@@ -36,7 +36,31 @@ export type AIProviderType =
   | 'nvidia-nim'
   // Phase 6: New vendors via defineVendor
   | 'kimi'
-  | 'minimax';
+  | 'minimax'
+  // v0.2.5: Advanced OpenAI & Anthropic Compatible Providers
+  | 'vllm'
+  | 'nebius'
+  | 'siliconflow'
+  | 'digitalocean'
+  | 'azure-openai'
+  | 'bedrock'
+  | 'vertex-anthropic'
+  | 'cloudflare-ai'
+  | 'deepinfra'
+  | 'hyperbolic'
+  | 'zhipu'
+  | 'qwen'
+  | 'baichuan'
+  | 'stepfun'
+  | 'lmstudio'
+  // v0.2.5 Expansion to 50 Providers Total
+  | 'friendli'
+  | 'octoai'
+  | 'baseten'
+  | 'modal'
+  | 'lepton'
+  | 'anyscale'
+  | 'hunyuan';
 
 export interface AIProviderConfig {
   type: AIProviderType;

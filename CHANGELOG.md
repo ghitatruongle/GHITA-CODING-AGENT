@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.2.5] - 2026-07-27
+
+### Theme: Version Integrity + Core Hardening
+
+- Unified version `0.2.5` across root package.json, all workspace packages, apps, manifest, docs, and security constants.
+- Added regression test suites for agents core (`astLock`, `markdownGate`, `pipeline`, `subagent`, `scheduler`).
+- Added security-path deny-default tests (`computer-use`, `browser-control`, `communication`).
+- Quality slash: `as_any` reduced to 77 (target ≤130).
+- Created release checklist (`docs/release-checklist-v0.2.5.md`).
+
+### Security
+
+- Security-path regression tests locked for deny-default surfaces.
+
+### Testing
+
+- Agents package: 15 test files, 114 tests passing.
+- Security package coverage maintained ≥94%.
+
+---
+
 ## [0.1.5] - 2026-07-23
 
 ### Theme: Trust Hardening
