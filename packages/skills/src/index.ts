@@ -383,3 +383,28 @@ export {
   discoverToolkitSlug,
 } from './registry/oauth-handoff.js';
 export type { OAuthSession } from './registry/oauth-handoff.js';
+
+// --- Universal Skill Importer & AI Governance Security ---
+export {
+  importFromSkillMd,
+  importFromJsonManifest,
+  parseYamlFrontmatter,
+  type UniversalSkillImportResult,
+  type ParsedFrontmatter,
+} from './importers/universal-importer.js';
+
+export {
+  PolicyEnforcer,
+  type CommandEvaluationResult,
+  type PromptEvaluationResult,
+  type ThreatSeverity,
+} from './governance/policy-enforcer.js';
+
+// --- PTY Terminal, AST Editor & OpenClaw Event Triggers (v0.2.5) ---
+export { PTYSessionPool, type PTYSession } from './terminal/pty-pool.js';
+export { ASTStructuralEditor, type ASTEditChunk } from './engineering/ast-editor.js';
+export {
+  OpenClawTriggerEngine,
+  type EventTrigger,
+  type SystemEventType,
+} from './openclaw/trigger-engine.js';

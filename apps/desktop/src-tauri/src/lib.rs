@@ -698,15 +698,19 @@ pub fn run() {
                 }
             };
 
+            let _ = main.show();
+            let _ = main.unminimize();
+            let _ = main.set_focus();
+
             // Show main window and close splash when frontend emits 'ready' event.
             // Tauri Window operations are thread-safe (use IPC channels internally),
             // so std::thread::spawn is safe for the delayed transition.
-            let shown = Arc::new(std::sync::atomic::AtomicBool::new(false));
+            let shown = Arc::new(std::sync::atomic::AtomicBool::new(true));
             {
                 let main_handle = main.clone();
                 let splash_handle = splash.clone();
                 let shown_clone = shown.clone();
-                main_handle.clone().once("ready", move |_event| {
+                main_handle.clone().listen("ready", move |_event| {
                     if shown_clone.swap(true, std::sync::atomic::Ordering::SeqCst) {
                         return; // Already handled
                     }

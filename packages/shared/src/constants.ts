@@ -6,7 +6,7 @@ import type { AIProviderType, SkillCategory } from './types.js';
 
 // --- App Info ---
 export const APP_NAME = 'GHITA CODING AGENT';
-export const APP_VERSION = '0.1.0';
+export const APP_VERSION = '0.2.5';
 export const APP_DESCRIPTION = 'Desktop AI Agent với multi-provider, skills, computer use';
 
 // --- Default Config ---
@@ -52,6 +52,36 @@ export const AI_PROVIDERS: Record<AIProviderType, { name: string; defaultModel: 
   // Phase 6: New vendors via defineVendor
   kimi: { name: 'Kimi (Moonshot AI)', defaultModel: 'moonshot-v1-8k' },
   minimax: { name: 'MiniMax', defaultModel: 'minimax-v1' },
+  // v0.2.5: Advanced OpenAI & Anthropic Compatible Providers
+  vllm: { name: 'vLLM (Local)', defaultModel: 'meta-llama/Llama-3.1-8B-Instruct' },
+  nebius: { name: 'Nebius AI', defaultModel: 'meta-llama/Meta-Llama-3.1-70B-Instruct' },
+  siliconflow: { name: 'SiliconFlow', defaultModel: 'Qwen/Qwen2.5-72B-Instruct' },
+  digitalocean: { name: 'DigitalOcean GenAI', defaultModel: 'meta-llama-3.1-70b-instruct' },
+  'azure-openai': { name: 'Azure OpenAI', defaultModel: 'gpt-4o' },
+  bedrock: { name: 'Amazon Bedrock', defaultModel: 'anthropic.claude-3-5-sonnet-20241022-v2:0' },
+  'vertex-anthropic': {
+    name: 'Google Vertex (Claude)',
+    defaultModel: 'claude-3-5-sonnet@20241022',
+  },
+  'cloudflare-ai': {
+    name: 'Cloudflare Workers AI',
+    defaultModel: '@cf/meta/llama-3.1-8b-instruct',
+  },
+  deepinfra: { name: 'DeepInfra', defaultModel: 'meta-llama/Meta-Llama-3.1-70B-Instruct' },
+  hyperbolic: { name: 'Hyperbolic AI', defaultModel: 'meta-llama/Meta-Llama-3.1-70B-Instruct' },
+  zhipu: { name: 'Zhipu AI (GLM-4)', defaultModel: 'glm-4-flash' },
+  qwen: { name: 'Alibaba Qwen', defaultModel: 'qwen-max' },
+  baichuan: { name: 'Baichuan AI', defaultModel: 'Baichuan4' },
+  stepfun: { name: 'StepFun', defaultModel: 'step-1-8k' },
+  lmstudio: { name: 'LM Studio (Local)', defaultModel: 'local-model' },
+  // v0.2.5 Expansion to 50 Providers Total
+  friendli: { name: 'FriendliAI', defaultModel: 'meta-llama-3.1-70b-instruct' },
+  octoai: { name: 'OctoAI', defaultModel: 'meta-llama-3.1-70b-instruct' },
+  baseten: { name: 'Baseten AI', defaultModel: 'llama-3.1-70b-instruct' },
+  modal: { name: 'Modal Labs', defaultModel: 'vllm-llama-3.1-70b' },
+  lepton: { name: 'Lepton AI', defaultModel: 'llama3-1-70b' },
+  anyscale: { name: 'Anyscale Endpoints', defaultModel: 'meta-llama/Meta-Llama-3.1-70B-Instruct' },
+  hunyuan: { name: 'Tencent Hunyuan', defaultModel: 'hunyuan-pro' },
 };
 
 export const OLLAMA_DEFAULT_URL = 'http://localhost:11434';

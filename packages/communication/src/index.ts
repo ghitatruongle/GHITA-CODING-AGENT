@@ -32,6 +32,12 @@ export { TelegramGateway, startTelegramBot } from './gateway/telegram.js';
 export { DiscordGateway, startDiscordBot } from './gateway/discord.js';
 export { SlackGateway, startSlackBot } from './gateway/slack.js';
 export { GatewayManager } from './gateway/manager.js';
+export {
+  MultiChannelGateway,
+  type ChatChannelPlatform,
+  type InboundChatMessage,
+  type OutboundChatMessage,
+} from './gateway/multi-channel-gateway.js';
 
 // --- Channel Plugin Contract & FIFO Lanes (Phase 8) ---
 export * from './channel-plugin-contract.js';
