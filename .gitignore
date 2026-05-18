@@ -1,0 +1,69 @@
+# ============================================================
+# GHITA CODING AGENT - .gitignore
+# ============================================================
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+.pnp.cjs
+.pnp.mjs
+
+# Build output
+dist/
+build/
+target/
+out/
+.next/
+
+# Rust / Tauri
+apps/desktop/src-tauri/target/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Test
+coverage/
+.nyc_output/
+
+# Turbo
+.turbo/
+
+# OpenClaude config
+.openclaude/
+
+# Refer projects (cloned repos - too large for main repo)
+refer_project/ai-core/*/
+refer_project/ai-framework/*/
+refer_project/ai-tools/*/
+refer_project/browser/*/
+refer_project/desktop/*/
+refer_project/infra/*/
+refer_project/memory/*/
+
+# Keep reference.md and .gitkeep
+!refer_project/**/reference.md
+!refer_project/**/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
