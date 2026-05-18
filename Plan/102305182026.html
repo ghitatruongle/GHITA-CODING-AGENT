@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GHITA CODING AGENT - Kế hoạch phát triển</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 50%, #16213e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            padding: 40px;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2));
+            border-radius: 20px;
+            border: 1px solid rgba(168, 85, 247, 0.3);
+        }
+
+        .logo {
+            font-size: 70px;
+            margin-bottom: 15px;
+        }
+
+        h1 {
+            font-size: 42px;
+            background: linear-gradient(135deg, #818cf8, #a78bfa, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 18px;
+            color: #a0a0c0;
+        }
+
+        h2 {
+            font-size: 28px;
+            color: #a78bfa;
+            margin: 40px 0 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(168, 85, 247, 0.3);
+        }
+
+        h3 {
+            font-size: 22px;
+            color: #818cf8;
+            margin: 25px 0 15px;
+        }
+
+        .section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Phase cards */
+        .phase {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1));
+            border-radius: 14px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-left: 5px solid #818cf8;
+        }
+
+        .phase-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .phase-title {
+            font-size: 22px;
+            color: #a78bfa;
+        }
+
+        .phase-duration {
+            background: rgba(168, 85, 247, 0.2);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            color: #c084fc;
+        }
+
+        .phase p {
+            color: #b0b0d0;
+            line-height: 1.7;
+            margin-bottom: 10px;
+        }
+
+        .phase ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .phase ul li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+            color: #c0c0e0;
+        }
+
+        .phase ul li::before {
+            content: "▸";
+            position: absolute;
+            left: 0;
+            color: #818cf8;
+        }
+
+        /* Repo table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            padding: 14px 16px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        th {
+            background: rgba(168, 85, 247, 0.2);
+            color: #a78bfa;
+            font-size: 16px;
+            position: sticky;
+            top: 0;
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        td a {
+            color: #818cf8;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        td a:hover {
+            color: #c084fc;
+            text-decoration: underline;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-core {
+            background: rgba(99, 102, 241, 0.25);
+            color: #818cf8;
+        }
+
+        .badge-ai {
+            background: rgba(168, 85, 247, 0.25);
+            color: #c084fc;
+        }
+
+        .badge-tool {
+            background: rgba(40, 200, 64, 0.2);
+            color: #28c840;
+        }
+
+        .badge-ui {
+            background: rgba(254, 188, 46, 0.2);
+            color: #febc2e;
+        }
+
+        .badge-infra {
+            background: rgba(255, 95, 87, 0.2);
+            color: #ff5f57;
+        }
+
+        /* Folder structure */
+        .folder-tree {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 10px;
+            padding: 25px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #818cf8;
+            overflow-x: auto;
+            white-space: pre;
+        }
+
+        /* Command blocks */
+        .cmd-block {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+            padding: 15px 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: #28c840;
+            margin: 10px 0;
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .cmd-block::before {
+            content: "$ ";
+            color: #606080;
+        }
+
+        /* Checklist */
+        .checklist {
+            list-style: none;
+            padding: 0;
+        }
+
+        .checklist li {
+            padding: 10px 0;
+            padding-left: 30px;
+            position: relative;
+            color: #c0c0e0;
+        }
+
+        .checklist li::before {
+            content: "☐";
+            position: absolute;
+            left: 0;
+            color: #818cf8;
+            font-size: 18px;
+        }
+
+        /* Git workflow */
+        .git-flow {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin: 15px 0;
+        }
+
+        .git-branch {
+            background: rgba(40, 200, 64, 0.1);
+            border: 1px solid rgba(40, 200, 64, 0.3);
+            border-radius: 8px;
+            padding: 10px 18px;
+            font-family: monospace;
+            color: #28c840;
+        }
+
+        /* Timeline */
+        .timeline {
+            position: relative;
+            padding-left: 40px;
+        }
+
+        .timeline::before {
+            content: "";
+            position: absolute;
+            left: 15px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: rgba(168, 85, 247, 0.3);
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 25px;
+        }
+
+        .timeline-item::before {
+            content: "";
+            position: absolute;
+            left: -30px;
+            top: 8px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #818cf8;
+            border: 2px solid #a78bfa;
+        }
+
+        .timeline-item h4 {
+            color: #a78bfa;
+            margin-bottom: 5px;
+        }
+
+        .timeline-item p {
+            color: #b0b0d0;
+            font-size: 14px;
+        }
+
+        /* Info box */
+        .info-box {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 10px;
+            padding: 18px;
+            margin: 15px 0;
+        }
+
+        .info-box.warning {
+            background: rgba(254, 188, 46, 0.1);
+            border-color: rgba(254, 188, 46, 0.3);
+        }
+
+        .info-box.success {
+            background: rgba(40, 200, 64, 0.1);
+            border-color: rgba(40, 200, 64, 0.3);
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 60px;
+            padding: 30px;
+            color: #606080;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 28px; }
+            .phase-header { flex-direction: column; gap: 10px; }
+            table { font-size: 13px; }
+            th, td { padding: 10px 8px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">📋</div>
+            <h1>GHITA CODING AGENT</h1>
+            <p class="subtitle">Kế hoạch phát triển chi tiết — Ngày tạo: 18/05/2026</p>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- MỤC TIÊU TỔNG QUAN -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>🎯 Mục tiêu tổng quan</h2>
+            <p style="font-size: 17px; line-height: 1.8;">
+                Xây dựng ứng dụng <strong>GHITA CODING AGENT</strong> — một desktop AI agent hoàn chỉnh,
+                tích hợp nhiều dự án open-source để tạo thành một sản phẩm thống nhất.
+                Ứng dụng có thể đưa lên GitHub như một dự án open-source, cho phép cộng đồng đóng góp.
+            </p>
+
+            <div class="info-box success" style="margin-top: 20px;">
+                <strong>Mục tiêu cuối cùng:</strong> Một app desktop (Win/Linux) + mobile (Android),
+                code bằng TypeScript, tích hợp 15+ dự án open-source, sẵn sàng cho production.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- DANH SÁCH DỰ ÁN OPEN-SOURCE TÍCH HỢP -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>📦 Danh sách dự án open-source tích hợp</h2>
+            <p style="color: #b0b0d0; margin-bottom: 20px;">
+                Các dự án dưới đây sẽ được tải về và tích hợp vào GHITA CODING AGENT.
+                Mỗi dự án phục vụ một vai trò cụ thể trong kiến trúc tổng thể.
+            </p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Dự án</th>
+                        <th>GitHub</th>
+                        <th>Vai trò</th>
+                        <th>Loại</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- AI / Agent Core -->
+                    <tr>
+                        <td>1</td>
+                        <td><strong>Claude Code</strong></td>
+                        <td><a href="https://github.com/anthropics/claude-code" target="_blank">anthropics/claude-code</a></td>
+                        <td>AI coding agent engine, terminal integration, tool use</td>
+                        <td><span class="badge badge-ai">AI Core</span></td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td><strong>OpenClaw</strong></td>
+                        <td><a href="https://github.com/openclaw/openclaw" target="_blank">openclaw/openclaw</a></td>
+                        <td>AI personal assistant, any OS/platform, skill system, own-your-data</td>
+                        <td><span class="badge badge-ai">AI Core</span></td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td><strong>OpenClaude</strong></td>
+                        <td><a href="https://github.com/Gitlawb/openclaude" target="_blank">Gitlawb/openclaude</a></td>
+                        <td>Open-source coding-agent CLI, runs anywhere, multi-provider (OpenAI, Gemini, Ollama...)</td>
+                        <td><span class="badge badge-ai">AI Core</span></td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td><strong>Open Interpreter</strong></td>
+                        <td><a href="https://github.com/OpenInterpreter/open-interpreter" target="_blank">OpenInterpreter/open-interpreter</a></td>
+                        <td>AI điều khiển máy tính qua code execution, computer use</td>
+                        <td><span class="badge badge-ai">AI Core</span></td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td><strong>OpenHands (OpenDevin)</strong></td>
+                        <td><a href="https://github.com/All-Hands-AI/OpenHands" target="_blank">All-Hands-AI/OpenHands</a></td>
+                        <td>AI software engineering agent, sandbox execution</td>
+                        <td><span class="badge badge-ai">AI Core</span></td>
+                    </tr>
+                    <tr>
+                        <td>6</td>
+                        <td><strong>OpenDevin</strong></td>
+                        <td><a href="https://github.com/OpenDevin/OpenDevin" target="_blank">OpenDevin/OpenDevin</a></td>
+                        <td>AI coding agent framework (legacy, merged into OpenHands)</td>
+                        <td><span class="badge badge-ai">AI Core</span></td>
+                    </tr>
+                    <tr>
+                        <td>7</td>
+                        <td><strong>LangChain.js</strong></td>
+                        <td><a href="https://github.com/langchain-ai/langchainjs" target="_blank">langchain-ai/langchainjs</a></td>
+                        <td>AI orchestration, chain-of-thought, multi-provider</td>
+                        <td><span class="badge badge-ai">AI Framework</span></td>
+                    </tr>
+                    <tr>
+                        <td>8</td>
+                        <td><strong>LiteLLM</strong></td>
+                        <td><a href="https://github.com/BerriAI/litellm" target="_blank">BerriAI/litellm</a></td>
+                        <td>Unified API cho 100+ AI providers (OpenAI, Anthropic, Google...)</td>
+                        <td><span class="badge badge-ai">AI Provider</span></td>
+                    </tr>
+                    <tr>
+                        <td>9</td>
+                        <td><strong>Vercel AI SDK</strong></td>
+                        <td><a href="https://github.com/vercel/ai" target="_blank">vercel/ai</a></td>
+                        <td>AI integration SDK, streaming, multi-provider</td>
+                        <td><span class="badge badge-ai">AI SDK</span></td>
+                    </tr>
+
+                    <!-- Browser / Computer Control -->
+                    <tr>
+                        <td>10</td>
+                        <td><strong>Browser Use</strong></td>
+                        <td><a href="https://github.com/browser-use/browser-use" target="_blank">browser-use/browser-use</a></td>
+                        <td>AI-driven browser automation, web scraping thông minh</td>
+                        <td><span class="badge badge-tool">Tool</span></td>
+                    </tr>
+                    <tr>
+                        <td>11</td>
+                        <td><strong>Playwright</strong></td>
+                        <td><a href="https://github.com/microsoft/playwright" target="_blank">microsoft/playwright</a></td>
+                        <td>Browser automation, cross-browser testing</td>
+                        <td><span class="badge badge-tool">Tool</span></td>
+                    </tr>
+                    <tr>
+                        <td>12</td>
+                        <td><strong>nut.js</strong></td>
+                        <td><a href="https://github.com/nut-tree/nut.js" target="_blank">nut-tree/nut.js</a></td>
+                        <td>Desktop automation: chuột, bàn phím, screenshot</td>
+                        <td><span class="badge badge-tool">Tool</span></td>
+                    </tr>
+                    <tr>
+                        <td>13</td>
+                        <td><strong>Ollama</strong></td>
+                        <td><a href="https://github.com/ollama/ollama" target="_blank">ollama/ollama</a></td>
+                        <td>Chạy AI models local (Llama, Mistral, Qwen...)</td>
+                        <td><span class="badge badge-tool">Local AI</span></td>
+                    </tr>
+
+                    <!-- UI Framework -->
+                    <tr>
+                        <td>14</td>
+                        <td><strong>Tauri</strong></td>
+                        <td><a href="https://github.com/tauri-apps/tauri" target="_blank">tauri-apps/tauri</a></td>
+                        <td>Desktop app framework (Win/Linux), nhẹ hơn Electron</td>
+                        <td><span class="badge badge-ui">UI Framework</span></td>
+                    </tr>
+                    <tr>
+                        <td>15</td>
+                        <td><strong>React Native</strong></td>
+                        <td><a href="https://github.com/facebook/react-native" target="_blank">facebook/react-native</a></td>
+                        <td>Android app cho remote control</td>
+                        <td><span class="badge badge-ui">Mobile</span></td>
+                    </tr>
+
+                    <!-- Infrastructure -->
+                    <tr>
+                        <td>16</td>
+                        <td><strong>Socket.io</strong></td>
+                        <td><a href="https://github.com/socketio/socket.io" target="_blank">socketio/socket.io</a></td>
+                        <td>Real-time communication desktop ↔ mobile</td>
+                        <td><span class="badge badge-infra">Infra</span></td>
+                    </tr>
+                    <tr>
+                        <td>17</td>
+                        <td><strong>node-pty</strong></td>
+                        <td><a href="https://github.com/microsoft/node-pty" target="_blank">microsoft/node-pty</a></td>
+                        <td>Terminal emulator tích hợp trong app</td>
+                        <td><span class="badge badge-infra">Infra</span></td>
+                    </tr>
+                    <tr>
+                        <td>18</td>
+                        <td><strong>xterm.js</strong></td>
+                        <td><a href="https://github.com/xtermjs/xterm.js" target="_blank">xtermjs/xterm.js</a></td>
+                        <td>Terminal UI component cho browser/desktop</td>
+                        <td><span class="badge badge-ui">UI</span></td>
+                    </tr>
+                    <tr>
+                        <td>19</td>
+                        <td><strong>Monaco Editor</strong></td>
+                        <td><a href="https://github.com/microsoft/monaco-editor" target="_blank">microsoft/monaco-editor</a></td>
+                        <td>Code editor engine (VS Code editor component)</td>
+                        <td><span class="badge badge-ui">UI</span></td>
+                    </tr>
+
+                    <!-- Thêm: Open-source AI agents khác -->
+                    <tr>
+                        <td>20</td>
+                        <td><strong>AutoGPT</strong></td>
+                        <td><a href="https://github.com/Significant-Gravitas/AutoGPT" target="_blank">Significant-Gravitas/AutoGPT</a></td>
+                        <td>Autonomous AI agent, task planning</td>
+                        <td><span class="badge badge-ai">AI Agent</span></td>
+                    </tr>
+                    <tr>
+                        <td>21</td>
+                        <td><strong>CrewAI</strong></td>
+                        <td><a href="https://github.com/crewAIInc/crewAI" target="_blank">crewAIInc/crewAI</a></td>
+                        <td>Multi-agent orchestration, role-based agents</td>
+                        <td><span class="badge badge-ai">AI Agent</span></td>
+                    </tr>
+                    <tr>
+                        <td>22</td>
+                        <td><strong>Composio</strong></td>
+                        <td><a href="https://github.com/ComposioHQ/composio" target="_blank">ComposioHQ/composio</a></td>
+                        <td>Tool integration cho AI agents (200+ tools)</td>
+                        <td><span class="badge badge-tool">Tool</span></td>
+                    </tr>
+                    <tr>
+                        <td>23</td>
+                        <td><strong>Aider</strong></td>
+                        <td><a href="https://github.com/paul-gauthier/aider" target="_blank">paul-gauthier/aider</a></td>
+                        <td>AI pair programming trong terminal</td>
+                        <td><span class="badge badge-ai">AI Coding</span></td>
+                    </tr>
+                    <tr>
+                        <td>24</td>
+                        <td><strong>Continue</strong></td>
+                        <td><a href="https://github.com/continuedev/continue" target="_blank">continuedev/continue</a></td>
+                        <td>AI code assistant (open-source alternative to Copilot)</td>
+                        <td><span class="badge badge-ai">AI Coding</span></td>
+                    </tr>
+                    <tr>
+                        <td>25</td>
+                        <td><strong>SWE-agent</strong></td>
+                        <td><a href="https://github.com/princeton-nlp/SWE-agent" target="_blank">princeton-nlp/SWE-agent</a></td>
+                        <td>AI agent giải quyết GitHub issues tự động</td>
+                        <td><span class="badge badge-ai">AI Agent</span></td>
+                    </tr>
+                    <tr>
+                        <td>26</td>
+                        <td><strong>WebArena</strong></td>
+                        <td><a href="https://github.com/web-arena-x/webarena" target="_blank">web-arena-x/webarena</a></td>
+                        <td>Benchmark cho web browsing agents</td>
+                        <td><span class="badge badge-tool">Benchmark</span></td>
+                    </tr>
+                    <tr>
+                        <td>27</td>
+                        <td><strong>Stagehand</strong></td>
+                        <td><a href="https://github.com/browserbase/stagehand" target="_blank">browserbase/stagehand</a></td>
+                        <td>AI-powered browser automation framework</td>
+                        <td><span class="badge badge-tool">Browser</span></td>
+                    </tr>
+                    <tr>
+                        <td>28</td>
+                        <td><strong>Hermes Agent</strong></td>
+                        <td><a href="https://github.com/NousResearch/hermes-agent" target="_blank">NousResearch/hermes-agent</a></td>
+                        <td>AI agent framework by Nous Research</td>
+                        <td><span class="badge badge-ai">AI Agent</span></td>
+                    </tr>
+                    <tr>
+                        <td>29</td>
+                        <td><strong>PPT Master</strong></td>
+                        <td><a href="https://github.com/hugohe3/ppt-master" target="_blank">hugohe3/ppt-master</a></td>
+                        <td>AI-powered PowerPoint presentation generator</td>
+                        <td><span class="badge badge-tool">Tool</span></td>
+                    </tr>
+                    <tr>
+                        <td>30</td>
+                        <td><strong>UI-TARS Desktop</strong></td>
+                        <td><a href="https://github.com/bytedance/UI-TARS-desktop" target="_blank">bytedance/UI-TARS-desktop</a></td>
+                        <td>Multimodal AI agent, GUI control, screenshot recognition, cross-platform desktop automation</td>
+                        <td><span class="badge badge-ai">AI Core</span></td>
+                    </tr>
+                    <tr>
+                        <td>31</td>
+                        <td><strong>AgentMemory</strong></td>
+                        <td><a href="https://github.com/rohitg00/agentmemory" target="_blank">rohitg00/agentmemory</a></td>
+                        <td>Persistent memory for AI agents, hybrid search (BM25+Vector+Graph), zero dependencies</td>
+                        <td><span class="badge badge-ai">AI Memory</span></td>
+                    </tr>
+                    <tr>
+                        <td>32</td>
+                        <td><strong>CloakBrowser</strong></td>
+                        <td><a href="https://github.com/CloakHQ/CloakBrowser" target="_blank">CloakHQ/CloakBrowser</a></td>
+                        <td>Stealth Chromium browser, bypass bot detection, Playwright replacement, 49+ C++ source patches</td>
+                        <td><span class="badge badge-tool">Browser</span></td>
+                    </tr>
+                    <tr>
+                        <td>33</td>
+                        <td><strong>Skills (Matt Pocock)</strong></td>
+                        <td><a href="https://github.com/mattpocock/skills" target="_blank">mattpocock/skills</a></td>
+                        <td>Reusable skill sets for AI coding agents, TDD, debugging, engineering discipline</td>
+                        <td><span class="badge badge-ai">AI Skills</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- CẤU TRÚC THƯ MỤC DỰ ÁN -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>📁 Cấu trúc thư mục dự án</h2>
+            <div class="folder-tree">GHITA-CODING-AGENT/
+├── 📄 README.md                    # Hướng dẫn tổng quan
+├── 📄 LICENSE                      # MIT License
+├── 📄 package.json                 # Root monorepo config
+├── 📄 turbo.json                   # Turborepo config
+├── 📄 tsconfig.base.json           # Shared TypeScript config
+├── 📄 .gitignore                   # Git ignore rules
+├── 📄 .env.example                 # Environment variables template
+├── 📄 CONTRIBUTING.md              # Hướng dẫn đóng góp
+│
+├── 📂 apps/                        # === ỨNG DỤNG CHÍNH ===
+│   ├── 📂 desktop/                 # Tauri + React (Win/Linux)
+│   │   ├── 📂 src-tauri/           # Rust backend
+│   │   │   ├── 📄 Cargo.toml
+│   │   │   └── 📂 src/
+│   │   │       ├── 📄 main.rs
+│   │   │       ├── 📄 computer_use.rs
+│   │   │       ├── 📄 browser_control.rs
+│   │   │       └── 📄 file_system.rs
+│   │   ├── 📂 src/                 # React frontend
+│   │   │   ├── 📄 App.tsx
+│   │   │   ├── 📂 components/
+│   │   │   │   ├── 📄 CodeEditor.tsx     # Monaco Editor
+│   │   │   │   ├── 📄 Terminal.tsx       # xterm.js
+│   │   │   │   ├── 📄 ApiManager.tsx
+│   │   │   │   ├── 📄 SkillManager.tsx
+│   │   │   │   ├── 📄 AgentGroups.tsx
+│   │   │   │   ├── 📄 DeviceConnect.tsx
+│   │   │   │   └── 📄 ChatPanel.tsx
+│   │   │   ├── 📂 hooks/
+│   │   │   └── 📂 stores/
+│   │   └── 📄 package.json
+│   │
+│   └── 📂 mobile/                  # React Native (Android)
+│       ├── 📂 src/
+│       │   ├── 📄 App.tsx
+│       │   ├── 📂 screens/
+│       │   ├── 📂 components/
+│       │   └── 📂 services/
+│       └── 📄 package.json
+│
+├── 📂 packages/                    # === SHARED PACKAGES ===
+│   ├── 📂 ai-engine/              # AI multi-provider (← openclaw, litellm, vercel-ai, ollama)
+│   │   ├── 📂 providers/
+│   │   │   ├── 📄 openai.ts
+│   │   │   ├── 📄 anthropic.ts
+│   │   │   ├── 📄 google.ts
+│   │   │   ├── 📄 ollama.ts
+│   │   │   └── 📄 custom.ts
+│   │   ├── 📄 orchestrator.ts
+│   │   └── 📄 index.ts
+│   │
+│   ├── 📂 skills/                  # Skill system (← skills, composio, aider, ppt-master)
+│   │   ├── 📂 builtin/
+│   │   │   ├── 📄 file-manager.ts
+│   │   │   ├── 📄 browser-control.ts
+│   │   │   ├── 📄 computer-use.ts
+│   │   │   ├── 📄 terminal.ts
+│   │   │   ├── 📄 screenshot.ts
+│   │   │   └── 📄 app-control.ts
+│   │   ├── 📄 skill-registry.ts
+│   │   └── 📄 index.ts
+│   │
+│   ├── 📂 agents/                  # Agent & groups (← crewai, hermes-agent)
+│   │   ├── 📂 types/
+│   │   ├── 📄 agent-manager.ts
+│   │   ├── 📄 group-manager.ts
+│   │   └── 📄 index.ts
+│   │
+│   ├── 📂 browser-control/         # Browser (← playwright, browser-use, cloakbrowser)
+│   │   ├── 📄 playwright-driver.ts
+│   │   ├── 📄 stealth-driver.ts
+│   │   └── 📄 index.ts
+│   │
+│   ├── 📂 computer-use/            # Desktop control (← open-interpreter, ui-tars, nut-js)
+│   │   ├── 📄 mouse-keyboard.ts
+│   │   ├── 📄 screen-capture.ts
+│   │   └── 📄 index.ts
+│   │
+│   ├── 📂 communication/           # Desktop ↔ Mobile (← socketio)
+│   │   ├── 📄 socket-server.ts
+│   │   ├── 📄 pairing.ts
+│   │   ├── 📄 protocol.ts
+│   │   └── 📄 index.ts
+│   │
+│   ├── 📂 memory/                  # Agent memory (← agentmemory)
+│   │   ├── 📄 memory-store.ts
+│   │   ├── 📄 search.ts
+│   │   └── 📄 index.ts
+│   │
+│   └── 📂 shared/                  # Utils, types, constants
+│       ├── 📄 types.ts
+│       ├── 📄 constants.ts
+│       ├── 📄 utils.ts
+│       └── 📄 index.ts
+│
+├── 📂 refer_project/              # === 33 DỰ ÁN THAM KHẢO ===
+│   ├── 📄 reference.md            # Bảng tổng hợp link & mô tả
+│   ├── 📂 ai-core/               # 9 repos: claude-code, openclaw, openclaude...
+│   ├── 📂 ai-framework/          # 4 repos: langchainjs, litellm, vercel-ai, crewai
+│   ├── 📂 ai-tools/              # 6 repos: aider, continue, swe-agent, composio, skills, ppt-master
+│   ├── 📂 browser/               # 5 repos: playwright, browser-use, stagehand, cloakbrowser, webarena
+│   ├── 📂 desktop/               # 6 repos: tauri, react-native, nut-js, monaco-editor, xtermjs, node-pty
+│   ├── 📂 infra/                 # 2 repos: socketio, ollama
+│   └── 📂 memory/                # 1 repo: agentmemory
+│
+├── 📂 scripts/                    # === BUILD & SETUP ===
+│   ├── 📄 clone-refer.sh         # Clone 33 refer projects
+│   ├── 📄 setup.sh               # Setup dev environment
+│   └── 📄 build.sh               # Build all platforms
+│
+├── 📂 docs/                       # Documentation
+├── 📂 tests/                      # Tests (unit, integration, e2e)
+└── 📂 Plan/                       # Ý tưởng & kế hoạch (HTML)</div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- KẾ HOẠCH TRIỂN KHAI TỪNG GIAI ĐOẠN -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>📅 Kế hoạch triển khai theo giai đoạn</h2>
+
+            <!-- Phase 0 -->
+            <div class="phase">
+                <div class="phase-header">
+                    <div class="phase-title">Phase 0: Khởi tạo dự án & Tải dependencies</div>
+                    <div class="phase-duration">Tuần 1</div>
+                </div>
+                <ul>
+                    <li>Tạo repository GitHub: <code>GHITA-CODING-AGENT</code></li>
+                    <li>Khởi tạo monorepo với Turborepo hoặc Nx</li>
+                    <li>Cấu hình TypeScript, ESLint, Prettier</li>
+                    <li>Tạo <code>.gitignore</code>, <code>LICENSE</code> (MIT), <code>README.md</code></li>
+                    <li>Clone tất cả 33 dự án open-source vào thư mục <code>refer_project/</code></li>
+                    <li>Chạy script <code>scripts/clone-refer.sh</code> để tự động tải</li>
+                </ul>
+
+                <div class="cmd-block">git init && gh repo create GHITA-CODING-AGENT --public --source=.</div>
+                <div class="cmd-block">npx create-turbo@latest GHITA-CODING-AGENT --package-manager npm</div>
+            </div>
+
+            <!-- Phase 1 -->
+            <div class="phase">
+                <div class="phase-header">
+                    <div class="phase-title">Phase 1: Desktop App Foundation</div>
+                    <div class="phase-duration">Tuần 2-3</div>
+                </div>
+                <ul>
+                    <li>Setup Tauri project với React frontend</li>
+                    <li>Tích hợp Monaco Editor (code editor)</li>
+                    <li>Tích hợp xterm.js + node-pty (terminal)</li>
+                    <li>Xây dựng giao diện tabs cơ bản (Code, API, Skills, Agents, Devices)</li>
+                    <li>Implement basic layout类似 VS Code</li>
+                </ul>
+
+                <div class="cmd-block">npm create tauri-app@latest desktop -- --template react-ts</div>
+                <div class="cmd-block">npm install monaco-editor @xterm/xterm node-pty</div>
+            </div>
+
+            <!-- Phase 2 -->
+            <div class="phase">
+                <div class="phase-header">
+                    <div class="phase-title">Phase 2: AI Engine & Multi-Provider</div>
+                    <div class="phase-duration">Tuần 4-5</div>
+                </div>
+                <ul>
+                    <li>Tích hợp Vercel AI SDK cho multi-provider streaming</li>
+                    <li>Adapt LiteLLM để hỗ trợ 100+ providers</li>
+                    <li>Xây dựng provider registry (OpenAI, Anthropic, Google, Ollama, Custom)</li>
+                    <li>Implement API key management UI</li>
+                    <li>Tích hợp Ollama cho local AI models</li>
+                    <li>Adapt engine từ Claude Code, Open Interpreter</li>
+                </ul>
+
+                <div class="cmd-block">npm install ai @ai-sdk/openai @ai-sdk/anthropic @ai-sdk/google</div>
+                <div class="cmd-block">pip install litellm  # hoặc port sang JS</div>
+            </div>
+
+            <!-- Phase 3 -->
+            <div class="phase">
+                <div class="phase-header">
+                    <div class="phase-title">Phase 3: Skills & Agent System</div>
+                    <div class="phase-duration">Tuần 6-7</div>
+                </div>
+                <ul>
+                    <li>Xây dựng Skill Registry (đăng ký, quản lý skills)</li>
+                    <li>Implement builtin skills: File Manager, Terminal, Screenshot</li>
+                    <li>Tích hợp nut.js cho Computer Use skill</li>
+                    <li>Tích hợp Playwright cho Browser Control skill</li>
+                    <li>Adapt logic từ OpenHands, Browser Use, Stagehand</li>
+                    <li>Xây dựng Agent Manager (tạo, quản lý agents)</li>
+                    <li>Implement Agent Groups (Dev Team, Research, Automation)</li>
+                    <li>Adapt multi-agent pattern từ CrewAI</li>
+                    <li>Tích hợp tool system từ Composio</li>
+                </ul>
+
+                <div class="cmd-block">npm install @nut-tree/nut-js playwright</div>
+                <div class="cmd-block">npx playwright install chromium</div>
+            </div>
+
+            <!-- Phase 4 -->
+            <div class="phase">
+                <div class="phase-header">
+                    <div class="phase-title">Phase 4: Communication & Mobile</div>
+                    <div class="phase-duration">Tuần 8-9</div>
+                </div>
+                <ul>
+                    <li>Implement Socket.io server trên desktop</li>
+                    <li>Xây dựng pairing system (mã xác thực 2 chiều)</li>
+                    <li>Implement message protocol (commands, screenshots, status)</li>
+                    <li>Setup React Native project cho Android</li>
+                    <li>Xây dựng Pairing Screen (nhập mã, QR code)</li>
+                    <li>Xây dựng Remote Control Screen (screen preview, chat, quick actions)</li>
+                    <li>Implement screen streaming (desktop → mobile)</li>
+                </ul>
+
+                <div class="cmd-block">npx react-native@latest init MobileApp --template react-native-template-typescript</div>
+                <div class="cmd-block">npm install socket.io socket.io-client</div>
+            </div>
+
+            <!-- Phase 5 -->
+            <div class="phase">
+                <div class="phase-header">
+                    <div class="phase-title">Phase 5: Integration & Polish</div>
+                    <div class="phase-duration">Tuần 10-11</div>
+                </div>
+                <ul>
+                    <li>Integrate coding agent từ Aider, Continue, SWE-agent</li>
+                    <li>Implement chat panel với streaming responses</li>
+                    <li>Add notification system (approve/reject actions)</li>
+                    <li>Implement sandbox execution cho code chạy an toàn</li>
+                    <li>Add logging và error handling</li>
+                    <li>Performance optimization</li>
+                    <li>UI/UX polish, dark theme, animations</li>
+                </ul>
+            </div>
+
+            <!-- Phase 6 -->
+            <div class="phase">
+                <div class="phase-header">
+                    <div class="phase-title">Phase 6: Testing & Release</div>
+                    <div class="phase-duration">Tuần 12</div>
+                </div>
+                <ul>
+                    <li>Viết unit tests cho core modules</li>
+                    <li>Integration tests cho AI providers</li>
+                    <li>E2E tests cho desktop và mobile</li>
+                    <li>Build cho Win (.exe/.msi), Linux (.deb/.AppImage), Android (.apk)</li>
+                    <li>Viết documentation (README, API docs, Contributing guide)</li>
+                    <li>Tạo GitHub Actions CI/CD pipeline</li>
+                    <li>Release v1.0.0 trên GitHub</li>
+                </ul>
+
+                <div class="cmd-block">npm run build:all  # Build desktop + mobile</div>
+                <div class="cmd-block">gh release create v1.0.0 --title "GHITA CODING AGENT v1.0.0" --notes "Initial release"</div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SCRIPT TẢI DỰ ÁN -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>⬇️ Script tải tất cả dự án open-source</h2>
+            <p style="color: #b0b0d0; margin-bottom: 15px;">
+                Chạy script này để tự động clone tất cả 33 dự án vào thư mục <code>refer_project/</code> theo phân loại
+            </p>
+
+            <div class="folder-tree">#!/bin/bash
+# scripts/clone-refer.sh
+# Clone 33 dự án open-source vào refer_project/ theo phân loại
+
+set -e
+
+BASE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+REFER_DIR="$BASE_DIR/refer_project"
+
+echo "🤖 GHITA CODING AGENT - Clone Refer Projects"
+echo ""
+
+clone() {
+    local dir="$1"; local url="$2"; local name="$3"; local num="$4"
+    if [ -d "$dir/.git" ]; then
+        echo "[$num/33] ⏭️  $name (exists, skip)"
+    else
+        echo "[$num/33] 📦 $name..."
+        git clone --depth 1 "$url" "$dir" 2>/dev/null || echo "  ⚠️ Failed: $name"
+    fi
+}
+
+# === AI Core (9) ===
+clone "$REFER_DIR/ai-core/claude-code" "https://github.com/anthropics/claude-code.git" "Claude Code" 1
+clone "$REFER_DIR/ai-core/openclaw" "https://github.com/openclaw/openclaw.git" "OpenClaw" 2
+clone "$REFER_DIR/ai-core/openclaude" "https://github.com/Gitlawb/openclaude.git" "OpenClaude" 3
+clone "$REFER_DIR/ai-core/open-interpreter" "https://github.com/OpenInterpreter/open-interpreter.git" "Open Interpreter" 4
+clone "$REFER_DIR/ai-core/openhands" "https://github.com/All-Hands-AI/OpenHands.git" "OpenHands" 5
+clone "$REFER_DIR/ai-core/opendevin" "https://github.com/OpenDevin/OpenDevin.git" "OpenDevin" 6
+clone "$REFER_DIR/ai-core/autogpt" "https://github.com/Significant-Gravitas/AutoGPT.git" "AutoGPT" 7
+clone "$REFER_DIR/ai-core/ui-tars-desktop" "https://github.com/bytedance/UI-TARS-desktop.git" "UI-TARS" 8
+clone "$REFER_DIR/ai-core/hermes-agent" "https://github.com/NousResearch/hermes-agent.git" "Hermes" 9
+
+# === AI Framework (4) ===
+clone "$REFER_DIR/ai-framework/langchainjs" "https://github.com/langchain-ai/langchainjs.git" "LangChain.js" 10
+clone "$REFER_DIR/ai-framework/litellm" "https://github.com/BerriAI/litellm.git" "LiteLLM" 11
+clone "$REFER_DIR/ai-framework/vercel-ai" "https://github.com/vercel/ai.git" "Vercel AI" 12
+clone "$REFER_DIR/ai-framework/crewai" "https://github.com/crewAIInc/crewAI.git" "CrewAI" 13
+
+# === AI Tools (6) ===
+clone "$REFER_DIR/ai-tools/aider" "https://github.com/paul-gauthier/aider.git" "Aider" 14
+clone "$REFER_DIR/ai-tools/continue" "https://github.com/continuedev/continue.git" "Continue" 15
+clone "$REFER_DIR/ai-tools/swe-agent" "https://github.com/princeton-nlp/SWE-agent.git" "SWE-agent" 16
+clone "$REFER_DIR/ai-tools/composio" "https://github.com/ComposioHQ/composio.git" "Composio" 17
+clone "$REFER_DIR/ai-tools/skills" "https://github.com/mattpocock/skills.git" "Skills" 18
+clone "$REFER_DIR/ai-tools/ppt-master" "https://github.com/hugohe3/ppt-master.git" "PPT Master" 19
+
+# === Browser (5) ===
+clone "$REFER_DIR/browser/playwright" "https://github.com/microsoft/playwright.git" "Playwright" 20
+clone "$REFER_DIR/browser/browser-use" "https://github.com/browser-use/browser-use.git" "Browser Use" 21
+clone "$REFER_DIR/browser/stagehand" "https://github.com/browserbase/stagehand.git" "Stagehand" 22
+clone "$REFER_DIR/browser/cloakbrowser" "https://github.com/CloakHQ/CloakBrowser.git" "CloakBrowser" 23
+clone "$REFER_DIR/browser/webarena" "https://github.com/web-arena-x/webarena.git" "WebArena" 24
+
+# === Desktop (6) ===
+clone "$REFER_DIR/desktop/tauri" "https://github.com/tauri-apps/tauri.git" "Tauri" 25
+clone "$REFER_DIR/desktop/react-native" "https://github.com/facebook/react-native.git" "React Native" 26
+clone "$REFER_DIR/desktop/nut-js" "https://github.com/nut-tree/nut.js.git" "nut.js" 27
+clone "$REFER_DIR/desktop/monaco-editor" "https://github.com/microsoft/monaco-editor.git" "Monaco" 28
+clone "$REFER_DIR/desktop/xtermjs" "https://github.com/xtermjs/xterm.js.git" "xterm.js" 29
+clone "$REFER_DIR/desktop/node-pty" "https://github.com/microsoft/node-pty.git" "node-pty" 30
+
+# === Infra (2) ===
+clone "$REFER_DIR/infra/socketio" "https://github.com/socketio/socket.io.git" "Socket.io" 31
+clone "$REFER_DIR/infra/ollama" "https://github.com/ollama/ollama.git" "Ollama" 32
+
+# === Memory (1) ===
+clone "$REFER_DIR/memory/agentmemory" "https://github.com/rohitg00/agentmemory.git" "AgentMemory" 33
+
+echo ""
+echo "✅ Done! All 33 repos processed."</div>
+
+            <div class="info-box warning" style="margin-top: 15px;">
+                <strong>Lưu ý:</strong> Một số repo có thể private hoặc đã bị archive.
+                Script sẽ bỏ qua và thông báo nếu không clone được.
+                Cần có <code>git</code> và kết nối internet.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- GIT WORKFLOW -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>🔀 Git Workflow</h2>
+
+            <h3>Branch strategy</h3>
+            <div class="git-flow">
+                <div class="git-branch">main</div>
+                <div class="git-branch">develop</div>
+                <div class="git-branch">feature/desktop-ui</div>
+                <div class="git-branch">feature/ai-engine</div>
+                <div class="git-branch">feature/skills</div>
+                <div class="git-branch">feature/agents</div>
+                <div class="git-branch">feature/mobile</div>
+                <div class="git-branch">feature/communication</div>
+                <div class="git-branch">hotfix/*</div>
+                <div class="git-branch">release/v1.0.0</div>
+            </div>
+
+            <h3>Quy trình commit</h3>
+            <ul class="checklist">
+                <li>Mỗi feature trên branch riêng</li>
+                <li>Commit message theo format: <code>type(scope): description</code></li>
+                <li>Ví dụ: <code>feat(ai-engine): add OpenAI provider</code></li>
+                <li>Pull Request trước khi merge vào <code>develop</code></li>
+                <li>Code review tối thiểu 1 người</li>
+                <li>CI/CD phải pass trước khi merge</li>
+            </ul>
+
+            <h3>Gitignore mẫu</h3>
+            <div class="folder-tree"># Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build
+dist/
+build/
+target/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Integrations (cloned repos - too large for main repo)
+refer_project/*/*/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test
+coverage/
+
+# Tauri
+src-tauri/target/</div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- TIMELINE TỔNG QUAN -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>⏱️ Timeline tổng quan</h2>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <h4>Tuần 1 — Khởi tạo</h4>
+                    <p>Setup repo, monorepo, clone 33 dự án, cấu hình dev environment</p>
+                </div>
+                <div class="timeline-item">
+                    <h4>Tuần 2-3 — Desktop Foundation</h4>
+                    <p>Tauri + React, Monaco Editor, xterm.js, UI layout cơ bản</p>
+                </div>
+                <div class="timeline-item">
+                    <h4>Tuần 4-5 — AI Engine</h4>
+                    <p>Multi-provider AI, API management, Vercel AI SDK, LiteLLM, Ollama</p>
+                </div>
+                <div class="timeline-item">
+                    <h4>Tuần 6-7 — Skills & Agents</h4>
+                    <p>Skill system, Computer Use (nut.js), Browser (Playwright), Agent groups</p>
+                </div>
+                <div class="timeline-item">
+                    <h4>Tuần 8-9 — Communication & Mobile</h4>
+                    <p>Socket.io, Pairing system, React Native Android app, Remote control</p>
+                </div>
+                <div class="timeline-item">
+                    <h4>Tuần 10-11 — Integration & Polish</h4>
+                    <p>Aider/Continue/SWE-agent integration, UI polish, sandbox, notifications</p>
+                </div>
+                <div class="timeline-item">
+                    <h4>Tuần 12 — Release</h4>
+                    <p>Testing, documentation, CI/CD, build all platforms, v1.0.0 release</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- CHECKLIST TRƯỚC KHI ĐẨY LÊN GIT -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>✅ Checklist trước khi đẩy lên Git</h2>
+            <ul class="checklist">
+                <li>Tạo repository GitHub công khai</li>
+                <li>Viết README.md đầy đủ (mô tả, cài đặt, sử dụng, contributing)</li>
+                <li>Thêm LICENSE (MIT hoặc Apache 2.0)</li>
+                <li>Tạo .gitignore phù hợp</li>
+                <li>Tạo .env.example với các biến môi trường mẫu</li>
+                <li>Đảm bảo không commit secrets (API keys, tokens)</li>
+                <li>Setup GitHub Actions CI/CD</li>
+                <li>Tạo CONTRIBUTING.md hướng dẫn đóng góp</li>
+                <li>Tạo issue templates (bug report, feature request)</li>
+                <li>Tạo PR template</li>
+                <li>Chạy lint và test trước khi push</li>
+                <li>Tag version đầu tiên: <code>v1.0.0</code></li>
+            </ul>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- FOOTER -->
+        <!-- ============================================================ -->
+        <div class="footer">
+            <p><strong>GHITA CODING AGENT</strong> — Kế hoạch phát triển chi tiết</p>
+            <p style="margin-top: 8px;">Ngày tạo: 18/05/2026 | Phiên bản: 1.0</p>
+            <p style="margin-top: 8px;">33 dự án open-source | 6 giai đoạn | 12 tuần phát triển</p>
+            <p style="margin-top: 15px;">
+                <a href="y_tuong.html" style="color: #818cf8; text-decoration: none;">📄 Xem file Ý tưởng (y_tuong.html)</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
