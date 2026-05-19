@@ -1,0 +1,20 @@
+[package]
+name = "ghita-coding-agent"
+version = "0.1.0"
+description = "GHITA CODING AGENT Desktop"
+authors = ["ghitatruongle"]
+edition = "2021"
+
+[lib]
+name = "ghita_coding_agent_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-shell = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri-plugin-updater = "2.10.1"

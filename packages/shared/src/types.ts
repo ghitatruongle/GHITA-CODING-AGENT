@@ -1,0 +1,213 @@
+// ==============================================================================
+// GHITA CODING AGENT - Shared Types
+// ==============================================================================
+
+// --- Platform ---
+export type Platform = 'windows' | 'linux' | 'android';
+
+// --- AI Provider ---
+export type AIProviderType = 'openai' | 'anthropic' | 'google' | 'ollama' | 'custom';
+
+export interface AIProviderConfig {
+  type: AIProviderType;
+  apiKey?: string;
+  baseUrl?: string;
+  model?: string;
+  maxTokens?: number;
+  temperature?: number;
+}
+
+export interface AIMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: number;
+  provider?: AIProviderType;
+  model?: string;
+}
+
+export interface AIStreamChunk {
+  content: string;
+  done: boolean;
+  provider?: AIProviderType;
+  model?: string;
+}
+
+// --- Skill ---
+export type SkillCategory = 'file' | 'terminal' | 'browser' | 'computer' | 'screenshot' | 'app';
+
+export interface Skill {
+  id: string;
+  name: string;
+  description: string;
+  category: SkillCategory;
+  enabled: boolean;
+  parameters?: Record<string, SkillParameter>;
+}
+
+export interface SkillParameter {
+  type: 'string' | 'number' | 'boolean' | 'array';
+  description: string;
+  required: boolean;
+  default?: unknown;
+}
+
+export interface SkillResult {
+  success: boolean;
+  output?: string;
+  error?: string;
+  data?: unknown;
+}
+
+// --- Agent ---
+export type AgentRole = 'coder' | 'reviewer' | 'researcher' | 'planner' | 'executor' | 'custom';
+
+export interface Agent {
+  id: string;
+  name: string;
+  role: AgentRole;
+  description: string;
+  skills: string[];
+  model?: string;
+  systemPrompt?: string;
+}
+
+export interface AgentGroup {
+  id: string;
+  name: string;
+  description: string;
+  agents: string[];
+  task?: string;
+  status: 'idle' | 'working' | 'completed' | 'error';
+}
+
+export interface AgentTask {
+  id: string;
+  agentId: string;
+  groupId?: string;
+  description: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  result?: string;
+  error?: string;
+  startTime?: number;
+  endTime?: number;
+}
+
+// --- Communication ---
+export type MessageType =
+  | 'command'
+  | 'screenshot'
+  | 'status'
+  | 'approve'
+  | 'reject'
+  | 'chat'
+  | 'ping'
+  | 'pong';
+
+export interface SocketMessage {
+  type: MessageType;
+  payload: unknown;
+  timestamp: number;
+  deviceId?: string;
+}
+
+export interface PairingCode {
+  code: string;
+  expiresAt: number;
+  deviceId?: string;
+}
+
+export interface DeviceInfo {
+  id: string;
+  name: string;
+  platform: Platform;
+  connected: boolean;
+  lastSeen: number;
+}
+
+export interface CommandPayload {
+  action: string;
+  params?: Record<string, unknown>;
+  timestamp: number;
+}
+
+export interface ScreenStreamConfig {
+  /** JPEG quality 1-100 */
+  quality: number;
+  /** Milliseconds between frames */
+  interval: number;
+  /** Max width in pixels (resize for bandwidth) */
+  maxWidth: number;
+}
+
+// --- File System ---
+export interface FileInfo {
+  path: string;
+  name: string;
+  extension: string;
+  size: number;
+  isDirectory: boolean;
+  modifiedAt: number;
+}
+
+export interface FileOperation {
+  type: 'read' | 'write' | 'delete' | 'rename' | 'copy' | 'move';
+  source: string;
+  destination?: string;
+  content?: string;
+}
+
+// --- Terminal ---
+export interface TerminalCommand {
+  command: string;
+  args: string[];
+  cwd?: string;
+  env?: Record<string, string>;
+}
+
+export interface TerminalResult {
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  duration: number;
+}
+
+// --- Browser ---
+export interface BrowserAction {
+  type: 'navigate' | 'click' | 'type' | 'screenshot' | 'extract' | 'fill';
+  selector?: string;
+  value?: string;
+  url?: string;
+}
+
+export interface BrowserResult {
+  success: boolean;
+  data?: string | Record<string, unknown>;
+  screenshot?: string;
+  error?: string;
+}
+
+// --- Memory ---
+export interface MemoryEntry {
+  id: string;
+  type: 'conversation' | 'fact' | 'preference' | 'context';
+  content: string;
+  metadata?: Record<string, unknown>;
+  timestamp: number;
+  relevance?: number;
+}
+
+export interface MemorySearchResult {
+  entry: MemoryEntry;
+  score: number;
+}
+
+// --- App Config ---
+export interface AppConfig {
+  language: string;
+  theme: 'dark' | 'light' | 'system';
+  logLevel: 'debug' | 'info' | 'warn' | 'error';
+  socketPort: number;
+  providers: AIProviderConfig[];
+  autoUpdate: boolean;
+}

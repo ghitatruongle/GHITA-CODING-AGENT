@@ -15,12 +15,14 @@ GHITA CODING AGENT là ứng dụng desktop AI đa năng với giao diện tươ
 - **Remote Control** — Điều khiển từ xa qua Android (WiFi/Bluetooth)
 - **Secure Pairing** — Mã xác thực 2 chiều an toàn
 
+> 📱 **Yêu cầu Android**: Android 9 (Pie) trở lên (API 28+)
+
 ## Tech Stack
 
 | Thành phần | Technology |
 |---|---|
 | Desktop | Tauri + React (TypeScript) |
-| Mobile | React Native (Android) |
+| Mobile | React Native (Android) — minSdk=28 (Android 9+)
 | AI Engine | Vercel AI SDK / LiteLLM / LangChain.js |
 | Browser | Playwright / CloakBrowser |
 | Computer Use | nut.js / UI-TARS |
@@ -59,6 +61,7 @@ GHITA-CODING-AGENT/
 - Node.js >= 20
 - Rust (cho Tauri)
 - Android Studio (cho React Native)
+- Android device/emulator chạy **Android 9+ (API 28)**
 - Git
 
 ### Bước 1: Clone dự án

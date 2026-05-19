@@ -1,0 +1,267 @@
+// ==============================================================================
+// GHITA CODING AGENT - Skill Manager
+// ==============================================================================
+
+import { useMemo, useState } from 'react';
+import {
+  createDefaultSkillRegistry,
+  type SkillDefinition,
+  type SkillRegistrySnapshot,
+} from '@ghita/skills';
+import { BrowserController, createBrowserControlSkills } from '@ghita/browser-control';
+import { ComputerUseController, createComputerUseSkills } from '@ghita/computer-use';
+import type { SkillCategory, SkillResult } from '@ghita/shared';
+
+const CATEGORY_LABELS: Record<SkillCategory, string> = {
+  file: 'File',
+  terminal: 'Terminal',
+  browser: 'Browser',
+  computer: 'Computer',
+  screenshot: 'Screenshot',
+  app: 'App',
+};
+
+const CATEGORY_ACCENTS: Record<SkillCategory, string> = {
+  file: '#60a5fa',
+  terminal: '#22c55e',
+  browser: '#38bdf8',
+  computer: '#f59e0b',
+  screenshot: '#a78bfa',
+  app: '#f472b6',
+};
+
+function getSampleInput(skill: SkillDefinition): Record<string, unknown> {
+  switch (skill.id) {
+    case 'file.read':
+      return { path: 'README.md' };
+    case 'file.list':
+      return { path: '.' };
+    case 'file.write':
+      return { path: 'tmp/skill-test.txt', content: 'GHITA skill test' };
+    case 'terminal.run':
+      return { command: 'echo GHITA terminal skill', timeoutMs: 5000 };
+    case 'app.open':
+      return { target: 'https://example.com' };
+    case 'app.close':
+      return { target: 'example.exe' };
+    case 'browser.navigate':
+      return { url: 'https://example.com' };
+    case 'browser.extract':
+      return { selector: 'body' };
+    case 'browser.fill':
+      return { selector: 'input[name=q]', value: 'GHITA' };
+    case 'computer.moveMouse':
+    case 'computer.click':
+      return { x: 10, y: 10 };
+    case 'computer.typeText':
+      return { text: 'GHITA' };
+    default:
+      return {};
+  }
+}
+
+function createRegistry() {
+  const registry = createDefaultSkillRegistry();
+  const computer = new ComputerUseController();
+  const browser = new BrowserController();
+
+  registry.registerMany(createComputerUseSkills(computer));
+  registry.registerMany(createBrowserControlSkills(browser));
+  return registry;
+}
+
+function ResultLine({ result }: { result?: SkillResult }) {
+  if (!result) return null;
+
+  return (
+    <div
+      style={{
+        marginTop: '10px',
+        padding: '8px 10px',
+        borderRadius: 'var(--radius-sm)',
+        background: result.success ? 'var(--success-bg)' : 'var(--error-bg)',
+        color: result.success ? 'var(--success)' : 'var(--error)',
+        fontSize: '11px',
+        lineHeight: 1.5,
+      }}
+    >
+      {result.success ? result.output ?? 'Skill ran successfully.' : result.error ?? 'Skill failed.'}
+    </div>
+  );
+}
+
+export function SkillManager() {
+  const registry = useMemo(createRegistry, []);
+  const [snapshot, setSnapshot] = useState<SkillRegistrySnapshot>(() => registry.snapshot());
+  const [lastResults, setLastResults] = useState<Record<string, SkillResult>>({});
+  const [runningId, setRunningId] = useState<string | null>(null);
+
+  const categories = useMemo(() => {
+    const grouped = new Map<SkillCategory, SkillDefinition[]>();
+    for (const skill of snapshot.skills) {
+      const existing = grouped.get(skill.category) ?? [];
+      existing.push(skill);
+      grouped.set(skill.category, existing);
+    }
+    return [...grouped.entries()];
+  }, [snapshot.skills]);
+
+  const toggleSkill = (skill: SkillDefinition) => {
+    registry.setEnabled(skill.id, !skill.enabled);
+    setSnapshot(registry.snapshot());
+  };
+
+  const runSkill = async (skill: SkillDefinition) => {
+    setRunningId(skill.id);
+    const result = await registry.run(skill.id, { input: getSampleInput(skill) });
+    setLastResults((current) => ({ ...current, [skill.id]: result }));
+    setRunningId(null);
+  };
+
+  return (
+    <div style={{ padding: '24px', overflow: 'auto', height: '100%' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', marginBottom: '20px' }}>
+        <div>
+          <h2
+            style={{
+              fontSize: '20px',
+              fontWeight: 700,
+              marginBottom: '8px',
+              background: 'var(--accent-gradient)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
+          >
+            Skill Management
+          </h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+            Registry, enable/disable controls, and safe test runs for built-in and automation skills.
+          </p>
+        </div>
+        <div
+          style={{
+            minWidth: '170px',
+            padding: '12px',
+            borderRadius: 'var(--radius-md)',
+            border: '1px solid var(--border-subtle)',
+            background: 'var(--bg-surface)',
+          }}
+        >
+          <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--accent-secondary)' }}>
+            {snapshot.enabled}/{snapshot.total}
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>enabled skills</div>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+        {categories.map(([category, skills]) => (
+          <section key={category}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+              <span
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: CATEGORY_ACCENTS[category],
+                }}
+              />
+              <h3 style={{ fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                {CATEGORY_LABELS[category]} ({snapshot.byCategory[category]})
+              </h3>
+            </div>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                gap: '12px',
+              }}
+            >
+              {skills.map((skill) => {
+                const accent = CATEGORY_ACCENTS[skill.category];
+                const isRunning = runningId === skill.id;
+                return (
+                  <article
+                    key={skill.id}
+                    style={{
+                      borderRadius: 'var(--radius-md)',
+                      border: `1px solid ${skill.enabled ? accent : 'var(--border-subtle)'}`,
+                      background: skill.enabled ? 'rgba(255, 255, 255, 0.055)' : 'var(--bg-surface)',
+                      padding: '16px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
+                      <div>
+                        <h4 style={{ fontSize: '14px', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                          {skill.name}
+                        </h4>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                          {skill.id}
+                        </div>
+                      </div>
+                      <span
+                        style={{
+                          height: '22px',
+                          padding: '3px 8px',
+                          borderRadius: 'var(--radius-full)',
+                          background: skill.enabled ? 'var(--success-bg)' : 'var(--bg-hover)',
+                          color: skill.enabled ? 'var(--success)' : 'var(--text-muted)',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {skill.enabled ? 'Active' : 'Off'}
+                      </span>
+                    </div>
+
+                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5, marginTop: '10px' }}>
+                      {skill.description}
+                    </p>
+
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
+                      <button
+                        type="button"
+                        onClick={() => toggleSkill(skill)}
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: 'var(--radius-sm)',
+                          background: skill.enabled ? 'var(--warning-bg)' : 'var(--bg-active)',
+                          color: skill.enabled ? 'var(--warning)' : 'var(--accent-primary)',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {skill.enabled ? 'Disable' : 'Enable'}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!skill.enabled || isRunning}
+                        onClick={() => {
+                          void runSkill(skill);
+                        }}
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: 'var(--radius-sm)',
+                          background: 'var(--success-bg)',
+                          color: 'var(--success)',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {isRunning ? 'Running...' : 'Test Run'}
+                      </button>
+                    </div>
+
+                    <ResultLine result={lastResults[skill.id]} />
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        ))}
+      </div>
+    </div>
+  );
+}
