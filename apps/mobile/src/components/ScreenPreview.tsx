@@ -1,0 +1,94 @@
+// ==============================================================================
+// GHITA CODING AGENT — Screen Preview Component
+// Shows desktop screenshot received via Socket.io
+// ==============================================================================
+
+import React from 'react';
+import { View, Image, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { Colors } from '../theme/colors';
+import { FontSize, Spacing, Radius } from '../theme/styles';
+
+interface ScreenPreviewProps {
+  imageBase64: string | null;
+  loading?: boolean;
+  connected?: boolean;
+}
+
+export function ScreenPreview({
+  imageBase64,
+  loading = false,
+  connected = false,
+}: ScreenPreviewProps): React.JSX.Element {
+  // Loading state
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.placeholder]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={styles.placeholderText}>Đang tải screenshot...</Text>
+      </View>
+    );
+  }
+
+  // Has image
+  if (imageBase64) {
+    return (
+      <View style={styles.container}>
+        <Image
+          source={{ uri: `data:image/png;base64,${imageBase64}` }}
+          style={styles.image}
+          resizeMode="contain"
+          accessibilityLabel="Desktop screen preview"
+        />
+      </View>
+    );
+  }
+
+  // Placeholder — no image yet
+  return (
+    <View style={[styles.container, styles.placeholder]}>
+      <Text style={styles.placeholderIcon}>📸</Text>
+      <Text style={styles.placeholderText}>
+        {connected ? 'Nhấn Screenshot để xem màn hình' : 'Screen Preview'}
+      </Text>
+      {!connected && (
+        <Text style={styles.placeholderSubtext}>Kết nối để xem màn hình desktop</Text>
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    borderRadius: Radius.xl,
+    overflow: 'hidden',
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    minHeight: 180,
+  },
+  placeholder: {
+    borderStyle: 'dashed',
+    borderColor: Colors.borderPrimary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: Spacing.xxxl,
+    gap: Spacing.sm,
+  },
+  placeholderIcon: {
+    fontSize: 36,
+    marginBottom: Spacing.sm,
+  },
+  placeholderText: {
+    color: Colors.textDark,
+    fontSize: FontSize.md,
+  },
+  placeholderSubtext: {
+    color: Colors.textDark,
+    fontSize: FontSize.xs,
+    marginTop: Spacing.xs,
+  },
+  image: {
+    width: '100%',
+    height: 220,
+  },
+});

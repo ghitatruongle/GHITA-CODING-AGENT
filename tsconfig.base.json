@@ -1,0 +1,43 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": false,
+    "baseUrl": ".",
+    "paths": {
+      "@ghita/shared": ["packages/shared/src/index.ts"],
+      "@ghita/shared/*": ["packages/shared/src/*"],
+      "@ghita/ai-engine": ["packages/ai-engine/src/index.ts"],
+      "@ghita/ai-engine/*": ["packages/ai-engine/src/*"],
+      "@ghita/skills": ["packages/skills/src/index.ts"],
+      "@ghita/skills/*": ["packages/skills/src/*"],
+      "@ghita/agents": ["packages/agents/src/index.ts"],
+      "@ghita/agents/*": ["packages/agents/src/*"],
+      "@ghita/browser-control": ["packages/browser-control/src/index.ts"],
+      "@ghita/browser-control/*": ["packages/browser-control/src/*"],
+      "@ghita/computer-use": ["packages/computer-use/src/index.ts"],
+      "@ghita/computer-use/*": ["packages/computer-use/src/*"],
+      "@ghita/communication": ["packages/communication/src/index.ts"],
+      "@ghita/communication/*": ["packages/communication/src/*"],
+      "@ghita/memory": ["packages/memory/src/index.ts"],
+      "@ghita/memory/*": ["packages/memory/src/*"]
+    }
+  },
+  "exclude": ["node_modules", "dist", "build", "target"]
+}

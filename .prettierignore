@@ -1,0 +1,10 @@
+node_modules/
+dist/
+build/
+target/
+coverage/
+refer_project/
+*.min.js
+*.bundle.js
+pnpm-lock.yaml
+package-lock.json

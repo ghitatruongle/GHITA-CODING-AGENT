@@ -1,0 +1,56 @@
+// ==============================================================================
+// GHITA CODING AGENT - Communication Types (Server-Side)
+// ==============================================================================
+
+import type { DeviceInfo } from '@ghita/shared';
+
+// --- Server Configuration ---
+export interface ServerConfig {
+  port: number;
+  host?: string;
+  cors?: {
+    origin: string | string[];
+    methods?: string[];
+  };
+}
+
+// --- Paired Device (extended from shared DeviceInfo) ---
+export interface PairedDevice extends DeviceInfo {
+  socketId: string;
+  pairedAt: number;
+}
+
+// --- Command Payload ---
+export interface CommandPayload {
+  action: string;
+  params?: Record<string, unknown>;
+  timestamp: number;
+}
+
+// --- Screen Stream Configuration ---
+export interface ScreenStreamConfig {
+  /** JPEG quality 1-100 */
+  quality: number;
+  /** Milliseconds between frames */
+  interval: number;
+  /** Max width in pixels (resize for bandwidth) */
+  maxWidth: number;
+}
+
+// --- Server Events (typed callback signatures) ---
+export interface ServerEvents {
+  onDeviceConnected?: (device: PairedDevice) => void;
+  onDeviceDisconnected?: (deviceId: string) => void;
+  onCommand?: (deviceId: string, payload: CommandPayload) => void;
+  onChat?: (deviceId: string, text: string) => void;
+  onApprove?: (deviceId: string) => void;
+  onReject?: (deviceId: string) => void;
+  onError?: (error: Error) => void;
+}
+
+// --- Pairing State ---
+export interface PairingState {
+  code: string;
+  expiresAt: number;
+  isActive: boolean;
+}
