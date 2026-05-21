@@ -394,3 +394,9 @@ export async function runSkillSequence(
 
   return results;
 }
+
+// --- Phase 6A: Slash Commands ---
+export { SlashCommandRegistry } from './commands/registry.js';
+export type { SlashCommand } from './commands/registry.js';
+export { createBuiltinSlashCommands } from './commands/builtins.js';
+

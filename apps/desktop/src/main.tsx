@@ -1,7 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { App } from './App';
-import { getCurrentWindow } from '@tauri-apps/api/window';
 import './styles/globals.css';
 
 const rootElement = document.getElementById('root');
@@ -14,8 +13,3 @@ ReactDOM.createRoot(rootElement).render(
     <App />
   </React.StrictMode>,
 );
-
-// Notify Tauri that frontend is ready (triggers splash → main transition)
-getCurrentWindow().emit('ready').catch(() => {
-  // Fallback: window already visible or splash not configured
-});

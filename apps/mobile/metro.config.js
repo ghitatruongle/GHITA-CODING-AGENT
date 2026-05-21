@@ -24,6 +24,9 @@ const config = {
 
     // Ensure @ghita/shared resolves from workspace
     disableHierarchicalLookup: false,
+
+    // Allow resolving .android.js, .ios.js, .native.js extensions
+    sourceExts: ['js', 'jsx', 'ts', 'tsx', 'json', 'android.js', 'ios.js', 'native.js'],
   },
 
   transformer: {

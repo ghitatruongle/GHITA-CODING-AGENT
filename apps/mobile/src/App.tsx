@@ -3,7 +3,8 @@
 // Navigation + SafeArea + ErrorBoundary
 // ==============================================================================
 
-import React, { Component, ErrorInfo } from 'react';
+import React, { Component } from 'react';
+import type { ErrorInfo } from 'react';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';

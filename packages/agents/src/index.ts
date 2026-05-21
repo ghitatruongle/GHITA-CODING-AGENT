@@ -317,3 +317,8 @@ export function createDefaultAgentGroupManager(agentManager: AgentManager): Agen
 
   return groupManager;
 }
+
+// --- Phase 7A: Agent SDK ---
+export { GhitAgentClient } from './sdk/client.js';
+export type { AgentSDKConfig, SendMessageOptions, AgentMessage } from './sdk/types.js';
+

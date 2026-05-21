@@ -3,7 +3,7 @@
 // Shows desktop screenshot received via Socket.io
 // ==============================================================================
 
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Image, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { Colors } from '../theme/colors';
 import { FontSize, Spacing, Radius } from '../theme/styles';
@@ -30,15 +30,27 @@ export function ScreenPreview({
   }
 
   // Has image
-  if (imageBase64) {
+  const [imageError, setImageError] = useState(false);
+
+  if (imageBase64 && !imageError) {
     return (
       <View style={styles.container}>
         <Image
-          source={{ uri: `data:image/png;base64,${imageBase64}` }}
+          source={{ uri: `data:image/jpeg;base64,${imageBase64}` }}
           style={styles.image}
           resizeMode="contain"
           accessibilityLabel="Desktop screen preview"
+          onError={() => setImageError(true)}
         />
+      </View>
+    );
+  }
+
+  if (imageError) {
+    return (
+      <View style={[styles.container, styles.placeholder]}>
+        <Text style={styles.placeholderIcon}>⚠️</Text>
+        <Text style={styles.placeholderText}>Ảnh bị lỗi</Text>
       </View>
     );
   }

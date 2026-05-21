@@ -14,6 +14,7 @@ export class PairingManager {
   private ttlMs: number;
   private refreshTimer: ReturnType<typeof setInterval> | null = null;
   private onCodeChange?: (code: string) => void;
+  private disposed = false;
 
   constructor(ttlMs = DEFAULT_TTL_MS) {
     this.ttlMs = ttlMs;
@@ -66,6 +67,7 @@ export class PairingManager {
    * Start auto-refresh timer
    */
   startAutoRefresh(onChange?: (code: string) => void): void {
+    if (this.disposed) return;
     this.onCodeChange = onChange;
     this.stopAutoRefresh();
 
@@ -97,6 +99,7 @@ export class PairingManager {
    * Cleanup resources
    */
   dispose(): void {
+    this.disposed = true;
     this.stopAutoRefresh();
     this.onCodeChange = undefined;
   }

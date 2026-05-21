@@ -39,6 +39,7 @@ export interface ChatOptions {
   topP?: number;
   stop?: string[];
   signal?: AbortSignal;
+  agentRole?: 'Explore' | 'Plan' | 'UI' | 'default';
 }
 
 export interface ChatResponse {
@@ -65,6 +66,17 @@ export interface ProviderConfig {
   temperature?: number;
 }
 
+// --- MCP Config ---
+export interface MCPServerEntry {
+  name: string;
+  command?: string;
+  args?: string[];
+  url?: string;
+  transport: 'stdio' | 'sse';
+  env?: Record<string, string>;
+  enabled: boolean;
+}
+
 // --- Orchestrator ---
 export interface OrchestratorConfig {
   providers: ProviderConfig[];
@@ -72,6 +84,14 @@ export interface OrchestratorConfig {
   fallbackOrder?: AIProviderType[];
   retryAttempts?: number;
   retryDelayMs?: number;
+  routing?: {
+    Explore?: string;
+    Plan?: string;
+    UI?: string;
+    default?: string;
+    [key: string]: string | undefined;
+  };
+  mcpServers?: MCPServerEntry[];
 }
 
 export interface OrchestratorStatus {

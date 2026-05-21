@@ -5,9 +5,23 @@
   "windows": ["main", "splash"],
   "permissions": [
     "core:default",
-    "shell:allow-execute",
-    "shell:allow-stdin-write",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "cmd",
+          "cmd": "cmd",
+          "args": true
+        },
+        {
+          "name": "powershell",
+          "cmd": "powershell",
+          "args": true
+        }
+      ]
+    },
     "shell:allow-spawn",
+    "shell:allow-stdin-write",
     "shell:allow-open",
     "updater:default"
   ]

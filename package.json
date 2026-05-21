@@ -7,8 +7,10 @@
   "license": "MIT",
   "scripts": {
     "dev": "turbo dev",
-    "dev:desktop": "turbo dev --filter=@ghita/desktop",
-    "dev:mobile": "turbo dev --filter=@ghita/mobile",
+    "dev:desktop": "pnpm --filter @ghita/desktop tauri dev",
+    "build:desktop": "pnpm --filter @ghita/desktop tauri build",
+    "dev:android": "pnpm --filter @ghita/mobile android",
+    "build:android": "pnpm --filter @ghita/mobile build:release",
     "build": "turbo build",
     "build:packages": "turbo build --filter='./packages/*'",
     "lint": "turbo lint",

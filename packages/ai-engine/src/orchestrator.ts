@@ -3,7 +3,7 @@
 // ==============================================================================
 
 import type { AIProviderType, AIStreamChunk } from '@ghita/shared';
-import { retry } from '@ghita/shared';
+import { retry, sleep } from '@ghita/shared';
 import type {
   AIProvider,
   ChatMessage,
@@ -13,12 +13,26 @@ import type {
   OrchestratorStatus,
 } from './types.js';
 import { ProviderRegistry } from './registry.js';
+import { MCPClient } from './mcp/client.js';
+import type { MCPTool, MCPToolResult } from './mcp/types.js';
+import { HookRunner } from './hooks/runner.js';
+import type { HookConfig, HookResult } from './hooks/types.js';
+import { createBuiltInTools, type BuiltInTool } from './tools/index.js';
+import { ContextManager } from './context/manager.js';
+import { PermissionManager } from './security/permissions.js';
 
 export class Orchestrator {
   private registry: ProviderRegistry;
   private config: OrchestratorConfig;
   private defaultProvider: AIProviderType | null = null;
   private fallbackOrder: AIProviderType[] = [];
+
+  // Phase 5-7 modules
+  readonly mcpClient: MCPClient;
+  readonly hookRunner: HookRunner;
+  readonly builtInTools: BuiltInTool[];
+  readonly contextManager: ContextManager;
+  readonly permissionManager: PermissionManager;
 
   constructor(config: OrchestratorConfig) {
     this.config = config;
@@ -31,6 +45,34 @@ export class Orchestrator {
 
     this.defaultProvider = config.defaultProvider ?? null;
     this.fallbackOrder = config.fallbackOrder ?? [];
+
+    // Phase 5A: MCP Client
+    this.mcpClient = new MCPClient();
+    if (config.mcpServers) {
+      for (const server of config.mcpServers) {
+        this.mcpClient.addServer({
+          name: server.name,
+          command: server.command,
+          args: server.args,
+          url: server.url,
+          transport: server.transport,
+          env: server.env,
+          enabled: server.enabled,
+        });
+      }
+    }
+
+    // Phase 5B: Hook Runner
+    this.hookRunner = new HookRunner();
+
+    // Phase 5C: Built-in Tools
+    this.builtInTools = createBuiltInTools();
+
+    // Phase 6B: Context Manager
+    this.contextManager = new ContextManager();
+
+    // Phase 6D: Permission Manager
+    this.permissionManager = new PermissionManager();
   }
 
   /** Lấy registry để truy cập providers trực tiếp */
@@ -43,7 +85,7 @@ export class Orchestrator {
     messages: ChatMessage[],
     options?: ChatOptions & { provider?: AIProviderType },
   ): Promise<ChatResponse> {
-    const provider = this.resolveProvider(options?.provider);
+    const provider = this.resolveProvider(options?.provider, options?.agentRole);
     const maxAttempts = this.config.retryAttempts ?? 2;
 
     return await this.executeWithFallback(
@@ -58,19 +100,32 @@ export class Orchestrator {
     messages: ChatMessage[],
     options?: ChatOptions & { provider?: AIProviderType },
   ): AsyncGenerator<AIStreamChunk> {
-    const provider = this.resolveProvider(options?.provider);
+    const provider = this.resolveProvider(options?.provider, options?.agentRole);
+    const maxAttempts = this.config.retryAttempts ?? 2;
 
-    try {
-      yield* provider.chatStream(messages, options);
-    } catch (error) {
-      // Fallback cho streaming
-      const fallback = this.findFallbackProvider(provider.type);
-      if (fallback) {
-        yield* fallback.chatStream(messages, options);
-      } else {
-        throw error;
+    let lastError: Error | undefined;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        yield* provider.chatStream(messages, options);
+        return;
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        if (attempt < maxAttempts) {
+          await sleep(this.config.retryDelayMs ?? 1000);
+        }
       }
     }
+
+    const fallback = this.findFallbackProvider(provider.type);
+    if (fallback) {
+      try {
+        yield* fallback.chatStream(messages, options);
+        return;
+      } catch {
+        throw lastError;
+      }
+    }
+    throw lastError;
   }
 
   /** Test tất cả providers */
@@ -123,15 +178,103 @@ export class Orchestrator {
     this.fallbackOrder = order;
   }
 
+  // --- Phase 5A: MCP ---
+
+  /** Lấy tất cả MCP tools */
+  getMCPTools(): MCPTool[] {
+    return this.mcpClient.getAllTools();
+  }
+
+  /** Gọi MCP tool */
+  async callMCPTool(serverName: string, toolName: string, args: Record<string, unknown>): Promise<MCPToolResult> {
+    return this.mcpClient.callTool(serverName, toolName, args);
+  }
+
+  // --- Phase 5B: Hooks ---
+
+  /** Load hooks config */
+  loadHooks(hooks: HookConfig[]): void {
+    this.hookRunner.loadHooks(hooks);
+  }
+
+  /** Chạy pre-tool hooks */
+  async runPreToolHooks(toolName: string, toolArgs?: Record<string, unknown>): Promise<HookResult[]> {
+    return this.hookRunner.runHooks('pre_tool', toolName, toolArgs);
+  }
+
+  /** Chạy post-tool hooks */
+  async runPostToolHooks(toolName: string, toolArgs?: Record<string, unknown>, toolResult?: string): Promise<HookResult[]> {
+    return this.hookRunner.runHooks('post_tool', toolName, toolArgs, toolResult);
+  }
+
+  // --- Phase 5C: Built-in Tools ---
+
+  /** Lấy built-in tool theo tên */
+  getBuiltInTool(name: string): BuiltInTool | undefined {
+    return this.builtInTools.find((t) => t.name === name);
+  }
+
+  /** Gọi built-in tool */
+  async callBuiltInTool(name: string, args: Record<string, unknown>): Promise<string> {
+    const tool = this.getBuiltInTool(name);
+    if (!tool) throw new Error(`Built-in tool "${name}" not found`);
+    return tool.execute(args);
+  }
+
+  // --- Phase 6B: Context ---
+
+  /** Kiểm tra context có cần compact không */
+  needsContextCompact(messages: ChatMessage[]): boolean {
+    return this.contextManager.needsCompact(messages);
+  }
+
+  /** Compact messages */
+  compactContext(messages: ChatMessage[]): ChatMessage[] {
+    return this.contextManager.compact(messages);
+  }
+
+  /** Lấy context usage */
+  getContextUsage(messages: ChatMessage[]): { used: number; max: number; percentage: number } {
+    return this.contextManager.getUsage(messages);
+  }
+
   // --- Private ---
 
-  private resolveProvider(preferred?: AIProviderType): AIProvider {
-    // Ưu tiên: preferred > defaultProvider > fallback đầu tiên > bất kỳ sẵn sàng
+  private mapModelKeyToProviderType(modelKey: string): AIProviderType | null {
+    const key = modelKey.toLowerCase();
+    if (key.includes('openai')) return 'openai';
+    if (key.includes('anthropic') || key.includes('claude')) return 'anthropic';
+    if (key.includes('google') || key.includes('gemini')) return 'google';
+    if (key.includes('ollama')) return 'ollama';
+    if (key.includes('custom')) return 'custom';
+
+    const allTypes: AIProviderType[] = ['openai', 'anthropic', 'google', 'ollama', 'custom'];
+    for (const type of allTypes) {
+      if (key === type) return type as AIProviderType;
+    }
+    return null;
+  }
+
+  private resolveProvider(preferred?: AIProviderType, agentRole?: string): AIProvider {
+    // 1. Ưu tiên cao nhất: Preferred provider do người dùng chỉ định thủ công
     if (preferred) {
       const p = this.registry.get(preferred);
       if (p) return p;
     }
 
+    // 2. Định tuyến theo agentRole nếu có cấu hình routing
+    if (agentRole && this.config.routing) {
+      const modelKey = this.config.routing[agentRole] || this.config.routing['default'];
+      if (modelKey) {
+        const providerType = this.mapModelKeyToProviderType(modelKey);
+        if (providerType) {
+          const p = this.registry.get(providerType);
+          if (p) return p;
+        }
+      }
+    }
+
+    // 3. Ưu tiên tiếp theo: defaultProvider > fallback đầu tiên > bất kỳ sẵn sàng
     if (this.defaultProvider) {
       const p = this.registry.get(this.defaultProvider);
       if (p) return p;

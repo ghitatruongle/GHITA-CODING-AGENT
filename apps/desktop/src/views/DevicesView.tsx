@@ -1,261 +1,296 @@
 // ==============================================================================
-// GHITA CODING AGENT — Devices View (Phase 6 — Live Data)
+// GHITA CODING AGENT — Devices View (Real Server + IP Display)
 // ==============================================================================
 
 import { useState, useEffect, useCallback } from 'react';
+import { invoke } from '@tauri-apps/api/core';
+import type { DeviceInfo } from '@ghita/shared';
 import { useAppStore } from '../stores/appStore';
-import { generatePairingCode, getRelativeTime } from '@ghita/shared';
+
+interface ServerHealth {
+  status?: string;
+  pairingCode?: string;
+  codeExpiresAt?: number;
+  connectedDevices?: number;
+  port?: number;
+  uptime?: number;
+  localIps?: string[];
+  hostname?: string;
+  devices?: DeviceInfo[];
+}
 
 export function DevicesView() {
   const serverStatus = useAppStore((s) => s.serverStatus);
-  const pairingCode = useAppStore((s) => s.pairingCode);
-  const connectedDevices = useAppStore((s) => s.connectedDevices);
+  const setServerStatus = useAppStore((s) => s.setServerStatus);
   const setPairingCode = useAppStore((s) => s.setPairingCode);
+  const setConnectedDevices = useAppStore((s) => s.setConnectedDevices);
 
+  const [health, setHealth] = useState<ServerHealth | null>(null);
+  const [isStarting, setIsStarting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [codeCountdown, setCodeCountdown] = useState(300);
 
-  // Initialize pairing code if not set
-  useEffect(() => {
-    if (!pairingCode) {
-      setPairingCode(generatePairingCode());
-    }
-  }, [pairingCode, setPairingCode]);
-
-  // Countdown timer for pairing code expiry
-  useEffect(() => {
-    setCodeCountdown(300);
-    const timer = setInterval(() => {
-      setCodeCountdown((prev) => {
-        if (prev <= 1) {
-          setPairingCode(generatePairingCode());
-          return 300;
+  // Poll server status
+  const pollStatus = useCallback(async () => {
+    try {
+      const result = await invoke<ServerHealth>('get_server_status');
+      setHealth(result);
+      if (result.status === 'ok') {
+        setServerStatus('listening');
+        setPairingCode(result.pairingCode || null);
+        if (result.devices) {
+          setConnectedDevices(result.devices);
+        } else {
+          setConnectedDevices([]);
         }
-        return prev - 1;
-      });
-    }, 1000);
+      } else {
+        setServerStatus('offline');
+        setPairingCode(null);
+        setConnectedDevices([]);
+      }
+    } catch (e) {
+      setServerStatus('error');
+      setPairingCode(null);
+      setConnectedDevices([]);
+      setHealth(null);
+    }
+  }, [setServerStatus, setPairingCode, setConnectedDevices]);
+
+  // Poll every 3 seconds and auto-start if offline
+  useEffect(() => {
+    const initAndPoll = async () => {
+      try {
+        const result = await invoke<ServerHealth>('get_server_status');
+        setHealth(result);
+        if (result.status === 'ok') {
+          setServerStatus('listening');
+          setPairingCode(result.pairingCode || null);
+          if (result.devices) {
+            setConnectedDevices(result.devices);
+          } else {
+            setConnectedDevices([]);
+          }
+        } else {
+          setServerStatus('offline');
+          setPairingCode(null);
+          setConnectedDevices([]);
+          await invoke('start_server');
+          setTimeout(pollStatus, 1500);
+        }
+      } catch (e) {
+        try {
+          await invoke('start_server');
+          setTimeout(pollStatus, 1500);
+        } catch (_) {
+          setServerStatus('error');
+          setPairingCode(null);
+          setConnectedDevices([]);
+          setHealth(null);
+        }
+      }
+    };
+
+    initAndPoll();
+    const interval = setInterval(pollStatus, 3000);
+    return () => clearInterval(interval);
+  }, [pollStatus, setServerStatus, setPairingCode, setConnectedDevices]);
+
+  // Countdown for pairing code
+  useEffect(() => {
+    if (serverStatus !== 'listening' || !health?.codeExpiresAt) return;
+    
+    const updateCountdown = () => {
+      const remaining = Math.max(0, Math.round((health.codeExpiresAt! - Date.now()) / 1000));
+      setCodeCountdown(remaining);
+    };
+
+    updateCountdown();
+    const timer = setInterval(updateCountdown, 1000);
     return () => clearInterval(timer);
-  }, [pairingCode, setPairingCode]);
+  }, [serverStatus, health?.codeExpiresAt]);
 
-  const handleNewCode = useCallback(() => {
-    setPairingCode(generatePairingCode());
-    setCodeCountdown(300);
-  }, [setPairingCode]);
-
-  const formatCountdown = (s: number) => {
-    const min = Math.floor(s / 60);
-    const sec = s % 60;
-    return `${min}:${sec.toString().padStart(2, '0')}`;
+  const handleStartServer = async () => {
+    setIsStarting(true);
+    setError(null);
+    try {
+      await invoke<string>('start_server');
+      setTimeout(pollStatus, 2000);
+    } catch (e) {
+      setError(String(e));
+      setServerStatus('error');
+    } finally {
+      setIsStarting(false);
+    }
   };
 
-  const statusColor =
-    serverStatus === 'listening'
-      ? 'var(--success)'
-      : serverStatus === 'error'
-        ? 'var(--error)'
-        : 'var(--text-muted)';
+  const handleStopServer = async () => {
+    try {
+      await invoke<string>('stop_server');
+      setServerStatus('offline');
+      setHealth(null);
+    } catch (e) {
+      setError(String(e));
+    }
+  };
 
-  const statusLabel =
-    serverStatus === 'listening'
-      ? '● Listening'
-      : serverStatus === 'error'
-        ? '● Error'
-        : '○ Offline';
+  const formatCountdown = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
+  const formatUptime = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
+  };
+
+  const primaryIp = health?.localIps?.[0] || null;
+  const port = health?.port || 8080;
 
   return (
     <div style={{ padding: '24px', overflow: 'auto', height: '100%' }}>
-      <h2
-        style={{
-          fontSize: '20px',
-          fontWeight: 700,
-          marginBottom: '8px',
-          background: 'var(--accent-gradient)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-        }}
-      >
-        📱 Kết nối thiết bị
+      <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px', background: 'var(--accent-gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+        Devices
       </h2>
       <p style={{ color: 'var(--text-muted)', marginBottom: '24px', fontSize: '13px' }}>
-        Kết nối điện thoại Android để điều khiển desktop từ xa qua Socket.io.
+        Kết nối điện thoại với máy tính
       </p>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-          gap: '20px',
-          marginBottom: '24px',
-        }}
-      >
-        {/* Server Status */}
-        <div
-          style={{
-            background: 'var(--bg-surface)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-md)',
-            padding: '20px',
-          }}
-        >
-          <h4 style={{ color: 'var(--accent-primary)', marginBottom: '12px', fontSize: '15px' }}>
-            📶 Socket.io Server
-          </h4>
-          <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.8 }}>
-            <div>Port: <code style={{ color: 'var(--accent-primary)' }}>8080</code></div>
-            <div>
-              Status: <span style={{ color: statusColor, fontWeight: 600 }}>{statusLabel}</span>
-            </div>
-            <div>
-              Devices: <span style={{ color: 'var(--accent-secondary)', fontWeight: 600 }}>
-                {connectedDevices.length}
+      {/* Error */}
+      {error && (
+        <div style={{ background: 'var(--error-bg)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius-md)', padding: '12px 16px', marginBottom: '16px', color: 'var(--error)', fontSize: '13px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>{error}</span>
+          <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', fontWeight: 600, fontSize: '16px' }}>x</button>
+        </div>
+      )}
+
+      {/* Server Control */}
+      <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', padding: '24px', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+          <div>
+            <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>Communication Server</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: serverStatus === 'listening' ? 'var(--success)' : 'var(--text-muted)', display: 'inline-block' }} />
+              <span style={{ fontSize: '13px', color: serverStatus === 'listening' ? 'var(--success)' : 'var(--text-muted)' }}>
+                {serverStatus === 'listening' ? 'Đang chạy' : serverStatus === 'error' ? 'Lỗi' : 'Đã tắt'}
               </span>
+              {health?.uptime != null && <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '8px' }}>Uptime: {formatUptime(health.uptime)}</span>}
             </div>
           </div>
-        </div>
-
-        {/* Connection Info */}
-        <div
-          style={{
-            background: 'var(--bg-surface)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-md)',
-            padding: '20px',
-          }}
-        >
-          <h4 style={{ color: 'var(--accent-primary)', marginBottom: '12px', fontSize: '15px' }}>
-            📋 Hướng dẫn kết nối
-          </h4>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.8 }}>
-            <div>1. Mở ứng dụng GHITA trên điện thoại</div>
-            <div>2. Nhập địa chỉ IP máy tính và port 8080</div>
-            <div>3. Nhập mã ghép đôi bên dưới</div>
-            <div>4. Bắt đầu điều khiển từ xa!</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Pairing Code */}
-      <div
-        style={{
-          background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(99, 102, 241, 0.1))',
-          border: '1px solid var(--border-accent)',
-          borderRadius: 'var(--radius-lg)',
-          padding: '32px',
-          textAlign: 'center',
-          maxWidth: '400px',
-          margin: '0 auto',
-        }}
-      >
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '12px', fontSize: '14px' }}>
-          Mã ghép đôi:
-        </p>
-        <div
-          style={{
-            fontSize: '40px',
-            fontFamily: 'var(--font-mono)',
-            fontWeight: 700,
-            letterSpacing: '12px',
-            color: 'var(--accent-secondary)',
-            marginBottom: '8px',
-            textShadow: '0 0 20px rgba(167, 139, 250, 0.3)',
-          }}
-        >
-          {pairingCode ?? '------'}
-        </div>
-        <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginBottom: '4px' }}>
-          Hết hạn sau: <span style={{ color: 'var(--warning)', fontWeight: 600 }}>{formatCountdown(codeCountdown)}</span>
-        </p>
-        <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '16px' }}>
-          Nhập mã này trên điện thoại để kết nối
-        </p>
-        <div
-          style={{
-            display: 'flex',
-            gap: '8px',
-            justifyContent: 'center',
-          }}
-        >
           <button
-            onClick={handleNewCode}
-            style={{
-              padding: '8px 20px',
-              background: 'var(--accent-primary)',
-              color: '#fff',
-              borderRadius: 'var(--radius-sm)',
-              fontWeight: 600,
-              fontSize: '13px',
-              transition: 'opacity var(--transition-fast)',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+            onClick={serverStatus === 'listening' ? handleStopServer : handleStartServer}
+            disabled={isStarting}
+            style={{ padding: '10px 24px', background: serverStatus === 'listening' ? 'var(--error)' : 'var(--accent-primary)', color: '#fff', border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 600, cursor: isStarting ? 'not-allowed' : 'pointer', opacity: isStarting ? 0.6 : 1 }}
           >
-            🔄 Tạo mã mới
+            {isStarting ? 'Đang khởi động...' : serverStatus === 'listening' ? 'Tắt Server' : 'Bật Server'}
           </button>
         </div>
-      </div>
 
-      {/* Connected devices */}
-      <div style={{ marginTop: '32px' }}>
-        <h3 style={{ fontSize: '15px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
-          Thiết bị đã kết nối ({connectedDevices.length})
-        </h3>
-        {connectedDevices.length === 0 ? (
-          <div
-            style={{
-              background: 'var(--bg-surface)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: 'var(--radius-md)',
-              padding: '20px',
-              textAlign: 'center',
-              color: 'var(--text-muted)',
-              fontSize: '13px',
-            }}
-          >
-            Chưa có thiết bị nào kết nối. Nhập mã ghép đôi trên điện thoại để bắt đầu.
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {connectedDevices.map((device) => (
-              <div
-                key={device.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '14px 18px',
-                  background: 'var(--bg-surface)',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: 'var(--radius-md)',
-                  borderLeft: '3px solid var(--success)',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{ fontSize: '22px' }}>📱</span>
-                  <div>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                      {device.name}
-                    </div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                      {device.platform} · {getRelativeTime(device.lastSeen)}
-                    </div>
-                  </div>
-                </div>
-                <span
-                  style={{
-                    fontSize: '11px',
-                    padding: '3px 10px',
-                    borderRadius: 'var(--radius-full)',
-                    background: device.connected ? 'var(--success-bg)' : 'var(--error-bg)',
-                    color: device.connected ? 'var(--success)' : 'var(--error)',
-                    fontWeight: 600,
-                  }}
-                >
-                  {device.connected ? '● Connected' : '○ Disconnected'}
-                </span>
+        {/* IP + Port info */}
+        {serverStatus === 'listening' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr 1.2fr', gap: '12px', padding: '16px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', marginBottom: '12px' }}>
+            <div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>IP Address</div>
+              <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--accent-primary)', fontFamily: 'var(--font-mono)' }}>
+                {primaryIp || 'Đang tìm...'}
               </div>
-            ))}
+              {health?.localIps && health.localIps.length > 1 && (
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', wordBreak: 'break-all' }}>
+                  IP khác: {health.localIps.slice(1).join(', ')}
+                </div>
+              )}
+            </div>
+            <div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>Port</div>
+              <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>{port}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>Tên Máy (Bluetooth)</div>
+              <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--accent-primary)', fontFamily: 'var(--font-mono)', wordBreak: 'break-all' }}>
+                {health?.hostname || 'DESKTOP'}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Connection string */}
+        {serverStatus === 'listening' && primaryIp && (
+          <div style={{ padding: '12px 16px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>Địa chỉ kết nối</div>
+              <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--accent-primary)', fontFamily: 'var(--font-mono)' }}>
+                http://{primaryIp}:{port}
+              </div>
+            </div>
+            <button
+              onClick={() => navigator.clipboard.writeText(`http://${primaryIp}:${port}`)}
+              style={{ padding: '6px 12px', background: 'var(--bg-active)', color: 'var(--accent-primary)', border: '1px solid rgba(129,140,248,0.2)', borderRadius: 'var(--radius-sm)', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}
+            >
+              Copy
+            </button>
           </div>
         )}
       </div>
+
+      {/* Pairing Code */}
+      {serverStatus === 'listening' && health?.pairingCode && (
+        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: 'var(--radius-lg)', padding: '24px', marginBottom: '20px', textAlign: 'center' }}>
+          <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '16px' }}>Mã ghép đôi</h3>
+          <div style={{ fontSize: '36px', fontWeight: 700, letterSpacing: '8px', fontFamily: 'var(--font-mono)', color: 'var(--accent-primary)', background: 'var(--bg-tertiary)', padding: '16px 32px', borderRadius: 'var(--radius-md)', display: 'inline-block', marginBottom: '12px' }}>
+            {health.pairingCode}
+          </div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Hết hạn sau: {formatCountdown(codeCountdown)}</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>Nhập mã này trên ứng dụng điện thoại để kết nối</div>
+        </div>
+      )}
+
+      {/* Bluetooth Connection Guide */}
+      {serverStatus === 'listening' && (
+        <div style={{ background: 'var(--bg-surface)', border: '1px solid rgba(96,165,250,0.3)', borderRadius: 'var(--radius-lg)', padding: '24px', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+            <span style={{ fontSize: '22px' }}>🔵</span>
+            <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Kết nối qua Bluetooth</h3>
+          </div>
+          <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+            <p style={{ marginBottom: '8px' }}>Trên điện thoại, chuyển sang tab <strong>🔵 Bluetooth</strong> và nhập tên máy tính:</p>
+            <div style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--accent-primary)', background: 'var(--bg-tertiary)', padding: '12px 20px', borderRadius: 'var(--radius-md)', textAlign: 'center', marginBottom: '12px', letterSpacing: '2px', wordBreak: 'break-all' }}>
+              {health?.hostname || 'DESKTOP'}
+            </div>
+            <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
+              💡 Không cần nhập IP hay mã ghép đôi — điện thoại sẽ tự động tìm và kết nối tới máy tính này.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Connected Devices */}
+      {health?.devices && health.devices.length > 0 && (
+        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)' }}>
+            <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Thiết bị đã kết nối</h3>
+          </div>
+          {health.devices.map((device, index) => (
+            <div key={`${device.id}-${index}`} style={{ display: 'flex', alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid var(--border-subtle)', gap: '12px' }}>
+              <span style={{ fontSize: '20px' }}>{device.platform === 'android' ? '📱' : '💻'}</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>{device.name}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{device.platform} - Last seen: {new Date(device.lastSeen).toLocaleTimeString()}</div>
+              </div>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: device.connected ? 'var(--success)' : 'var(--text-muted)' }} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Instructions when server is off */}
+      {serverStatus !== 'listening' && (
+        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', padding: '24px' }}>
+          <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '12px' }}>Hướng dẫn kết nối</h3>
+          <ol style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: 1.8, paddingLeft: '20px' }}>
+            <li>Nhấn <strong>"Bật Server"</strong> để khởi động Socket.io server</li>
+            <li>Địa chỉ IP, mã ghép đôi, và tên máy sẽ hiện ra</li>
+            <li>Mở ứng dụng GHITA trên điện thoại</li>
+            <li><strong>Wi-Fi:</strong> Nhập mã ghép đôi 6 ký tự → Kết nối tự động</li>
+            <li><strong>Bluetooth:</strong> Nhập tên máy tính hiển thị ở trên → Kết nối không cần mã</li>
+          </ol>
+        </div>
+      )}
     </div>
   );
 }

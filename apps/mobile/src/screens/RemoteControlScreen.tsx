@@ -23,6 +23,8 @@ import { socketService } from '../services/socketService';
 import type { ConnectionState, QuickAction, ChatMessage } from '../types';
 import type { RemoteControlScreenProps } from '../navigation/types';
 
+const MAX_CHAT_MESSAGES = 50;
+
 export function RemoteControlScreen({
   route,
   navigation,
@@ -43,10 +45,10 @@ export function RemoteControlScreen({
     socketService.setCallbacks({
       onConnectionChange: (state) => {
         setConnectionState(state);
-        if (state === 'disconnected' || state === 'error') {
+        if (state === 'error') {
           Alert.alert(
             'Mất kết nối',
-            'Đã mất kết nối với máy tính. Quay lại màn hình ghép đôi?',
+            'Không thể kết nối lại với máy tính. Quay lại màn hình ghép đôi?',
             [
               { text: 'Ở lại', style: 'cancel' },
               {
@@ -65,10 +67,34 @@ export function RemoteControlScreen({
         setScreenshotLoading(false);
       },
       onChatResponse: (message) => {
-        setChatMessages((prev) => [...prev, message]);
+        setChatMessages((prev) => {
+          const updated = [...prev, message];
+          if (updated.length > MAX_CHAT_MESSAGES) {
+            return updated.slice(-MAX_CHAT_MESSAGES);
+          }
+          return updated;
+        });
       },
       onError: (error) => {
-        Alert.alert('Lỗi', error);
+        Alert.alert(
+          'Lỗi kết nối',
+          error,
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                if (
+                  error.includes('Session expired') ||
+                  error.includes('re-pair') ||
+                  error.includes('Unauthorized')
+                ) {
+                  socketService.disconnect();
+                  navigation.replace('Pairing');
+                }
+              },
+            },
+          ]
+        );
       },
     });
 

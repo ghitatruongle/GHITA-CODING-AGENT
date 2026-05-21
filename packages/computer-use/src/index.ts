@@ -157,13 +157,8 @@ export class ComputerUseController {
   }
 }
 
-export {
-  runInSandbox,
-  createSandboxSkill,
-  type SandboxConfig,
-  type SandboxResult,
-  type SandboxLanguage,
-} from './sandbox.js';
+// NOTE: sandbox.js re-exports removed to avoid bundling Node.js APIs (child_process, fs, etc.)
+// in browser/frontend builds. Import from '@ghita/computer-use/sandbox' directly in Node.js contexts.
 
 export function createComputerUseSkills(controller = new ComputerUseController()): SkillDefinition[] {
   return [

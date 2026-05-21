@@ -2,8 +2,10 @@
 // GHITA CODING AGENT — Main Layout
 // ==============================================================================
 
-import { useCallback, useRef, useEffect } from 'react';
+import { useCallback, useRef, useEffect, Component } from 'react';
+import type { ErrorInfo, ReactNode } from 'react';
 import { useAppStore } from '../stores/appStore';
+import { isWindows, isLinux } from '@ghita/shared';
 import { TabBar } from '../components/TabBar';
 import { Terminal } from '../components/Terminal';
 import { ChatPanel } from '../components/ChatPanel';
@@ -12,19 +14,78 @@ import { ApiView } from '../views/ApiView';
 import { SkillsView } from '../views/SkillsView';
 import { AgentsView } from '../views/AgentsView';
 import { DevicesView } from '../views/DevicesView';
+import { DashboardView } from '../views/DashboardView';
 import { SettingsView } from '../views/SettingsView';
+
+// --- Per-view Error Boundary ---
+interface ViewErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class ViewErrorBoundary extends Component<{ children: ReactNode }, ViewErrorBoundaryState> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ViewErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+    console.error('[ViewErrorBoundary]', error, errorInfo);
+  }
+
+  handleReset = (): void => {
+    this.setState({ hasError: false, error: null });
+  };
+
+  render(): ReactNode {
+    if (this.state.hasError && this.state.error) {
+      return (
+        <div style={{ padding: 24, color: 'var(--error)' }}>
+          <h3>⚠️ Lỗi View</h3>
+          <p style={{ fontSize: '13px', opacity: 0.8 }}>{this.state.error.message}</p>
+          <button
+            onClick={this.handleReset}
+            style={{
+              marginTop: 12,
+              padding: '6px 16px',
+              borderRadius: 6,
+              border: '1px solid var(--error)',
+              background: 'transparent',
+              color: 'var(--error)',
+              cursor: 'pointer',
+            }}
+          >
+            Thử lại
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function ActiveView() {
   const activeTab = useAppStore((s) => s.activeTab);
 
-  switch (activeTab) {
-    case 'code':     return <CodeView />;
-    case 'api':      return <ApiView />;
-    case 'skills':   return <SkillsView />;
-    case 'agents':   return <AgentsView />;
-    case 'devices':  return <DevicesView />;
-    case 'settings': return <SettingsView />;
-  }
+  return (
+    <ViewErrorBoundary key={activeTab}>
+      {(() => {
+        switch (activeTab) {
+          case 'code':      return <CodeView />;
+          case 'api':       return <ApiView />;
+          case 'skills':    return <SkillsView />;
+          case 'agents':    return <AgentsView />;
+          case 'devices':   return <DevicesView />;
+          case 'dashboard': return <DashboardView />;
+          case 'settings':  return <SettingsView />;
+        }
+      })()}
+    </ViewErrorBoundary>
+  );
 }
 
 export function MainLayout() {
@@ -169,15 +230,7 @@ export function MainLayout() {
               {/* Drag handle */}
               <div
                 onMouseDown={onDragStart}
-                style={{
-                  height: '4px',
-                  background: 'var(--border-subtle)',
-                  cursor: 'row-resize',
-                  transition: 'background var(--transition-fast)',
-                  flexShrink: 0,
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--accent-primary)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--border-subtle)'; }}
+                className="drag-handle"
               />
               <div style={{ height: terminalHeight, flexShrink: 0 }}>
                 <Terminal />
@@ -220,7 +273,7 @@ export function MainLayout() {
       >
         <div style={{ display: 'flex', gap: '12px', minWidth: 0, overflow: 'hidden' }}>
           <span>🤖 GHITA v0.1.0</span>
-          <span>🖥️ Windows</span>
+          <span>{isWindows() ? '🖥️ Windows' : isLinux() ? '🖥️ Linux' : '🖥️ Unknown'}</span>
         </div>
         <div style={{ display: 'flex', gap: '12px', minWidth: 0, overflow: 'hidden', justifyContent: 'flex-end' }}>
           <span style={{ color: serverStatus === 'listening' ? 'var(--success)' : undefined }}>

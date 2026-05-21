@@ -10,6 +10,7 @@ const TABS: Array<{ id: TabId; label: string; icon: string }> = [
   { id: 'skills',  label: 'Skills',  icon: '⚡' },
   { id: 'agents',  label: 'Agents',  icon: '👥' },
   { id: 'devices', label: 'Devices', icon: '📱' },
+  { id: 'dashboard', label: 'Dashboard', icon: '📊' },
   { id: 'settings', label: 'Settings', icon: '⚙️' },
 ];
 

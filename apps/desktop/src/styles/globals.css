@@ -295,6 +295,51 @@ input::placeholder, textarea::placeholder {
   animation: fadeIn 200ms ease forwards;
 }
 
+/* --- Interactive elements with hover states --- */
+.drag-handle {
+  height: 4px;
+  background: var(--border-subtle);
+  cursor: row-resize;
+  transition: background var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.drag-handle:hover {
+  background: var(--accent-primary);
+}
+
+.btn-send {
+  padding: 10px 16px;
+  background: var(--accent-primary);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 14px;
+  transition: opacity var(--transition-fast);
+  border: none;
+  cursor: pointer;
+}
+
+.btn-send:hover {
+  opacity: 0.85;
+}
+
+.btn-primary {
+  padding: 8px 20px;
+  background: var(--accent-primary);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 13px;
+  transition: opacity var(--transition-fast);
+  border: none;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  opacity: 0.85;
+}
+
 /* --- Loading skeleton --- */
 .skeleton {
   background: linear-gradient(90deg, var(--bg-surface) 25%, var(--bg-hover) 50%, var(--bg-surface) 75%);

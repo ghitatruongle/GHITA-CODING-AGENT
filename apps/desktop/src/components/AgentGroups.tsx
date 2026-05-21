@@ -2,7 +2,7 @@
 // GHITA CODING AGENT - Agent Groups
 // ==============================================================================
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   createDefaultAgentGroupManager,
   createDefaultAgentManager,
@@ -42,6 +42,9 @@ function createRuntime(): AgentRuntimeState {
     groups: createDefaultAgentGroupManager(manager),
   };
 }
+
+// Module-level singleton — persists across component remounts
+const globalRuntime = createRuntime();
 
 function statusColor(status: string): string {
   switch (status) {
@@ -122,7 +125,7 @@ function LatestTask({ task }: { task?: AgentTask }) {
 }
 
 export function AgentGroups() {
-  const runtime = useMemo(createRuntime, []);
+  const runtime = globalRuntime;
   const [agents, setAgents] = useState<ManagedAgent[]>(() => runtime.manager.list());
   const [groups, setGroups] = useState<AgentGroup[]>(() => runtime.groups.list());
   const [latestTasks, setLatestTasks] = useState<Record<string, AgentTask>>({});
