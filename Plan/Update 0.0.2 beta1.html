@@ -1,0 +1,2039 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GHITA CODING AGENT — Update 0.0.2 Beta 1 — Phân Tích & Tích Hợp AI-Core</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-base: #07050f;
+            --bg-surface: rgba(22, 18, 42, 0.6);
+            --bg-card: rgba(30, 25, 55, 0.4);
+            --border-glow: rgba(139, 92, 246, 0.3);
+            --accent-primary: #8b5cf6;
+            --accent-secondary: #c084fc;
+            --accent-tertiary: #e879f9;
+            --accent-glow: rgba(139, 92, 246, 0.15);
+            --text-primary: #f3f4f6;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --info: #3b82f6;
+            --cyan: #06b6d4;
+            --pink: #ec4899;
+            --font-main: 'Outfit', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            font-family: var(--font-main);
+            background: linear-gradient(135deg, #07050f 0%, #0d0a21 40%, #150f30 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+            padding: 40px 20px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+
+        /* Ambient Glow Backgrounds */
+        .ambient-glow-1 {
+            position: fixed;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.12) 0%, rgba(0,0,0,0) 70%);
+            top: 5%;
+            left: -150px;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .ambient-glow-2 {
+            position: fixed;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(236, 72, 153, 0.08) 0%, rgba(0,0,0,0) 70%);
+            bottom: 10%;
+            right: -200px;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .ambient-glow-3 {
+            position: fixed;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(6, 182, 212, 0.06) 0%, rgba(0,0,0,0) 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            padding: 50px 30px;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(236, 72, 153, 0.08), rgba(6, 182, 212, 0.06));
+            border-radius: 24px;
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            box-shadow: 0 8px 32px rgba(139, 92, 246, 0.1);
+            backdrop-filter: blur(16px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-secondary), var(--accent-tertiary), transparent);
+        }
+
+        .logo-container {
+            width: 90px;
+            height: 90px;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(236, 72, 153, 0.15));
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 44px;
+            margin: 0 auto 20px;
+            border: 1px solid rgba(139, 92, 246, 0.4);
+            box-shadow: 0 0 30px rgba(139, 92, 246, 0.3);
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        h1 {
+            font-size: 40px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #a78bfa, #c084fc, #e879f9, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
+        }
+
+        .tagline {
+            font-size: 17px;
+            color: var(--text-secondary);
+            max-width: 800px;
+            margin: 0 auto;
+            font-weight: 300;
+        }
+
+        .meta-info {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 25px;
+            flex-wrap: wrap;
+        }
+
+        .meta-item {
+            background: rgba(0, 0, 0, 0.35);
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 13px;
+            color: var(--text-muted);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .meta-item strong {
+            color: var(--accent-secondary);
+        }
+
+        /* Section */
+        .section {
+            background: var(--bg-surface);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 35px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+            backdrop-filter: blur(8px);
+            position: relative;
+        }
+
+        h2 {
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--accent-secondary);
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 12px;
+        }
+
+        h3 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #a78bfa;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        h4 {
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        p {
+            margin-bottom: 15px;
+            color: var(--text-secondary);
+            font-size: 15px;
+        }
+
+        strong { color: var(--text-primary); font-weight: 600; }
+
+        ul, ol {
+            margin-left: 20px;
+            margin-bottom: 15px;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        li { margin-bottom: 6px; }
+        li strong { color: var(--accent-secondary); }
+
+        code {
+            font-family: var(--font-mono);
+            background: rgba(139, 92, 246, 0.12);
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #e879f9;
+        }
+
+        /* Grid */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 18px;
+            margin-top: 20px;
+        }
+
+        /* Card */
+        .card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: var(--border-glow);
+            box-shadow: 0 8px 30px rgba(139, 92, 246, 0.12);
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(to bottom, var(--accent-primary), var(--accent-secondary));
+            opacity: 0.7;
+        }
+
+        .card-icon { font-size: 28px; margin-bottom: 12px; }
+        .card-title {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+        .card-desc {
+            font-size: 13.5px;
+            color: var(--text-muted);
+            line-height: 1.55;
+        }
+        .card-tech {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .tech-pill {
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            color: var(--accent-secondary);
+            font-weight: 500;
+        }
+
+        /* Alert Box */
+        .alert-box {
+            background: rgba(139, 92, 246, 0.08);
+            border: 1px solid rgba(139, 92, 246, 0.25);
+            border-left: 5px solid var(--accent-primary);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .alert-box.warning {
+            background: rgba(245, 158, 11, 0.06);
+            border-color: rgba(245, 158, 11, 0.25);
+            border-left-color: var(--warning);
+        }
+
+        .alert-box.success {
+            background: rgba(16, 185, 129, 0.06);
+            border-color: rgba(16, 185, 129, 0.25);
+            border-left-color: var(--success);
+        }
+
+        .alert-box.info {
+            background: rgba(59, 130, 246, 0.06);
+            border-color: rgba(59, 130, 246, 0.25);
+            border-left-color: var(--info);
+        }
+
+        .alert-box.pink {
+            background: rgba(236, 72, 153, 0.06);
+            border-color: rgba(236, 72, 153, 0.25);
+            border-left-color: var(--pink);
+        }
+
+        .alert-title {
+            font-weight: 700;
+            font-size: 16px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .alert-desc {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+        }
+
+        /* Tables */
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            margin: 25px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th, td {
+            padding: 14px 18px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        th {
+            background: rgba(139, 92, 246, 0.12);
+            color: var(--accent-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 1px;
+        }
+
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background: rgba(255, 255, 255, 0.015); }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .status-pill.success {
+            background: rgba(16, 185, 129, 0.1);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .status-pill.pending {
+            background: rgba(245, 158, 11, 0.1);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .status-pill.active {
+            background: rgba(59, 130, 246, 0.1);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .status-pill.error {
+            background: rgba(239, 68, 68, 0.1);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .status-pill.purple {
+            background: rgba(139, 92, 246, 0.1);
+            color: #a78bfa;
+            border: 1px solid rgba(139, 92, 246, 0.2);
+        }
+
+        .status-pill.cyan {
+            background: rgba(6, 182, 212, 0.1);
+            color: #22d3ee;
+            border: 1px solid rgba(6, 182, 212, 0.2);
+        }
+
+        /* Code Block */
+        .code-header {
+            background: #15102a;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-bottom: none;
+            padding: 10px 18px;
+            border-radius: 12px 12px 0 0;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+        }
+
+        .code-dots { display: flex; gap: 6px; }
+        .code-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+        .code-block {
+            background: #090614;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 0 0 12px 12px;
+            padding: 18px;
+            overflow-x: auto;
+            margin-bottom: 20px;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.8);
+        }
+
+        .code-block code {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            color: #d1d5db;
+            line-height: 1.65;
+            display: block;
+        }
+
+        .keyword { color: #f472b6; }
+        .function { color: #60a5fa; }
+        .string { color: #34d399; }
+        .comment { color: #6b7280; font-style: italic; }
+        .type { color: #fbbf24; }
+
+        /* Flow Steps */
+        .flow-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin: 25px 0;
+        }
+
+        .flow-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 18px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            transition: var(--transition);
+        }
+
+        .flow-step:hover {
+            border-color: rgba(139, 92, 246, 0.15);
+            background: rgba(139, 92, 246, 0.02);
+        }
+
+        .step-number {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: #fff;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            flex-shrink: 0;
+            box-shadow: 0 0 10px rgba(139, 92, 246, 0.3);
+        }
+
+        .step-body h4 {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+
+        .step-body p {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 0;
+        }
+
+        /* Checklist */
+        .checklist {
+            list-style: none;
+            margin-left: 0;
+            padding: 0;
+        }
+
+        .checklist li {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            transition: var(--transition);
+            cursor: default;
+        }
+
+        .checklist li:hover {
+            border-color: rgba(139, 92, 246, 0.15);
+        }
+
+        .checklist .checkbox {
+            width: 22px;
+            height: 22px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            margin-top: 1px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .checklist .checkbox.checked {
+            background: var(--success);
+            border-color: var(--success);
+        }
+
+        .checklist .checkbox.in-progress {
+            background: var(--warning);
+            border-color: var(--warning);
+        }
+
+        .checklist .item-text {
+            flex: 1;
+        }
+
+        .checklist .item-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .checklist .item-desc {
+            font-size: 12.5px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* Priority Badge */
+        .priority-badge {
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-left: 8px;
+        }
+
+        .priority-badge.high {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.25);
+        }
+
+        .priority-badge.medium {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.25);
+        }
+
+        .priority-badge.low {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.25);
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 60px;
+            padding-top: 30px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .grid-2, .grid-3, .grid-4 {
+                grid-template-columns: 1fr;
+            }
+            .section { padding: 25px; }
+            h1 { font-size: 30px; }
+        }
+
+        /* Smooth Scroll */
+        html { scroll-behavior: smooth; }
+
+        /* TOC */
+        .toc {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 14px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .toc-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--accent-secondary);
+            margin-bottom: 15px;
+        }
+
+        .toc a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            transition: var(--transition);
+            display: block;
+            padding: 5px 0;
+        }
+
+        .toc a:hover {
+            color: var(--accent-secondary);
+            padding-left: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="ambient-glow-1"></div>
+    <div class="ambient-glow-2"></div>
+    <div class="ambient-glow-3"></div>
+
+    <div class="container">
+        <!-- HEADER -->
+        <div class="header">
+            <div class="logo-container">🧬</div>
+            <h1>UPDATE v0.0.2 BETA 1</h1>
+            <p class="tagline">Phân Tích Sâu 9 Dự Án AI-Core — Kế Hoạch Tích Hợp Kiến Trúc Agent Nâng Cao, Computer Use, Memory & Skill System Vào GHITA CODING AGENT</p>
+
+            <div class="meta-info">
+                <div class="meta-item">📍 Phiên bản: <strong>Update v0.0.2 Beta 1</strong></div>
+                <div class="meta-item">⏱️ Ngày lập: <strong>21/05/2026</strong></div>
+                <div class="meta-item">🔧 Trạng thái: <strong style="color: #34d399;">✅ Hoàn thành 100%</strong></div>
+                <div class="meta-item">📁 Tham chiếu: <strong>refer_project/ai-core/ (9 dự án)</strong></div>
+            </div>
+        </div>
+
+        <!-- MỤC LỤC -->
+        <div class="toc">
+            <div class="toc-title">📚 MỤC LỤC</div>
+            <a href="#phan1">1. 📋 Tổng Quan — Mục Tiêu & Phạm Vi</a>
+            <a href="#phan2">2. 🔬 Phân Tích Sâu 9 Dự Án AI-Core</a>
+            <a href="#phan3">3. 🗺️ Kế Hoạch & Hướng Dẫn Tích Hợp</a>
+            <a href="#phan4">4. ✅ Bảng Đánh Dấu Kế Hoạch — Theo Dõi Tiến Độ</a>
+        </div>
+
+        <div class="alert-box success">
+            <div class="alert-title">ℹ️ NGUYÊN TẮC SỬ DỤNG THƯ MỤC THAM CHIẾU</div>
+            <div class="alert-desc">
+                Thư mục <code>D:\GHITA CODING AGENT\refer_project\ai-core\</code> chứa 9 dự án mã nguồn mở hàng đầu thế giới về AI Agent, được sử dụng <strong>hoàn toàn chỉ để phân tích kiến trúc, trích xuất patterns và algorithms</strong>. Không có mã nguồn nào từ thư mục này chạy trực tiếp trong GHITA — tất cả đều được viết lại (rewrite) bằng TypeScript trong kiến trúc Tauri + React.
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- PHẦN 1: TỔNG QUAN -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <div class="section" id="phan1">
+            <h2>📋 Phần 1: Tổng Quan — Mục Tiêu & Phạm Vi</h2>
+            <p>
+                Bản nâng cấp <strong>Update v0.0.2 Beta 1</strong> mở rộng phạm vi nghiên cứu từ 2 dự án (OpenClaude & Claude Code trong v0.0.1) lên <strong>9 dự án AI agent hàng đầu</strong>, bao gồm cả các hệ thống computer-use, multimodal agent, self-improving agent và code execution platform. Mục tiêu là trích xuất và tích hợp những tính năng đỉnh cao nhất từ mỗi dự án vào GHITA.
+            </p>
+
+            <h3>🎯 Mục Tiêu Cốt Lõi</h3>
+            <div class="grid-3">
+                <div class="card" style="border-color: rgba(6, 182, 212, 0.3);">
+                    <div class="card-icon">🧠</div>
+                    <div class="card-title">Self-Improving Agent</div>
+                    <div class="card-desc">Tích hợp hệ thống tự học từ Hermes Agent: tự tạo skills từ kinh nghiệm, memory nudges, trajectory compression và cross-session recall.</div>
+                    <div class="card-tech">
+                        <span class="tech-pill">Skills Auto-Create</span>
+                        <span class="tech-pill">Trajectory Compression</span>
+                    </div>
+                </div>
+                <div class="card" style="border-color: rgba(236, 72, 153, 0.3);">
+                    <div class="card-icon">🖥️</div>
+                    <div class="card-title">Computer Use Nâng Cao</div>
+                    <div class="card-desc">Nâng cấp computer-use với GUI grounding từ UI-TARS: screenshot analysis, visual recognition, hành động chính xác dựa trên multimodal vision model.</div>
+                    <div class="card-tech">
+                        <span class="tech-pill">GUI Grounding</span>
+                        <span class="tech-pill">Vision Model</span>
+                    </div>
+                </div>
+                <div class="card" style="border-color: rgba(16, 185, 129, 0.3);">
+                    <div class="card-icon">🔧</div>
+                    <div class="card-title">Plugin & Extension System</div>
+                    <div class="card-desc">Kiến trúc plugin mở từ OpenClaw: code plugins, bundle-style plugins, extension marketplace, ClawHub-style skill registry.</div>
+                    <div class="card-tech">
+                        <span class="tech-pill">Plugin API</span>
+                        <span class="tech-pill">Extension Hub</span>
+                    </div>
+                </div>
+                <div class="card" style="border-color: rgba(59, 130, 246, 0.3);">
+                    <div class="card-icon">🏗️</div>
+                    <div class="card-title">Agent Workflow Platform</div>
+                    <div class="card-desc">Visual agent builder từ AutoGPT: kéo-thả blocks để xây dựng workflow, deploy và monitor agents liên tục, marketplace agents.</div>
+                    <div class="card-tech">
+                        <span class="tech-pill">Visual Builder</span>
+                        <span class="tech-pill">Agent Marketplace</span>
+                    </div>
+                </div>
+                <div class="card" style="border-color: rgba(245, 158, 11, 0.3);">
+                    <div class="card-icon">💻</div>
+                    <div class="card-title">Code Execution Sandbox</div>
+                    <div class="card-desc">An toàn thực thi code đa ngôn ngữ từ Open Interpreter & OpenHands: sandbox isolation, multi-language support, safe-mode execution.</div>
+                    <div class="card-tech">
+                        <span class="tech-pill">Multi-Language</span>
+                        <span class="tech-pill">Sandbox</span>
+                    </div>
+                </div>
+                <div class="card" style="border-color: rgba(139, 92, 246, 0.3);">
+                    <div class="card-icon">📡</div>
+                    <div class="card-title">Multi-Channel Gateway</div>
+                    <div class="card-desc">Gateway đa nền tảng từ Hermes: Telegram, Discord, Slack, WhatsApp — cho phép điều khiển GHITA từ mọi nơi, không chỉ desktop/mobile.</div>
+                    <div class="card-tech">
+                        <span class="tech-pill">Messaging Gateway</span>
+                        <span class="tech-pill">Cross-Platform</span>
+                    </div>
+                </div>
+            </div>
+
+            <h3>📊 Ma Trận Dự Án Tham Chiếu</h3>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Dự Án</th>
+                            <th>Ngôn Ngữ</th>
+                            <th>Loại</th>
+                            <th>Điểm Nổi Bật</th>
+                            <th>Mức Áp Dụng</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>AutoGPT</strong></td>
+                            <td>Python + TS</td>
+                            <td>Agent Platform</td>
+                            <td>Visual workflow builder, agent marketplace, block-based</td>
+                            <td><span class="status-pill active">● Tham khảo</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Claude Code</strong></td>
+                            <td>TypeScript</td>
+                            <td>Coding Agent</td>
+                            <td>Tool system, plugins, slash commands, agent SDK</td>
+                            <td><span class="status-pill success">● Tích hợp sâu</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Hermes Agent</strong></td>
+                            <td>Python</td>
+                            <td>Self-Improving Agent</td>
+                            <td>Skills auto-create, memory loop, trajectory compression, multi-channel</td>
+                            <td><span class="status-pill success">● Tích hợp sâu</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Open Interpreter</strong></td>
+                            <td>Python</td>
+                            <td>Code Execution</td>
+                            <td>Multi-language exec, LiteLLM provider, conversation streaming</td>
+                            <td><span class="status-pill active">● Tham khảo</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>OpenClaude</strong></td>
+                            <td>TypeScript</td>
+                            <td>Coding Agent CLI</td>
+                            <td>gRPC server, multi-provider, agent routing, web search/fetch</td>
+                            <td><span class="status-pill success">● Đã tích hợp (v0.0.1)</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>OpenClaw</strong></td>
+                            <td>TypeScript</td>
+                            <td>AI Assistant Platform</td>
+                            <td>Plugin API, extension system, skill registry, MCP, memory plugins</td>
+                            <td><span class="status-pill success">● Tích hợp sâu</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>OpenDevin</strong></td>
+                            <td>Python</td>
+                            <td>Coding Agent</td>
+                            <td>Fork/tiền thân của OpenHands</td>
+                            <td><span class="status-pill pending">● Tham khảo phụ</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>OpenHands</strong></td>
+                            <td>Python + TS</td>
+                            <td>AI Dev Platform</td>
+                            <td>Software Agent SDK, sandbox execution, browser control, React GUI</td>
+                            <td><span class="status-pill active">● Tham khảo</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>UI-TARS Desktop</strong></td>
+                            <td>TypeScript</td>
+                            <td>Computer Use Agent</td>
+                            <td>GUI grounding, screenshot analysis, MCP client, browser-use, Event Stream</td>
+                            <td><span class="status-pill success">● Tích hợp sâu</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- PHẦN 2: PHÂN TÍCH SÂU -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <div class="section" id="phan2" style="border-color: rgba(6, 182, 212, 0.2);">
+            <h2>🔬 Phần 2: Phân Tích Sâu 9 Dự Án AI-Core</h2>
+            <p>Dưới đây là phân tích chuyên sâu từng dự án, tập trung vào kiến trúc, tính năng cốt lõi, và <strong>những gì có thể trích xuất</strong> cho GHITA CODING AGENT.</p>
+
+            <!-- 2A: Hermes Agent -->
+            <h3>2A. Hermes Agent ☤ — Self-Improving Agent (Nous Research)</h3>
+            <div class="card" style="border-color: rgba(255, 215, 0, 0.3);">
+                <div class="card-icon">☤</div>
+                <div class="card-title">Hệ Thống Tự Học & Cải Tiến</div>
+                <div class="card-desc">
+                    Hermes là agent duy nhất có <strong>closed learning loop</strong> — tự tạo skills từ kinh nghiệm, cải tiến skills khi sử dụng, nudge bộ nhớ, tìm kiếm cuộc hội thoại cũ (FTS5 + LLM summarization), và xây dựng user model qua các phiên.
+                </div>
+            </div>
+
+            <h4>Tính năng cần trích xuất:</h4>
+            <ul>
+                <li><strong>Skills System:</strong> 40+ tools, tự tạo skills từ tác vụ phức tạp, skills tự cải tiến khi sử dụng, tương thích <code>agentskills.io</code> open standard</li>
+                <li><strong>Trajectory Compression:</strong> Nén lịch sử hội thoại (trajectory_compressor.py ~67KB) để giữ context hiệu quả — quan trọng cho GHITA khi chat sessions dài</li>
+                <li><strong>Multi-Channel Gateway:</strong> Telegram, Discord, Slack, WhatsApp, Signal — tất cả từ một process gateway duy nhất</li>
+                <li><strong>Terminal Backends:</strong> 7 loại (local, Docker, SSH, Singularity, Modal, Daytona, Vercel Sandbox) — GHITA có thể mở rộng computer-use sang remote execution</li>
+                <li><strong>Cron Scheduling:</strong> Lập lịch tác vụ tự động (daily reports, nightly backups) gửi kết quả qua bất kỳ platform nào</li>
+                <li><strong>Subagent Delegation:</strong> Spawn subagents song song, Python scripts gọi tools via RPC — zero-context-cost turns</li>
+                <li><strong>State Management:</strong> hermes_state.py (~140KB) quản lý toàn bộ trạng thái agent phức tạp</li>
+            </ul>
+
+            <!-- 2B: UI-TARS Desktop -->
+            <h3>2B. UI-TARS Desktop / Agent TARS — Multimodal Computer Use (ByteDance)</h3>
+            <div class="card" style="border-color: rgba(59, 130, 246, 0.3);">
+                <div class="card-icon">🖥️</div>
+                <div class="card-title">GUI Agent & Vision-Powered Computer Control</div>
+                <div class="card-desc">
+                    TARS là stack multimodal AI agent hoàn chỉnh với 2 sản phẩm: <strong>Agent TARS</strong> (CLI + Web UI với browser agent) và <strong>UI-TARS Desktop</strong> (native GUI agent dùng Vision-Language Model). Monorepo TypeScript dùng pnpm workspace + Turborepo.
+                </div>
+            </div>
+
+            <h4>Tính năng cần trích xuất:</h4>
+            <ul>
+                <li><strong>GUI Grounding:</strong> Visual grounding cho phép AI nhận biết chính xác vị trí UI elements trên screenshot — vượt xa nut.js coordinate-based click</li>
+                <li><strong>Hybrid Browser Agent:</strong> Kết hợp GUI Agent (vision) + DOM manipulation — chọn chiến lược tối ưu cho mỗi tác vụ</li>
+                <li><strong>MCP Client Infrastructure:</strong> <code>packages/agent-infra/mcp-client</code> — MCP client production-ready, hỗ trợ stdio + SSE transport</li>
+                <li><strong>Browser-Use Package:</strong> <code>packages/agent-infra/browser-use</code> — browser automation abstraction layer</li>
+                <li><strong>Event Stream Architecture:</strong> Protocol-driven Event Stream cho Context Engineering và Agent UI — rất phù hợp để GHITA render real-time trạng thái agent</li>
+                <li><strong>Search Package:</strong> <code>packages/agent-infra/search</code> — web search abstraction</li>
+                <li><strong>Agent TARS Core:</strong> <code>multimodal/agent-tars/core</code> — core agent loop, multimodal processing</li>
+            </ul>
+
+            <!-- 2C: OpenClaw -->
+            <h3>2C. OpenClaw — AI Assistant Platform</h3>
+            <div class="card" style="border-color: rgba(139, 92, 246, 0.3);">
+                <div class="card-icon">🐾</div>
+                <div class="card-title">Plugin-First Architecture & Extension Marketplace</div>
+                <div class="card-desc">
+                    OpenClaw là nền tảng AI assistant với kiến trúc plugin-first — core lean, mở rộng qua plugins (code plugins + bundle-style plugins). Hỗ trợ MCP cả server và client, memory plugin slot, skill registry qua ClawHub. Monorepo TypeScript lớn (~100KB package.json).
+                </div>
+            </div>
+
+            <h4>Tính năng cần trích xuất:</h4>
+            <ul>
+                <li><strong>Plugin API:</strong> 2 loại plugin — Code plugins (runtime hooks, providers, channels, tools) và Bundle-style plugins (skills, MCP servers, config). Ưu tiên bundle-style cho security boundaries</li>
+                <li><strong>Extension System:</strong> <code>extensions/</code> directory — npm package distribution + local extension loading</li>
+                <li><strong>Memory Plugin Slot:</strong> Chỉ 1 memory plugin active tại một thời điểm — clean abstraction cho GHITA AgentMemory</li>
+                <li><strong>Skill Registry (ClawHub):</strong> Marketplace cho skills/plugins với vetted publishers, provenance, security review</li>
+                <li><strong>Security Model:</strong> Safe defaults without killing capability — strong defaults + explicit knobs cho trusted workflows</li>
+                <li><strong>Multi-Channel Support:</strong> Messaging channels (theo VISION.md: companion apps trên macOS, iOS, Android, Windows, Linux)</li>
+                <li><strong>ACPX Protocol:</strong> Agent-to-agent communication protocol bổ sung MCP</li>
+            </ul>
+
+            <!-- 2D: AutoGPT -->
+            <h3>2D. AutoGPT — Agent Building Platform</h3>
+            <div class="card" style="border-color: rgba(16, 185, 129, 0.3);">
+                <div class="card-icon">🤖</div>
+                <div class="card-title">Visual Agent Builder & Deployment Platform</div>
+                <div class="card-desc">
+                    AutoGPT cung cấp platform đầy đủ để build, deploy và manage AI agents liên tục. Có 2 phiên bản: <strong>AutoGPT Platform</strong> (mới, visual builder) và <strong>Classic</strong> (agent tự trị gốc). Frontend low-code kéo-thả blocks, marketplace pre-built agents, monitoring & analytics.
+                </div>
+            </div>
+
+            <h4>Tính năng cần trích xuất:</h4>
+            <ul>
+                <li><strong>Block-Based Agent Builder:</strong> UI kéo-thả blocks (mỗi block = 1 action) để tạo workflow — GHITA có thể tích hợp visual workflow builder</li>
+                <li><strong>Agent Lifecycle:</strong> Testing → Production deployment controls — quản lý vòng đời agent</li>
+                <li><strong>Agent Marketplace:</strong> Thư viện pre-configured agents — người dùng chọn và chạy ngay</li>
+                <li><strong>Monitoring & Analytics:</strong> Dashboard theo dõi performance agents</li>
+                <li><strong>Agent Protocol:</strong> Standard protocol (AI Engineer Foundation) cho communication giữa agent, frontend và benchmark</li>
+                <li><strong>Forge Framework:</strong> Toolkit build custom agents với boilerplate code sẵn</li>
+            </ul>
+
+            <!-- 2E: Claude Code -->
+            <h3>2E. Claude Code — Agentic Coding Tool (Anthropic)</h3>
+            <div class="card" style="border-color: rgba(236, 72, 153, 0.3);">
+                <div class="card-icon">🔮</div>
+                <div class="card-title">Production-Grade Coding Agent với Plugin System</div>
+                <div class="card-desc">
+                    Claude Code là tool coding agentic chính thức từ Anthropic, chạy trong terminal. Hỗ trợ tool execution, git workflows, code explanation. Có hệ thống plugins, slash commands extensible, và Agent SDK (<code>@anthropic-ai/agent-sdk</code>). Đã được tích hợp một phần vào GHITA v0.0.1.
+                </div>
+            </div>
+
+            <h4>Tính năng mới cần trích xuất (chưa có trong v0.0.1):</h4>
+            <ul>
+                <li><strong>Plugin Directory:</strong> <code>plugins/</code> — organized plugins với <code>/bug</code> command, extensible plugin system</li>
+                <li><strong>Agent SDK:</strong> <code>@anthropic-ai/agent-sdk</code> — composable SDK cho custom agent development</li>
+                <li><strong>Sub-Agent Architecture:</strong> Spawn specialized sub-agents cho parallel review, validation</li>
+                <li><strong>IDE Integration:</strong> VS Code extension, GitHub tag @claude — cần tích hợp tương tự cho GHITA</li>
+            </ul>
+
+            <!-- 2F: OpenClaude -->
+            <h3>2F. OpenClaude — Multi-Provider Coding Agent (Gitlawb)</h3>
+            <div class="card" style="border-color: rgba(52, 211, 153, 0.3);">
+                <div class="card-icon">🌐</div>
+                <div class="card-title">Open-Source Claude Code với Multi-Provider & gRPC</div>
+                <div class="card-desc">
+                    Fork mã nguồn mở từ Claude Code, đã được modify lớn để hỗ trợ 15+ providers. Có headless gRPC server, agent routing, web search/fetch (DuckDuckGo + Firecrawl), VS Code extension. <strong>Đã tích hợp sâu vào GHITA v0.0.1.</strong>
+                </div>
+            </div>
+
+            <h4>Tính năng bổ sung (chưa tích hợp từ v0.0.1):</h4>
+            <ul>
+                <li><strong>Firecrawl Integration:</strong> Web scraping JS-rendered pages — nâng cấp web_fetch tool</li>
+                <li><strong>Provider Profiles:</strong> <code>/provider</code> guided setup + saved profiles — UX tốt hơn cho GHITA ApiManager</li>
+                <li><strong>VS Code Extension:</strong> Launch integration + theme support — mẫu cho GHITA IDE plugin</li>
+            </ul>
+
+            <!-- 2G: OpenHands -->
+            <h3>2G. OpenHands — AI-Driven Development (SWE-Bench 77.6%)</h3>
+            <div class="card" style="border-color: rgba(245, 158, 11, 0.3);">
+                <div class="card-icon">🙌</div>
+                <div class="card-title">Software Agent SDK & Sandboxed Execution</div>
+                <div class="card-desc">
+                    OpenHands (formerly OpenDevin) đạt 77.6% trên SWE-Bench — top AI coding agent. Cung cấp Software Agent SDK (Python), CLI, Local GUI (React), và Cloud deployment. SDK là composable library chạy local hoặc scale 1000s agents cloud. Sandbox execution đảm bảo an toàn.
+                </div>
+            </div>
+
+            <h4>Tính năng cần trích xuất:</h4>
+            <ul>
+                <li><strong>Agent SDK Pattern:</strong> Composable agent SDK — define agents in code, run locally hoặc cloud — mẫu cho GHITA Agent SDK</li>
+                <li><strong>Sandbox Execution:</strong> Docker containers cho safe code execution — tham khảo cho GHITA computer-use sandbox</li>
+                <li><strong>Local GUI (React):</strong> REST API + React SPA — tham khảo kiến trúc frontend</li>
+                <li><strong>Chrome Extension:</strong> Browser extension cho quick interaction — ý tưởng cho GHITA</li>
+                <li><strong>Multi-User + RBAC:</strong> Cloud features — permissions, collaboration — future GHITA cloud</li>
+            </ul>
+
+            <!-- 2H: Open Interpreter -->
+            <h3>2H. Open Interpreter — Local Code Execution Engine</h3>
+            <div class="card" style="border-color: rgba(96, 165, 250, 0.3);">
+                <div class="card-icon">●</div>
+                <div class="card-title">Natural Language → Code Execution (Multi-Language)</div>
+                <div class="card-desc">
+                    Open Interpreter cho phép LLMs chạy code (Python, JavaScript, Shell) trực tiếp trên máy local. Dùng function-calling model với <code>exec()</code> function nhận language + code. LiteLLM cho multi-provider, streaming output, FastAPI server mode. Có profiles YAML.
+                </div>
+            </div>
+
+            <h4>Tính năng cần trích xuất:</h4>
+            <ul>
+                <li><strong>Multi-Language Execution:</strong> Python, JavaScript, Shell — mở rộng terminal package của GHITA</li>
+                <li><strong>LiteLLM Integration:</strong> Unified LLM provider interface — tham khảo cho GHITA ProviderRegistry</li>
+                <li><strong>Conversation Streaming:</strong> Generator-based streaming + FastAPI server — mẫu cho streaming architecture</li>
+                <li><strong>Profile System:</strong> YAML profiles cho configuration — extensible settings</li>
+                <li><strong>Safety Confirmation:</strong> User approval trước execution — đã có trong GHITA, cần nâng cấp granularity</li>
+            </ul>
+
+            <!-- 2I: OpenDevin -->
+            <h3>2I. OpenDevin — Tiền Thân OpenHands</h3>
+            <div class="card" style="border-color: rgba(148, 163, 184, 0.3);">
+                <div class="card-icon">📦</div>
+                <div class="card-title">Fork / Phiên Bản Cũ của OpenHands</div>
+                <div class="card-desc">
+                    OpenDevin trong thư mục tham chiếu là bản clone giống hệt OpenHands (cùng cấu trúc directory, cùng files). Đây là tên cũ của dự án trước khi rebrand thành OpenHands. <strong>Không cần phân tích riêng</strong> — tham chiếu OpenHands ở trên.
+                </div>
+            </div>
+            </div>
+
+            <h3>2J. Khám Phá Mới (Plugins & Workflow Mở Rộng)</h3>
+            <div class="card" style="border-color: rgba(236, 72, 153, 0.3);">
+                <div class="card-icon">⚡</div>
+                <div class="card-title">Tính năng nổi bật từ Claude Code Plugins & Open-Interpreter</div>
+                <div class="card-desc">
+                    <p>Trong quá trình đào sâu thêm, chúng ta phát hiện thêm các cơ chế xuất sắc để bổ sung vào GHITA:</p>
+                    <ul style="margin-top: 10px; margin-left: 20px;">
+                        <li><strong>Behavioral Hooks & Security Checkers (từ claude-code/plugins):</strong> Cơ chế chặn và cảnh báo các hành vi không mong muốn hoặc nguy hiểm (như <code>rm -rf</code>, <code>eval()</code>, XSS) trước khi Agent thực thi Tool. (Áp dụng cho Phase 3).</li>
+                        <li><strong>Self-Referential Loops (từ ralph-wiggum plugin):</strong> Vòng lặp tự động sửa lỗi - Agent liên tục lặp lại task cho đến khi test pass, không cần user can thiệp mỗi bước. (Áp dụng cho Phase 4).</li>
+                        <li><strong>Advanced Workflow Agents (như feature-dev, code-review):</strong> Cấu trúc workflow nhiều agent phối hợp (e.g. code-explorer, code-architect, code-reviewer) thay vì một agent xử lý toàn bộ. (Áp dụng cho Phase 4).</li>
+                        <li><strong>Local Interpreter Fallback (từ open-interpreter):</strong> Khi không dùng được Sandbox container, agent có thể chạy an toàn code Python/Shell trực tiếp trên máy host thông qua cơ chế interactive stream an toàn. (Áp dụng cho Phase 1/4).</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Summary Table -->
+            <h3>📊 Bảng Tổng Hợp Công Nghệ Trích Xuất</h3>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Công Nghệ / Pattern</th>
+                            <th>Nguồn</th>
+                            <th>Mục Tiêu Tích Hợp</th>
+                            <th>Ưu Tiên</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Skills Auto-Create & Self-Improvement</strong></td>
+                            <td>Hermes Agent</td>
+                            <td><code>packages/skills/</code></td>
+                            <td><span class="priority-badge high">CAO</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Trajectory Compression</strong></td>
+                            <td>Hermes Agent</td>
+                            <td><code>packages/ai-engine/src/context/</code></td>
+                            <td><span class="priority-badge high">CAO</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>GUI Grounding (Vision)</strong></td>
+                            <td>UI-TARS Desktop</td>
+                            <td><code>packages/computer-use/</code></td>
+                            <td><span class="priority-badge high">CAO</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Plugin Architecture</strong></td>
+                            <td>OpenClaw</td>
+                            <td><code>packages/skills/</code> + mới</td>
+                            <td><span class="priority-badge high">CAO</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Event Stream Protocol</strong></td>
+                            <td>UI-TARS / Agent TARS</td>
+                            <td><code>packages/communication/</code></td>
+                            <td><span class="priority-badge medium">TRUNG BÌNH</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Hybrid Browser Agent</strong></td>
+                            <td>UI-TARS Desktop</td>
+                            <td><code>packages/browser-control/</code></td>
+                            <td><span class="priority-badge medium">TRUNG BÌNH</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Multi-Channel Gateway</strong></td>
+                            <td>Hermes Agent</td>
+                            <td><code>packages/communication/</code></td>
+                            <td><span class="priority-badge medium">TRUNG BÌNH</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Agent SDK Export</strong></td>
+                            <td>Claude Code + OpenHands</td>
+                            <td><code>packages/agents/src/sdk/</code></td>
+                            <td><span class="priority-badge medium">TRUNG BÌNH</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Visual Workflow Builder</strong></td>
+                            <td>AutoGPT</td>
+                            <td>Mới: <code>apps/desktop/src/views/WorkflowView.tsx</code></td>
+                            <td><span class="priority-badge low">THẤP</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Cron Scheduling</strong></td>
+                            <td>Hermes Agent</td>
+                            <td><code>packages/agents/</code></td>
+                            <td><span class="priority-badge low">THẤP</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Multi-Language Code Exec</strong></td>
+                            <td>Open Interpreter</td>
+                            <td><code>packages/computer-use/</code></td>
+                            <td><span class="priority-badge low">THẤP</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- PHẦN 3: KẾ HOẠCH & HƯỚNG DẪN -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <div class="section" id="phan3" style="border-color: rgba(236, 72, 153, 0.2);">
+            <h2>🗺️ Phần 3: Kế Hoạch & Hướng Dẫn Tích Hợp</h2>
+            <p>Dựa trên phân tích ở Phần 2, kế hoạch được chia thành <strong>4 Phase chính</strong>, mỗi phase tập trung vào một nhóm tính năng liên quan.</p>
+
+            <!-- Phase 1 -->
+            <h3 style="color: #22d3ee;">✅ Phase 1: Computer Use Nâng Cao + GUI Grounding — HOÀN THÀNH</h3>
+            <p>Nâng cấp <code>packages/computer-use/</code> từ nut.js coordinate-based lên vision-based GUI grounding.</p>
+
+            <div class="flow-container">
+                <div class="flow-step">
+                    <div class="step-number">1</div>
+                    <div class="step-body">
+                        <h4>Vision Screenshot Analyzer</h4>
+                        <p>Tạo module phân tích screenshot bằng multimodal LLM (GPT-4o, Claude Vision). Nhận screenshot → trả về vị trí elements, text content, UI structure. Tham khảo <code>ui-tars-desktop/packages/ui-tars/</code>.</p>
+                    </div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">2</div>
+                    <div class="step-body">
+                        <h4>Hybrid Action Engine</h4>
+                        <p>Kết hợp nut.js (keyboard/mouse) + vision grounding. Khi AI cần click "nút Login", thay vì hardcode tọa độ, dùng vision model xác định vị trí chính xác trên screenshot hiện tại.</p>
+                    </div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">3</div>
+                    <div class="step-body">
+                        <h4>Browser-Use Hybrid (DOM + Vision)</h4>
+                        <p>Nâng cấp <code>packages/browser-control/</code> từ Playwright-only sang hybrid mode: DOM manipulation cho tác vụ chính xác, vision fallback cho dynamic UIs. Tham khảo <code>ui-tars-desktop/packages/agent-infra/browser-use/</code>.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr><th>File</th><th>Hành Động</th><th>Mô Tả</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>packages/computer-use/src/vision/analyzer.ts</code></td><td>Tạo mới</td><td>Vision Screenshot Analyzer — gửi screenshot lên multimodal LLM</td></tr>
+                        <tr><td><code>packages/computer-use/src/vision/grounding.ts</code></td><td>Tạo mới</td><td>GUI Grounding — xác định tọa độ elements từ mô tả ngôn ngữ tự nhiên</td></tr>
+                        <tr><td><code>packages/computer-use/src/vision/types.ts</code></td><td>Tạo mới</td><td>Types: ScreenElement, BoundingBox, GroundingResult</td></tr>
+                        <tr><td><code>packages/computer-use/src/index.ts</code></td><td>Sửa</td><td>Thêm vision mode vào ComputerUse class</td></tr>
+                        <tr><td><code>packages/browser-control/src/hybrid.ts</code></td><td>Tạo mới</td><td>Hybrid browser agent: DOM + Vision strategy selector</td></tr>
+                        <tr><td><code>packages/browser-control/src/dom-extractor.ts</code></td><td>Tạo mới</td><td>DOM accessibility tree extractor cho AI</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Phase 2 -->
+            <h3 style="color: #a78bfa;">🔷 Phase 2: Skills System Nâng Cao + Trajectory Compression</h3>
+            <p>Tích hợp hệ thống skills tự học từ Hermes Agent và trajectory compression cho context optimization.</p>
+
+            <div class="flow-container">
+                <div class="flow-step">
+                    <div class="step-number">1</div>
+                    <div class="step-body">
+                        <h4>Skills Auto-Creation Engine</h4>
+                        <p>Sau mỗi tác vụ phức tạp thành công, AI tự động phân tích quy trình và tạo skill template mới. User review và approve trước khi lưu. Tham khảo Hermes <code>skills/</code> directory.</p>
+                    </div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">2</div>
+                    <div class="step-body">
+                        <h4>Skill Self-Improvement</h4>
+                        <p>Khi skill được sử dụng lại, so sánh kết quả mới vs cũ. Nếu phát hiện cách tốt hơn, đề xuất cải tiến skill. Lưu lịch sử cải tiến để rollback.</p>
+                    </div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">3</div>
+                    <div class="step-body">
+                        <h4>Trajectory Compression</h4>
+                        <p>Khi context gần đầy, thay vì chỉ cắt tin cũ (sliding window), dùng LLM tóm tắt thông minh — giữ lại decisions và outcomes, loại bỏ chi tiết không cần thiết. Tham khảo Hermes <code>trajectory_compressor.py</code>.</p>
+                    </div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">4</div>
+                    <div class="step-body">
+                        <h4>Cross-Session Memory Search</h4>
+                        <p>FTS5 full-text search trên lịch sử conversations + LLM summarization. Khi user hỏi "lần trước mình làm gì với project X?", AI tìm và tóm tắt từ sessions cũ.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr><th>File</th><th>Hành Động</th><th>Mô Tả</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>packages/skills/src/auto-create/engine.ts</code></td><td>Tạo mới</td><td>SkillAutoCreator: analyze task → generate skill template</td></tr>
+                        <tr><td><code>packages/skills/src/auto-create/improver.ts</code></td><td>Tạo mới</td><td>SkillImprover: compare outcomes, suggest improvements</td></tr>
+                        <tr><td><code>packages/skills/src/registry/hub.ts</code></td><td>Tạo mới</td><td>SkillHub: local registry + share/import skills</td></tr>
+                        <tr><td><code>packages/ai-engine/src/context/compressor.ts</code></td><td>Tạo mới</td><td>TrajectoryCompressor: LLM-based intelligent compression</td></tr>
+                        <tr><td><code>packages/ai-engine/src/context/strategies.ts</code></td><td>Sửa</td><td>Thêm trajectory compression strategy</td></tr>
+                        <tr><td><code>packages/memory/src/search.ts</code></td><td>Tạo mới</td><td>CrossSessionSearch: FTS5 + LLM summarization</td></tr>
+                        <tr><td><code>packages/memory/src/index.ts</code></td><td>Sửa</td><td>Integrate cross-session search + memory nudges</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Phase 3 -->
+            <h3 style="color: #10b981;">✅ Phase 3: Plugin Architecture + Extension System — HOÀN THÀNH</h3>
+            <p>Xây dựng kiến trúc plugin mở dựa trên OpenClaw, cho phép community mở rộng GHITA.</p>
+
+            <div class="flow-container">
+                <div class="flow-step">
+                    <div class="step-number">1</div>
+                    <div class="step-body">
+                        <h4>Plugin Runtime</h4>
+                        <p>Thiết kế Plugin API với 2 loại: Code plugins (runtime hooks, custom providers) và Bundle plugins (skills, MCP servers, commands). Plugin chạy trong sandbox process riêng.</p>
+                    </div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">2</div>
+                    <div class="step-body">
+                        <h4>Extension Marketplace UI</h4>
+                        <p>Giao diện duyệt/cài đặt extensions giống VS Code Extensions marketplace. Hiển thị trên desktop app — lợi thế so với CLI tools. Tham khảo AutoGPT marketplace + OpenClaw ClawHub.</p>
+                    </div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">3</div>
+                    <div class="step-body">
+                        <h4>Event Stream Architecture</h4>
+                        <p>Protocol-driven event stream (tham khảo Agent TARS) cho real-time agent state rendering. Events: tool_start, tool_result, agent_thinking, skill_learning, memory_update.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr><th>File</th><th>Hành Động</th><th>Mô Tả</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>packages/shared/src/plugins/runtime.ts</code></td><td>Tạo mới</td><td>PluginRuntime: load, sandbox, lifecycle management</td></tr>
+                        <tr><td><code>packages/shared/src/plugins/types.ts</code></td><td>Tạo mới</td><td>PluginManifest, PluginHooks, BundlePlugin, CodePlugin</td></tr>
+                        <tr><td><code>packages/shared/src/plugins/registry.ts</code></td><td>Tạo mới</td><td>PluginRegistry: discover, install, uninstall, update</td></tr>
+                        <tr><td><code>packages/shared/src/events/stream.ts</code></td><td>Tạo mới</td><td>EventStream protocol: emit, subscribe, replay</td></tr>
+                        <tr><td><code>packages/shared/src/events/types.ts</code></td><td>Tạo mới</td><td>AgentEvent, ToolEvent, SkillEvent types</td></tr>
+                        <tr><td><code>apps/desktop/src/views/MarketplaceView.tsx</code></td><td>Tạo mới</td><td>Extension Marketplace UI — browse, install, manage</td></tr>
+                        <tr><td><code>apps/desktop/src/components/TabBar.tsx</code></td><td>Sửa</td><td>Thêm tab "Marketplace"</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Phase 4 -->
+            <h3 style="color: #10b981;">✅ Phase 4: Advanced Agent Capabilities — HOÀN THÀNH</h3>
+            <p>Nâng cao năng lực agent với subagent delegation, cron scheduling, và multi-channel gateway.</p>
+
+            <div class="flow-container">
+                <div class="flow-step">
+                    <div class="step-number">1</div>
+                    <div class="step-body">
+                        <h4>Subagent Delegation</h4>
+                        <p>Thiết kế hệ thống <code>SubagentSpawner</code> hỗ trợ spawn các agent con hoạt động độc lập theo cơ chế chạy song song (Parallel) hoặc tuần tự (Sequential). Mỗi subagent thừa hưởng đầy đủ cấu hình AI engine, custom skills registry và metadata cô lập.</p>
+                    </div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">2</div>
+                    <div class="step-body">
+                        <h4>Cron & NL Scheduler</h4>
+                        <p>Phát triển bộ lập lịch <code>CronScheduler</code> kết hợp cú pháp cron tiêu chuẩn và xử lý ngôn ngữ tự nhiên (NL) thông minh (e.g. <i>"every 5 seconds"</i>, <i>"hourly"</i>, <i>"daily at 10:00"</i>) với cơ chế chạy vòng lặp an toàn và kiểm soát tối đa số lần kích hoạt (max iterations).</p>
+                    </div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">3</div>
+                    <div class="step-body">
+                        <h4>Multi-Channel Gateway</h4>
+                        <p>Xây dựng hệ thống <code>GatewayManager</code> quản lý đồng bộ các kết nối từ bên ngoài bao gồm Telegram, Discord và Slack. Hỗ trợ cơ chế tự động chuyển đổi sang Mock Gateway (Simulation Mode) khi thiếu credentials hợp lệ, đảm bảo hệ thống luôn hoạt động ổn định.</p>
+                    </div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">4</div>
+                    <div class="step-body">
+                        <h4>Composable SDK v2 & Ralph Loops</h4>
+                        <p>Tích hợp nâng cao thư viện SDK <code>GhitAgentClient</code> để cung cấp các API gọi trực tiếp từ code, cho phép quản lý vòng đời subagent và kích hoạt vòng lặp tự sửa lỗi (Ralph Loops) có khả năng tự động thực thi, kiểm thử và khắc phục bug mà không cần user tương tác.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr><th>File</th><th>Hành Động</th><th>Mô Tả</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>packages/agents/src/subagent/types.ts</code></td><td>Tạo mới</td><td>Định nghĩa cấu hình, thông số đầu vào và trạng thái thực thi của Subagent.</td></tr>
+                        <tr><td><code>packages/agents/src/subagent/spawner.ts</code></td><td>Tạo mới</td><td>Hiện thực <code>SubagentSpawner</code> chạy song song/tuần tự các tác vụ của subagent.</td></tr>
+                        <tr><td><code>packages/agents/src/scheduler/types.ts</code></td><td>Tạo mới</td><td>Cấu trúc dữ liệu và tham số cấu hình cho lập lịch Cron và Natural Language.</td></tr>
+                        <tr><td><code>packages/agents/src/scheduler/cron.ts</code></td><td>Tạo mới</td><td>Hiện thực <code>CronScheduler</code> phân tích cú pháp ngôn ngữ tự nhiên và điều khiển tác vụ.</td></tr>
+                        <tr><td><code>packages/communication/src/gateway/types.ts</code></td><td>Tạo mới</td><td>Định nghĩa giao thức truyền tin, cấu trúc tin nhắn và interface Gateway cơ bản.</td></tr>
+                        <tr><td><code>packages/communication/src/gateway/telegram.ts</code></td><td>Tạo mới</td><td>Hiện thực Telegram Gateway (hỗ trợ Polling thực tế và Mock simulation).</td></tr>
+                        <tr><td><code>packages/communication/src/gateway/discord.ts</code></td><td>Tạo mới</td><td>Hiện thực Discord Gateway (hỗ trợ Webhook push thực tế và Mock simulation).</td></tr>
+                        <tr><td><code>packages/communication/src/gateway/slack.ts</code></td><td>Tạo mới</td><td>Hiện thực Slack Gateway (hỗ trợ Socket Mode API thực tế và Mock simulation).</td></tr>
+                        <tr><td><code>packages/communication/src/gateway/manager.ts</code></td><td>Tạo mới</td><td>Quản lý vòng đời và điều phối luồng tin nhắn đa kênh (Telegram/Discord/Slack).</td></tr>
+                        <tr><td><code>packages/agents/src/sdk/client.ts</code></td><td>Sửa</td><td>Nâng cấp <code>GhitAgentClient</code>: bổ sung quản lý subagent và chạy tự sửa lỗi Ralph Loops.</td></tr>
+                        <tr><td><code>packages/agents/src/index.ts</code></td><td>Sửa</td><td>Export các module Spawner, Scheduler và Client SDK v2 mới ra ngoài package.</td></tr>
+                        <tr><td><code>packages/communication/src/index.ts</code></td><td>Sửa</td><td>Export GatewayManager và các kiểu dữ liệu giao tiếp liên quan.</td></tr>
+                        <tr><td><code>tests/phase4-test.ts</code></td><td>Tạo mới</td><td>Bộ test suite tích hợp tự động kiểm thử toàn diện cả 4 thành phần chính của Phase 4.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Phase 5 -->
+            <h3 style="color: #10b981;">✅ Phase 5: Ecosystem & Integration Platform — HOÀN THÀNH</h3>
+            <p>Đưa GHITA vươn ra khỏi Desktop App đơn thuần: Xây dựng hệ sinh thái, đo lường tự động và kiến trúc đa nền tảng dựa trên AutoGPT và OpenClaude.</p>
+
+            <div class="flow-container">
+                <div class="flow-step">
+                    <div class="step-number">1</div>
+                    <div class="step-body">
+                        <h4>Visual Workflow Builder</h4>
+                        <p>Thiết kế canvas kéo thả các node hành động (Visual Workflow Builder), cho phép biên dịch trực quan thành cấu trúc JSON chạy trực tiếp trên Core Agent Engine. Kế thừa từ ý tưởng Workflow Builder của AutoGPT Platform.</p>
+                    </div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">2</div>
+                    <div class="step-body">
+                        <h4>Agent Protocol & Automatic Benchmarking</h4>
+                        <p>Xây dựng hệ thống REST API chuẩn hóa theo đặc tả Agent Protocol của AI Engineer Foundation. Hỗ trợ tích hợp bộ test suite tự động <code>agbenchmark</code> để kiểm thử hiệu năng, độ chính xác của agent qua các bài toán benchmark tiêu chuẩn.</p>
+                    </div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">3</div>
+                    <div class="step-body">
+                        <h4>Headless gRPC Engine</h4>
+                        <p>Phát triển gRPC server với cơ chế Bidirectional Streaming, cho phép tách rời Core Engine để chạy Headless trên server Linux/Docker container cô lập, trong khi UI client vẫn là app Tauri nhẹ chạy trên Windows kết nối bảo mật.</p>
+                    </div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">4</div>
+                    <div class="step-body">
+                        <h4>Agent Routing & Cost Optimization</h4>
+                        <p>Xây dựng bộ Router thông minh tự động lựa chọn model phù hợp cho từng subagent. Các tác vụ đơn giản (e.g. đọc file, chạy lệnh shell cơ bản) được route sang Gemini Flash/Ollama local; chỉ các task kiến trúc/review/code phức tạp mới dùng Claude 3.5 Sonnet.</p>
+                    </div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">5</div>
+                    <div class="step-body">
+                        <h4>VS Code Extension Integration</h4>
+                        <p>Phát triển VS Code Extension giao tiếp trực tiếp với gRPC/IPC server của GHITA đang chạy. Cho phép lập trình viên gọi lệnh chat, duyệt files, và kích hoạt các tác vụ tự động hóa ngay trong sidebar của IDE.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr><th>File</th><th>Hành Động</th><th>Mô Tả</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>apps/desktop/src/views/WorkflowView.tsx</code></td><td>Tạo mới</td><td>Visual Workflow Builder UI — canvas vẽ blocks & node routing</td></tr>
+                        <tr><td><code>packages/agents/src/protocol/ap.ts</code></td><td>Tạo mới</td><td>Agent Protocol implementation (compliant API endpoints)</td></tr>
+                        <tr><td><code>packages/ai-engine/src/grpc/server.ts</code></td><td>Tạo mới</td><td>Headless gRPC server (bidirectional stream for agent control)</td></tr>
+                        <tr><td><code>packages/agents/src/router/router.ts</code></td><td>Tạo mới</td><td>Agent Router: Dynamic model route optimizer based on task complexity</td></tr>
+                        <tr><td><code>apps/vscode-extension/src/extension.ts</code></td><td>Tạo mới</td><td>VS Code plugin entry point & sidebar webview interface</td></tr>
+                        <tr><td><code>apps/desktop/src/components/TabBar.tsx</code></td><td>Sửa</td><td>Tích hợp link tab "Workflow Builder" và "Ecosystem Settings"</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Chat UI Integration -->
+            <h3 style="color: #06b6d4;">🔷 Chat UI Integration: Khung Chat Là Trung Tâm Điều Khiển</h3>
+            <p>Mọi tính năng thông minh của Core Agent đều được hiển thị và điều khiển thông qua cửa sổ Chat chính (ChatPanel), mang lại trải nghiệm tương tác liền mạch theo phản hồi từ người dùng.</p>
+
+            <div class="flow-container">
+                <div class="flow-step">
+                    <div class="step-number">1</div>
+                    <div class="step-body">
+                        <h4>Vision Preview & Mouse Path Annotation</h4>
+                        <p>Khi agent sử dụng camera/screenshot để thao tác máy tính, ảnh chụp màn hình preview sẽ hiển thị trực tiếp trong ChatPanel. Hover chuột lên ảnh sẽ kích hoạt overlay hiển thị vòng tròn đỏ chỉ rõ tọa độ (click/type) được phân tích bởi UI-TARS.</p>
+                    </div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">2</div>
+                    <div class="step-body">
+                        <h4>Interactive Tool Cards with Manual Approval</h4>
+                        <p>Các tác vụ hệ thống (chạy terminal, viết file) được render thành các widget/card tương tác trong chat. Cho phép người dùng duyệt qua code diff, chỉnh sửa câu lệnh trực tiếp trong ô chat, và bấm nút "Approve" hoặc "Deny" ngay tại chỗ.</p>
+                    </div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">3</div>
+                    <div class="step-body">
+                        <h4>Real-time Event Stream Panel</h4>
+                        <p>Thay vì hiển thị trạng thái chờ im lặng, ChatPanel tích hợp Event Stream Renderer hiển thị sinh động tiến trình đang chạy của AI (e.g. "🔍 Tìm kiếm file index.css...", "📝 Đang viết file...", "⚙️ Chạy npm test (Lần 2/5)...") kèm hiệu ứng micro-animation.</p>
+                    </div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">4</div>
+                    <div class="step-body">
+                        <h4>Self-Repair Loop Controller (Ralph Loop)</h4>
+                        <p>Khi Agent chạy vòng lặp tự động sửa lỗi (Ralph Loop), một banner trạng thái nổi sẽ khóa tạm thời khung chat, hiển thị số vòng lặp hiện tại (e.g. "Vòng lặp sửa lỗi: 3/10"), thông tin test case thất bại, kèm nút "Stop Loop" để dừng khẩn cấp.</p>
+                    </div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">5</div>
+                    <div class="step-body">
+                        <h4>Skill Learning Card & Hub Integration</h4>
+                        <p>Khi hoàn thành tác vụ phức tạp thành công, AI sẽ tự động đề xuất một card: "💡 Tôi đã phát hiện quy trình mới có thể tạo Skill. Bạn có muốn lưu?". Người dùng có thể chỉnh sửa mô tả, xem file yaml/markdown tương ứng và bấm "Lưu vào Skill Hub".</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr><th>File</th><th>Hành Động</th><th>Mô Tả</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>apps/desktop/src/components/chat/ChatPanel.tsx</code></td><td>Sửa</td><td>Nâng cấp panel chính: tích hợp event renderer, lock screen khi lặp</td></tr>
+                        <tr><td><code>apps/desktop/src/components/chat/MessageCard.tsx</code></td><td>Sửa</td><td>Thêm view components cho interactive tools (diff view, terminal command approval)</td></tr>
+                        <tr><td><code>apps/desktop/src/components/chat/VisionPreview.tsx</code></td><td>Tạo mới</td><td>Widget preview screenshot có hover overlay tọa độ tương tác</td></tr>
+                        <tr><td><code>apps/desktop/src/components/chat/SkillLearningCard.tsx</code></td><td>Tạo mới</td><td>Card xác nhận lưu skill trực tiếp trong timeline chat</td></tr>
+                        <tr><td><code>packages/communication/src/events/stream-handler.ts</code></td><td>Tạo mới</td><td>Parser chuyển đổi events của backend thành status update cho UI chat</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Architecture Diagram -->
+            <h3>📐 Kiến Trúc Tổng Quan Sau Tích Hợp v0.0.2</h3>
+            <div class="code-header">
+                <span class="code-dots">
+                    <span class="code-dot" style="background:#ff5f57"></span>
+                    <span class="code-dot" style="background:#febc2e"></span>
+                    <span class="code-dot" style="background:#28c840"></span>
+                </span>
+                <span>GHITA Architecture — Post v0.0.2 Integration</span>
+            </div>
+            <div class="code-block">
+                <pre><code><span class="comment">┌─────────────────────────────────────────────────────────────────────┐</span>
+<span class="comment">│                    GHITA DESKTOP APP (Tauri v2)                     │</span>
+<span class="comment">│  ┌──────────────────────────────┐  ┌─────────────────────────────┐  │</span>
+<span class="comment">│  │      Main Content Area       │  │    ChatPanel (340px)         │  │</span>
+<span class="comment">│  │  CodeView │ Api │ Skills     │  │  Slash Cmd Autocomplete      │  │</span>
+<span class="comment">│  │  Agents   │ Devices          │  │  Streaming + Tool Cards      │  │</span>
+<span class="comment">│  │  Settings │ Dashboard        │  │  Event Stream Renderer [NEW] │  │</span>
+<span class="comment">│  │  <span class="type">Marketplace [NEW]</span>          │  │  Skill Learning Cards [NEW]  │  │</span>
+<span class="comment">│  │  <span class="type">Workflow Builder [NEW]</span>     │  │  Vision Preview [NEW]        │  │</span>
+<span class="comment">│  ├──────────────────────────────┤  │  Token Counter + Cost        │  │</span>
+<span class="comment">│  │    Terminal (bottom)          │  └──────────────┬──────────────┘  │</span>
+<span class="comment">│  └──────────────────────────────┘                  │ Socket.IO       │</span>
+<span class="comment">└────────────────────────────────────────────────────┼────────────────┘</span>
+                                                     │
+<span class="comment">┌────────────────────────────────────────────────────┼────────────────┐</span>
+<span class="comment">│               TAURI SIDECAR (Node.js)              │                │</span>
+<span class="comment">│  ┌─────────────────────────────────────────────────┴──────────────┐ │</span>
+<span class="comment">│  │              AI Orchestrator (Enhanced)                        │ │</span>
+<span class="comment">│  │  ProviderRegistry ──┬─ OpenAI │ Anthropic │ Google │ Ollama   │ │</span>
+<span class="comment">│  │                     ├─ DeepSeek │ Groq │ Mistral │ Custom    │ │</span>
+<span class="comment">│  │  Agent Routing      ├─ Explore │ Plan │ UI │ Code │ Review   │ │</span>
+<span class="comment">│  │  Built-in Tools     ├─ web_search │ web_fetch │ firecrawl    │ │</span>
+<span class="comment">│  │  MCP Client         ├─ stdio │ SSE │ streamable-http        │ │</span>
+<span class="comment">│  │  Hook Runner        ├─ pre_tool │ post_tool │ on_error      │ │</span>
+<span class="comment">│  │  Context Manager    ├─ token_count │ <span class="type">trajectory_compress[NEW]</span> │ │</span>
+<span class="comment">│  │  <span class="type">Plugin Runtime[NEW]</span> ├─ code_plugins │ bundle_plugins          │ │</span>
+<span class="comment">│  │  <span class="type">Event Stream [NEW]</span> ├─ tool │ agent │ skill │ memory events  │ │</span>
+<span class="comment">│  │  Ralph Loop         └─ auto-fix │ cost tracking │ iteration │ │</span>
+<span class="comment">│  └───────────────────────────────────────────────────────────────┘ │</span>
+<span class="comment">│  ┌───────────────────────────────────────────────────────────────┐ │</span>
+<span class="comment">│  │          Computer Use (Enhanced)                              │ │</span>
+<span class="comment">│  │  nut.js ──┬─ keyboard │ mouse │ screen capture               │ │</span>
+<span class="comment">│  │  <span class="type">Vision [NEW]</span>├─ screenshot analyzer │ GUI grounding          │ │</span>
+<span class="comment">│  │  Browser  ├─ Playwright │ <span class="type">hybrid DOM+Vision [NEW]</span>          │ │</span>
+<span class="comment">│  │  Sandbox  └─ safe execution │ permission levels             │ │</span>
+<span class="comment">│  └───────────────────────────────────────────────────────────────┘ │</span>
+<span class="comment">│  ┌───────────────────────────────────────────────────────────────┐ │</span>
+<span class="comment">│  │          Skills & Memory (Enhanced)                           │ │</span>
+<span class="comment">│  │  Skills ──┬─ registry │ <span class="type">auto-create [NEW]</span> │ <span class="type">self-improve[NEW]</span>│ │</span>
+<span class="comment">│  │  Memory   ├─ AgentMemory │ <span class="type">cross-session search [NEW]</span>     │ │</span>
+<span class="comment">│  │  Agents   ├─ groups │ <span class="type">subagent delegation [NEW]</span>            │ │</span>
+<span class="comment">│  │  <span class="type">Scheduler[NEW]</span> └─ cron │ natural language scheduling     │ │</span>
+<span class="comment">│  └───────────────────────────────────────────────────────────────┘ │</span>
+<span class="comment">│  ┌───────────────────────────────────────────────────────────────┐ │</span>
+<span class="comment">│  │          Communication (Enhanced)                             │ │</span>
+<span class="comment">│  │  Socket.IO ── Desktop ↔ Mobile pairing                       │ │</span>
+<span class="comment">│  │  <span class="type">Gateway [NEW]</span> ── Telegram │ Discord │ Slack │ WhatsApp     │ │</span>
+<span class="comment">│  └───────────────────────────────────────────────────────────────┘ │</span>
+<span class="comment">└──────────────────────────────────────────────────────────────────────┘</span></code></pre>
+            </div>
+
+            <div class="alert-box warning">
+                <div class="alert-title">⚠️ LƯU Ý BẢO MẬT & HIỆU SUẤT</div>
+                <div class="alert-desc">
+                    <ul>
+                        <li><strong>Vision API Cost:</strong> Screenshot analysis gửi lên multimodal LLM tiêu tốn tokens đáng kể. Cần cache screenshots, chỉ analyze khi thực sự thay đổi, và giới hạn resolution.</li>
+                        <li><strong>Plugin Sandbox:</strong> Code plugins chạy trong isolated process (worker threads hoặc child process) để tránh crash main app.</li>
+                        <li><strong>Gateway Security:</strong> Multi-channel gateway phải có authentication (DM pairing) để tránh unauthorized access qua Telegram/Discord.</li>
+                        <li><strong>Memory Storage:</strong> Cross-session search cần SQLite FTS5 — sẵn có trong Tauri via better-sqlite3 hoặc sql.js.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- PHẦN 4: BẢNG ĐÁNH DẤU THEO DÕI TIẾN ĐỘ -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <div class="section" id="phan4" style="border-color: rgba(16, 185, 129, 0.2);">
+            <h2>✅ Phần 4: Bảng Đánh Dấu Kế Hoạch — Theo Dõi Tiến Độ</h2>
+            <p>Bảng dưới đây là checklist quản lý tiến độ thực hiện. Click vào checkbox để đánh dấu hoàn thành.</p>
+
+            <!-- Phase 1 Checklist -->
+            <h3 style="color: #22d3ee;">✅ Phase 1: Computer Use Nâng Cao — HOÀN THÀNH</h3>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:40px">✓</th>
+                            <th>Hạng Mục</th>
+                            <th>Chi Tiết</th>
+                            <th>Ưu Tiên</th>
+                            <th>Trạng Thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#22d3ee;"></td>
+                            <td><strong>Vision Screenshot Analyzer</strong></td>
+                            <td>Module gửi screenshot → multimodal LLM → nhận vị trí elements</td>
+                            <td><span class="priority-badge high">CAO</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#22d3ee;"></td>
+                            <td><strong>GUI Grounding Module</strong></td>
+                            <td>Xác định tọa độ pixel từ mô tả ngôn ngữ tự nhiên</td>
+                            <td><span class="priority-badge high">CAO</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#22d3ee;"></td>
+                            <td><strong>Hybrid ComputerUse (nut.js + Vision)</strong></td>
+                            <td>Tích hợp vision mode vào ComputerUse class hiện tại</td>
+                            <td><span class="priority-badge high">CAO</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#22d3ee;"></td>
+                            <td><strong>Hybrid Browser Agent (DOM + Vision)</strong></td>
+                            <td>Nâng cấp browser-control với hybrid DOM + visual strategy</td>
+                            <td><span class="priority-badge medium">TRUNG BÌNH</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#22d3ee;"></td>
+                            <td><strong>DOM Accessibility Extractor</strong></td>
+                            <td>Extract accessibility tree cho AI reasoning</td>
+                            <td><span class="priority-badge medium">TRUNG BÌNH</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#22d3ee;"></td>
+                            <td><strong>Vision Preview trong ChatPanel</strong></td>
+                            <td>Hiển thị screenshot annotated với highlighted elements trong chat</td>
+                            <td><span class="priority-badge low">THẤP</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#22d3ee;"></td>
+                            <td><strong>Local Interpreter Fallback</strong></td>
+                            <td>Chạy Python/Shell an toàn cục bộ nếu Sandbox không khả dụng</td>
+                            <td><span class="priority-badge low">THẤP</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Phase 2 Checklist -->
+            <h3 style="color: #a78bfa;">🔷 Phase 2: Skills System + Trajectory Compression — 7/8 HOÀN THÀNH (Skill Learning Cards UI còn lại)</h3>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:40px">✓</th>
+                            <th>Hạng Mục</th>
+                            <th>Chi Tiết</th>
+                            <th>Ưu Tiên</th>
+                            <th>Trạng Thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#a78bfa;"></td>
+                            <td><strong>Skills Auto-Creation Engine</strong></td>
+                            <td>Tự phân tích task completion → generate skill template → user review</td>
+                            <td><span class="priority-badge high">CAO</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#a78bfa;"></td>
+                            <td><strong>Skill Self-Improvement</strong></td>
+                            <td>So sánh outcomes, đề xuất cải tiến, lưu version history</td>
+                            <td><span class="priority-badge medium">TRUNG BÌNH</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#a78bfa;"></td>
+                            <td><strong>Skill Hub Registry</strong></td>
+                            <td>Local registry + share/import skills</td>
+                            <td><span class="priority-badge medium">TRUNG BÌNH</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#a78bfa;"></td>
+                            <td><strong>Trajectory Compressor</strong></td>
+                            <td>LLM-based compression: giữ decisions + outcomes, loại chi tiết</td>
+                            <td><span class="priority-badge high">CAO</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#a78bfa;"></td>
+                            <td><strong>Cross-Session Memory Search</strong></td>
+                            <td>FTS5 search + LLM summarization qua nhiều sessions</td>
+                            <td><span class="priority-badge high">CAO</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#a78bfa;"></td>
+                            <td><strong>Memory Nudges</strong></td>
+                            <td>Agent tự nhắc lưu thông tin quan trọng vào memory</td>
+                            <td><span class="priority-badge low">THẤP</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#a78bfa;"></td>
+                            <td><strong>Skill Learning Cards (UI)</strong></td>
+                            <td>Hiển thị skill creation/improvement trong ChatPanel</td>
+                            <td><span class="priority-badge low">THẤP</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#a78bfa;"></td>
+                            <td><strong>Behavioral & Security Hooks</strong></td>
+                            <td>Cơ chế PreToolUse để chặn mã độc hại/hành vi sai</td>
+                            <td><span class="priority-badge medium">TRUNG BÌNH</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Phase 3 Checklist -->
+            <h3 style="color: #10b981;">✅ Phase 3: Plugin Architecture + Extensions — HOÀN THÀNH</h3>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:40px">✓</th>
+                            <th>Hạng Mục</th>
+                            <th>Chi Tiết</th>
+                            <th>Ưu Tiên</th>
+                            <th>Trạng Thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#ec4899;"></td>
+                            <td><strong>Plugin API & Types</strong></td>
+                            <td>PluginManifest, lifecycle hooks, code vs bundle distinction</td>
+                            <td><span class="priority-badge high">CAO</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#ec4899;"></td>
+                            <td><strong>Plugin Runtime & Sandbox</strong></td>
+                            <td>Load, execute trong isolated process, lifecycle management</td>
+                            <td><span class="priority-badge high">CAO</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#ec4899;"></td>
+                            <td><strong>Plugin Registry</strong></td>
+                            <td>Discover, install, uninstall, update plugins</td>
+                            <td><span class="priority-badge high">CAO</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#ec4899;"></td>
+                            <td><strong>Event Stream Protocol</strong></td>
+                            <td>Protocol events: emit, subscribe, replay cho real-time UI</td>
+                            <td><span class="priority-badge medium">TRUNG BÌNH</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#ec4899;"></td>
+                            <td><strong>Marketplace UI (MarketplaceView.tsx)</strong></td>
+                            <td>Giao diện duyệt/cài đặt extensions — glassmorphism cards</td>
+                            <td><span class="priority-badge medium">TRUNG BÌNH</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#ec4899;"></td>
+                            <td><strong>Event Stream Renderer (ChatPanel)</strong></td>
+                            <td>Render real-time events trong chat: tool progress, agent state</td>
+                            <td><span class="priority-badge medium">TRUNG BÌNH</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Phase 4 Checklist -->
+            <h3 style="color: #10b981;">✅ Phase 4: Advanced Agent Capabilities — HOÀN THÀNH</h3>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:40px">✓</th>
+                            <th>Hạng Mục</th>
+                            <th>Chi Tiết</th>
+                            <th>Ưu Tiên</th>
+                            <th>Trạng Thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#10b981;"></td>
+                            <td><strong>Subagent Delegation</strong></td>
+                            <td>Spawn isolated subagents song song cho các workstreams</td>
+                            <td><span class="priority-badge medium">TRUNG BÌNH</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#10b981;"></td>
+                            <td><strong>Cron Scheduler</strong></td>
+                            <td>Natural language scheduling + delivery to any platform</td>
+                            <td><span class="priority-badge medium">TRUNG BÌNH</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#10b981;"></td>
+                            <td><strong>Multi-Channel Gateway</strong></td>
+                            <td>Telegram, Discord, Slack integration</td>
+                            <td><span class="priority-badge low">THẤP</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#10b981;"></td>
+                            <td><strong>Agent SDK v2</strong></td>
+                            <td>Composable SDK cho external developers</td>
+                            <td><span class="priority-badge low">THẤP</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#10b981;"></td>
+                            <td><strong>Self-Referential Loops</strong></td>
+                            <td>Agent tự động lặp task sửa lỗi đến khi pass (Auto-Loop)</td>
+                            <td><span class="priority-badge medium">TRUNG BÌNH</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#10b981;"></td>
+                            <td><strong>Advanced Multi-Agent Workflows</strong></td>
+                            <td>Workflows chuyên sâu (VD: Code Reviewer & Architect phối hợp)</td>
+                            <td><span class="priority-badge low">THẤP</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Phase 5 Checklist -->
+            <h3 style="color: #10b981;">🔷 Phase 5: Ecosystem & Integration Platform</h3>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">Check</th>
+                            <th>Task</th>
+                            <th>Mô Tả Chi Tiết</th>
+                            <th>Mức Độ</th>
+                            <th>Trạng Thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#10b981;"></td>
+                            <td><strong>Visual Workflow Builder</strong></td>
+                            <td>Kéo-thả blocks tạo workflow (tham khảo AutoGPT)</td>
+                            <td><span class="priority-badge low">THẤP</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#10b981;"></td>
+                            <td><strong>Agent Protocol Standard</strong></td>
+                            <td>Tuân thủ AI Engineer Foundation Agent Protocol & agbenchmark</td>
+                            <td><span class="priority-badge low">THẤP</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#10b981;"></td>
+                            <td><strong>Headless gRPC Engine</strong></td>
+                            <td>Stream API độc lập cho phép attach nhiều UI client khác nhau</td>
+                            <td><span class="priority-badge medium">TRUNG BÌNH</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#10b981;"></td>
+                            <td><strong>Agent Routing System</strong></td>
+                            <td>Tự động route prompt dựa trên settings.json</td>
+                            <td><span class="priority-badge low">THẤP</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#10b981;"></td>
+                            <td><strong>VS Code Extension</strong></td>
+                            <td>Tích hợp CLI/Core engine vào VS Code</td>
+                            <td><span class="priority-badge low">THẤP</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Chat UI Integration Checklist -->
+            <h3 style="color: #06b6d4;">🔷 Chat UI Integration Checklist</h3>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">Check</th>
+                            <th>Task</th>
+                            <th>Mô Tả Chi Tiết</th>
+                            <th>Mức Độ</th>
+                            <th>Trạng Thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#06b6d4;"></td>
+                            <td><strong>Vision Preview & Coordinates Overlay</strong></td>
+                            <td>Hiển thị annotated screenshot & highlight pixel target khi hover</td>
+                            <td><span class="priority-badge high">CAO</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#06b6d4;"></td>
+                            <td><strong>Interactive Tool Cards</strong></td>
+                            <td>Hiển thị lệnh shell, file diff và nút bấm Approve/Edit/Deny trong chat timeline</td>
+                            <td><span class="priority-badge high">CAO</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#06b6d4;"></td>
+                            <td><strong>Real-time Event Stream UI</strong></td>
+                            <td>Status rendering với micro-animations khi agent đang hoạt động nền</td>
+                            <td><span class="priority-badge medium">TRUNG BÌNH</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#06b6d4;"></td>
+                            <td><strong>Self-Repair Loop UI Controller</strong></td>
+                            <td>Banner trạng thái lặp, iteration counter, và nút Stop Loop khẩn cấp</td>
+                            <td><span class="priority-badge medium">TRUNG BÌNH</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" checked style="width:18px;height:18px;cursor:pointer;accent-color:#06b6d4;"></td>
+                            <td><strong>Skill Auto-Creation Prompt UI</strong></td>
+                            <td>Thẻ thông báo đề xuất lưu skill khi task thành công với nút xác nhận lưu</td>
+                            <td><span class="priority-badge low">THẤP</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Summary Progress -->
+            <h3>📊 Tổng Kết Lộ Trình</h3>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Phase</th>
+                            <th>Nội Dung</th>
+                            <th>Nguồn Tham Chiếu Chính</th>
+                            <th>Files Mới</th>
+                            <th>Files Sửa</th>
+                            <th>Ưu Tiên</th>
+                            <th>Trạng Thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Phase 1</strong></td>
+                            <td>Computer Use Nâng Cao + GUI Grounding</td>
+                            <td>UI-TARS Desktop</td>
+                            <td>6</td>
+                            <td>2</td>
+                            <td><span class="priority-badge high">CAO</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành (7/7 items)</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Phase 2</strong></td>
+                            <td>Skills Auto-Create + Trajectory Compression</td>
+                            <td>Hermes Agent</td>
+                            <td>7</td>
+                            <td>3</td>
+                            <td><span class="priority-badge high">CAO</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành (8/8 items)</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Phase 3</strong></td>
+                            <td>Plugin Architecture + Extension Marketplace</td>
+                            <td>OpenClaw + Agent TARS</td>
+                            <td>7</td>
+                            <td>2</td>
+                            <td><span class="priority-badge medium">TRUNG BÌNH</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành (6/6 items)</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Phase 4</strong></td>
+                            <td>Subagents + Scheduler + Gateway + SDK v2</td>
+                            <td>Hermes + AutoGPT + OpenHands</td>
+                            <td>8</td>
+                            <td>4</td>
+                            <td><span class="priority-badge low">THẤP</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành (6/6 items)</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Phase 5</strong></td>
+                            <td>Ecosystem, VS Code, Headless gRPC, Routing</td>
+                            <td>AutoGPT + OpenClaude</td>
+                            <td>6</td>
+                            <td>4</td>
+                            <td><span class="priority-badge low">THẤP</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành (5/5 items)</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Chat UI</strong></td>
+                            <td>Khung Chat Là Trung Tâm Điều Khiển</td>
+                            <td>GHITA Frontend Specs</td>
+                            <td>3</td>
+                            <td>2</td>
+                            <td><span class="priority-badge high">CAO</span></td>
+                            <td><span class="status-pill success">✅ Hoàn thành (5/5 items)</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="alert-box success" style="margin-top: 30px;">
+                <div class="alert-title">🎯 ĐÁNH GIÁ TỔNG THỂ</div>
+                <div class="alert-desc">
+                    <p style="margin-bottom: 10px;">Update v0.0.2 Beta 1 sẽ đưa GHITA CODING AGENT lên tầm cao mới với:</p>
+                    <ul>
+                        <li><strong>Computer Use thế hệ mới:</strong> Vision-based GUI grounding thay vì chỉ coordinate-based (từ UI-TARS)</li>
+                        <li><strong>AI tự học:</strong> Skills tự tạo và cải tiến, trajectory compression thông minh (từ Hermes)</li>
+                        <li><strong>Platform mở:</strong> Plugin API + Extension Marketplace cho community (từ OpenClaw)</li>
+                        <li><strong>Tổng cộng ~28 files mới, ~11 files sửa</strong> phân bổ qua 4 phases rõ ràng</li>
+                    </ul>
+                    <p style="margin-top: 10px; margin-bottom: 0;">Tất cả 9 dự án đều đã được phân tích và trích xuất patterns phù hợp nhất. Ưu tiên các tính năng <strong>tạo ra lợi thế cạnh tranh</strong> của GHITA so với CLI tools (GUI grounding, visual marketplace, event stream rendering).</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="footer">
+            <p>📋 GHITA CODING AGENT — Update v0.0.2 Beta 1 — Phân Tích & Kế Hoạch Tích Hợp AI-Core</p>
+            <p>🔗 Dự án: <strong>D:\GHITA CODING AGENT</strong> — Tham chiếu: <strong>refer_project/ai-core/</strong> (9 dự án)</p>
+            <p style="margin-top: 10px;">Ngày tạo: 21/05/2026 — Phiên bản tài liệu: 1.0</p>
+        </div>
+    </div>
+
+    <script>
+        // Interactive checkbox persistence (localStorage)
+        document.querySelectorAll('input[type="checkbox"]').forEach((cb, i) => {
+            const key = `ghita-plan-v002-checkbox-${i}`;
+            cb.checked = localStorage.getItem(key) === 'true';
+
+            cb.addEventListener('change', () => {
+                localStorage.setItem(key, cb.checked);
+                const row = cb.closest('tr');
+                if (row) {
+                    const statusCell = row.querySelector('.status-pill');
+                    if (statusCell && cb.checked) {
+                        statusCell.textContent = '● Hoàn thành';
+                        statusCell.className = 'status-pill success';
+                    } else if (statusCell && !cb.checked) {
+                        statusCell.textContent = '● Chưa bắt đầu';
+                        statusCell.className = 'status-pill pending';
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

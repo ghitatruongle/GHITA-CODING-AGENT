@@ -177,3 +177,6 @@ export function createNodeSkillAdapters(options: NodeSkillAdapterOptions = {}): 
 export function createNodeSkillRegistry(options: NodeSkillAdapterOptions = {}) {
   return createDefaultSkillRegistry(createNodeSkillAdapters(options));
 }
+
+export { SkillHub } from './registry/hub.js';
+

@@ -2,18 +2,21 @@
 // GHITA CODING AGENT - Custom Provider (OpenAI-compatible endpoints)
 // ==============================================================================
 
-import type { AIStreamChunk } from '@ghita/shared';
+import type { AIProviderType, AIStreamChunk } from '@ghita/shared';
 import type { ChatMessage, ChatOptions, ChatResponse, ProviderConfig } from '../types.js';
 import { BaseProvider } from './base.js';
 
 export class CustomProvider extends BaseProvider {
-  readonly type = 'custom' as const;
-  readonly name = 'Custom';
-  readonly defaultModel = '';
+  readonly type: AIProviderType;
+  readonly name: string;
+  readonly defaultModel: string;
   readonly models: string[] = [];
 
   constructor(config: ProviderConfig) {
     super(config);
+    this.type = config.providerType ?? 'custom';
+    this.name = config.providerName ?? 'Custom';
+    this.defaultModel = config.defaultModel ?? '';
   }
 
   async isReady(): Promise<boolean> {
@@ -97,6 +100,7 @@ export class CustomProvider extends BaseProvider {
         max_tokens: this.getMaxTokens(options),
         temperature: this.getTemperature(options),
         stream: true,
+        stream_options: { include_usage: true },
       }),
       signal: options?.signal,
     });
@@ -111,6 +115,7 @@ export class CustomProvider extends BaseProvider {
 
     const decoder = new TextDecoder();
     let buffer = '';
+    let usage: { promptTokens: number; completionTokens: number; totalTokens: number } | undefined;
 
     try {
       while (true) {
@@ -126,14 +131,25 @@ export class CustomProvider extends BaseProvider {
           if (!trimmed || !trimmed.startsWith('data: ')) continue;
           const data = trimmed.slice(6);
           if (data === '[DONE]') {
-            yield { content: '', done: true, provider: 'custom', model };
+            yield { content: '', done: true, provider: 'custom', model, usage };
             return;
           }
 
           try {
             const parsed = JSON.parse(data) as {
               choices: Array<{ delta: { content?: string } }>;
+              usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
             };
+
+            // Capture usage from the final chunk (when stream_options.include_usage is true)
+            if (parsed.usage) {
+              usage = {
+                promptTokens: parsed.usage.prompt_tokens ?? 0,
+                completionTokens: parsed.usage.completion_tokens ?? 0,
+                totalTokens: parsed.usage.total_tokens ?? 0,
+              };
+            }
+
             const content = parsed.choices[0]?.delta?.content;
             if (content) {
               yield { content, done: false, provider: 'custom', model };
@@ -147,6 +163,6 @@ export class CustomProvider extends BaseProvider {
       reader.releaseLock();
     }
 
-    yield { content: '', done: true, provider: 'custom', model };
+    yield { content: '', done: true, provider: 'custom', model, usage };
   }
 }

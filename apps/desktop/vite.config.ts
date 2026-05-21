@@ -22,6 +22,17 @@ export default defineConfig({
 
   // Pre-bundle heavy deps so Tauri WebView doesn't get a mid-session reload
   optimizeDeps: {
+    exclude: [
+      '@ghita/browser-control',
+      '@ghita/computer-use',
+      '@ghita/ai-engine',
+      '@ghita/communication',
+      'playwright',
+      'playwright-core',
+      'sharp',
+      'screenshot-desktop',
+      'socket.io',
+    ],
     include: [
       'react',
       'react-dom',

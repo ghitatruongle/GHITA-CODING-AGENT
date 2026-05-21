@@ -1,84 +1,86 @@
-# Refer Project - Danh sách 33 dự án tham khảo
+# Refer Project - Danh sách 34 dự án tham khảo
 
 > Các dự án được phân loại theo vai trò trong kiến trúc GHITA CODING AGENT.
 > Script clone tự động: `scripts/clone-refer.sh`
+> Cập nhật lần cuối: 2026-05-21
 
 ---
 
 ## AI Core (9) — `refer_project/ai-core/`
 
-| # | Dự án | GitHub | Stars | Vai trò | Package dùng |
-|---|---|---|---|---|---|
-| 1 | Claude Code | [anthropics/claude-code](https://github.com/anthropics/claude-code) | 125k | AI coding agent engine, terminal, tool use | `packages/ai-engine` |
-| 2 | OpenClaw | [openclaw/openclaw](https://github.com/openclaw/openclaw) | 373k | AI personal assistant, skill system, any OS | `packages/ai-engine` |
-| 3 | OpenClaude | [Gitlawb/openclaude](https://github.com/Gitlawb/openclaude) | 27k | Open-source coding-agent CLI, multi-provider | `packages/ai-engine` |
-| 4 | Open Interpreter | [OpenInterpreter/open-interpreter](https://github.com/OpenInterpreter/open-interpreter) | 58k | AI computer control via code execution | `packages/computer-use` |
-| 5 | OpenHands | [All-Hands-AI/OpenHands](https://github.com/All-Hands-AI/OpenHands) | 55k | AI software engineering agent, sandbox | `packages/computer-use` |
-| 6 | OpenDevin | [OpenDevin/OpenDevin](https://github.com/OpenDevin/OpenDevin) | — | Legacy, merged into OpenHands | Tham khảo |
-| 7 | AutoGPT | [Significant-Gravitas/AutoGPT](https://github.com/Significant-Gravitas/AutoGPT) | — | Autonomous AI agent, task planning | Tham khảo arch |
-| 8 | UI-TARS Desktop | [bytedance/UI-TARS-desktop](https://github.com/bytedance/UI-TARS-desktop) | 34.6k | Multimodal GUI agent, screenshot, cross-platform | `packages/computer-use` |
-| 9 | Hermes Agent | [NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent) | — | AI agent framework by Nous Research | `packages/agents` |
+| # | Dự án | GitHub | Stars | Latest Version | Vai trò | Package dùng |
+|---|---|---|---|---|---|---|
+| 1 | Claude Code | [anthropics/claude-code](https://github.com/anthropics/claude-code) | 125.5k | — | AI coding agent engine, terminal, tool use | `packages/ai-engine` |
+| 2 | OpenClaw | [openclaw/openclaw](https://github.com/openclaw/openclaw) | 373.7k | — | AI personal assistant, skill system, any OS | `packages/ai-engine` |
+| 3 | OpenClaude | [Gitlawb/openclaude](https://github.com/Gitlawb/openclaude) | 27.4k | — | Open-source coding-agent CLI, multi-provider | `packages/ai-engine` |
+| 4 | Open Interpreter | [OpenInterpreter/open-interpreter](https://github.com/OpenInterpreter/open-interpreter) | 63.6k | — | AI computer control via code execution | `packages/computer-use` |
+| 5 | OpenHands | [All-Hands-AI/OpenHands](https://github.com/All-Hands-AI/OpenHands) | 74.4k | v0.9.21 | AI software engineering agent, sandbox | `packages/computer-use` |
+| 6 | OpenDevin | [OpenDevin/OpenDevin](https://github.com/OpenDevin/OpenDevin) | — | — | Legacy, merged into OpenHands | Tham khảo |
+| 7 | AutoGPT | [Significant-Gravitas/AutoGPT](https://github.com/Significant-Gravitas/AutoGPT) | 184.4k | beta-v0.6.61 | Autonomous AI agent, task planning | Tham khảo arch |
+| 8 | UI-TARS Desktop | [bytedance/UI-TARS-desktop](https://github.com/bytedance/UI-TARS-desktop) | 34.9k | — | Multimodal GUI agent, screenshot, cross-platform | `packages/computer-use` |
+| 9 | Hermes Agent | [NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent) | 161.0k | — | AI agent framework by Nous Research | `packages/agents` |
 
 ## AI Framework (4) — `refer_project/ai-framework/`
 
-| # | Dự án | GitHub | Stars | Vai trò | Package dùng |
-|---|---|---|---|---|---|
-| 10 | LangChain.js | [langchain-ai/langchainjs](https://github.com/langchain-ai/langchainjs) | 14k | AI orchestration, chains, RAG | `packages/ai-engine` |
-| 11 | LiteLLM | [BerriAI/litellm](https://github.com/BerriAI/litellm) | 20k | Unified API cho 100+ providers | `packages/ai-engine` |
-| 12 | Vercel AI SDK | [vercel/ai](https://github.com/vercel/ai) | 16k | AI streaming SDK, multi-provider | `packages/ai-engine` |
-| 13 | CrewAI | [crewAIInc/crewAI](https://github.com/crewAIInc/crewAI) | — | Multi-agent orchestration, role-based | `packages/agents` |
+| # | Dự án | GitHub | Stars | Latest Version | Vai trò | Package dùng |
+|---|---|---|---|---|---|---|
+| 10 | LangChain.js | [langchain-ai/langchainjs](https://github.com/langchain-ai/langchainjs) | 17.7k | — | AI orchestration, chains, RAG | `packages/ai-engine` |
+| 11 | LiteLLM | [BerriAI/litellm](https://github.com/BerriAI/litellm) | 47.8k | v1.85.1 | Unified API cho 100+ providers | `packages/ai-engine` |
+| 12 | Vercel AI SDK | [vercel/ai](https://github.com/vercel/ai) | 24.4k | — | AI streaming SDK, multi-provider | `packages/ai-engine` |
+| 13 | CrewAI | [crewAIInc/crewAI](https://github.com/crewAIInc/crewAI) | 51.9k | v1.60.0 | Multi-agent orchestration, role-based | `packages/agents` |
 
-## AI Tools (6) — `refer_project/ai-tools/`
+## AI Tools (7) — `refer_project/ai-tools/`
 
-| # | Dự án | GitHub | Stars | Vai trò | Package dùng |
-|---|---|---|---|---|---|
-| 14 | Aider | [paul-gauthier/aider](https://github.com/paul-gauthier/aider) | — | AI pair programming terminal | `packages/skills` |
-| 15 | Continue | [continuedev/continue](https://github.com/continuedev/continue) | — | AI code assistant (open-source Copilot) | `packages/skills` |
-| 16 | SWE-agent | [princeton-nlp/SWE-agent](https://github.com/princeton-nlp/SWE-agent) | — | AI agent giải quyết GitHub issues | `packages/skills` |
-| 17 | Composio | [ComposioHQ/composio](https://github.com/ComposioHQ/composio) | — | Tool integration 200+ tools cho AI | `packages/skills` |
-| 18 | Skills (Matt Pocock) | [mattpocock/skills](https://github.com/mattpocock/skills) | 91.3k | Skill sets cho AI coding agents | `packages/skills` |
-| 19 | PPT Master | [hugohe3/ppt-master](https://github.com/hugohe3/ppt-master) | — | AI PowerPoint generator | `packages/skills` |
+| # | Dự án | GitHub | Stars | Latest Version | Vai trò | Package dùng |
+|---|---|---|---|---|---|---|
+| 14 | Aider | [paul-gauthier/aider](https://github.com/paul-gauthier/aider) | 45.1k | v0.86.0 | AI pair programming terminal | `packages/skills` |
+| 15 | Continue | [continuedev/continue](https://github.com/continuedev/continue) | 33.3k | v1.2.22 | AI code assistant (open-source Copilot) | `packages/skills` |
+| 16 | SWE-agent | [princeton-nlp/SWE-agent](https://github.com/princeton-nlp/SWE-agent) | 19.3k | v1.1.0 | AI agent giải quyết GitHub issues | `packages/skills` |
+| 17 | Composio | [ComposioHQ/composio](https://github.com/ComposioHQ/composio) | 28.4k | — | Tool integration 200+ tools cho AI | `packages/skills` |
+| 18 | Skills (Matt Pocock) | [mattpocock/skills](https://github.com/mattpocock/skills) | 98.4k | — | Skill sets cho AI coding agents | `packages/skills` |
+| 19 | PPT Master | [hugohe3/ppt-master](https://github.com/hugohe3/ppt-master) | 19.3k | — | AI PowerPoint generator | `packages/skills` |
+| 20 | CodeGraph | [colbymchenry/codegraph](https://github.com/colbymchenry/codegraph) | 12.3k | — | Pre-indexed code knowledge graph cho AI agents, MCP server | `packages/ai-engine` |
 
 ## Browser (5) — `refer_project/browser/`
 
-| # | Dự án | GitHub | Stars | Vai trò | Package dùng |
-|---|---|---|---|---|---|
-| 20 | Playwright | [microsoft/playwright](https://github.com/microsoft/playwright) | 72k | Browser automation, cross-browser | `packages/browser-control` |
-| 21 | Browser Use | [browser-use/browser-use](https://github.com/browser-use/browser-use) | 65k | AI-driven browser automation | `packages/browser-control` |
-| 22 | Stagehand | [browserbase/stagehand](https://github.com/browserbase/stagehand) | — | AI browser automation framework | `packages/browser-control` |
-| 23 | CloakBrowser | [CloakHQ/CloakBrowser](https://github.com/CloakHQ/CloakBrowser) | 14.8k | Stealth Chromium, bypass bot detection | `packages/browser-control` |
-| 24 | WebArena | [web-arena-x/webarena](https://github.com/web-arena-x/webarena) | — | Benchmark cho web browsing agents | Testing |
+| # | Dự án | GitHub | Stars | Latest Version | Vai trò | Package dùng |
+|---|---|---|---|---|---|---|
+| 21 | Playwright | [microsoft/playwright](https://github.com/microsoft/playwright) | 89.1k | v1.14.5 | Browser automation, cross-browser | `packages/browser-control` |
+| 22 | Browser Use | [browser-use/browser-use](https://github.com/browser-use/browser-use) | 95.0k | 0.12.7 | AI-driven browser automation | `packages/browser-control` |
+| 23 | Stagehand | [browserbase/stagehand](https://github.com/browserbase/stagehand) | 22.8k | v3.6.10 | AI browser automation framework | `packages/browser-control` |
+| 24 | CloakBrowser | [CloakHQ/CloakBrowser](https://github.com/CloakHQ/CloakBrowser) | 18.0k | — | Stealth Chromium, bypass bot detection | `packages/browser-control` |
+| 25 | WebArena | [web-arena-x/webarena](https://github.com/web-arena-x/webarena) | 1.5k | — | Benchmark cho web browsing agents | Testing |
 
 ## Desktop (6) — `refer_project/desktop/`
 
-| # | Dự án | GitHub | Stars | Vai trò | Package dùng |
-|---|---|---|---|---|---|
-| 25 | Tauri | [tauri-apps/tauri](https://github.com/tauri-apps/tauri) | 90k | Desktop app framework (Win/Linux) | `apps/desktop` |
-| 26 | React Native | [facebook/react-native](https://github.com/facebook/react-native) | 122k | Android app framework | `apps/mobile` |
-| 27 | nut.js | [nut-tree/nut.js](https://github.com/nut-tree/nut.js) | 1.8k | Desktop automation: mouse, keyboard | `packages/computer-use` |
-| 28 | Monaco Editor | [microsoft/monaco-editor](https://github.com/microsoft/monaco-editor) | — | Code editor engine (VS Code) | `apps/desktop` UI |
-| 29 | xterm.js | [xtermjs/xterm.js](https://github.com/xtermjs/xterm.js) | — | Terminal UI component | `apps/desktop` UI |
-| 30 | node-pty | [microsoft/node-pty](https://github.com/microsoft/node-pty) | — | Terminal emulator backend | `apps/desktop` UI |
+| # | Dự án | GitHub | Stars | Latest Version | Vai trò | Package dùng |
+|---|---|---|---|---|---|---|
+| 26 | Tauri | [tauri-apps/tauri](https://github.com/tauri-apps/tauri) | 106.9k | v2.11.2 | Desktop app framework (Win/Linux) | `apps/desktop` |
+| 27 | React Native | [facebook/react-native](https://github.com/facebook/react-native) | 125.9k | v0.85.3 | Android app framework | `apps/mobile` |
+| 28 | nut.js | [nut-tree/nut.js](https://github.com/nut-tree/nut.js) | 2.8k | — | Desktop automation: mouse, keyboard | `packages/computer-use` |
+| 29 | Monaco Editor | [microsoft/monaco-editor](https://github.com/microsoft/monaco-editor) | 46.1k | v0.55.1 | Code editor engine (VS Code) | `apps/desktop` UI |
+| 30 | xterm.js | [xtermjs/xterm.js](https://github.com/xtermjs/xterm.js) | 20.6k | v6.0.0 | Terminal UI component | `apps/desktop` UI |
+| 31 | node-pty | [microsoft/node-pty](https://github.com/microsoft/node-pty) | 1.9k | — | Terminal emulator backend | `apps/desktop` UI |
 
 ## Infra (2) — `refer_project/infra/`
 
-| # | Dự án | GitHub | Stars | Vai trò | Package dùng |
-|---|---|---|---|---|---|
-| 31 | Socket.io | [socketio/socket.io](https://github.com/socketio/socket.io) | 62k | Real-time desktop ↔ mobile | `packages/communication` |
-| 32 | Ollama | [ollama/ollama](https://github.com/ollama/ollama) | 120k | Local AI models (Llama, Mistral...) | `packages/ai-engine` |
+| # | Dự án | GitHub | Stars | Latest Version | Vai trò | Package dùng |
+|---|---|---|---|---|---|---|
+| 32 | Socket.io | [socketio/socket.io](https://github.com/socketio/socket.io) | 63.1k | v4.8.3 | Real-time desktop ↔ mobile | `packages/communication` |
+| 33 | Ollama | [ollama/ollama](https://github.com/ollama/ollama) | 171.9k | v0.24.0 | Local AI models (Llama, Mistral...) | `packages/ai-engine` |
 
 ## Memory (1) — `refer_project/memory/`
 
-| # | Dự án | GitHub | Stars | Vai trò | Package dùng |
-|---|---|---|---|---|---|
-| 33 | AgentMemory | [rohitg00/agentmemory](https://github.com/rohitg00/agentmemory) | 12.2k | Persistent memory cho AI agents | `packages/memory` |
+| # | Dự án | GitHub | Stars | Latest Version | Vai trò | Package dùng |
+|---|---|---|---|---|---|---|
+| 34 | AgentMemory | [rohitg00/agentmemory](https://github.com/rohitg00/agentmemory) | 15.6k | v1.7.0 | Persistent memory cho AI agents | `packages/memory` |
 
 ---
 
 ## Mapping refer_project → Package
 
 ```
-packages/ai-engine       ← openclaw, openclaude, claude-code, litellm, vercel-ai, langchainjs, ollama
+packages/ai-engine       ← openclaw, openclaude, claude-code, litellm, vercel-ai, langchainjs, ollama, codegraph
 packages/computer-use    ← open-interpreter, openhands, ui-tars-desktop, nut-js
 packages/agents          ← crewai, hermes-agent
 packages/browser-control ← playwright, browser-use, stagehand, cloakbrowser
@@ -88,3 +90,35 @@ packages/communication   ← socketio
 apps/desktop             ← tauri, monaco-editor, xtermjs, node-pty
 apps/mobile              ← react-native
 ```
+
+---
+
+## Thay đổi đáng chú ý (cập nhật 2026-05-21)
+
+| Dự án | Stars cũ → Mới | Thay đổi |
+|---|---|---|
+| Open Interpreter | 58k → 63.6k | +5.6k |
+| OpenHands | 55k → 74.4k | +19.4k |
+| AutoGPT | — → 184.4k | Bổ sung stars |
+| Hermes Agent | — → 161.0k | Bổ sung stars |
+| LangChain.js | 14k → 17.7k | +3.7k |
+| LiteLLM | 20k → 47.8k | +27.8k |
+| CrewAI | — → 51.9k | Bổ sung stars |
+| Aider | — → 45.1k | Bổ sung stars |
+| Continue | — → 33.3k | Bổ sung stars |
+| SWE-agent | — → 19.3k | Bổ sung stars |
+| Composio | — → 28.4k | Bổ sung stars |
+| Skills | 91.3k → 98.4k | +7.1k |
+| Playwright | 72k → 89.1k | +17.1k |
+| Browser Use | 65k → 95.0k | +30.0k |
+| Stagehand | — → 22.8k | Bổ sung stars |
+| CloakBrowser | 14.8k → 18.0k | +3.2k |
+| Tauri | 90k → 106.9k | +16.9k |
+| React Native | 122k → 125.9k | +3.9k |
+| Monaco Editor | — → 46.1k | Bổ sung stars |
+| xterm.js | — → 20.6k | Bổ sung stars |
+| node-pty | — → 1.9k | Bổ sung stars |
+| Socket.io | 62k → 63.1k | +1.1k |
+| Ollama | 120k → 171.9k | +51.9k |
+| AgentMemory | 12.2k → 15.6k | +3.4k |
+| **CodeGraph** | — | **MỚI** — clone về ai-tools |

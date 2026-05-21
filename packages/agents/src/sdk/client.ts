@@ -86,4 +86,37 @@ export class GhitAgentClient {
     const data = (await response.json()) as { providers: string[] };
     return data.providers;
   }
+
+  /** Lấy danh sách subagents khả dụng */
+  async getSubagents(): Promise<any[]> {
+    try {
+      const response = await fetch(`${this.config.serverUrl}/api/subagents`, {
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!response.ok) return [];
+      const data = (await response.json()) as { subagents: any[] };
+      return data.subagents || [];
+    } catch {
+      return []; // Fallback for network/mock environments
+    }
+  }
+
+  /** Kích hoạt vòng lặp tự sửa sai Ralph Loop cho một tác vụ */
+  async runRalphLoop(task: string, maxIterations = 5): Promise<any> {
+    const response = await fetch(`${this.config.serverUrl}/api/ralph-loop`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(this.config.apiKey ? { Authorization: `Bearer ${this.config.apiKey}` } : {}),
+      },
+      body: JSON.stringify({ task, maxIterations }),
+      signal: AbortSignal.timeout(this.config.timeout),
+    });
+
+    if (!response.ok) {
+      throw new Error(`GHITA Ralph Loop API error: ${response.status}`);
+    }
+
+    return await response.json();
+  }
 }

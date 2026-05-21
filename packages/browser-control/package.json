@@ -4,6 +4,7 @@
   "private": true,
   "description": "Browser automation (Playwright + CloakBrowser) cho GHITA CODING AGENT",
   "main": "./dist/index.js",
+  "type": "module",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
@@ -24,7 +25,8 @@
   },
   "dependencies": {
     "@ghita/skills": "workspace:*",
-    "@ghita/shared": "workspace:*"
+    "@ghita/shared": "workspace:*",
+    "@ghita/computer-use": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

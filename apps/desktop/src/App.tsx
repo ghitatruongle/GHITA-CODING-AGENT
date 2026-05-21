@@ -9,6 +9,7 @@ import { MainLayout } from './layouts/MainLayout';
 import { Toast } from './components/Toast';
 import { useAppStore } from './stores/appStore';
 import toast from 'react-hot-toast';
+import { invoke } from '@tauri-apps/api/core';
 
 /**
  * Emits a 'ready' event to Tauri after the first React render completes.
@@ -37,6 +38,29 @@ function AppContent() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
+
+  // Auto-start the sidecar server if it is offline on startup
+  useEffect(() => {
+    const autoStartServer = async () => {
+      try {
+        const result = await invoke<{ status?: string }>('get_server_status');
+        if (result?.status !== 'ok') {
+          console.log('[AppContent] Server is offline on startup, invoking start_server...');
+          await invoke('start_server');
+        } else {
+          console.log('[AppContent] Server is already running.');
+        }
+      } catch (err) {
+        console.warn('[AppContent] Failed to check or start server on startup:', err);
+        try {
+          await invoke('start_server');
+        } catch (startErr) {
+          console.error('[AppContent] Failed fallback start_server command:', startErr);
+        }
+      }
+    };
+    autoStartServer();
+  }, []);
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;

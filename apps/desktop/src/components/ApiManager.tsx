@@ -1,10 +1,24 @@
 // ==============================================================================
-// GHITA CODING AGENT — API Manager Component
+// GHITA CODING AGENT — API Manager Component (v2 Redesign)
+// Searchable, categorized, favorites, status badges
 // ==============================================================================
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 
-type ProviderId = 'openai' | 'anthropic' | 'google' | 'ollama' | 'custom';
+type ProviderId =
+  | 'openai'
+  | 'anthropic'
+  | 'google'
+  | 'ollama'
+  | 'custom'
+  | 'opengateway'
+  | 'mimo'
+  | 'openrouter'
+  | 'deepseek'
+  | 'groq'
+  | 'mistral'
+  | 'hicap'
+  | 'github-models';
 
 interface ProviderConfig {
   id: ProviderId;
@@ -13,11 +27,35 @@ interface ProviderConfig {
   baseUrl: string;
   keyPlaceholder: string;
   defaultModels: string[];
+  category: 'free' | 'paid' | 'custom';
   fetchModelsUrl?: (key: string, baseUrl: string) => string;
   parseModels?: (data: unknown) => string[];
 }
 
 const PROVIDERS: ProviderConfig[] = [
+  {
+    id: 'opengateway',
+    name: 'Gitlawb Opengateway',
+    icon: '🌐',
+    baseUrl: 'https://opengateway.gitlawb.com/v1',
+    keyPlaceholder: 'Miễn phí — không cần key',
+    defaultModels: ['mimo-v2.5-pro', 'mimo-v2.5', 'mimo-v2-pro', 'mimo-v2-omni', 'mimo-v2-flash'],
+    category: 'free',
+  },
+  {
+    id: 'ollama',
+    name: 'Ollama (Local)',
+    icon: '🦙',
+    baseUrl: 'http://localhost:11434',
+    keyPlaceholder: 'Không cần key',
+    defaultModels: ['llama3', 'codellama', 'mistral'],
+    category: 'free',
+    fetchModelsUrl: (_key, base) => `${base}/api/tags`,
+    parseModels: (data) => {
+      const d = data as { models?: { name: string }[] };
+      return (d.models ?? []).map((m) => m.name).sort();
+    },
+  },
   {
     id: 'openai',
     name: 'OpenAI',
@@ -25,6 +63,7 @@ const PROVIDERS: ProviderConfig[] = [
     baseUrl: 'https://api.openai.com/v1',
     keyPlaceholder: 'sk-proj-...',
     defaultModels: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo', 'o1', 'o1-mini'],
+    category: 'paid',
     fetchModelsUrl: (_key, base) => `${base}/models`,
     parseModels: (data) => {
       const d = data as { data?: { id: string }[] };
@@ -37,11 +76,8 @@ const PROVIDERS: ProviderConfig[] = [
     icon: '🟣',
     baseUrl: 'https://api.anthropic.com',
     keyPlaceholder: 'sk-ant-...',
-    defaultModels: [
-      'claude-sonnet-4-20250514',
-      'claude-3-5-haiku-20241022',
-      'claude-3-opus-20240229',
-    ],
+    defaultModels: ['claude-sonnet-4-20250514', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
+    category: 'paid',
   },
   {
     id: 'google',
@@ -50,6 +86,7 @@ const PROVIDERS: ProviderConfig[] = [
     baseUrl: 'https://generativelanguage.googleapis.com',
     keyPlaceholder: 'AIza...',
     defaultModels: ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash'],
+    category: 'paid',
     fetchModelsUrl: (key, base) => `${base}/v1beta/models?key=${key}`,
     parseModels: (data) => {
       const d = data as { models?: { name: string }[] };
@@ -57,16 +94,87 @@ const PROVIDERS: ProviderConfig[] = [
     },
   },
   {
-    id: 'ollama',
-    name: 'Ollama (Local)',
-    icon: '🦙',
-    baseUrl: 'http://localhost:11434',
-    keyPlaceholder: 'Không cần key',
-    defaultModels: ['llama3', 'codellama', 'mistral'],
-    fetchModelsUrl: (_key, base) => `${base}/api/tags`,
+    id: 'openrouter',
+    name: 'OpenRouter',
+    icon: '🔀',
+    baseUrl: 'https://openrouter.ai/api/v1',
+    keyPlaceholder: 'sk-or-...',
+    defaultModels: ['anthropic/claude-sonnet-4', 'openai/gpt-4o', 'meta-llama/llama-3.1-70b-instruct'],
+    category: 'paid',
+    fetchModelsUrl: (_key, base) => `${base}/models`,
     parseModels: (data) => {
-      const d = data as { models?: { name: string }[] };
-      return (d.models ?? []).map((m) => m.name).sort();
+      const d = data as { data?: { id: string }[] };
+      return (d.data ?? []).map((m) => m.id).sort();
+    },
+  },
+  {
+    id: 'deepseek',
+    name: 'DeepSeek',
+    icon: '🔍',
+    baseUrl: 'https://api.deepseek.com/v1',
+    keyPlaceholder: 'sk-...',
+    defaultModels: ['deepseek-chat', 'deepseek-coder'],
+    category: 'paid',
+    fetchModelsUrl: (_key, base) => `${base}/models`,
+    parseModels: (data) => {
+      const d = data as { data?: { id: string }[] };
+      return (d.data ?? []).map((m) => m.id).sort();
+    },
+  },
+  {
+    id: 'groq',
+    name: 'Groq',
+    icon: '⚡',
+    baseUrl: 'https://api.groq.com/openai/v1',
+    keyPlaceholder: 'gsk_...',
+    defaultModels: ['llama-3.1-70b-versatile', 'mixtral-8x7b-32768'],
+    category: 'paid',
+    fetchModelsUrl: (_key, base) => `${base}/models`,
+    parseModels: (data) => {
+      const d = data as { data?: { id: string }[] };
+      return (d.data ?? []).map((m) => m.id).sort();
+    },
+  },
+  {
+    id: 'mistral',
+    name: 'Mistral',
+    icon: '🌊',
+    baseUrl: 'https://api.mistral.ai/v1',
+    keyPlaceholder: 'Nhập Mistral API key...',
+    defaultModels: ['mistral-large-latest', 'mistral-medium-latest', 'open-mistral-nemo'],
+    category: 'paid',
+    fetchModelsUrl: (_key, base) => `${base}/models`,
+    parseModels: (data) => {
+      const d = data as { data?: { id: string }[] };
+      return (d.data ?? []).map((m) => m.id).sort();
+    },
+  },
+  {
+    id: 'mimo',
+    name: 'Xiaomi MiMo',
+    icon: '🤖',
+    baseUrl: 'https://api.xiaomimimo.com/v1',
+    keyPlaceholder: 'MIMO_API_KEY',
+    defaultModels: ['mimo-v2.5-pro', 'mimo-v2-lite'],
+    category: 'paid',
+    fetchModelsUrl: (_key, base) => `${base}/models`,
+    parseModels: (data) => {
+      const d = data as { data?: { id: string }[] };
+      return (d.data ?? []).map((m) => m.id).sort();
+    },
+  },
+  {
+    id: 'github-models',
+    name: 'GitHub Models',
+    icon: '🐙',
+    baseUrl: 'https://models.inference.ai.azure.com',
+    keyPlaceholder: 'ghp_...',
+    defaultModels: ['gpt-4o', 'Meta-Llama-3.1-70B-Instruct', 'Mistral-large'],
+    category: 'paid',
+    fetchModelsUrl: (_key, base) => `${base}/models`,
+    parseModels: (data) => {
+      const d = data as { data?: { id: string }[] };
+      return (d.data ?? []).map((m) => m.id).sort();
     },
   },
   {
@@ -76,6 +184,16 @@ const PROVIDERS: ProviderConfig[] = [
     baseUrl: '',
     keyPlaceholder: 'Nhập API key...',
     defaultModels: [],
+    category: 'custom',
+  },
+  {
+    id: 'hicap',
+    name: 'Hicap',
+    icon: '🔗',
+    baseUrl: '',
+    keyPlaceholder: 'Nhập API key...',
+    defaultModels: [],
+    category: 'custom',
   },
 ];
 
@@ -93,9 +211,9 @@ interface ApiKeyEntry {
 type ApiKeysState = Record<ProviderId, ApiKeyEntry>;
 
 const STORAGE_KEY = 'ghita_api_keys';
+const FAVORITES_KEY = 'ghita_api_favorites';
 
 function buildInitialState(): ApiKeysState {
-  // Try to restore from localStorage (basic persistence)
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
@@ -117,7 +235,7 @@ function buildInitialState(): ApiKeysState {
       return state;
     }
   } catch {
-    // Ignore parse errors
+    // Ignore
   }
 
   const state = {} as ApiKeysState;
@@ -136,12 +254,26 @@ function buildInitialState(): ApiKeysState {
   return state;
 }
 
+function loadFavorites(): Set<ProviderId> {
+  try {
+    const saved = localStorage.getItem(FAVORITES_KEY);
+    if (saved) return new Set(JSON.parse(saved) as ProviderId[]);
+  } catch { /* ignore */ }
+  return new Set<ProviderId>();
+}
+
+function saveFavorites(favs: Set<ProviderId>) {
+  try { localStorage.setItem(FAVORITES_KEY, JSON.stringify([...favs])); } catch { /* ignore */ }
+}
+
 export function ApiManager() {
   const [keys, setKeys] = useState<ApiKeysState>(buildInitialState);
   const [expandedId, setExpandedId] = useState<ProviderId | null>(null);
   const [showKey, setShowKey] = useState<ProviderId | null>(null);
+  const [search, setSearch] = useState('');
+  const [favorites, setFavorites] = useState<Set<ProviderId>>(loadFavorites);
 
-  // Persist API keys to localStorage on change
+  // Persist API keys
   useEffect(() => {
     try {
       const toSave: Partial<Record<ProviderId, Partial<ApiKeyEntry>>> = {};
@@ -155,18 +287,26 @@ export function ApiManager() {
         };
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
-    } catch {
-      // localStorage may be unavailable
-    }
+    } catch { /* ignore */ }
   }, [keys]);
 
   const updateKey = useCallback((id: ProviderId, patch: Partial<ApiKeyEntry>) => {
     setKeys((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
   }, []);
 
+  const toggleFavorite = useCallback((id: ProviderId) => {
+    setFavorites((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      saveFavorites(next);
+      return next;
+    });
+  }, []);
+
   const handleSave = (id: ProviderId) => {
     const entry = keys[id];
-    updateKey(id, { active: entry.apiKey.length > 0 || id === 'ollama' });
+    const needsNoKey = id === 'ollama' || id === 'opengateway';
+    updateKey(id, { active: entry.apiKey.length > 0 || needsNoKey });
     setExpandedId(null);
   };
 
@@ -180,7 +320,8 @@ export function ApiManager() {
     try {
       const url = provider.fetchModelsUrl(entry.apiKey, entry.baseUrl);
       const headers: Record<string, string> = {};
-      if (entry.apiKey && id === 'openai') {
+      const openAiCompat = ['openai', 'opengateway', 'mimo', 'openrouter', 'deepseek', 'groq', 'mistral', 'hicap', 'github-models'];
+      if (entry.apiKey && openAiCompat.includes(id)) {
         headers['Authorization'] = `Bearer ${entry.apiKey}`;
       }
       if (entry.apiKey && id === 'anthropic') {
@@ -215,279 +356,326 @@ export function ApiManager() {
 
   const maskKey = (key: string): string => {
     if (!key) return '';
-    if (key.length <= 8) return '•'.repeat(key.length);
-    return key.slice(0, 4) + '•'.repeat(Math.min(key.length - 8, 20)) + key.slice(-4);
+    if (key.length <= 8) return '\u2022'.repeat(key.length);
+    return key.slice(0, 4) + '\u2022'.repeat(Math.min(key.length - 8, 20)) + key.slice(-4);
   };
+
+  // Filter + group
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    if (!q) return PROVIDERS;
+    return PROVIDERS.filter(
+      (p) => p.name.toLowerCase().includes(q) || p.id.includes(q),
+    );
+  }, [search]);
 
   const activeCount = Object.values(keys).filter((k) => k.active).length;
 
+  const groups = useMemo(() => {
+    const favList = filtered.filter((p) => favorites.has(p.id));
+    const freeList = filtered.filter((p) => p.category === 'free' && !favorites.has(p.id));
+    const paidList = filtered.filter((p) => p.category === 'paid' && !favorites.has(p.id));
+    const customList = filtered.filter((p) => p.category === 'custom' && !favorites.has(p.id));
+    return [
+      { label: 'Y\u00EAU THÍCH', emoji: '\u2B50', list: favList },
+      { label: 'MIỄN PHÍ / LOCAL', emoji: '\uD83C\uDF1F', list: freeList },
+      { label: 'TRẢ PHÍ', emoji: '\uD83D\uDCB0', list: paidList },
+      { label: 'TÙY CHỈNH', emoji: '\u2699\uFE0F', list: customList },
+    ].filter((g) => g.list.length > 0);
+  }, [filtered, favorites]);
+
   return (
-    <div style={{ padding: '24px', overflow: 'auto', height: '100%' }}>
-      <h2
-        style={{
-          fontSize: '20px',
-          fontWeight: 700,
-          marginBottom: '8px',
-          background: 'var(--accent-gradient)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-        }}
-      >
+    <div style={{ padding: '20px', overflow: 'auto', height: '100%' }}>
+      {/* Header */}
+      <h2 style={{
+        fontSize: '18px', fontWeight: 700, marginBottom: '4px',
+        background: 'var(--accent-gradient)',
+        WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+      }}>
         API Management
       </h2>
-      <p style={{ color: 'var(--text-muted)', marginBottom: '24px', fontSize: '13px' }}>
-        {activeCount > 0
-          ? `${activeCount} provider(s) đang hoạt động`
-          : 'Thêm API key để bắt đầu sử dụng AI'}
+      <p style={{ color: 'var(--text-muted)', marginBottom: '16px', fontSize: '12px' }}>
+        {activeCount > 0 ? `${activeCount} provider(s) đang hoạt động` : 'Thêm API key để bắt đầu sử dụng AI'}
       </p>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {PROVIDERS.map((provider) => {
-          const entry = keys[provider.id];
-          const isExpanded = expandedId === provider.id;
+      {/* Search */}
+      <div style={{ position: 'relative', marginBottom: '16px' }}>
+        <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', opacity: 0.5 }}>
+          🔍
+        </span>
+        <input
+          type="text"
+          placeholder="Tìm provider..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{
+            width: '100%', padding: '10px 12px 10px 36px',
+            background: 'var(--bg-tertiary)', border: '1px solid var(--border-default)',
+            borderRadius: 'var(--radius-md)', color: 'var(--text-primary)',
+            fontSize: '13px', outline: 'none', boxSizing: 'border-box',
+          }}
+        />
+      </div>
 
-          return (
-            <div
-              key={provider.id}
-              style={{
-                background: 'var(--bg-surface)',
-                borderRadius: 'var(--radius-md)',
-                border: entry.active
-                  ? '1px solid rgba(34, 197, 94, 0.3)'
-                  : '1px solid var(--border-subtle)',
-                overflow: 'hidden',
-                transition: 'border-color var(--transition-fast)',
-              }}
-            >
-              {/* Header row */}
-              <div
-                onClick={() => setExpandedId(isExpanded ? null : provider.id)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '16px 20px',
-                  cursor: 'pointer',
-                  gap: '12px',
-                  transition: 'background var(--transition-fast)',
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-              >
-                <span style={{ fontSize: '24px' }}>{provider.icon}</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '14px' }}>
-                    {provider.name}
-                  </div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                    {entry.active
-                      ? `Model: ${entry.selectedModel || '—'}`
-                      : entry.apiKey
-                        ? maskKey(entry.apiKey)
-                        : provider.keyPlaceholder}
-                  </div>
-                </div>
+      {/* Groups */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        {groups.map((group) => (
+          <div key={group.label}>
+            <div style={{
+              fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)',
+              textTransform: 'uppercase', letterSpacing: '1px',
+              marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px',
+            }}>
+              <span>{group.emoji}</span> {group.label}
+              <span style={{
+                marginLeft: 'auto', fontSize: '10px', fontWeight: 500,
+                background: 'var(--bg-active)', padding: '2px 8px',
+                borderRadius: 'var(--radius-full)', color: 'var(--text-muted)',
+              }}>
+                {group.list.length}
+              </span>
+            </div>
 
-                {/* Status badge */}
-                <span
-                  style={{
-                    padding: '3px 10px',
-                    borderRadius: 'var(--radius-full)',
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    background: entry.active ? 'var(--success-bg)' : 'var(--bg-surface)',
-                    color: entry.active ? 'var(--success)' : 'var(--text-muted)',
-                    border: entry.active ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid var(--border-subtle)',
-                  }}
-                >
-                  {entry.active ? 'Connected' : 'Not set'}
-                </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {group.list.map((provider) => {
+                const entry = keys[provider.id];
+                const isExpanded = expandedId === provider.id;
+                const isFav = favorites.has(provider.id);
+                const status = entry.active ? 'active' : entry.apiKey ? 'ready' : 'none';
 
-                {/* Chevron */}
-                <span
-                  style={{
-                    color: 'var(--text-muted)',
-                    transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                    transition: 'transform 200ms',
-                    fontSize: '12px',
-                  }}
-                >
-                  ▼
-                </span>
-              </div>
-
-              {/* Expanded content */}
-              {isExpanded && (
-                <div
-                  style={{
-                    padding: '0 20px 20px',
-                    borderTop: '1px solid var(--border-subtle)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '14px',
-                    paddingTop: '16px',
-                  }}
-                >
-                  {/* API Key input */}
-                  <div>
-                    <label style={labelStyle}>API Key</label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <input
-                        type={showKey === provider.id ? 'text' : 'password'}
-                        value={entry.apiKey}
-                        onChange={(e) => updateKey(provider.id, { apiKey: e.target.value, active: false })}
-                        placeholder={provider.keyPlaceholder}
-                        style={{ ...inputStyle, flex: 1 }}
-                      />
+                return (
+                  <div
+                    key={provider.id}
+                    style={{
+                      background: 'var(--bg-surface)',
+                      borderRadius: 'var(--radius-md)',
+                      border: status === 'active'
+                        ? '1px solid rgba(34, 197, 94, 0.3)'
+                        : status === 'ready'
+                          ? '1px solid rgba(245, 158, 11, 0.2)'
+                          : '1px solid var(--border-subtle)',
+                      overflow: 'hidden',
+                      transition: 'border-color var(--transition-fast)',
+                    }}
+                  >
+                    {/* Header row */}
+                    <div
+                      onClick={() => setExpandedId(isExpanded ? null : provider.id)}
+                      style={{
+                        display: 'flex', alignItems: 'center',
+                        padding: '12px 16px', cursor: 'pointer', gap: '10px',
+                        transition: 'background var(--transition-fast)',
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                    >
+                      {/* Favorite star */}
                       <button
-                        onClick={() => setShowKey(showKey === provider.id ? null : provider.id)}
-                        style={iconBtnStyle}
-                        title={showKey === provider.id ? 'Hide' : 'Show'}
+                        onClick={(e) => { e.stopPropagation(); toggleFavorite(provider.id); }}
+                        style={{
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          fontSize: '14px', padding: '2px', opacity: isFav ? 1 : 0.3,
+                          transition: 'opacity 0.2s',
+                        }}
+                        title={isFav ? 'Bỏ yêu thích' : 'Thêm yêu thích'}
                       >
-                        {showKey === provider.id ? '🙈' : '👁️'}
+                        {isFav ? '\u2B50' : '\u2606'}
                       </button>
+
+                      <span style={{ fontSize: '20px' }}>{provider.icon}</span>
+
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '13px' }}>
+                          {provider.name}
+                        </div>
+                        <div style={{
+                          fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px',
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>
+                          {status === 'active'
+                            ? `Model: ${entry.selectedModel || '\u2014'}`
+                            : status === 'ready'
+                              ? maskKey(entry.apiKey)
+                              : provider.keyPlaceholder}
+                        </div>
+                      </div>
+
+                      {/* Status badge */}
+                      <span style={{
+                        padding: '2px 8px', borderRadius: 'var(--radius-full)',
+                        fontSize: '10px', fontWeight: 600,
+                        background: status === 'active'
+                          ? 'var(--success-bg)'
+                          : status === 'ready'
+                            ? 'rgba(245, 158, 11, 0.1)'
+                            : 'var(--bg-surface)',
+                        color: status === 'active'
+                          ? 'var(--success)'
+                          : status === 'ready'
+                            ? '#f59e0b'
+                            : 'var(--text-muted)',
+                        border: status === 'active'
+                          ? '1px solid rgba(34, 197, 94, 0.3)'
+                          : status === 'ready'
+                            ? '1px solid rgba(245, 158, 11, 0.2)'
+                            : '1px solid var(--border-subtle)',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {status === 'active' ? 'Active' : status === 'ready' ? 'Ready' : 'Not set'}
+                      </span>
+
+                      {/* Chevron */}
+                      <span style={{
+                        color: 'var(--text-muted)',
+                        transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 200ms', fontSize: '10px',
+                      }}>
+                        ▼
+                      </span>
                     </div>
-                  </div>
 
-                  {/* Base URL (editable for custom) */}
-                  {provider.id === 'custom' && (
-                    <div>
-                      <label style={labelStyle}>Base URL</label>
-                      <input
-                        type="text"
-                        value={entry.baseUrl}
-                        onChange={(e) => updateKey(provider.id, { baseUrl: e.target.value })}
-                        placeholder="https://api.example.com/v1"
-                        style={inputStyle}
-                      />
-                    </div>
-                  )}
+                    {/* Expanded content */}
+                    {isExpanded && (
+                      <div style={{
+                        padding: '0 16px 16px',
+                        borderTop: '1px solid var(--border-subtle)',
+                        display: 'flex', flexDirection: 'column', gap: '12px', paddingTop: '14px',
+                      }}>
+                        {/* API Key input */}
+                        <div>
+                          <label style={labelStyle}>API Key</label>
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <input
+                              type={showKey === provider.id ? 'text' : 'password'}
+                              value={entry.apiKey}
+                              onChange={(e) => updateKey(provider.id, { apiKey: e.target.value, active: false })}
+                              placeholder={provider.keyPlaceholder}
+                              style={{ ...inputStyle, flex: 1 }}
+                            />
+                            <button
+                              onClick={() => setShowKey(showKey === provider.id ? null : provider.id)}
+                              style={iconBtnStyle}
+                              title={showKey === provider.id ? 'Hide' : 'Show'}
+                            >
+                              {showKey === provider.id ? '\uD83D\uDE48' : '\uD83D\uDC41\uFE0F'}
+                            </button>
+                          </div>
+                        </div>
 
-                  {/* Model selector */}
-                  <div>
-                    <label style={labelStyle}>Model</label>
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      <input
-                        type="text"
-                        list={`models-list-${provider.id}`}
-                        value={entry.selectedModel}
-                        onChange={(e) => updateKey(provider.id, { selectedModel: e.target.value })}
-                        placeholder="Chọn hoặc tự gõ tên model..."
-                        style={{ ...inputStyle, flex: 1 }}
-                      />
-                      <datalist id={`models-list-${provider.id}`}>
-                        {entry.availableModels.map((m) => (
-                          <option key={m} value={m} />
-                        ))}
-                      </datalist>
+                        {/* Base URL (editable for custom) */}
+                        {provider.id === 'custom' && (
+                          <div>
+                            <label style={labelStyle}>Base URL</label>
+                            <input
+                              type="text"
+                              value={entry.baseUrl}
+                              onChange={(e) => updateKey(provider.id, { baseUrl: e.target.value })}
+                              placeholder="https://api.example.com/v1"
+                              style={inputStyle}
+                            />
+                          </div>
+                        )}
 
-                      {/* Fetch models button */}
-                      {provider.fetchModelsUrl && (
-                        <button
-                          onClick={() => handleFetchModels(provider.id)}
-                          disabled={entry.isFetchingModels || (!entry.apiKey && provider.id !== 'ollama')}
-                          style={{
-                            ...iconBtnStyle,
-                            opacity: entry.isFetchingModels || (!entry.apiKey && provider.id !== 'ollama') ? 0.4 : 1,
-                            whiteSpace: 'nowrap',
-                          }}
-                          title="Lấy danh sách model từ API"
-                        >
-                          {entry.isFetchingModels ? '⏳' : '🔄'} Fetch
-                        </button>
-                      )}
-                    </div>
+                        {/* Model selector */}
+                        <div>
+                          <label style={labelStyle}>Model</label>
+                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                            <input
+                              type="text"
+                              list={`models-list-${provider.id}`}
+                              value={entry.selectedModel}
+                              onChange={(e) => updateKey(provider.id, { selectedModel: e.target.value })}
+                              placeholder="Chọn hoặc gõ tên model..."
+                              style={{ ...inputStyle, flex: 1 }}
+                            />
+                            <datalist id={`models-list-${provider.id}`}>
+                              {entry.availableModels.map((m) => (
+                                <option key={m} value={m} />
+                              ))}
+                            </datalist>
 
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '5px', display: 'block' }}>
-                      💡 Bạn có thể chọn model gợi ý trong danh sách hoặc tự do gõ bất kỳ tên model nào khác.
-                    </span>
+                            {provider.fetchModelsUrl && (
+                              <button
+                                onClick={() => handleFetchModels(provider.id)}
+                                disabled={entry.isFetchingModels || (!entry.apiKey && provider.id !== 'ollama' && provider.id !== 'opengateway')}
+                                style={{
+                                  ...iconBtnStyle,
+                                  opacity: entry.isFetchingModels || (!entry.apiKey && provider.id !== 'ollama' && provider.id !== 'opengateway') ? 0.4 : 1,
+                                  whiteSpace: 'nowrap',
+                                }}
+                                title="Lấy danh sách model từ API"
+                              >
+                                {entry.isFetchingModels ? '\u23F3' : '\uD83D\uDD04'} Fetch
+                              </button>
+                            )}
+                          </div>
+                          {entry.fetchError && (
+                            <div style={{ fontSize: '11px', color: 'var(--error)', marginTop: '4px' }}>
+                              {entry.fetchError}
+                            </div>
+                          )}
+                        </div>
 
-                    {/* Fetch error */}
-                    {entry.fetchError && (
-                      <div style={{ fontSize: '11px', color: 'var(--error)', marginTop: '4px' }}>
-                        {entry.fetchError}
+                        {/* Actions */}
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                          <button
+                            onClick={() => {
+                              updateKey(provider.id, {
+                                apiKey: '', active: false,
+                                selectedModel: provider.defaultModels[0] ?? '',
+                                availableModels: provider.defaultModels,
+                                fetchError: null,
+                              });
+                            }}
+                            style={{
+                              padding: '7px 14px', background: 'var(--error-bg)',
+                              color: 'var(--error)', border: '1px solid rgba(239, 68, 68, 0.2)',
+                              borderRadius: 'var(--radius-sm)', fontSize: '12px', cursor: 'pointer',
+                            }}
+                          >
+                            Xóa Key
+                          </button>
+                          <button
+                            onClick={() => handleSave(provider.id)}
+                            style={{
+                              padding: '7px 20px', background: 'var(--accent-primary)',
+                              color: '#fff', border: 'none',
+                              borderRadius: 'var(--radius-sm)', fontSize: '12px',
+                              fontWeight: 600, cursor: 'pointer',
+                            }}
+                          >
+                            Lưu
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
-
-                  {/* Actions */}
-                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                    <button
-                      onClick={() => {
-                        updateKey(provider.id, {
-                          apiKey: '',
-                          active: false,
-                          selectedModel: provider.defaultModels[0] ?? '',
-                          availableModels: provider.defaultModels,
-                          fetchError: null,
-                        });
-                      }}
-                      style={{
-                        padding: '8px 16px',
-                        background: 'var(--error-bg)',
-                        color: 'var(--error)',
-                        border: '1px solid rgba(239, 68, 68, 0.2)',
-                        borderRadius: 'var(--radius-sm)',
-                        fontSize: '13px',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Xóa Key
-                    </button>
-                    <button
-                      onClick={() => handleSave(provider.id)}
-                      style={{
-                        padding: '8px 24px',
-                        background: 'var(--accent-primary)',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: 'var(--radius-sm)',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Lưu
-                    </button>
-                  </div>
-                </div>
-              )}
+                );
+              })}
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
 const labelStyle: React.CSSProperties = {
-  display: 'block',
-  fontSize: '12px',
-  fontWeight: 600,
-  color: 'var(--text-secondary)',
-  marginBottom: '6px',
-  textTransform: 'uppercase',
-  letterSpacing: '0.5px',
+  display: 'block', fontSize: '11px', fontWeight: 600,
+  color: 'var(--text-secondary)', marginBottom: '5px',
+  textTransform: 'uppercase', letterSpacing: '0.5px',
 };
 
 const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '8px 12px',
-  background: 'var(--bg-tertiary)',
-  border: '1px solid var(--border-default)',
-  borderRadius: 'var(--radius-sm)',
-  color: 'var(--text-primary)',
-  fontSize: '13px',
-  fontFamily: "'Cascadia Code', 'Fira Code', 'Consolas', monospace",
-  outline: 'none',
+  width: '100%', padding: '8px 12px',
+  background: 'var(--bg-tertiary)', border: '1px solid var(--border-default)',
+  borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)',
+  fontSize: '13px', fontFamily: "'Cascadia Code', 'Fira Code', 'Consolas', monospace",
+  outline: 'none', boxSizing: 'border-box',
 };
 
 const iconBtnStyle: React.CSSProperties = {
-  padding: '8px 12px',
-  background: 'var(--bg-active)',
-  color: 'var(--accent-primary)',
-  border: '1px solid rgba(129, 140, 248, 0.2)',
-  borderRadius: 'var(--radius-sm)',
-  fontSize: '12px',
-  cursor: 'pointer',
-  fontWeight: 600,
+  padding: '8px 12px', background: 'var(--bg-active)',
+  color: 'var(--accent-primary)', border: '1px solid rgba(129, 140, 248, 0.2)',
+  borderRadius: 'var(--radius-sm)', fontSize: '12px', cursor: 'pointer', fontWeight: 600,
 };

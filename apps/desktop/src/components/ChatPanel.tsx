@@ -5,10 +5,24 @@
 import { useState, useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { invoke } from '@tauri-apps/api/core';
-import { generateUUID } from '@ghita/shared';
+import { generateUUID, type AgentEvent } from '@ghita/shared';
+import { useAppStore } from '../stores/appStore';
 
 // --- Types mirroring ApiManager storage schema ---
-type ProviderId = 'openai' | 'anthropic' | 'google' | 'ollama' | 'custom';
+type ProviderId =
+  | 'openai'
+  | 'anthropic'
+  | 'google'
+  | 'ollama'
+  | 'custom'
+  | 'opengateway'
+  | 'mimo'
+  | 'openrouter'
+  | 'deepseek'
+  | 'groq'
+  | 'mistral'
+  | 'hicap'
+  | 'github-models';
 
 interface ApiKeyEntry {
   providerId: ProviderId;
@@ -20,11 +34,19 @@ interface ApiKeyEntry {
 }
 
 const PROVIDER_LABELS: Record<ProviderId, { name: string; icon: string }> = {
-  openai:    { name: 'OpenAI',          icon: '🟢' },
-  anthropic: { name: 'Anthropic',       icon: '🟣' },
-  google:    { name: 'Google Gemini',   icon: '🔵' },
-  ollama:    { name: 'Ollama (Local)',   icon: '🦙' },
-  custom:    { name: 'Custom Provider', icon: '⚙️' },
+  openai:          { name: 'OpenAI',                icon: '🟢' },
+  anthropic:       { name: 'Anthropic',             icon: '🟣' },
+  google:          { name: 'Google Gemini',         icon: '🔵' },
+  ollama:          { name: 'Ollama (Local)',         icon: '🦙' },
+  custom:          { name: 'Custom Provider',       icon: '⚙️' },
+  opengateway:     { name: 'Gitlawb Opengateway',   icon: '🌐' },
+  mimo:            { name: 'Xiaomi MiMo',           icon: '🤖' },
+  openrouter:      { name: 'OpenRouter',            icon: '🔀' },
+  deepseek:        { name: 'DeepSeek',              icon: '🔍' },
+  groq:            { name: 'Groq',                  icon: '⚡' },
+  mistral:         { name: 'Mistral',               icon: '🌊' },
+  hicap:           { name: 'Hicap',                 icon: '🔗' },
+  'github-models': { name: 'GitHub Models',         icon: '🐙' },
 };
 
 interface DynamicModelOption {
@@ -49,8 +71,8 @@ function buildModelOptions(): DynamicModelOption[] {
       // Provider must be active
       if (!entry.active) continue;
 
-      // Non-ollama providers must have a non-empty API key
-      if (pid !== 'ollama' && (!entry.apiKey || entry.apiKey.trim() === '')) continue;
+      // Non-ollama/opengateway providers must have a non-empty API key
+      if (pid !== 'ollama' && pid !== 'opengateway' && (!entry.apiKey || entry.apiKey.trim() === '')) continue;
 
       const meta = PROVIDER_LABELS[pid] || { name: pid, icon: '🔷' };
       const models = entry.availableModels && entry.availableModels.length > 0
@@ -86,6 +108,12 @@ interface ChatMessage {
   searchCard?: { query: string; results: Array<{ title: string; url: string; snippet: string }> };
   /** Attached image (base64) */
   imageAttachment?: string;
+  /** Computer Use step preview details */
+  computerUsePreview?: {
+    screenshot: string;
+    point?: { x: number; y: number };
+    box?: { x1: number; y1: number; x2: number; y2: number };
+  };
 }
 
 interface ToolApprovalRequest {
@@ -104,11 +132,383 @@ const INITIAL_MESSAGES: ChatMessage[] = [
   },
 ];
 
+interface ComputerUsePreviewProps {
+  preview: {
+    screenshot: string;
+    point?: { x: number; y: number };
+    box?: { x1: number; y1: number; x2: number; y2: number };
+  };
+}
+
+function ComputerUsePreviewComponent({ preview }: ComputerUsePreviewProps) {
+  const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+    setHoverPos({ x, y });
+  };
+
+  const handleMouseLeave = () => {
+    setHoverPos(null);
+  };
+
+  const imgSrc = preview.screenshot.startsWith('data:')
+    ? preview.screenshot
+    : `data:image/png;base64,${preview.screenshot}`;
+
+  const point = preview.point;
+  const box = preview.box;
+
+  return (
+    <div
+      ref={containerRef}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      style={{
+        position: 'relative',
+        marginTop: '8px',
+        borderRadius: '12px',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        overflow: 'hidden',
+        maxWidth: '100%',
+        backgroundColor: '#0b0f19',
+        cursor: 'crosshair',
+        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)',
+      }}
+    >
+      <img
+        src={imgSrc}
+        alt="Computer Use Screenshot"
+        style={{
+          display: 'block',
+          width: '100%',
+          height: 'auto',
+          maxHeight: '400px',
+          objectFit: 'contain',
+          pointerEvents: 'none',
+        }}
+      />
+
+      {/* SVG Overlay for Vector Paths */}
+      <svg
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 10,
+        }}
+      >
+        <defs>
+          <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+        </defs>
+
+        {/* Cursor path from screen center to target action point */}
+        {point && (
+          <line
+            x1="50%"
+            y1="50%"
+            x2={`${point.x * 100}%`}
+            y2={`${point.y * 100}%`}
+            stroke="#f43f5e"
+            strokeWidth="2"
+            strokeDasharray="4 4"
+            filter="url(#glow)"
+            style={{
+              opacity: 0.75,
+              animation: 'dashOffset 30s linear infinite',
+            }}
+          />
+        )}
+
+        {/* Interactive path from center to current hover position */}
+        {hoverPos && (
+          <line
+            x1="50%"
+            y1="50%"
+            x2={`${hoverPos.x * 100}%`}
+            y2={`${hoverPos.y * 100}%`}
+            stroke="#818cf8"
+            strokeWidth="1.5"
+            strokeDasharray="3 3"
+            style={{
+              opacity: 0.6,
+            }}
+          />
+        )}
+      </svg>
+
+      {/* Responsive Crosshair Lines */}
+      {hoverPos && (
+        <>
+          <div
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              top: `${hoverPos.y * 100}%`,
+              height: '1px',
+              borderTop: '1px dashed rgba(129, 140, 248, 0.4)',
+              pointerEvents: 'none',
+              zIndex: 5,
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              bottom: 0,
+              left: `${hoverPos.x * 100}%`,
+              width: '1px',
+              borderLeft: '1px dashed rgba(129, 140, 248, 0.4)',
+              pointerEvents: 'none',
+              zIndex: 5,
+            }}
+          />
+        </>
+      )}
+
+      {/* Action Target Box */}
+      {box && (
+        <div
+          style={{
+            position: 'absolute',
+            left: `${box.x1 * 100}%`,
+            top: `${box.y1 * 100}%`,
+            width: `${(box.x2 - box.x1) * 100}%`,
+            height: `${(box.y2 - box.y1) * 100}%`,
+            border: '2px solid #38bdf8',
+            boxShadow: '0 0 12px rgba(56, 189, 248, 0.4), inset 0 0 6px rgba(56, 189, 248, 0.2)',
+            borderRadius: '4px',
+            pointerEvents: 'none',
+            zIndex: 8,
+            animation: 'computerUsePulse 2.5s infinite ease-in-out',
+          }}
+        />
+      )}
+
+      {/* Action Target Point with pulsing sonar circle */}
+      {point && (
+        <>
+          <div
+            style={{
+              position: 'absolute',
+              left: `${point.x * 100}%`,
+              top: `${point.y * 100}%`,
+              width: '40px',
+              height: '40px',
+              borderRadius: '50%',
+              border: '2px solid #f43f5e',
+              transform: 'translate(-50%, -50%)',
+              pointerEvents: 'none',
+              zIndex: 12,
+              animation: 'sonarPulse 1.8s infinite cubic-bezier(0.215, 0.610, 0.355, 1)',
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              left: `${point.x * 100}%`,
+              top: `${point.y * 100}%`,
+              width: '12px',
+              height: '12px',
+              borderRadius: '50%',
+              backgroundColor: '#f43f5e',
+              border: '2px solid #ffffff',
+              boxShadow: '0 0 10px #f43f5e',
+              transform: 'translate(-50%, -50%)',
+              pointerEvents: 'none',
+              zIndex: 13,
+            }}
+          />
+        </>
+      )}
+
+      {/* Coordinate Tooltip Badge */}
+      {hoverPos && (
+        <div
+          style={{
+            position: 'absolute',
+            left: `${hoverPos.x * 100}%`,
+            top: `${hoverPos.y * 100}%`,
+            transform: `translate(${hoverPos.x > 0.7 ? '-110%' : '15px'}, ${hoverPos.y > 0.7 ? '-110%' : '15px'})`,
+            background: 'rgba(15, 23, 42, 0.85)',
+            backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(129, 140, 248, 0.3)',
+            borderRadius: '6px',
+            padding: '6px 10px',
+            color: '#f8fafc',
+            fontSize: '11px',
+            fontFamily: 'monospace',
+            pointerEvents: 'none',
+            zIndex: 20,
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+            whiteSpace: 'nowrap',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '2px',
+          }}
+        >
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between' }}>
+            <span style={{ color: '#818cf8', fontWeight: 'bold' }}>X:</span>
+            <span>{(hoverPos.x * 100).toFixed(1)}%</span>
+            <span style={{ color: '#94a3b8' }}>({(hoverPos.x * 1000).toFixed(0)})</span>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between' }}>
+            <span style={{ color: '#818cf8', fontWeight: 'bold' }}>Y:</span>
+            <span>{(hoverPos.y * 100).toFixed(1)}%</span>
+            <span style={{ color: '#94a3b8' }}>({(hoverPos.y * 1000).toFixed(0)})</span>
+          </div>
+        </div>
+      )}
+
+      {/* Embedded Animation Styles */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes dashOffset {
+          to {
+            stroke-dashoffset: -1000;
+          }
+        }
+        @keyframes sonarPulse {
+          0% {
+            transform: translate(-50%, -50%) scale(0.4);
+            opacity: 1;
+          }
+          100% {
+            transform: translate(-50%, -50%) scale(1.6);
+            opacity: 0;
+          }
+        }
+        @keyframes computerUsePulse {
+          0%, 100% { opacity: 0.8; }
+          50% { opacity: 0.4; }
+        }
+      `}} />
+    </div>
+  );
+}
+
+/** Simple markdown to JSX renderer (bold, italic, code, code blocks, lists) */
+function renderMarkdown(text: string): React.ReactNode {
+  // Split by code blocks first
+  const parts = text.split(/(```[\s\S]*?```)/g);
+  return parts.map((part, i) => {
+    // Code block
+    if (part.startsWith('```') && part.endsWith('```')) {
+      const lines = part.slice(3, -3).split('\n');
+      const lang = lines[0]?.trim() || '';
+      const code = lang ? lines.slice(1).join('\n') : lines.join('\n');
+      return (
+        <div key={i} style={{
+          margin: '8px 0', borderRadius: '6px',
+          background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)',
+          overflow: 'hidden',
+        }}>
+          {lang && (
+            <div style={{
+              padding: '4px 10px', fontSize: '10px', color: '#64748b',
+              background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.05)',
+              textTransform: 'uppercase', fontWeight: 600,
+            }}>
+              {lang}
+            </div>
+          )}
+          <pre style={{
+            margin: 0, padding: '10px', fontSize: '12px', color: '#e2e8f0',
+            whiteSpace: 'pre-wrap', wordBreak: 'break-all', overflow: 'auto',
+            maxHeight: '200px', fontFamily: "'Cascadia Code', 'Fira Code', monospace",
+          }}>
+            {code}
+          </pre>
+        </div>
+      );
+    }
+
+    // Inline text — process bold, italic, inline code, lists
+    const lines = part.split('\n');
+    return lines.map((line, li) => {
+      // List item
+      if (/^\s*[-*+]\s/.test(line)) {
+        const content = line.replace(/^\s*[-*+]\s/, '');
+        return (
+          <div key={`${i}-${li}`} style={{ display: 'flex', gap: '6px', margin: '2px 0' }}>
+            <span style={{ color: '#818cf8', flexShrink: 0 }}>{'\u2022'}</span>
+            <span>{renderInline(content)}</span>
+          </div>
+        );
+      }
+      // Numbered list
+      if (/^\s*\d+\.\s/.test(line)) {
+        const num = line.match(/^\s*(\d+)\./)?.[1] || '1';
+        const content = line.replace(/^\s*\d+\.\s/, '');
+        return (
+          <div key={`${i}-${li}`} style={{ display: 'flex', gap: '6px', margin: '2px 0' }}>
+            <span style={{ color: '#818cf8', flexShrink: 0, minWidth: '14px' }}>{num}.</span>
+            <span>{renderInline(content)}</span>
+          </div>
+        );
+      }
+      return <span key={`${i}-${li}`}>{li > 0 && <br />}{renderInline(line)}</span>;
+    });
+  });
+}
+
+/** Render inline markdown (bold, italic, inline code) */
+function renderInline(text: string): React.ReactNode {
+  // Split by inline code, bold, italic patterns
+  const regex = /(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*)/g;
+  const parts = text.split(regex);
+  return parts.map((p, i) => {
+    if (p.startsWith('`') && p.endsWith('`')) {
+      return <code key={i} style={{
+        background: 'rgba(99,102,241,0.15)', padding: '1px 5px',
+        borderRadius: '3px', fontSize: '12px', color: '#a5b4fc',
+        fontFamily: "'Cascadia Code', 'Fira Code', monospace",
+      }}>{p.slice(1, -1)}</code>;
+    }
+    if (p.startsWith('**') && p.endsWith('**')) {
+      return <strong key={i} style={{ color: '#e2e8f0', fontWeight: 700 }}>{p.slice(2, -2)}</strong>;
+    }
+    if (p.startsWith('*') && p.endsWith('*')) {
+      return <em key={i} style={{ color: '#cbd5e1', fontStyle: 'italic' }}>{p.slice(1, -1)}</em>;
+    }
+    return p;
+  });
+}
+
 export function ChatPanel() {
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
+  const [reconnectTrigger, setReconnectTrigger] = useState(0);
+
+  const handleReconnect = async () => {
+    if (connectionStatus === 'connected') return;
+    setConnectionStatus('connecting');
+    try {
+      console.log('[ChatPanel] Manual reconnect triggered, starting sidecar server...');
+      await invoke('start_server');
+      // Wait 1.5 seconds for server to start
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      setReconnectTrigger((prev) => prev + 1);
+    } catch (e) {
+      console.error('[ChatPanel] Manual reconnect failed:', e);
+      setConnectionStatus('disconnected');
+    }
+  };
+
+  // Phase 3: Live Event Stream
+  const [agentEvents, setAgentEvents] = useState<AgentEvent[]>([]);
 
   // Dynamic model list — loaded from localStorage API keys
   const [modelOptions, setModelOptions] = useState<DynamicModelOption[]>(buildModelOptions);
@@ -116,6 +516,22 @@ export function ChatPanel() {
     const opts = buildModelOptions();
     return opts.length > 0 ? opts[0]!.value : '';
   });
+  const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
+  const [modelSearch, setModelSearch] = useState('');
+
+  // Close model dropdown on outside click
+  useEffect(() => {
+    if (!modelDropdownOpen) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-model-dropdown]')) {
+        setModelDropdownOpen(false);
+        setModelSearch('');
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [modelDropdownOpen]);
 
   // Sync model options when localStorage changes (e.g. user configures keys in API Manager tab)
   useEffect(() => {
@@ -196,9 +612,12 @@ export function ChatPanel() {
         if (!active) return;
 
         setConnectionStatus('connecting');
-        const socket = io(`http://localhost:${port}`, {
+        const socket = io(`http://127.0.0.1:${port}`, {
           transports: ['websocket'],
-          reconnectionAttempts: 10,
+          reconnection: true,
+          reconnectionAttempts: Infinity,
+          reconnectionDelay: 1000,
+          reconnectionDelayMax: 5000,
         });
 
         socketRef.current = socket;
@@ -209,6 +628,11 @@ export function ChatPanel() {
         });
 
         socket.on('disconnect', () => {
+          if (active) setConnectionStatus('disconnected');
+        });
+
+        socket.on('connect_error', (err) => {
+          console.warn('[ChatPanel] Socket connection error:', err);
           if (active) setConnectionStatus('disconnected');
         });
 
@@ -254,7 +678,7 @@ export function ChatPanel() {
           );
         });
 
-        socket.on('chat_done', (data: { text: string }) => {
+        socket.on('chat_done', (data: { text: string; usage?: { promptTokens: number; completionTokens: number; totalTokens: number } }) => {
           if (!active) return;
           setMessages((prev) =>
             prev.map((msg) =>
@@ -264,6 +688,25 @@ export function ChatPanel() {
             )
           );
           setIsSending(false);
+
+          // Update dashboard stats with real usage data
+          if (data.usage) {
+            const currentStats = useAppStore.getState().dashboardStats;
+            useAppStore.getState().setDashboardStats({
+              totalTokens: currentStats.totalTokens + data.usage.totalTokens,
+              totalCost: currentStats.totalCost + (data.usage.totalTokens * 0.000002),
+              activeAgents: currentStats.activeAgents,
+              mcpConnections: currentStats.mcpConnections,
+            });
+            // Update context usage
+            const used = data.usage.totalTokens;
+            const max = 128000;
+            useAppStore.getState().setContextUsage({
+              used: Math.min(used, max),
+              max,
+              percentage: Math.round((used / max) * 100),
+            });
+          }
         });
 
         socket.on('chat_error', (data: { message: string }) => {
@@ -285,6 +728,31 @@ export function ChatPanel() {
           }
         });
 
+        // Phase 3: Listen to live agent runtime events
+        socket.on('agent_event', (event: AgentEvent) => {
+          if (active) {
+            setAgentEvents((prev) => {
+              const next = [...prev, event];
+              // Keep last 15 events
+              if (next.length > 15) next.shift();
+              return next;
+            });
+
+            // If a skill is auto-created or learned, push a premium info message
+            if (event.type === 'skill:learning') {
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: generateUUID(),
+                  role: 'assistant',
+                  content: `⚡ **Học Skill Tự Động:** Agent vừa đề xuất và tự học một kỹ năng mới:\n\n**${event.payload?.name || 'Unnamed Skill'}**\n*Mô tả:* ${event.payload?.description || ''}\n\nĐã tự động lưu vào **Skill Hub** và sẵn sàng sử dụng!`,
+                  timestamp: Date.now(),
+                }
+              ]);
+            }
+          }
+        });
+
         socket.on('ralph_loop_progress', (data: any) => {
           if (active) {
             setRalphProgress(data);
@@ -294,6 +762,30 @@ export function ChatPanel() {
         socket.on('ralph_loop_done', () => {
           if (active) {
             setRalphProgress(null);
+          }
+        });
+
+        socket.on('computer_use_step', (data: {
+          action?: string;
+          screenshot: string;
+          point?: { x: number; y: number };
+          box?: { x1: number; y1: number; x2: number; y2: number };
+        }) => {
+          if (active) {
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: generateUUID(),
+                role: 'assistant',
+                content: data.action ? `🤖 **[Computer Action]** ${data.action}` : '🤖 **[Computer Action]** Running screen automation step...',
+                timestamp: Date.now(),
+                computerUsePreview: {
+                  screenshot: data.screenshot,
+                  point: data.point,
+                  box: data.box,
+                },
+              },
+            ]);
           }
         });
 
@@ -319,7 +811,7 @@ export function ChatPanel() {
         socketRef.current.disconnect();
       }
     };
-  }, []);
+  }, [reconnectTrigger]);
 
   // Phase 6A: Handle slash command input
   const handleInputChange = (value: string) => {
@@ -367,8 +859,52 @@ export function ChatPanel() {
     }
   };
 
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
   const handleSend = () => {
-    if (!input.trim() || isSending || !socketRef.current) return;
+    if (!input.trim() || isSending) return;
+
+    // Guard: nếu chưa kết nối socket thì hiển thị hướng dẫn
+    if (!socketRef.current || connectionStatus !== 'connected') {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: generateUUID(),
+          role: 'user',
+          content: input,
+          timestamp: Date.now(),
+        },
+        {
+          id: generateUUID(),
+          role: 'assistant',
+          content: '⚠️ **Chưa kết nối được tới Server.**\n\nVui lòng nhấn nút **"Kết nối lại"** ở góc trên bên trái để kết nối lại với Sidecar Server.',
+          timestamp: Date.now(),
+        },
+      ]);
+      setInput('');
+      return;
+    }
+
+    // Guard: nếu chưa cấu hình API Key thì hiển thị hướng dẫn thay vì gửi lên server
+    if (modelOptions.length === 0) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: generateUUID(),
+          role: 'user',
+          content: input,
+          timestamp: Date.now(),
+        },
+        {
+          id: generateUUID(),
+          role: 'assistant',
+          content: '⚙️ **Chưa cấu hình AI Provider.**\n\nĐể sử dụng Chat AI, bạn cần:\n1. Mở tab **"API Manager"** (biểu tượng 🔑) ở sidebar bên trái\n2. Thêm ít nhất 1 nhà cung cấp AI (OpenAI, Anthropic, Google, DeepSeek, Ollama...)\n3. Nhập **API Key** và chọn **Model**\n4. Bật **Active** cho nhà cung cấp đó\n\nSau đó quay lại đây và thử lại!',
+          timestamp: Date.now(),
+        },
+      ]);
+      setInput('');
+      return;
+    }
 
     const userMsg: ChatMessage = {
       id: generateUUID(),
@@ -403,6 +939,23 @@ export function ChatPanel() {
       const selectedProvider = slashIdx > 0 ? provider.substring(0, slashIdx) : provider;
       const selectedModel = slashIdx > 0 ? provider.substring(slashIdx + 1) : undefined;
 
+      // Read full provider credentials from localStorage to send to server
+      let providerApiKey: string | undefined;
+      let providerBaseUrl: string | undefined;
+      try {
+        const raw = localStorage.getItem('ghita_api_keys');
+        if (raw) {
+          const parsed = JSON.parse(raw) as Partial<Record<ProviderId, Partial<ApiKeyEntry>>>;
+          const entry = parsed[selectedProvider as ProviderId];
+          if (entry) {
+            providerApiKey = entry.apiKey || undefined;
+            providerBaseUrl = entry.baseUrl || undefined;
+          }
+        }
+      } catch {
+        // ignore
+      }
+
       // Emit event through Socket.io to trigger AI Engine
       socketRef.current.emit('chat', {
         text: input,
@@ -411,6 +964,8 @@ export function ChatPanel() {
         model: selectedModel,
         agentRole: agentRole,
         history: [...history, { role: 'user', content: input }],
+        apiKey: providerApiKey,
+        baseUrl: providerBaseUrl,
       });
     }
 
@@ -480,40 +1035,151 @@ export function ChatPanel() {
             }}
             title={connectionStatus === 'connected' ? 'Connected' : 'Offline'}
           />
+          {connectionStatus !== 'connected' && (
+            <button
+              onClick={handleReconnect}
+              disabled={connectionStatus === 'connecting'}
+              style={{
+                marginLeft: '8px',
+                padding: '2px 8px',
+                fontSize: '10px',
+                fontWeight: 600,
+                backgroundColor: connectionStatus === 'connecting' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(245, 158, 11, 0.15)',
+                border: connectionStatus === 'connecting' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(245, 158, 11, 0.3)',
+                borderRadius: '4px',
+                color: connectionStatus === 'connecting' ? '#94a3b8' : '#f59e0b',
+                cursor: connectionStatus === 'connecting' ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                if (connectionStatus !== 'connecting') {
+                  e.currentTarget.style.backgroundColor = 'rgba(245, 158, 11, 0.3)';
+                  e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.5)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (connectionStatus !== 'connecting') {
+                  e.currentTarget.style.backgroundColor = 'rgba(245, 158, 11, 0.15)';
+                  e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+                }
+              }}
+            >
+              {connectionStatus === 'connecting' ? 'Đang kết nối...' : 'Kết nối lại'}
+            </button>
+          )}
         </div>
 
-        <select
-          value={provider}
-          onChange={(e) => setProvider(e.target.value)}
-          disabled={modelOptions.length === 0}
-          title={modelOptions.length === 0 ? 'Chưa cấu hình API Key — Vào tab API để thêm' : 'Chọn AI Model'}
-          style={{
-            padding: '4px 10px',
-            fontSize: '11px',
-            background: 'rgba(15, 23, 42, 0.6)',
-            border: modelOptions.length === 0
-              ? '1px solid rgba(239, 68, 68, 0.3)'
-              : '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: '6px',
-            color: modelOptions.length === 0 ? '#f87171' : '#cbd5e1',
-            outline: 'none',
-            cursor: modelOptions.length === 0 ? 'not-allowed' : 'pointer',
-            transition: 'border 0.2s, color 0.2s',
-            maxWidth: '220px',
-          }}
-        >
-          {modelOptions.length === 0 ? (
-            <option value="" style={{ background: '#1e293b', color: '#f87171' }}>
-              ⚠️ Chưa cấu hình API Key
-            </option>
-          ) : (
-            modelOptions.map((opt) => (
-              <option key={opt.value} value={opt.value} style={{ background: '#1e293b', color: '#f1f5f9' }}>
-                {opt.label}
-              </option>
-            ))
+        {/* Model Selector - Custom Searchable Dropdown */}
+        <div style={{ position: 'relative' }} data-model-dropdown>
+          <button
+            onClick={() => {
+              if (modelOptions.length > 0) {
+                setModelDropdownOpen(!modelDropdownOpen);
+                setModelSearch('');
+              }
+            }}
+            style={{
+              padding: '4px 10px', fontSize: '11px',
+              background: 'rgba(15, 23, 42, 0.6)',
+              border: modelOptions.length === 0
+                ? '1px solid rgba(239, 68, 68, 0.3)'
+                : '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '6px',
+              color: modelOptions.length === 0 ? '#f87171' : '#cbd5e1',
+              cursor: modelOptions.length === 0 ? 'not-allowed' : 'pointer',
+              maxWidth: '220px', display: 'flex', alignItems: 'center', gap: '4px',
+              transition: 'border 0.2s',
+            }}
+          >
+            {modelOptions.length === 0
+              ? '\u26A0\uFE0F Ch\u01B0a c\u1EA5u h\u00ECnh'
+              : (modelOptions.find((o) => o.value === provider)?.label || provider)}
+            <span style={{ fontSize: '8px', marginLeft: '2px', transform: modelDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▼</span>
+          </button>
+
+          {modelDropdownOpen && modelOptions.length > 0 && (
+            <div style={{
+              position: 'absolute', top: '100%', right: 0, marginTop: '4px',
+              width: '280px', maxHeight: '320px',
+              background: 'rgba(15, 23, 42, 0.95)', backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '8px', zIndex: 1000, overflow: 'hidden',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+            }}>
+              {/* Search input */}
+              <div style={{ padding: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <input
+                  autoFocus
+                  type="text"
+                  placeholder="Tìm model..."
+                  value={modelSearch}
+                  onChange={(e) => setModelSearch(e.target.value)}
+                  style={{
+                    width: '100%', padding: '6px 10px', fontSize: '12px',
+                    background: 'rgba(30, 41, 59, 0.8)', border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '4px', color: '#e2e8f0', outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+
+              {/* Grouped model list */}
+              <div style={{ maxHeight: '260px', overflowY: 'auto', padding: '4px' }}>
+                {(() => {
+                  const q = modelSearch.toLowerCase().trim();
+                  const filtered = q
+                    ? modelOptions.filter((o) => o.label.toLowerCase().includes(q) || o.model.toLowerCase().includes(q))
+                    : modelOptions;
+
+                  // Group by providerId
+                  const groups = new Map<string, DynamicModelOption[]>();
+                  for (const opt of filtered) {
+                    if (!groups.has(opt.providerId)) groups.set(opt.providerId, []);
+                    groups.get(opt.providerId)!.push(opt);
+                  }
+
+                  return [...groups.entries()].map(([pid, opts]) => {
+                    const meta = PROVIDER_LABELS[pid as ProviderId] || { name: pid, icon: '\uD83D\uDD37' };
+                    return (
+                      <div key={pid}>
+                        <div style={{
+                          fontSize: '10px', fontWeight: 700, color: '#64748b',
+                          padding: '6px 8px 2px', textTransform: 'uppercase', letterSpacing: '0.5px',
+                        }}>
+                          {meta.icon} {meta.name}
+                        </div>
+                        {opts.map((opt) => (
+                          <div
+                            key={opt.value}
+                            onClick={() => { setProvider(opt.value); setModelDropdownOpen(false); setModelSearch(''); }}
+                            style={{
+                              padding: '6px 10px', fontSize: '12px', color: '#e2e8f0',
+                              cursor: 'pointer', borderRadius: '4px',
+                              background: opt.value === provider ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
+                              borderLeft: opt.value === provider ? '2px solid #818cf8' : '2px solid transparent',
+                              transition: 'background 0.15s',
+                            }}
+                            onMouseEnter={(e) => { if (opt.value !== provider) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                            onMouseLeave={(e) => { if (opt.value !== provider) e.currentTarget.style.background = 'transparent'; }}
+                          >
+                            {opt.model}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  });
+                })()}
+                {modelSearch && modelOptions.filter((o) =>
+                  o.label.toLowerCase().includes(modelSearch.toLowerCase()) || o.model.toLowerCase().includes(modelSearch.toLowerCase())
+                ).length === 0 && (
+                  <div style={{ padding: '12px', textAlign: 'center', color: '#64748b', fontSize: '12px' }}>
+                    Không tìm thấy model
+                  </div>
+                )}
+              </div>
+            </div>
           )}
-        </select>
+        </div>
       </div>
 
       {/* Messages Window */}
@@ -562,14 +1228,8 @@ export function ChatPanel() {
                 boxShadow: msg.role === 'user' ? '0 4px 14px rgba(99, 102, 241, 0.1)' : 'none',
               }}
             >
-              {/* Highlight special text */}
-              {msg.content.startsWith('👋 Xin chào!') ? (
-                <div>
-                  👋 Xin chào! Tôi là <strong style={{ color: '#a5b4fc' }}>GHITA AI Assistant</strong> tích hợp lõi gRPC của <strong style={{ color: '#a5b4fc' }}>OpenClaude</strong> và <strong style={{ color: '#a5b4fc' }}>Claude Code</strong>. Tôi có khả năng stream token cực nhanh, chạy các workflow thông minh và thực thi command an toàn dưới sự duyệt quyền của bạn. Hãy hỏi tôi bất cứ điều gì!
-                </div>
-              ) : (
-                msg.content
-              )}
+              {/* Markdown rendered content */}
+              {renderMarkdown(msg.content)}
               
               {/* Phase 6C: Image attachment display */}
               {msg.imageAttachment && (
@@ -578,6 +1238,11 @@ export function ChatPanel() {
                   alt="Attached"
                   style={{ maxWidth: '100%', borderRadius: '8px', marginTop: '8px', border: '1px solid rgba(255,255,255,0.1)' }}
                 />
+              )}
+
+              {/* Computer Use Step Preview with pulsing highlights */}
+              {msg.computerUsePreview && (
+                <ComputerUsePreviewComponent preview={msg.computerUsePreview} />
               )}
 
               {/* Phase 5A: MCP Tool Card */}
@@ -642,170 +1307,343 @@ export function ChatPanel() {
                 />
               )}
             </div>
-            <span
-              style={{
-                fontSize: '10px',
-                color: 'rgba(148, 163, 184, 0.6)',
-                marginTop: '4px',
-                padding: '0 4px',
-              }}
-            >
-              {new Date(msg.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+            <span style={{
+              fontSize: '10px', color: 'rgba(148, 163, 184, 0.6)',
+              marginTop: '4px', padding: '0 4px', display: 'flex', gap: '8px', alignItems: 'center',
+            }}>
+              <span>{new Date(msg.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+              <span style={{ opacity: 0.5 }}>
+                ~{Math.ceil(msg.content.length / 4)} tok
+              </span>
             </span>
           </div>
         ))}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Smart Workflow Control Bar */}
+      {/* Live Agent Activity Timeline */}
+      {agentEvents.length > 0 && (
+        <div
+          style={{
+            margin: '0 16px 12px 16px',
+            padding: '12px',
+            background: 'rgba(30, 41, 59, 0.45)',
+            border: '1px solid rgba(139, 92, 246, 0.25)',
+            borderRadius: '12px',
+            backdropFilter: 'blur(16px)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+            maxHeight: '140px',
+            overflowY: 'auto',
+            animation: 'fadeInUp 0.3s ease',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+          }}
+        >
+          <style dangerouslySetInnerHTML={{__html: `
+            @keyframes pulsePurple {
+              0% { box-shadow: 0 0 0 0 rgba(192, 132, 252, 0.7); }
+              70% { box-shadow: 0 0 0 6px rgba(192, 132, 252, 0); }
+              100% { box-shadow: 0 0 0 0 rgba(192, 132, 252, 0); }
+            }
+            .pulse-indicator-purple {
+              animation: pulsePurple 2s infinite;
+            }
+          `}} />
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--accent-secondary)', display: 'flex', alignItems: 'center', gap: '6px', letterSpacing: '0.5px' }}>
+              <span className="pulse-indicator-purple" style={{
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                backgroundColor: '#c084fc',
+                display: 'inline-block',
+              }} />
+              LIVE AGENT EVENTS
+            </span>
+            <button
+              onClick={() => setAgentEvents([])}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-muted)',
+                fontSize: '10px',
+                cursor: 'pointer',
+                opacity: 0.7,
+                transition: 'opacity 0.2s',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+              onMouseLeave={(e) => e.currentTarget.style.opacity = '0.7'}
+            >
+              Clear
+            </button>
+          </div>
+          
+          <div style={{ display: 'flex', flexDirection: 'column-reverse', gap: '8px' }}>
+            {agentEvents.map((evt) => {
+              let icon = 'ℹ️';
+              let color = '#cbd5e1';
+              let label: string = evt.type;
+              
+              switch (evt.type) {
+                case 'agent:thinking':
+                  icon = '🧠';
+                  color = '#c084fc';
+                  label = 'Thinking';
+                  break;
+                case 'agent:state':
+                  icon = '🤖';
+                  color = '#38bdf8';
+                  label = 'State';
+                  break;
+                case 'tool:run':
+                  icon = '⚙️';
+                  color = '#f472b6';
+                  label = `Running Tool: ${evt.payload?.name || ''}`;
+                  break;
+                case 'tool:complete':
+                  icon = '✅';
+                  color = '#34d399';
+                  label = `Completed Tool: ${evt.payload?.name || ''}`;
+                  break;
+                case 'tool:error':
+                  icon = '❌';
+                  color = '#f87171';
+                  label = `Tool Error: ${evt.payload?.name || ''}`;
+                  break;
+                case 'skill:learning':
+                  icon = '⚡';
+                  color = '#fbbf24';
+                  label = 'Skill Learning';
+                  break;
+                case 'memory:update':
+                  icon = '💾';
+                  color = '#22d3ee';
+                  label = 'Memory Update';
+                  break;
+              }
+
+              return (
+                <div
+                  key={evt.id}
+                  style={{
+                    display: 'flex',
+                    gap: '10px',
+                    fontSize: '12px',
+                    color,
+                    alignItems: 'flex-start',
+                    padding: '6px 10px',
+                    background: 'rgba(255,255,255,0.02)',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(255,255,255,0.03)',
+                  }}
+                >
+                  <span style={{ fontSize: '13px' }}>{icon}</span>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <div style={{ fontWeight: 600 }}>{evt.message || label}</div>
+                    {evt.payload && typeof evt.payload === 'object' && Object.keys(evt.payload).length > 0 && evt.type !== 'skill:learning' && (
+                      <pre
+                        style={{
+                          margin: 0,
+                          fontSize: '10px',
+                          color: 'var(--text-muted)',
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-all',
+                          background: 'rgba(0,0,0,0.15)',
+                          padding: '4px 6px',
+                          borderRadius: '4px',
+                        }}
+                      >
+                        {JSON.stringify(evt.payload, null, 2)}
+                      </pre>
+                    )}
+                  </div>
+                  <span style={{ fontSize: '9px', color: 'var(--text-muted)', opacity: 0.6, marginTop: '2px' }}>
+                    {new Date(evt.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Compact Status & Advanced Toggle Bar */}
       <div
         style={{
-          padding: '10px 14px',
+          padding: '6px 14px',
           background: 'rgba(30, 41, 59, 0.35)',
           backdropFilter: 'blur(10px)',
           borderTop: '1px solid rgba(255, 255, 255, 0.04)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '12px',
-          flexWrap: 'wrap',
+          gap: '8px',
         }}
       >
-        {/* Agent Role Routing Selector */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Agent Router:
-          </span>
-          <div style={{ display: 'flex', gap: '4px' }}>
-            {(['default', 'Explore', 'Plan', 'UI'] as const).map((role) => (
-              <button
-                key={role}
-                onClick={() => setAgentRole(role)}
-                style={{
-                  padding: '4px 8px',
-                  fontSize: '10px',
-                  fontWeight: 600,
-                  borderRadius: '4px',
-                  border: '1px solid ' + (agentRole === role ? 'rgba(99, 102, 241, 0.4)' : 'rgba(255, 255, 255, 0.05)'),
-                  background: agentRole === role ? 'rgba(99, 102, 241, 0.2)' : 'rgba(15, 23, 42, 0.4)',
-                  color: agentRole === role ? '#a5b4fc' : '#94a3b8',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}
-              >
-                {role}
-              </button>
-            ))}
+        {/* Left: Context + Status */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '10px', color: 'rgba(148, 163, 184, 0.6)' }}>
+          <span>Context: {contextUsage.used.toLocaleString()} / {contextUsage.max.toLocaleString()}</span>
+          <div style={{ width: '40px', height: '3px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${Math.min(100, contextUsage.percentage)}%`, background: contextUsage.percentage > 80 ? '#f87171' : '#818cf8', borderRadius: '2px' }} />
+          </div>
+          {ralphMode && (
+            <span style={{ color: '#34d399', fontWeight: 600, fontSize: '10px' }}>🔄 RALPH</span>
+          )}
+        </div>
+
+        {/* Right: Toggle Advanced */}
+        <button
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          style={{
+            padding: '3px 8px',
+            fontSize: '10px',
+            fontWeight: 600,
+            borderRadius: '4px',
+            border: '1px solid rgba(255, 255, 255, 0.06)',
+            background: showAdvanced ? 'rgba(99, 102, 241, 0.15)' : 'rgba(15, 23, 42, 0.4)',
+            color: showAdvanced ? '#a5b4fc' : '#64748b',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+          }}
+        >
+          <span>{showAdvanced ? '▾' : '▸'}</span>
+          <span>Nâng cao</span>
+        </button>
+      </div>
+
+      {/* Advanced Controls Panel (collapsible) */}
+      {showAdvanced && (
+        <div
+          style={{
+            padding: '8px 14px',
+            background: 'rgba(15, 23, 42, 0.4)',
+            borderTop: '1px solid rgba(255, 255, 255, 0.03)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+            animation: 'fadeInUp 0.2s ease',
+          }}
+        >
+          {/* Row 1: Agent Router */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', minWidth: '72px' }}>
+              Agent Role:
+            </span>
+            <div style={{ display: 'flex', gap: '3px' }}>
+              {(['default', 'Explore', 'Plan', 'UI'] as const).map((role) => (
+                <button
+                  key={role}
+                  onClick={() => setAgentRole(role)}
+                  style={{
+                    padding: '3px 7px',
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    borderRadius: '4px',
+                    border: '1px solid ' + (agentRole === role ? 'rgba(99, 102, 241, 0.4)' : 'rgba(255, 255, 255, 0.05)'),
+                    background: agentRole === role ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
+                    color: agentRole === role ? '#a5b4fc' : '#94a3b8',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {role}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Row 2: Ralph Loop + Workflow shortcuts */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', minWidth: '72px' }}>
+              Workflows:
+            </span>
+            <button
+              onClick={() => setRalphMode(!ralphMode)}
+              style={{
+                padding: '3px 8px',
+                fontSize: '10px',
+                fontWeight: 700,
+                borderRadius: '4px',
+                border: '1px solid ' + (ralphMode ? 'rgba(16, 185, 129, 0.4)' : 'rgba(255, 255, 255, 0.06)'),
+                background: ralphMode
+                  ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.2) 100%)'
+                  : 'transparent',
+                color: ralphMode ? '#34d399' : '#94a3b8',
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px',
+              }}
+            >
+              🔄 Ralph {ralphMode ? 'ON' : 'OFF'}
+            </button>
+            <button
+              onClick={() => setInput('/code-review ')}
+              style={{
+                padding: '3px 7px',
+                fontSize: '10px',
+                fontWeight: 600,
+                borderRadius: '4px',
+                border: '1px solid rgba(255, 255, 255, 0.05)',
+                background: 'transparent',
+                color: '#94a3b8',
+                cursor: 'pointer',
+              }}
+            >
+              🕵️ Review
+            </button>
+            <button
+              onClick={() => setInput('/feature-dev ')}
+              style={{
+                padding: '3px 7px',
+                fontSize: '10px',
+                fontWeight: 600,
+                borderRadius: '4px',
+                border: '1px solid rgba(255, 255, 255, 0.05)',
+                background: 'transparent',
+                color: '#94a3b8',
+                cursor: 'pointer',
+              }}
+            >
+              ⚡ Feature
+            </button>
           </div>
         </div>
-
-        {/* Ralph Loop Switch & Cost Tracker */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button
-            onClick={() => setRalphMode(!ralphMode)}
-            style={{
-              padding: '4px 10px',
-              fontSize: '11px',
-              fontWeight: 700,
-              borderRadius: '6px',
-              border: '1px solid ' + (ralphMode ? 'rgba(16, 185, 129, 0.4)' : 'rgba(255, 255, 255, 0.08)'),
-              background: ralphMode
-                ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.2) 100%)'
-                : 'rgba(15, 23, 42, 0.4)',
-              color: ralphMode ? '#34d399' : '#94a3b8',
-              cursor: 'pointer',
-              boxShadow: ralphMode ? '0 0 8px rgba(16, 185, 129, 0.2)' : 'none',
-              transition: 'all 0.2s',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-            }}
-          >
-            <span>🔄</span>
-            <span>RALPH LOOP: {ralphMode ? 'ON' : 'OFF'}</span>
-          </button>
-
-          {/* Workflow triggers */}
-          <button
-            onClick={() => setInput('/code-review ')}
-            style={{
-              padding: '4px 8px',
-              fontSize: '10px',
-              fontWeight: 600,
-              borderRadius: '4px',
-              border: '1px solid rgba(255, 255, 255, 0.05)',
-              background: 'rgba(15, 23, 42, 0.4)',
-              color: '#cbd5e1',
-              cursor: 'pointer',
-            }}
-          >
-            🕵️ Review
-          </button>
-
-          <button
-            onClick={() => setInput('/feature-dev ')}
-            style={{
-              padding: '4px 8px',
-              fontSize: '10px',
-              fontWeight: 600,
-              borderRadius: '4px',
-              border: '1px solid rgba(255, 255, 255, 0.05)',
-              background: 'rgba(15, 23, 42, 0.4)',
-              color: '#cbd5e1',
-              cursor: 'pointer',
-            }}
-          >
-            ⚡ Feature
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* Ralph Loop Active Dashboard Card */}
       {ralphProgress && (
         <div
           style={{
-            padding: '12px 14px',
+            padding: '10px 14px',
             background: 'rgba(16, 185, 129, 0.08)',
             borderTop: '1px solid rgba(16, 185, 129, 0.2)',
             borderBottom: '1px solid rgba(16, 185, 129, 0.2)',
             display: 'flex',
             flexDirection: 'column',
-            gap: '6px',
+            gap: '4px',
             animation: 'slideIn 0.2s ease',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '11px', fontWeight: 700, color: '#34d399', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span className="pulse-indicator" /> VÒNG LẶP SỬA LỖI ĐANG CHẠY (RALPH LOOP)
+              <span className="pulse-indicator" /> RALPH LOOP ĐANG CHẠY
             </span>
             <span style={{ fontSize: '10px', color: '#a7f3d0', background: 'rgba(16, 185, 129, 0.2)', padding: '2px 6px', borderRadius: '4px' }}>
-              Lượt sửa: #{ralphProgress.iteration} | Chi phí tích lũy: ${ralphProgress.cost.toFixed(5)}
+              #{ralphProgress.iteration} | ${ralphProgress.cost.toFixed(5)}
             </span>
           </div>
-          <p style={{ margin: 0, fontSize: '12px', color: '#cbd5e1' }}>
+          <p style={{ margin: 0, fontSize: '11px', color: '#cbd5e1' }}>
             {ralphProgress.message}
           </p>
         </div>
       )}
-
-      {/* Phase 6B: Context Usage Bar */}
-      <div
-        style={{
-          padding: '4px 14px',
-          background: 'rgba(30, 41, 59, 0.3)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          fontSize: '10px',
-          color: 'rgba(148, 163, 184, 0.5)',
-          borderTop: '1px solid rgba(255,255,255,0.03)',
-        }}
-      >
-        <span>Context: {contextUsage.used.toLocaleString()} / {contextUsage.max.toLocaleString()} tokens</span>
-        <div style={{ width: '60px', height: '3px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: `${Math.min(100, contextUsage.percentage)}%`, background: contextUsage.percentage > 80 ? '#f87171' : '#818cf8', borderRadius: '2px' }} />
-        </div>
-      </div>
 
       {/* Phase 6C: Image Preview */}
       {attachedImage && (
@@ -891,8 +1729,16 @@ export function ChatPanel() {
             if (e.key === 'Escape') setShowSlashMenu(false);
           }}
           onPaste={handlePaste}
-          disabled={connectionStatus !== 'connected'}
-          placeholder={connectionStatus === 'connected' ? "Hỏi AI hoặc gõ / cho commands..." : "Chờ kết nối server..."}
+          disabled={false}
+          placeholder={
+            connectionStatus === 'connected'
+              ? modelOptions.length === 0
+                ? "⚠ Chưa cấu hình API — Gõ gì đó để xem hướng dẫn..."
+                : "Hỏi AI hoặc gõ / cho commands..."
+              : connectionStatus === 'connecting'
+              ? "Đang kết nối với server..."
+              : "Chưa kết nối server — gõ gì đó để xem hướng dẫn..."
+          }
           style={{
             flex: 1,
             padding: '10px 14px',
@@ -908,7 +1754,7 @@ export function ChatPanel() {
         />
         <button
           onClick={handleSend}
-          disabled={!input.trim() || isSending || connectionStatus !== 'connected'}
+          disabled={!input.trim() || isSending}
           style={{
             width: '36px',
             height: '36px',
@@ -923,7 +1769,7 @@ export function ChatPanel() {
             fontSize: '14px',
             transition: 'transform 0.1s, opacity 0.2s',
             boxShadow: '0 4px 10px rgba(99, 102, 241, 0.3)',
-            opacity: (!input.trim() || isSending || connectionStatus !== 'connected') ? 0.5 : 1,
+            opacity: (!input.trim() || isSending) ? 0.5 : 1,
           }}
           onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.95)')}
           onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}

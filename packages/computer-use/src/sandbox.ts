@@ -61,6 +61,29 @@ const LANGUAGE_RUNNERS: Record<SandboxLanguage, { cmd: string; args: (file: stri
   },
 };
 
+const DOCKER_RUNNERS: Record<SandboxLanguage, { image: string; cmd: string; args: (file: string) => string[] }> = {
+  javascript: {
+    image: 'node:20-alpine',
+    cmd: 'node',
+    args: (file) => [file],
+  },
+  typescript: {
+    image: 'node:20-alpine',
+    cmd: 'npx',
+    args: (file) => ['-y', 'tsx', file],
+  },
+  python: {
+    image: 'python:3.11-alpine',
+    cmd: 'python',
+    args: (file) => [file],
+  },
+  shell: {
+    image: 'alpine',
+    cmd: 'sh',
+    args: (file) => [file],
+  },
+};
+
 function createTempDir(): string {
   const id = randomBytes(8).toString('hex');
   return join(tmpdir(), `ghita-sandbox-${id}`);
@@ -70,19 +93,27 @@ async function writeTempFile(
   dir: string,
   code: string,
   lang: SandboxLanguage,
+  isDocker: boolean = false,
 ): Promise<SandboxFile> {
   const extensions: Record<SandboxLanguage, string> = {
     javascript: '.mjs',
     typescript: '.mts',
     python: '.py',
-    shell: process.platform === 'win32' ? '.cmd' : '.sh',
+    shell: (isDocker || process.platform !== 'win32') ? '.sh' : '.cmd',
   };
 
   const filename = `sandbox${extensions[lang]}`;
   const filepath = join(dir, filename);
 
   await mkdir(dir, { recursive: true });
-  await writeFile(filepath, code, 'utf-8');
+  
+  let finalCode = code;
+  if (isDocker && lang === 'shell') {
+    // Normalise line endings to LF for Linux containers to avoid CRLF issues
+    finalCode = code.replace(/\r\n/g, '\n');
+  }
+
+  await writeFile(filepath, finalCode, 'utf-8');
 
   return {
     path: filepath,
@@ -107,7 +138,150 @@ function buildSpawnArgs(config: SandboxConfig): string[] {
   return args;
 }
 
-export async function runInSandbox(
+/** Check if Docker service is installed and running */
+async function isDockerAvailable(): Promise<boolean> {
+  return new Promise((resolve) => {
+    const child = spawn('docker', ['ps'], { stdio: 'ignore', windowsHide: true });
+    const timer = setTimeout(() => {
+      child.kill();
+      resolve(false);
+    }, 1500);
+    child.on('close', (code) => {
+      clearTimeout(timer);
+      resolve(code === 0);
+    });
+    child.on('error', () => {
+      clearTimeout(timer);
+      resolve(false);
+    });
+  });
+}
+
+/** Run isolated code inside Docker container sandbox */
+async function runInDocker(
+  _code: string,
+  config: SandboxConfig,
+  tempDir: string,
+  file: SandboxFile,
+  startTime: number,
+): Promise<SandboxResult> {
+  const {
+    timeoutMs = 30_000,
+    language = 'javascript',
+    env = {},
+  } = config;
+
+  const runner = DOCKER_RUNNERS[language];
+  const containerId = randomBytes(8).toString('hex');
+  const containerName = `ghita-sandbox-${containerId}`;
+
+  const dockerArgs = [
+    'run',
+    '--rm',
+    '--name', containerName,
+  ];
+
+  if (config.memoryLimitMb) {
+    dockerArgs.push(`--memory=${config.memoryLimitMb}m`);
+  }
+
+  if (!config.allowNetwork) {
+    dockerArgs.push('--net=none');
+  }
+
+  // Inject sandbox indicator environment variables
+  dockerArgs.push('-e', 'GHITA_SANDBOX=1');
+  if (!config.allowNetwork) {
+    dockerArgs.push('-e', 'GHITA_SANDBOX_NO_NETWORK=1');
+  }
+
+  for (const [key, value] of Object.entries(env)) {
+    if (value !== undefined) {
+      dockerArgs.push('-e', `${key}=${value}`);
+    }
+  }
+
+  // Volume mount workspace temp dir
+  dockerArgs.push('-v', `${tempDir}:/sandbox`);
+  dockerArgs.push('-w', '/sandbox');
+
+  // Append image and command
+  dockerArgs.push(runner.image);
+  dockerArgs.push(runner.cmd);
+
+  // Translate local path to container mount path
+  const filename = file.path.split(/[/\\]/).pop() || '';
+  const containerFilePath = `/sandbox/${filename}`;
+  dockerArgs.push(...runner.args(containerFilePath));
+
+  return new Promise<SandboxResult>((resolve, reject) => {
+    const child = spawn('docker', dockerArgs, {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: timeoutMs,
+      windowsHide: true,
+    });
+
+    let stdout = '';
+    let stderr = '';
+    let timedOut = false;
+    let killed = false;
+
+    child.stdout?.on('data', (chunk: Buffer) => {
+      stdout += chunk.toString();
+      if (stdout.length > 1_048_576) {
+        stdout = stdout.slice(0, 1_048_576) + '\n... (output truncated)';
+      }
+    });
+
+    child.stderr?.on('data', (chunk: Buffer) => {
+      stderr += chunk.toString();
+      if (stderr.length > 1_048_576) {
+        stderr = stderr.slice(0, 1_048_576) + '\n... (output truncated)';
+      }
+    });
+
+    const timer = setTimeout(() => {
+      timedOut = true;
+      killed = true;
+      // Kill docker container process explicitly on host
+      spawn('docker', ['kill', containerName], { windowsHide: true });
+      child.kill('SIGKILL');
+    }, timeoutMs);
+
+    child.on('close', (exitCode) => {
+      clearTimeout(timer);
+      const durationMs = Date.now() - startTime;
+
+      if (exitCode === 125 || (exitCode !== 0 && stderr.includes('docker:'))) {
+        reject(new Error(`Docker execution failed: ${stderr || 'Unknown Docker daemon error'}`));
+        return;
+      }
+
+      resolve({
+        success: exitCode === 0 && !timedOut,
+        exitCode: exitCode ?? 1,
+        stdout: stdout.trim(),
+        stderr: stderr.trim(),
+        durationMs,
+        timedOut,
+        killed,
+        error: timedOut
+          ? `Execution timed out after ${timeoutMs}ms`
+          : exitCode !== 0
+            ? `Process exited with code ${exitCode}`
+            : undefined,
+      });
+    });
+
+    child.on('error', (err) => {
+      clearTimeout(timer);
+      reject(err);
+    });
+  });
+}
+
+/** Fallback runner executing safely on local host interpreter */
+async function runInLocal(
   code: string,
   config: SandboxConfig = {},
 ): Promise<SandboxResult> {
@@ -133,7 +307,7 @@ export async function runInSandbox(
   }
 
   const tempDir = createTempDir();
-  const file = await writeTempFile(tempDir, code, language);
+  const file = await writeTempFile(tempDir, code, language, false);
   const startTime = Date.now();
 
   return new Promise<SandboxResult>((resolve) => {
@@ -141,7 +315,6 @@ export async function runInSandbox(
       ? [...buildSpawnArgs(config), ...runner.args(file.path)]
       : runner.args(file.path);
 
-    // Filter out undefined values from process.env to avoid unsafe type cast
     const cleanEnv: Record<string, string> = {};
     for (const [key, value] of Object.entries(process.env)) {
       if (value !== undefined) {
@@ -153,9 +326,9 @@ export async function runInSandbox(
       ...cleanEnv,
       ...env,
       GHITA_SANDBOX: '1',
+      GHITA_SANDBOX_FALLBACK: '1',
     };
 
-    // Disable network if not allowed
     if (!config.allowNetwork) {
       sandboxEnv.GHITA_SANDBOX_NO_NETWORK = '1';
     }
@@ -188,7 +361,6 @@ export async function runInSandbox(
 
     child.stdout?.on('data', (chunk: Buffer) => {
       stdout += chunk.toString();
-      // Limit output size to 1MB
       if (stdout.length > 1_048_576) {
         stdout = stdout.slice(0, 1_048_576) + '\n... (output truncated)';
       }
@@ -204,7 +376,6 @@ export async function runInSandbox(
     const timer = setTimeout(() => {
       timedOut = true;
       killed = true;
-      // Windows: SIGKILL not supported, use taskkill; Unix: use SIGKILL
       if (process.platform === 'win32' && child.pid) {
         try {
           spawn('taskkill', ['/pid', String(child.pid), '/f', '/t'], { windowsHide: true });
@@ -254,6 +425,53 @@ export async function runInSandbox(
       });
     });
   });
+}
+
+/** Entrypoint running isolated code with automatic Docker detection and local fallback stream */
+export async function runInSandbox(
+  code: string,
+  config: SandboxConfig = {},
+): Promise<SandboxResult> {
+  const { language = 'javascript' } = config;
+
+  // Option to skip Docker for testing local fallback execution
+  const forceLocal = process.env.GHITA_SANDBOX_FORCE_LOCAL === '1';
+
+  if (!forceLocal) {
+    const dockerAvailable = await isDockerAvailable();
+    if (dockerAvailable) {
+      try {
+        const tempDir = createTempDir();
+        const file = await writeTempFile(tempDir, code, language, true);
+        const startTime = Date.now();
+
+        const result = await runInDocker(code, config, tempDir, file, startTime);
+
+        // Cleanup volume files on host
+        await file.cleanup();
+        try {
+          const { rmdir } = await import('node:fs/promises');
+          await rmdir(tempDir, { recursive: true });
+        } catch {
+          // ignore
+        }
+        return result;
+      } catch (err: any) {
+        console.warn(`[Sandbox Warning] Docker container failed: ${err.message}. Falling back to safe Local Interpreter host stream.`);
+      }
+    } else {
+      console.warn('[Sandbox Warning] Docker is not available. Falling back to safe Local Interpreter host stream.');
+    }
+  }
+
+  // Fallback to local interpreter
+  const localResult = await runInLocal(code, config);
+  const fallbackMsg = `[Sandbox Warning] Docker container not available or failed. Falling back to safe Local Interpreter host stream.`;
+  localResult.stderr = localResult.stderr
+    ? `${fallbackMsg}\n${localResult.stderr}`
+    : fallbackMsg;
+
+  return localResult;
 }
 
 /** Tạo sandbox skill cho SkillRegistry */

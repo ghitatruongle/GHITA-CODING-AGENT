@@ -20,6 +20,7 @@ import type { HookConfig, HookResult } from './hooks/types.js';
 import { createBuiltInTools, type BuiltInTool } from './tools/index.js';
 import { ContextManager } from './context/manager.js';
 import { PermissionManager } from './security/permissions.js';
+import { SecurityChecker } from './hooks/security-checkers.js';
 
 export class Orchestrator {
   private registry: ProviderRegistry;
@@ -64,6 +65,7 @@ export class Orchestrator {
 
     // Phase 5B: Hook Runner
     this.hookRunner = new HookRunner();
+    this.hookRunner.addHook(new SecurityChecker().createPreToolHook());
 
     // Phase 5C: Built-in Tools
     this.builtInTools = createBuiltInTools();
@@ -242,16 +244,20 @@ export class Orchestrator {
 
   private mapModelKeyToProviderType(modelKey: string): AIProviderType | null {
     const key = modelKey.toLowerCase();
-    if (key.includes('openai')) return 'openai';
-    if (key.includes('anthropic') || key.includes('claude')) return 'anthropic';
-    if (key.includes('google') || key.includes('gemini')) return 'google';
-    if (key.includes('ollama')) return 'ollama';
-    if (key.includes('custom')) return 'custom';
 
-    const allTypes: AIProviderType[] = ['openai', 'anthropic', 'google', 'ollama', 'custom'];
+    // Direct type match first
+    const allTypes: AIProviderType[] = [
+      'openai', 'anthropic', 'google', 'ollama', 'custom',
+      'opengateway', 'mimo', 'openrouter', 'deepseek', 'groq',
+      'mistral', 'hicap', 'github-models',
+    ];
     for (const type of allTypes) {
-      if (key === type) return type as AIProviderType;
+      if (key === type || key.includes(type)) return type;
     }
+
+    // Legacy keyword matching
+    if (key.includes('claude')) return 'anthropic';
+    if (key.includes('gemini')) return 'google';
     return null;
   }
 

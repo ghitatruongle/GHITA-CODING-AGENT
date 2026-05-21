@@ -80,30 +80,62 @@ function regenerateCode() {
 }
 
 // --- Get local IP ---
-function getLocalIP() {
-  const interfaces = networkInterfaces();
-  for (const [name, addrs] of Object.entries(interfaces)) {
-    for (const addr of addrs) {
-      if (addr.family === 'IPv4' && !addr.internal) {
-        return addr.address;
-      }
-    }
-  }
-  return '127.0.0.1';
-}
-
 function getAllLocalIPs() {
   const ips = [];
   const interfaces = networkInterfaces();
-  for (const [name, addrs] of Object.entries(interfaces)) {
+  const entries = Object.entries(interfaces);
+
+  // Sort entries so physical interfaces (Wi-Fi, Ethernet) come first, and virtual ones (WSL, Docker) come last
+  entries.sort(([nameA], [nameB]) => {
+    const a = nameA.toLowerCase();
+    const b = nameB.toLowerCase();
+
+    const isVirtual = (name) =>
+      name.includes('vethernet') ||
+      name.includes('wsl') ||
+      name.includes('docker') ||
+      name.includes('vmnet') ||
+      name.includes('vbox') ||
+      name.includes('virtualbox') ||
+      name.includes('vpn') ||
+      name.includes('host-only') ||
+      name.includes('loopback');
+
+    const isPhysical = (name) =>
+      name.includes('wi-fi') ||
+      name.includes('wifi') ||
+      name.includes('wlan') ||
+      name.includes('ethernet') ||
+      name.includes('eth') ||
+      name.includes('en');
+
+    const vA = isVirtual(a);
+    const vB = isVirtual(b);
+    const pA = isPhysical(a);
+    const pB = isPhysical(b);
+
+    if (vA && !vB) return 1;
+    if (!vA && vB) return -1;
+    if (pA && !pB) return -1;
+    if (!pA && pB) return 1;
+    return 0;
+  });
+
+  for (const [name, addrs] of entries) {
+    if (!addrs) continue;
     for (const addr of addrs) {
-      if (addr.family === 'IPv4' && !addr.internal) {
+      const isIPv4 = addr.family === 'IPv4' || addr.family === 4;
+      if (isIPv4 && !addr.internal) {
         ips.push(addr.address);
       }
     }
   }
   if (ips.length === 0) ips.push('127.0.0.1');
   return ips;
+}
+
+function getLocalIP() {
+  return getAllLocalIPs()[0];
 }
 
 function publishToCloud(key, value) {
@@ -206,6 +238,7 @@ const EVENTS = {
   ERROR: 'error',
   PONG: 'pong',
   SCREEN_STREAM: 'screen_stream',
+  UNPAIR: 'unpair',
 };
 
 // --- HTTP Server ---
@@ -253,6 +286,39 @@ const httpServer = createServer((req, res) => {
       port: PORT,
       localIP: getLocalIP(),
     }));
+    return;
+  }
+
+  if (req.url.startsWith('/unpair')) {
+    const urlObj = new URL(req.url, `http://localhost:${PORT}`);
+    const deviceId = urlObj.searchParams.get('deviceId');
+    if (!deviceId) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Missing deviceId parameter' }));
+      return;
+    }
+
+    const device = connectedDevices.get(deviceId);
+    if (device) {
+      log(`Unpairing device via HTTP: ${device.name} (${device.id})`);
+      const socketId = device.socketId;
+      if (socketId) {
+        const activeSocket = io.sockets.sockets.get(socketId);
+        if (activeSocket) {
+          activeSocket.emit('unpaired');
+          activeSocket.disconnect(true);
+        }
+      }
+      connectedDevices.delete(deviceId);
+      sendStatus();
+      ipcEmit('unpaired', { deviceId });
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, message: `Device ${deviceId} has been unpaired.` }));
+    } else {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: `Device ${deviceId} not found.` }));
+    }
     return;
   }
 
@@ -448,7 +514,7 @@ io.on('connection', (socket) => {
         });
 
       } else {
-        io.emit('chat_error', { message: 'AI Orchestrator chưa được cấu hình cho Ralph Loop.' });
+        io.emit('chat_error', { message: '⚙️ AI Orchestrator chưa được cấu hình. Vui lòng mở tab API Manager, thêm API Key và bật Active cho ít nhất 1 provider.' });
       }
     } catch (err) {
       log(`Error in Ralph Loop execution: ${err.message}`);
@@ -548,23 +614,51 @@ io.on('connection', (socket) => {
         }
 
         if (grpcServerInstance && grpcServerInstance.orchestrator) {
+          // Sync API credentials from frontend (localStorage) into orchestrator registry
+          if (data.provider && (data.apiKey || data.baseUrl)) {
+            try {
+              const registry = grpcServerInstance.orchestrator.getRegistry();
+              registry.registerFromConfig({
+                type: data.provider,
+                apiKey: data.apiKey || '',
+                baseUrl: data.baseUrl || '',
+                defaultModel: data.model || '',
+              });
+              log(`Synced credentials for provider: ${data.provider}`);
+            } catch (e) {
+              log(`Failed to sync provider credentials: ${e.message}`);
+            }
+          }
+
           const stream = grpcServerInstance.orchestrator.chatStream(messages, {
             provider: data.provider || undefined,
             model: data.model || undefined,
           });
 
+          let lastUsage = null;
           for await (const chunk of stream) {
             if (chunk.content) {
               fullResponse += chunk.content;
               io.emit('chat_chunk', { text: chunk.content });
             }
+            if (chunk.usage) {
+              lastUsage = chunk.usage;
+            }
           }
 
-          io.emit('chat_done', { text: fullResponse });
+          // Estimate tokens if API didn't provide usage
+          const usage = lastUsage || {
+            promptTokens: Math.ceil((data.text || '').length / 4),
+            completionTokens: Math.ceil(fullResponse.length / 4),
+            totalTokens: Math.ceil(((data.text || '').length + fullResponse.length) / 4),
+          };
+
+          io.emit('chat_done', { text: fullResponse, usage });
         } else {
           // Fallback response nếu orchestrator chưa sẵn sàng
-          io.emit('chat_chunk', { text: `[Sidecar] AI Orchestrator chưa được cấu hình hoàn chỉnh. Nhận được: "${data.text}"` });
-          io.emit('chat_done', { text: `AI Orchestrator chưa được cấu hình.` });
+          const fallbackText = `⚙️ **AI Engine chưa sẵn sàng.**\n\nHệ thống nhận được tin nhắn: "${data.text}"\n\nĐể sử dụng Chat AI, vui lòng:\n1. Mở tab **API Manager** (🔑) trên ứng dụng Desktop\n2. Thêm ít nhất 1 nhà cung cấp AI và nhập API Key\n3. Bật **Active** cho provider đó\n\nSau đó hãy thử lại!`;
+          io.emit('chat_chunk', { text: fallbackText });
+          io.emit('chat_done', { text: fallbackText });
         }
       } catch (err) {
         log(`Error generating AI streaming: ${err.message}`);
@@ -599,6 +693,12 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Computer Use step feedback/preview
+  socket.on('computer_use_step', (data) => {
+    log(`Computer Use step preview received: ${data?.action || 'unknown action'}`);
+    io.emit('computer_use_step', data);
+  });
+
   // Approve/Reject
   socket.on(EVENTS.APPROVE, () => {
     const device = findDeviceBySocket(socket.id);
@@ -620,6 +720,28 @@ io.on('connection', (socket) => {
   socket.on(EVENTS.PONG, () => {
     const device = findDeviceBySocket(socket.id);
     if (device) device.lastSeen = Date.now();
+  });
+
+  // Unpair
+  socket.on(EVENTS.UNPAIR, (data) => {
+    const deviceId = data?.deviceId || findDeviceBySocket(socket.id)?.id;
+    if (deviceId) {
+      const device = connectedDevices.get(deviceId);
+      if (device) {
+        log(`Unpairing device via socket event: ${device.name} (${device.id})`);
+        const socketId = device.socketId;
+        if (socketId) {
+          const activeSocket = io.sockets.sockets.get(socketId);
+          if (activeSocket) {
+            activeSocket.emit('unpaired');
+            activeSocket.disconnect(true);
+          }
+        }
+        connectedDevices.delete(deviceId);
+        sendStatus();
+        ipcEmit('unpaired', { deviceId });
+      }
+    }
   });
 
   // Disconnect

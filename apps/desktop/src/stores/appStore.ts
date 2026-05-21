@@ -4,9 +4,9 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { DeviceInfo } from '@ghita/shared';
+import type { DeviceInfo, PluginManifest } from '@ghita/shared';
 
-export type TabId = 'code' | 'api' | 'skills' | 'agents' | 'devices' | 'dashboard' | 'settings';
+export type TabId = 'code' | 'api' | 'skills' | 'agents' | 'devices' | 'dashboard' | 'settings' | 'marketplace' | 'workflow' | 'ecosystem';
 
 export type ThemeMode = 'dark' | 'light';
 
@@ -60,6 +60,13 @@ interface AppState {
   // Phase 7: Dashboard stats
   dashboardStats: { totalTokens: number; totalCost: number; activeAgents: number; mcpConnections: number };
   setDashboardStats: (stats: { totalTokens: number; totalCost: number; activeAgents: number; mcpConnections: number }) => void;
+
+  // Phase 3: Plugins
+  plugins: Array<{ manifest: PluginManifest; enabled: boolean }>;
+  setPlugins: (plugins: Array<{ manifest: PluginManifest; enabled: boolean }>) => void;
+  togglePlugin: (id: string, enabled: boolean) => void;
+  installPlugin: (manifest: PluginManifest) => void;
+  uninstallPlugin: (id: string) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -117,6 +124,20 @@ export const useAppStore = create<AppState>()(
       // Phase 7: Dashboard stats
       dashboardStats: { totalTokens: 0, totalCost: 0, activeAgents: 0, mcpConnections: 0 },
       setDashboardStats: (stats) => set({ dashboardStats: stats }),
+
+      // Phase 3: Plugins
+      plugins: [] as Array<{ manifest: PluginManifest; enabled: boolean }>,
+      setPlugins: (plugins) => set({ plugins }),
+      togglePlugin: (id, enabled) => set((s) => ({
+        plugins: s.plugins.map((p) => p.manifest.id === id ? { ...p, enabled } : p)
+      })),
+      installPlugin: (manifest) => set((s) => {
+        if (s.plugins.some((p) => p.manifest.id === manifest.id)) return {};
+        return { plugins: [...s.plugins, { manifest, enabled: true }] };
+      }),
+      uninstallPlugin: (id) => set((s) => ({
+        plugins: s.plugins.filter((p) => p.manifest.id !== id)
+      })),
     }),
     {
       name: 'ghita-app-storage',
@@ -127,6 +148,7 @@ export const useAppStore = create<AppState>()(
         logLevel: state.logLevel,
         activeTab: state.activeTab,
         isTerminalOpen: state.isTerminalOpen,
+        plugins: state.plugins,
       }),
     },
   ),

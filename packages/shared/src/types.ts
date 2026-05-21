@@ -6,7 +6,20 @@
 export type Platform = 'windows' | 'linux' | 'android' | 'macos';
 
 // --- AI Provider ---
-export type AIProviderType = 'openai' | 'anthropic' | 'google' | 'ollama' | 'custom';
+export type AIProviderType =
+  | 'openai'
+  | 'anthropic'
+  | 'google'
+  | 'ollama'
+  | 'custom'
+  | 'opengateway'
+  | 'mimo'
+  | 'openrouter'
+  | 'deepseek'
+  | 'groq'
+  | 'mistral'
+  | 'hicap'
+  | 'github-models';
 
 export interface AIProviderConfig {
   type: AIProviderType;
@@ -31,6 +44,7 @@ export interface AIStreamChunk {
   done: boolean;
   provider?: AIProviderType;
   model?: string;
+  usage?: { promptTokens: number; completionTokens: number; totalTokens: number };
 }
 
 // --- Skill ---

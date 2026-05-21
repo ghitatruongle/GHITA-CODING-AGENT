@@ -14,6 +14,7 @@ interface ServerHealth {
   connectedDevices?: number;
   port?: number;
   uptime?: number;
+  localIP?: string;
   localIps?: string[];
   hostname?: string;
   devices?: DeviceInfo[];
@@ -133,6 +134,22 @@ export function DevicesView() {
     }
   };
 
+  const handleUnpairDevice = async (deviceId: string) => {
+    try {
+      const response = await fetch(`http://127.0.0.1:${port}/unpair?deviceId=${deviceId}`, {
+        method: 'POST',
+      });
+      if (response.ok) {
+        pollStatus();
+      } else {
+        const errJson = await response.json();
+        setError(errJson.error || 'Failed to unpair device');
+      }
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+
   const formatCountdown = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
   const formatUptime = (s: number) => {
     const m = Math.floor(s / 60);
@@ -140,7 +157,7 @@ export function DevicesView() {
     return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
   };
 
-  const primaryIp = health?.localIps?.[0] || null;
+  const primaryIp = health?.localIP || health?.localIps?.[0] || null;
   const port = health?.port || 8080;
 
   return (
@@ -273,6 +290,31 @@ export function DevicesView() {
                 <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{device.platform} - Last seen: {new Date(device.lastSeen).toLocaleTimeString()}</div>
               </div>
               <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: device.connected ? 'var(--success)' : 'var(--text-muted)' }} />
+              <button
+                onClick={() => handleUnpairDevice(device.id)}
+                style={{
+                  padding: '6px 12px',
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: 'var(--radius-sm)',
+                  color: '#ef4444',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  marginLeft: '12px',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.3)';
+                  e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.5)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+                  e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                }}
+              >
+                Hủy kết nối
+              </button>
             </div>
           ))}
         </div>

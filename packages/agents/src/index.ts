@@ -318,7 +318,19 @@ export function createDefaultAgentGroupManager(agentManager: AgentManager): Agen
   return groupManager;
 }
 
+// --- Phase 4: Subagent Spawner & Cron Scheduler ---
+export { SubagentSpawner } from './subagent/spawner.js';
+export type { SubagentSpawnInput, SubagentSpawnResult, SubagentState } from './subagent/types.js';
+export { CronScheduler } from './scheduler/cron.js';
+export type { ScheduledTaskConfig, ScheduledTask } from './scheduler/types.js';
+
 // --- Phase 7A: Agent SDK ---
 export { GhitAgentClient } from './sdk/client.js';
 export type { AgentSDKConfig, SendMessageOptions, AgentMessage } from './sdk/types.js';
+
+// --- Phase 5: Agent Protocol & Router ---
+export { AgentProtocolServer } from './protocol/ap.js';
+export type { APTask, APStep, APArtifact } from './protocol/ap.js';
+export { AgentRouter } from './router/router.js';
+export type { ComplexityLevel, RouteResolution } from './router/router.js';
 

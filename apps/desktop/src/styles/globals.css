@@ -347,3 +347,35 @@ input::placeholder, textarea::placeholder {
   animation: shimmer 1.5s infinite;
   border-radius: var(--radius-sm);
 }
+
+/* --- Computer Use Animations --- */
+@keyframes computerUsePulse {
+  0% {
+    border-color: #ef4444;
+    box-shadow: 0 0 8px #ef4444, inset 0 0 4px rgba(239, 68, 68, 0.3);
+  }
+  50% {
+    border-color: #f87171;
+    box-shadow: 0 0 16px #ef4444, inset 0 0 8px rgba(239, 68, 68, 0.5);
+  }
+  100% {
+    border-color: #ef4444;
+    box-shadow: 0 0 8px #ef4444, inset 0 0 4px rgba(239, 68, 68, 0.3);
+  }
+}
+
+@keyframes computerUsePointPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    transform: translate(-50%, -50%) scale(1);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+

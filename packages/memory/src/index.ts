@@ -3,6 +3,10 @@
 // ==============================================================================
 
 import type { MemoryEntry, MemorySearchResult } from '@ghita/shared';
+import { CrossSessionSearch } from './search.js';
+import type { SessionRecord, CrossSessionResult } from './search.js';
+import { MemoryNudgeEngine } from './nudge.js';
+import type { NudgeSuggestion, NudgeConfig } from './nudge.js';
 
 export const MEMORY_VERSION = '0.1.0';
 
@@ -69,11 +73,15 @@ function scoreEntry(entry: MemoryEntry, queryTokens: Set<string>, now: number): 
 
 export class AgentMemory {
   private readonly entries = new Map<string, MemoryEntry>();
+  private readonly sessionSearch: CrossSessionSearch;
+  private readonly nudgeEngine: MemoryNudgeEngine;
 
-  constructor(initialEntries: MemoryEntry[] = []) {
+  constructor(initialEntries: MemoryEntry[] = [], nudgeConfig?: Partial<NudgeConfig>) {
     for (const entry of initialEntries) {
       this.entries.set(entry.id, entry);
     }
+    this.sessionSearch = new CrossSessionSearch();
+    this.nudgeEngine = new MemoryNudgeEngine(nudgeConfig);
   }
 
   remember(input: RememberInput): MemoryEntry {
@@ -147,6 +155,34 @@ export class AgentMemory {
     return context.length > maxCharacters ? `${context.slice(0, maxCharacters)}...` : context;
   }
 
+  indexSession(session: SessionRecord): void {
+    this.sessionSearch.indexSession(session);
+  }
+
+  searchAcrossSessions(
+    query: string,
+    options?: { limit?: number; minScore?: number; sessionType?: string }
+  ): CrossSessionResult[] {
+    return this.sessionSearch.searchAcrossSessions(query, options);
+  }
+
+  analyzeForNudges(messages: Array<{ role: string; content: string }>): NudgeSuggestion[] {
+    return this.nudgeEngine.analyzeForNudges(messages);
+  }
+
+  autoSaveNudges(messages: Array<{ role: string; content: string }>): MemoryEntry[] {
+    const nudges = this.analyzeForNudges(messages);
+    const saved: MemoryEntry[] = [];
+    for (const nudge of nudges) {
+      if (this.nudgeEngine.shouldAutoSave(nudge)) {
+        const entry = this.nudgeEngine.toMemoryEntry(nudge);
+        this.add(entry);
+        saved.push(entry);
+      }
+    }
+    return saved;
+  }
+
   toJSON(): MemoryEntry[] {
     return this.list();
   }
@@ -155,3 +191,8 @@ export class AgentMemory {
     return new AgentMemory(entries);
   }
 }
+
+export { CrossSessionSearch } from './search.js';
+export type { SessionRecord, SessionMessage, CrossSessionResult } from './search.js';
+export { MemoryNudgeEngine } from './nudge.js';
+export type { NudgeSuggestion, NudgeConfig, NudgePattern } from './nudge.js';

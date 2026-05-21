@@ -24,6 +24,14 @@ export const AI_PROVIDERS: Record<AIProviderType, { name: string; defaultModel: 
   google: { name: 'Google', defaultModel: 'gemini-1.5-pro' },
   ollama: { name: 'Ollama (Local)', defaultModel: 'llama3' },
   custom: { name: 'Custom', defaultModel: '' },
+  opengateway: { name: 'Gitlawb Opengateway', defaultModel: 'mimo-v2.5-pro' },
+  mimo: { name: 'Xiaomi MiMo', defaultModel: 'mimo-v2.5-pro' },
+  openrouter: { name: 'OpenRouter', defaultModel: 'anthropic/claude-sonnet-4' },
+  deepseek: { name: 'DeepSeek', defaultModel: 'deepseek-chat' },
+  groq: { name: 'Groq', defaultModel: 'llama-3.1-70b-versatile' },
+  mistral: { name: 'Mistral', defaultModel: 'mistral-large-latest' },
+  hicap: { name: 'Hicap', defaultModel: '' },
+  'github-models': { name: 'GitHub Models', defaultModel: 'gpt-4o' },
 };
 
 export const OLLAMA_DEFAULT_URL = 'http://localhost:11434';

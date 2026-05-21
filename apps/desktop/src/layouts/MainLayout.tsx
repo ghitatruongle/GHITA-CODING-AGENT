@@ -16,6 +16,9 @@ import { AgentsView } from '../views/AgentsView';
 import { DevicesView } from '../views/DevicesView';
 import { DashboardView } from '../views/DashboardView';
 import { SettingsView } from '../views/SettingsView';
+import { MarketplaceView } from '../views/MarketplaceView';
+import { WorkflowView } from '../views/WorkflowView';
+import { EcosystemView } from '../views/EcosystemView';
 
 // --- Per-view Error Boundary ---
 interface ViewErrorBoundaryState {
@@ -81,6 +84,9 @@ function ActiveView() {
           case 'agents':    return <AgentsView />;
           case 'devices':   return <DevicesView />;
           case 'dashboard': return <DashboardView />;
+          case 'marketplace': return <MarketplaceView />;
+          case 'workflow':  return <WorkflowView />;
+          case 'ecosystem': return <EcosystemView />;
           case 'settings':  return <SettingsView />;
         }
       })()}
@@ -177,7 +183,7 @@ export function MainLayout() {
               flexShrink: 0,
             }}
           >
-            v0.1.0
+            v0.0.2-beta1
           </span>
         </div>
         <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
@@ -272,7 +278,7 @@ export function MainLayout() {
         }}
       >
         <div style={{ display: 'flex', gap: '12px', minWidth: 0, overflow: 'hidden' }}>
-          <span>🤖 GHITA v0.1.0</span>
+          <span>🤖 GHITA v0.0.2-beta1</span>
           <span>{isWindows() ? '🖥️ Windows' : isLinux() ? '🖥️ Linux' : '🖥️ Unknown'}</span>
         </div>
         <div style={{ display: 'flex', gap: '12px', minWidth: 0, overflow: 'hidden', justifyContent: 'flex-end' }}>

@@ -23,6 +23,27 @@
     "shell:allow-spawn",
     "shell:allow-stdin-write",
     "shell:allow-open",
-    "updater:default"
+    "updater:default",
+    "dialog:allow-open",
+    "fs:allow-read-file",
+    "fs:allow-write-file",
+    "fs:allow-exists",
+    "fs:allow-read-dir",
+    "fs:allow-mkdir",
+    "fs:allow-remove",
+    "fs:allow-rename",
+    "fs:allow-app-read",
+    "fs:allow-app-write",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        { "path": "$HOME/**" },
+        { "path": "$DESKTOP/**" },
+        { "path": "$DOCUMENT/**" },
+        { "path": "$DOWNLOAD/**" },
+        { "path": "$APPDATA/**" },
+        { "path": "$LOCALAPPDATA/**" }
+      ]
+    }
   ]
 }
