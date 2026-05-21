@@ -8,4 +8,11 @@ export { PairingManager } from './pairing.js';
 export { ScreenCapture } from './screen-capture.js';
 export * from './types.js';
 
+// --- Gateway Integrations (Phase 4) ---
+export * from './gateway/types.js';
+export { TelegramGateway } from './gateway/telegram.js';
+export { DiscordGateway } from './gateway/discord.js';
+export { SlackGateway } from './gateway/slack.js';
+export { GatewayManager } from './gateway/manager.js';
+
 export const COMMUNICATION_VERSION = '0.1.0';

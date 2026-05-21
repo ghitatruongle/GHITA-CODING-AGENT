@@ -3,25 +3,31 @@
 // ==============================================================================
 
 import type { ChatMessage } from '../types.js';
+import { TrajectoryCompressor } from './compressor.js';
 
 export interface ContextConfig {
   maxTokens: number;
   compactThreshold: number; // 0.0 - 1.0, e.g. 0.8 = compact at 80%
-  strategy: 'sliding_window' | 'summary';
+  strategy: 'sliding_window' | 'summary' | 'trajectory';
 }
 
 const DEFAULT_CONFIG: ContextConfig = {
   maxTokens: 128000,
   compactThreshold: 0.8,
-  strategy: 'sliding_window',
+  strategy: 'trajectory', // Default to trajectory compression in Phase 2
 };
 
 export class ContextManager {
   private config: ContextConfig;
+  private compressor: TrajectoryCompressor;
 
   constructor(config?: Partial<ContextConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...config };
+    this.compressor = new TrajectoryCompressor({
+      maxTokens: this.config.maxTokens,
+    });
   }
+
 
   /** Ước tính token count (rough: 1 token ≈ 4 chars tiếng Anh, 2 chars tiếng Việt) */
   estimateTokens(messages: ChatMessage[]): number {
@@ -45,6 +51,8 @@ export class ContextManager {
     if (!this.needsCompact(messages)) return messages;
 
     switch (this.config.strategy) {
+      case 'trajectory':
+        return this.compressor.compress(messages).messages;
       case 'summary':
         return this.compactWithSummary(messages);
       case 'sliding_window':

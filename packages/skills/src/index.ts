@@ -400,3 +400,9 @@ export { SlashCommandRegistry } from './commands/registry.js';
 export type { SlashCommand } from './commands/registry.js';
 export { createBuiltinSlashCommands } from './commands/builtins.js';
 
+// --- Phase 2: Skills Auto-Creation & Hub Registry ---
+export * from './auto-create/types.js';
+export { SkillAutoCreator } from './auto-create/engine.js';
+export { SkillImprover } from './auto-create/improver.js';
+
+

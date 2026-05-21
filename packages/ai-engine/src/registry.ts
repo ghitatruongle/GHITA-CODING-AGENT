@@ -3,6 +3,7 @@
 // ==============================================================================
 
 import type { AIProviderType } from '@ghita/shared';
+import { AI_PROVIDERS } from '@ghita/shared';
 import type { AIProvider, ProviderConfig } from './types.js';
 import { OpenAIProvider } from './providers/openai.js';
 import { AnthropicProvider } from './providers/anthropic.js';
@@ -82,6 +83,20 @@ export class ProviderRegistry {
         return new OllamaProvider(config);
       case 'custom':
         return new CustomProvider(config);
+      // OpenAI-compatible providers (reuse CustomProvider)
+      case 'opengateway':
+      case 'mimo':
+      case 'openrouter':
+      case 'deepseek':
+      case 'groq':
+      case 'mistral':
+      case 'hicap':
+      case 'github-models':
+        return new CustomProvider({
+          ...config,
+          providerType: config.type,
+          providerName: AI_PROVIDERS[config.type]?.name ?? config.type,
+        });
       default:
         throw new Error(`Unknown provider type: ${config.type as string}`);
     }

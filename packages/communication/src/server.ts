@@ -57,10 +57,50 @@ export class CommunicationServer {
 
     const getLocalIP = (): string => {
       const interfaces = networkInterfaces();
-      for (const [, addrs] of Object.entries(interfaces)) {
+      const entries = Object.entries(interfaces);
+
+      // Sort entries so physical interfaces (Wi-Fi, Ethernet) come first
+      entries.sort(([nameA], [nameB]) => {
+        const a = nameA.toLowerCase();
+        const b = nameB.toLowerCase();
+
+        const isVirtual = (name: string) =>
+          name.includes('vethernet') ||
+          name.includes('wsl') ||
+          name.includes('docker') ||
+          name.includes('vmnet') ||
+          name.includes('vbox') ||
+          name.includes('virtualbox') ||
+          name.includes('vpn') ||
+          name.includes('host-only') ||
+          name.includes('loopback');
+
+        const isPhysical = (name: string) =>
+          name.includes('wi-fi') ||
+          name.includes('wifi') ||
+          name.includes('wlan') ||
+          name.includes('ethernet') ||
+          name.includes('eth') ||
+          name.includes('en');
+
+        const vA = isVirtual(a);
+        const vB = isVirtual(b);
+        const pA = isPhysical(a);
+        const pB = isPhysical(b);
+
+        if (vA && !vB) return 1;
+        if (!vA && vB) return -1;
+        if (pA && !pB) return -1;
+        if (!pA && pB) return 1;
+        return 0;
+      });
+
+      for (const [, addrs] of entries) {
         if (!addrs) continue;
         for (const addr of addrs) {
-          if (addr.family === 'IPv4' && !addr.internal) {
+          const family = addr.family as any;
+          const isIPv4 = family === 'IPv4' || family === 4;
+          if (isIPv4 && !addr.internal) {
             return addr.address;
           }
         }

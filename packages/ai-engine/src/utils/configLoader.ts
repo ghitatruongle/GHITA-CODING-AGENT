@@ -25,7 +25,7 @@ export class ConfigLoader {
   private configPath: string;
 
   constructor() {
-    this.configPath = path.resolve(os.homedir(), '.openclaude.json');
+    this.configPath = path.resolve(os.homedir(), '.ghita-coding-agent.json');
   }
 
   /**
@@ -37,7 +37,16 @@ export class ConfigLoader {
         return this.initializeDefaultConfig();
       }
       const data = fs.readFileSync(this.configPath, 'utf-8');
-      return JSON.parse(data) as LocalConfig;
+      const parsed = JSON.parse(data) as LocalConfig;
+
+      // Validate required fields exist (file may be from another tool like OpenClaude CLI)
+      if (!parsed.agentModels || typeof parsed.agentModels !== 'object' ||
+          !parsed.agentRouting || typeof parsed.agentRouting !== 'object') {
+        console.warn('Config file missing agentModels/agentRouting, using defaults');
+        return this.initializeDefaultConfig();
+      }
+
+      return parsed;
     } catch (error) {
       console.error('Failed to load local settings, loading defaults:', error);
       return this.initializeDefaultConfig();
@@ -61,6 +70,7 @@ export class ConfigLoader {
    */
   toProviderConfigs(localConfig: LocalConfig): ProviderConfig[] {
     const configs: ProviderConfig[] = [];
+    if (!localConfig.agentModels) return configs;
     for (const [name, meta] of Object.entries(localConfig.agentModels)) {
       configs.push({
         type: meta.type as any,
@@ -93,12 +103,30 @@ export class ConfigLoader {
           api_key: '',
           default_model: 'llama3',
         },
+        'opengateway-mimo': {
+          type: 'opengateway',
+          base_url: 'https://opengateway.gitlawb.com/v1',
+          api_key: '',
+          default_model: 'mimo-v2.5-pro',
+        },
+        'deepseek-chat': {
+          type: 'deepseek',
+          base_url: 'https://api.deepseek.com/v1',
+          api_key: '',
+          default_model: 'deepseek-chat',
+        },
+        'groq-llama': {
+          type: 'groq',
+          base_url: 'https://api.groq.com/openai/v1',
+          api_key: '',
+          default_model: 'llama-3.1-70b-versatile',
+        },
       },
       agentRouting: {
         Explore: 'ollama-llama3',
         Plan: 'anthropic-sonnet',
         UI: 'openai-gpt-4o',
-        default: 'openai-gpt-4o',
+        default: 'opengateway-mimo',
       },
     };
 

@@ -83,6 +83,9 @@ export class HookRunner {
   ): Promise<HookResult> {
     const start = Date.now();
     try {
+      if (hook.handler) {
+        return await hook.handler(toolName, toolArgs ?? {}, toolResult);
+      }
       // Substitute variables in command
       let command = hook.command;
       command = command.replace(/\$TOOL_NAME/g, toolName);

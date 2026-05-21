@@ -10,9 +10,122 @@ import {
   type SkillDefinition,
   type SkillRegistrySnapshot,
 } from '@ghita/skills';
-import { BrowserController, createBrowserControlSkills } from '@ghita/browser-control';
-import { ComputerUseController, createComputerUseSkills } from '@ghita/computer-use';
 import type { SkillCategory, SkillResult } from '@ghita/shared';
+
+const MOCK_COMPUTER_SKILLS: SkillDefinition[] = [
+  {
+    id: 'computer.moveMouse',
+    name: 'Move Mouse',
+    description: 'Move the mouse cursor to screen coordinates.',
+    category: 'computer',
+    enabled: false,
+    version: '0.1.0',
+    scopes: ['desktop'],
+    status: 'disabled',
+    parameters: {
+      x: { type: 'number', description: 'X coordinate', required: true },
+      y: { type: 'number', description: 'Y coordinate', required: true },
+    },
+    run: async () => ({ success: false, error: 'OS Automation adapter is only available when connected to host sidecar.' }),
+  },
+  {
+    id: 'computer.click',
+    name: 'Click Mouse',
+    description: 'Click at the current cursor or a target coordinate.',
+    category: 'computer',
+    enabled: false,
+    version: '0.1.0',
+    scopes: ['desktop'],
+    status: 'disabled',
+    parameters: {
+      x: { type: 'number', description: 'Optional X coordinate', required: false },
+      y: { type: 'number', description: 'Optional Y coordinate', required: false },
+    },
+    run: async () => ({ success: false, error: 'OS Automation adapter is only available when connected to host sidecar.' }),
+  },
+  {
+    id: 'computer.typeText',
+    name: 'Type Text',
+    description: 'Type text through the keyboard adapter.',
+    category: 'computer',
+    enabled: false,
+    version: '0.1.0',
+    scopes: ['desktop'],
+    status: 'disabled',
+    parameters: {
+      text: { type: 'string', description: 'Text to type', required: true },
+    },
+    run: async () => ({ success: false, error: 'OS Automation adapter is only available when connected to host sidecar.' }),
+  },
+  {
+    id: 'computer.screenshot',
+    name: 'Computer Screenshot',
+    description: 'Capture the screen through the computer-use adapter.',
+    category: 'computer',
+    enabled: false,
+    version: '0.1.0',
+    scopes: ['desktop'],
+    status: 'disabled',
+    run: async () => ({ success: false, error: 'OS Automation adapter is only available when connected to host sidecar.' }),
+  },
+];
+
+const MOCK_BROWSER_SKILLS: SkillDefinition[] = [
+  {
+    id: 'browser.open',
+    name: 'Open Browser',
+    description: 'Launch a controlled browser session.',
+    category: 'browser',
+    enabled: false,
+    version: '0.1.0',
+    scopes: ['browser'],
+    status: 'disabled',
+    run: async () => ({ success: false, error: 'Browser Control adapter is only available when connected to host sidecar.' }),
+  },
+  {
+    id: 'browser.navigate',
+    name: 'Navigate Browser',
+    description: 'Navigate the controlled browser to a URL.',
+    category: 'browser',
+    enabled: false,
+    version: '0.1.0',
+    scopes: ['browser'],
+    status: 'disabled',
+    parameters: {
+      url: { type: 'string', description: 'URL to open', required: true },
+    },
+    run: async () => ({ success: false, error: 'Browser Control adapter is only available when connected to host sidecar.' }),
+  },
+  {
+    id: 'browser.extract',
+    name: 'Extract Page Text',
+    description: 'Extract text from the page or a selector.',
+    category: 'browser',
+    enabled: false,
+    version: '0.1.0',
+    scopes: ['browser'],
+    status: 'disabled',
+    parameters: {
+      selector: { type: 'string', description: 'Optional CSS selector', required: false },
+    },
+    run: async () => ({ success: false, error: 'Browser Control adapter is only available when connected to host sidecar.' }),
+  },
+  {
+    id: 'browser.fill',
+    name: 'Fill Browser Field',
+    description: 'Fill a browser input field.',
+    category: 'browser',
+    enabled: false,
+    version: '0.1.0',
+    scopes: ['browser'],
+    status: 'disabled',
+    parameters: {
+      selector: { type: 'string', description: 'CSS selector', required: true },
+      value: { type: 'string', description: 'Value to enter', required: true },
+    },
+    run: async () => ({ success: false, error: 'Browser Control adapter is only available when connected to host sidecar.' }),
+  },
+];
 
 const CATEGORY_LABELS: Record<SkillCategory, string> = {
   file: 'File',
@@ -64,11 +177,8 @@ function getSampleInput(skill: SkillDefinition): Record<string, unknown> {
 
 function createRegistry() {
   const registry = createDefaultSkillRegistry();
-  const computer = new ComputerUseController();
-  const browser = new BrowserController();
-
-  registry.registerMany(createComputerUseSkills(computer));
-  registry.registerMany(createBrowserControlSkills(browser));
+  registry.registerMany(MOCK_COMPUTER_SKILLS);
+  registry.registerMany(MOCK_BROWSER_SKILLS);
   return registry;
 }
 

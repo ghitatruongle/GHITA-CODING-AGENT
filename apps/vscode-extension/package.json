@@ -1,0 +1,57 @@
+{
+  "name": "@ghita/vscode-extension",
+  "version": "0.1.0",
+  "private": true,
+  "description": "VS Code Sidecar Extension for GHITA CODING AGENT",
+  "publisher": "ghita",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "ghita-sidecar.connect",
+        "title": "GHITA: Connect Sidecar",
+        "category": "GHITA CODING AGENT"
+      },
+      {
+        "command": "ghita-sidecar.syncWorkspace",
+        "title": "GHITA: Sync Workspace Files",
+        "category": "GHITA CODING AGENT"
+      }
+    ],
+    "configuration": {
+      "title": "GHITA CODING AGENT",
+      "properties": {
+        "ghita.corePort": {
+          "type": "integer",
+          "default": 50051,
+          "description": "Port of the running GHITA Core gRPC daemon server."
+        },
+        "ghita.autoSync": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to auto-sync workspace files on save."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "compile": "tsc"
+  },
+  "dependencies": {
+    "@ghita/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  }
+}

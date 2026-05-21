@@ -11,6 +11,9 @@ const TABS: Array<{ id: TabId; label: string; icon: string }> = [
   { id: 'agents',  label: 'Agents',  icon: '👥' },
   { id: 'devices', label: 'Devices', icon: '📱' },
   { id: 'dashboard', label: 'Dashboard', icon: '📊' },
+  { id: 'marketplace', label: 'Marketplace', icon: '🏪' },
+  { id: 'workflow', label: 'Workflow', icon: '🧩' },
+  { id: 'ecosystem', label: 'Ecosystem', icon: '📡' },
   { id: 'settings', label: 'Settings', icon: '⚙️' },
 ];
 

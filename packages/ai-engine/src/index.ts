@@ -63,7 +63,13 @@ export type { BuiltInTool } from './tools/index.js';
 // --- Context Manager ---
 export { ContextManager } from './context/manager.js';
 export type { ContextConfig } from './context/manager.js';
+export { TrajectoryCompressor } from './context/compressor.js';
+export type { CompressionResult, CompressorConfig, MessageAnalysis, MessageImportance } from './context/compressor.js';
 
 // --- Permission Manager ---
 export { PermissionManager } from './security/permissions.js';
 export type { PermissionLevel, ToolPermission } from './security/permissions.js';
+
+// --- Security Checkers & Safety Hooks ---
+export { SecurityChecker } from './hooks/security-checkers.js';
+export type { SecurityAnalysis, SecurityRiskLevel } from './hooks/security-checkers.js';

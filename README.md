@@ -6,6 +6,7 @@
 
 <div align="center">
 
+![Version](https://img.shields.io/badge/version-0.0.2--beta1-purple.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Node](https://img.shields.io/badge/node-%3E%3D20-green.svg)
 ![TypeScript](https://img.shields.io/badge/typescript-5.6-blue.svg)
@@ -13,28 +14,28 @@
 
 </div>
 
-**AI Desktop Agent** — Ứng dụng desktop AI đa năng, giao diện kiểu VS Code, hỗ trợ điều khiển máy tính từ xa qua điện thoại Android.
+**AI Desktop Agent** — A versatile AI desktop application with VS Code-style interface, supporting remote computer control via Android phone.
 
 ---
 
-## Tính năng
+## Features
 
-- **Code Editor** — AI-assisted coding với Monaco Editor
-- **AI Multi-Provider** — Quản lý OpenAI, Anthropic, Google, Ollama...
-- **Skill System** — Tạo/quản lý kỹ năng cho AI
-- **Agent Groups** — Tạo nhóm agents chuyên biệt
-- **Computer Use** — AI điều khiển chuột, bàn phím, ứng dụng
-- **Browser Control** — AI mở Chrome, tự động hóa web
-- **Remote Control** — Điều khiển từ xa qua Android (WiFi/Socket.IO)
-- **Secure Pairing** — Mã xác thực 2 chiều an toàn
+- **Code Editor** — AI-assisted coding with Monaco Editor
+- **AI Multi-Provider** — Manage OpenAI, Anthropic, Google, Ollama and more
+- **Skill System** — Create and manage AI skills
+- **Agent Groups** — Create specialized agent teams
+- **Computer Use** — AI controls mouse, keyboard, and applications
+- **Browser Control** — AI opens Chrome, automates web tasks
+- **Remote Control** — Remote control via Android (WiFi/Socket.IO)
+- **Secure Pairing** — Secure two-way authentication code
 
-> **Yêu cầu Android**: Android 9 (Pie) trở lên (API 28+)
+> **Android Requirement**: Android 9 (Pie) or higher (API 28+)
 
 ---
 
 ## Tech Stack
 
-| Thành phần | Technology |
+| Component | Technology |
 |---|---|
 | Desktop | Tauri 2.x + React (TypeScript) |
 | Mobile | React Native (Android) — minSdk=28 |
@@ -49,7 +50,7 @@
 
 ---
 
-## Cấu trúc dự án
+## Project Structure
 
 ```
 GHITA-CODING-AGENT/
@@ -68,45 +69,45 @@ GHITA-CODING-AGENT/
 ├── scripts/             # Build & setup scripts
 ├── docs/                # Documentation & assets
 ├── tests/               # Tests
-└── Plan/                # Kế hoạch phát triển
+└── Plan/                # Development plan
 ```
 
 ---
 
-## Cài đặt
+## Installation
 
-### Yêu cầu
+### Requirements
 
 - **Node.js** >= 20
 - **pnpm** >= 10.x (`npm install -g pnpm`)
-- **Rust** (cho Tauri desktop)
-- **Android Studio** (cho React Native)
-- **Android device/emulator** chạy Android 9+ (API 28)
+- **Rust** (for Tauri desktop)
+- **Android Studio** (for React Native)
+- **Android device/emulator** running Android 9+ (API 28)
 - **Git**
 
-### Bước 1: Clone dự án
+### Step 1: Clone the project
 
 ```bash
 git clone https://github.com/ghitatruongle/GHITA-CODING-AGENT.git
 cd GHITA-CODING-AGENT
 ```
 
-### Bước 2: Cài đặt dependencies
+### Step 2: Install dependencies
 
 ```bash
 pnpm install
 ```
 
-### Bước 3: Cấu hình environment
+### Step 3: Configure environment
 
 ```bash
 cp .env.example .env
-# Chỉnh sửa .env với API keys của bạn
+# Edit .env with your API keys
 ```
 
-Xem [`.env.example`](.env.example) để biết các biến môi trường cần thiết.
+See [`.env.example`](.env.example) for required environment variables.
 
-### Bước 4: Chạy development
+### Step 4: Run development
 
 ```bash
 # Desktop (Tauri + React)
@@ -120,31 +121,32 @@ pnpm dev:android
 
 ## Scripts
 
-| Script | Mô tả |
+| Script | Description |
 |---|---|
-| `pnpm dev` | Chạy tất cả workspace ở dev mode |
-| `pnpm dev:desktop` | Chạy desktop app (Tauri) |
-| `pnpm dev:android` | Chạy Android app |
-| `pnpm build` | Build tất cả |
+| `pnpm dev` | Run all workspaces in dev mode |
+| `pnpm dev:desktop` | Run desktop app (Tauri) |
+| `pnpm dev:android` | Run Android app |
+| `pnpm build` | Build everything |
 | `pnpm build:desktop` | Build desktop app |
 | `pnpm build:android` | Build Android APK |
-| `pnpm build:packages` | Build chỉ packages |
-| `pnpm lint` | Kiểm tra code style |
-| `pnpm lint:fix` | Tự động fix lint |
-| `pnpm typecheck` | Kiểm tra TypeScript |
-| `pnpm format` | Format code với Prettier |
-| `pnpm test` | Chạy tests |
-| `pnpm clean` | Xóa build artifacts |
-| `pnpm clean:all` | Xóa tất cả (bao gồm node_modules) |
+| `pnpm build:packages` | Build packages only |
+| `pnpm lint` | Check code style |
+| `pnpm lint:fix` | Auto-fix lint issues |
+| `pnpm typecheck` | Check TypeScript |
+| `pnpm format` | Format code with Prettier |
+| `pnpm test` | Run tests |
+| `pnpm clean` | Remove build artifacts |
+| `pnpm clean:all` | Remove everything (including node_modules) |
 
 ---
 
-## Lịch sử cập nhật
+## Changelog
 
-| Phiên bản | Ngày | Nội dung |
+| Version | Date | Description |
 |---|---|---|
-| DEMO | 19/05/2026 | Bản demo đầu tiên |
-| Update 0.0.1 | 21/05/2026 | Tối ưu cho việc kết nối giữa điện thoại và máy tính và sửa một số lỗi nhỏ |
+| DEMO | 19/05/2026 | Initial demo release |
+| Update 0.0.1 | 21/05/2026 | Optimized phone-computer connection and fixed minor bugs |
+| Update 0.0.2 beta1 | 21/05/2026 | Code Editor VSCode-style, File Explorer, Multi-tab, 13 AI providers, Dashboard real-time, API Manager redesign, Chat markdown rendering, Token counter |
 
 ---
 

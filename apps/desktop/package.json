@@ -1,6 +1,6 @@
 {
   "name": "@ghita/desktop",
-  "version": "0.1.0",
+  "version": "0.0.2-beta1",
   "private": true,
   "description": "GHITA CODING AGENT — Desktop App (Tauri + React)",
   "type": "module",
@@ -22,6 +22,8 @@
     "@ghita/shared": "workspace:*",
     "@ghita/skills": "workspace:*",
     "@tauri-apps/api": "^2.5.0",
+    "@tauri-apps/plugin-dialog": "^2.7.1",
+    "@tauri-apps/plugin-fs": "^2.2.0",
     "@tauri-apps/plugin-shell": "^2.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

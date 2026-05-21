@@ -64,6 +64,10 @@ export interface ProviderConfig {
   defaultModel?: string;
   maxTokens?: number;
   temperature?: number;
+  /** Override type identity for custom-compatible providers (e.g. 'deepseek', 'groq') */
+  providerType?: AIProviderType;
+  /** Override display name for custom-compatible providers */
+  providerName?: string;
 }
 
 // --- MCP Config ---
