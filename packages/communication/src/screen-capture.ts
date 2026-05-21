@@ -26,12 +26,22 @@ export class ScreenCapture {
    */
   async captureScreen(): Promise<string> {
     try {
-      // Dynamic import to avoid bundling native module in frontend
       const screenshotModule = await import('screenshot-desktop');
       const screenshot = screenshotModule.default ?? screenshotModule;
 
-      const imgBuffer: Buffer = await screenshot({ format: 'jpg' });
-      return imgBuffer.toString('base64');
+      const imgBuffer: Buffer | Uint8Array = await screenshot({ format: 'jpg' });
+
+      // Cross-environment base64 encoding (works in both Node.js and browser)
+      if (typeof Buffer !== 'undefined' && Buffer.isBuffer(imgBuffer)) {
+        return imgBuffer.toString('base64');
+      }
+      // Browser-safe: Uint8Array → base64 via btoa
+      const bytes = imgBuffer instanceof Uint8Array ? imgBuffer : new Uint8Array(imgBuffer as ArrayBuffer);
+      let binary = '';
+      for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]!);
+      }
+      return btoa(binary);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.error('[ScreenCapture] Failed to capture screen:', message);

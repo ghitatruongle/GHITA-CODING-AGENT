@@ -2,7 +2,9 @@
 // GHITA CODING AGENT - Skill Manager
 // ==============================================================================
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
+import { invoke } from '@tauri-apps/api/core';
+import { io, type Socket } from 'socket.io-client';
 import {
   createDefaultSkillRegistry,
   type SkillDefinition,
@@ -91,10 +93,61 @@ function ResultLine({ result }: { result?: SkillResult }) {
 }
 
 export function SkillManager() {
-  const registry = useMemo(createRegistry, []);
+  const registryRef = useRef<ReturnType<typeof createDefaultSkillRegistry> | null>(null);
+  if (!registryRef.current) {
+    registryRef.current = createRegistry();
+  }
+  const registry = registryRef.current;
   const [snapshot, setSnapshot] = useState<SkillRegistrySnapshot>(() => registry.snapshot());
   const [lastResults, setLastResults] = useState<Record<string, SkillResult>>({});
   const [runningId, setRunningId] = useState<string | null>(null);
+
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [connected, setConnected] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    let localSocket: Socket | null = null;
+
+    const initSocket = async () => {
+      try {
+        const status = await invoke<{ port: number }>('get_server_status');
+        const port = status.port || 8080;
+        if (!active) return;
+
+        const s = io(`http://localhost:${port}`, {
+          transports: ['websocket'],
+          reconnectionAttempts: 5,
+        });
+        localSocket = s;
+
+        s.on('connect', () => {
+          if (active) {
+            setSocket(s);
+            setConnected(true);
+            console.log('[SkillManager] Connected to sidecar for OS skill execution.');
+          }
+        });
+
+        s.on('disconnect', () => {
+          if (active) {
+            setConnected(false);
+          }
+        });
+      } catch (err) {
+        console.error('[SkillManager] Socket connection failed:', err);
+      }
+    };
+
+    void initSocket();
+
+    return () => {
+      active = false;
+      if (localSocket) {
+        localSocket.disconnect();
+      }
+    };
+  }, []);
 
   const categories = useMemo(() => {
     const grouped = new Map<SkillCategory, SkillDefinition[]>();
@@ -113,8 +166,33 @@ export function SkillManager() {
 
   const runSkill = async (skill: SkillDefinition) => {
     setRunningId(skill.id);
-    const result = await registry.run(skill.id, { input: getSampleInput(skill) });
-    setLastResults((current) => ({ ...current, [skill.id]: result }));
+    const input = getSampleInput(skill);
+
+    if (connected && socket) {
+      // Proxy skill run to Node sidecar
+      try {
+        const result = await new Promise<SkillResult>((resolvePromise) => {
+          socket.emit('run_skill', { id: skill.id, input }, (res: SkillResult) => {
+            resolvePromise(res);
+          });
+          // Timeout after 15 seconds
+          setTimeout(() => {
+            resolvePromise({ success: false, error: 'Skill execution timed out on host sidecar.' });
+          }, 15000);
+        });
+        setLastResults((current) => ({ ...current, [skill.id]: result }));
+      } catch (err: any) {
+        setLastResults((current) => ({
+          ...current,
+          [skill.id]: { success: false, error: err.message || 'Failed to proxy skill execution.' },
+        }));
+      }
+    } else {
+      // Fallback: local sandboxed execution (mostly will say adapter not available)
+      const result = await registry.run(skill.id, { input });
+      setLastResults((current) => ({ ...current, [skill.id]: result }));
+    }
+
     setRunningId(null);
   };
 

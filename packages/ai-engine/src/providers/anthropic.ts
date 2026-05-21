@@ -120,7 +120,12 @@ export class AnthropicProvider extends BaseProvider {
 
     if (!response.ok) {
       const error = await response.text();
-      throw new Error(`Anthropic API error (${response.status}): ${error}`);
+      throw new Error(`Anthropic API error (${response.status}): ${error.slice(0, 200)}`);
+    }
+
+    const contentType = response.headers.get('content-type');
+    if (!contentType?.includes('text/event-stream') && !contentType?.includes('application/json')) {
+      throw new Error(`Unexpected response type: ${contentType}`);
     }
 
     const reader = response.body?.getReader();
@@ -132,7 +137,10 @@ export class AnthropicProvider extends BaseProvider {
     try {
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          yield { content: '', done: true, provider: 'anthropic', model };
+          return;
+        }
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
@@ -159,7 +167,6 @@ export class AnthropicProvider extends BaseProvider {
             }
 
             if (parsed.type === 'message_stop') {
-              yield { content: '', done: true, provider: 'anthropic', model };
               return;
             }
           } catch {
@@ -170,8 +177,6 @@ export class AnthropicProvider extends BaseProvider {
     } finally {
       reader.releaseLock();
     }
-
-    yield { content: '', done: true, provider: 'anthropic', model };
   }
 
   private mapFinishReason(

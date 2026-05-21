@@ -110,7 +110,12 @@ export class GoogleProvider extends BaseProvider {
 
     if (!response.ok) {
       const error = await response.text();
-      throw new Error(`Google API error (${response.status}): ${error}`);
+      throw new Error(`Google API error (${response.status}): ${error.slice(0, 200)}`);
+    }
+
+    const contentType = response.headers.get('content-type');
+    if (!contentType?.includes('text/event-stream') && !contentType?.includes('application/json')) {
+      throw new Error(`Unexpected response type: ${contentType}`);
     }
 
     const reader = response.body?.getReader();
@@ -144,7 +149,7 @@ export class GoogleProvider extends BaseProvider {
               yield { content: text, done: false, provider: 'google', model };
             }
           } catch {
-            // skip malformed
+            // Expected: skip malformed JSON chunks in SSE stream
           }
         }
       }

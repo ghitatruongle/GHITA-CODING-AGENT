@@ -141,8 +141,16 @@ export async function runInSandbox(
       ? [...buildSpawnArgs(config), ...runner.args(file.path)]
       : runner.args(file.path);
 
+    // Filter out undefined values from process.env to avoid unsafe type cast
+    const cleanEnv: Record<string, string> = {};
+    for (const [key, value] of Object.entries(process.env)) {
+      if (value !== undefined) {
+        cleanEnv[key] = value;
+      }
+    }
+
     const sandboxEnv: Record<string, string> = {
-      ...process.env as Record<string, string>,
+      ...cleanEnv,
       ...env,
       GHITA_SANDBOX: '1',
     };
@@ -164,6 +172,19 @@ export async function runInSandbox(
     let stderr = '';
     let timedOut = false;
     let killed = false;
+    let settled = false;
+
+    const cleanup = async (): Promise<void> => {
+      if (settled) return;
+      settled = true;
+      await file.cleanup();
+      try {
+        const { rmdir } = await import('node:fs/promises');
+        await rmdir(tempDir, { recursive: true });
+      } catch {
+        // ignore cleanup errors
+      }
+    };
 
     child.stdout?.on('data', (chunk: Buffer) => {
       stdout += chunk.toString();
@@ -183,21 +204,22 @@ export async function runInSandbox(
     const timer = setTimeout(() => {
       timedOut = true;
       killed = true;
-      child.kill('SIGKILL');
+      // Windows: SIGKILL not supported, use taskkill; Unix: use SIGKILL
+      if (process.platform === 'win32' && child.pid) {
+        try {
+          spawn('taskkill', ['/pid', String(child.pid), '/f', '/t'], { windowsHide: true });
+        } catch {
+          child.kill();
+        }
+      } else {
+        child.kill('SIGKILL');
+      }
     }, timeoutMs);
 
     child.on('close', async (exitCode) => {
       clearTimeout(timer);
       const durationMs = Date.now() - startTime;
-
-      // Cleanup temp files
-      await file.cleanup();
-      try {
-        const { rmdir } = await import('node:fs/promises');
-        await rmdir(tempDir, { recursive: true });
-      } catch {
-        // ignore
-      }
+      await cleanup();
 
       resolve({
         success: exitCode === 0 && !timedOut,
@@ -218,14 +240,7 @@ export async function runInSandbox(
     child.on('error', async (err) => {
       clearTimeout(timer);
       const durationMs = Date.now() - startTime;
-
-      await file.cleanup();
-      try {
-        const { rmdir } = await import('node:fs/promises');
-        await rmdir(tempDir, { recursive: true });
-      } catch {
-        // ignore
-      }
+      await cleanup();
 
       resolve({
         success: false,

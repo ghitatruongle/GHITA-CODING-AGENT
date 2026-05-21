@@ -67,7 +67,12 @@ export class OllamaProvider extends BaseProvider {
 
     if (!response.ok) {
       const error = await response.text();
-      throw new Error(`Ollama error (${response.status}): ${error}`);
+      throw new Error(`Ollama error (${response.status}): ${error.slice(0, 200)}`);
+    }
+
+    const contentType = response.headers.get('content-type');
+    if (!contentType?.includes('application/json')) {
+      throw new Error(`Unexpected response type: ${contentType}`);
     }
 
     const data = (await response.json()) as {

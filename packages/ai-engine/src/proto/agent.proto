@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package ghita.v1;
+
+service AgentService {
+  // Luồng giao tiếp hai chiều thời gian thực
+  rpc Chat(stream ClientMessage) returns (stream ServerMessage);
+}
+
+message ClientMessage {
+  string session_id = 1;
+  oneof payload {
+    ChatRequest request = 2;          // Tin nhắn / prompt khởi đầu từ người dùng
+    UserInput response = 3;           // Phản hồi duyệt/từ chối quyền chạy Tool
+    CancelSignal cancel = 4;          // Tín hiệu hủy tiến trình đang chạy
+  }
+}
+
+message ChatRequest {
+  string prompt = 1;
+  repeated ChatMessageHistory history = 2;
+  string provider = 3;                // Tùy chọn chỉ định API provider cụ thể
+  string agent_routing_role = 4;      // Vai trò Agent (Explore, Plan, UI, v.v.)
+}
+
+message ChatMessageHistory {
+  string role = 1;                    // 'user', 'assistant', 'system'
+  string content = 2;
+}
+
+message UserInput {
+  string tool_call_id = 1;
+  bool approved = 2;                  // true: đồng ý chạy lệnh, false: từ chối chạy lệnh
+  string reason = 3;                  // Lý do từ chối hoặc hướng dẫn bổ sung từ user
+}
+
+message CancelSignal {
+  string reason = 1;
+}
+
+message ServerMessage {
+  string session_id = 1;
+  oneof event {
+    TextChunk text_chunk = 2;         // Streaming token từ LLM
+    ToolCallStart tool_start = 3;     // Báo hiệu bắt đầu chạy Tool
+    ToolCallResult tool_result = 4;   // Kết quả trả về sau khi chạy Tool
+    ActionRequired action_required = 5;// Chờ phê duyệt từ phía người dùng
+    FinalResponse done = 6;           // Hoàn thành phiên làm việc
+    ErrorResponse error = 7;          // Gặp lỗi trong quá trình xử lý
+  }
+}
+
+message TextChunk {
+  string text = 1;
+}
+
+message ToolCallStart {
+  string tool_call_id = 1;
+  string name = 2;                    // Tên tool (ví dụ: write_file, execute_command)
+  string arguments = 3;               // JSON string chứa tham số đầu vào
+}
+
+message ToolCallResult {
+  string tool_call_id = 1;
+  string result = 2;                  // Kết quả chạy tool
+  bool is_error = 3;
+}
+
+message ActionRequired {
+  string tool_call_id = 1;
+  string name = 2;
+  string arguments = 3;
+  string warning_message = 4;         // Thông báo cảnh báo bảo mật nếu có
+}
+
+message FinalResponse {
+  string summary = 1;
+  TokenUsage usage = 2;
+}
+
+message TokenUsage {
+  int32 prompt_tokens = 1;
+  int32 completion_tokens = 2;
+  double estimated_cost_usd = 3;
+}
+
+message ErrorResponse {
+  string code = 1;
+  string message = 2;
+}

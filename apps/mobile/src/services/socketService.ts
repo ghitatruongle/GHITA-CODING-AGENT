@@ -24,6 +24,7 @@ export class SocketService {
   private _connectionState: ConnectionState = 'disconnected';
   private reconnectAttempts = 0;
   private readonly maxReconnectAttempts = 10;
+  private deviceId: string | null = null;
 
   get connectionState(): ConnectionState {
     return this._connectionState;
@@ -31,6 +32,10 @@ export class SocketService {
 
   get isConnected(): boolean {
     return this._connectionState === 'connected';
+  }
+
+  get isSocketConnected(): boolean {
+    return this.socket?.connected ?? false;
   }
 
   /**
@@ -75,17 +80,19 @@ export class SocketService {
       this.socket.disconnect();
       this.socket = null;
     }
+    this.deviceId = null;
     this.setConnectionState('disconnected');
     this.reconnectAttempts = 0;
+    // Keep callbacks so reconnect can reuse them
   }
 
   /**
    * Send pairing code to server
    */
-  sendPairingCode(code: string): void {
+  sendPairingCode(code: string, deviceId?: string): void {
     if (!this.socket) return;
     this.setConnectionState('pairing');
-    this.socket.emit(SOCKET_EVENTS.PAIR, { code, timestamp: Date.now() });
+    this.socket.emit(SOCKET_EVENTS.PAIR, { code, deviceId, timestamp: Date.now() });
   }
 
   /**
@@ -126,10 +133,10 @@ export class SocketService {
   /**
    * Send command to desktop
    */
-  sendCommand(command: string): void {
+  sendCommand(action: string): void {
     if (!this.socket || !this.isConnected) return;
     this.socket.emit(SOCKET_EVENTS.COMMAND, {
-      command,
+      action,
       timestamp: Date.now(),
     });
   }
@@ -174,7 +181,12 @@ export class SocketService {
     // Connection
     this.socket.on(SOCKET_EVENTS.CONNECT, () => {
       this.reconnectAttempts = 0;
-      this.setConnectionState('connected');
+      if (this.deviceId) {
+        this.setConnectionState('pairing');
+        this.socket?.emit(SOCKET_EVENTS.PAIR, { deviceId: this.deviceId, timestamp: Date.now() });
+      } else {
+        this.setConnectionState('disconnected');
+      }
     });
 
     // Disconnection
@@ -198,7 +210,10 @@ export class SocketService {
     });
 
     // Pairing confirmation
-    this.socket.on(SOCKET_EVENTS.PAIR_CONFIRM, (data: { deviceName?: string }) => {
+    this.socket.on(SOCKET_EVENTS.PAIR_CONFIRM, (data: { deviceName?: string; deviceId?: string }) => {
+      if (data.deviceId) {
+        this.deviceId = data.deviceId;
+      }
       this.setConnectionState('connected');
       this.callbacks.onPairConfirm?.(data.deviceName ?? 'Desktop');
     });
@@ -230,6 +245,10 @@ export class SocketService {
 
     // Error from server
     this.socket.on(SOCKET_EVENTS.ERROR, (data: { message?: string }) => {
+      if (data.message === 'Session expired. Please re-pair.') {
+        this.deviceId = null;
+        this.setConnectionState('disconnected');
+      }
       this.callbacks.onError?.(data.message ?? 'Unknown error from server');
     });
 

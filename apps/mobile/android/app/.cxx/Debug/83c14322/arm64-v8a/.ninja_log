@@ -1,0 +1,40 @@
+# ninja log v5
+2	28	0	D:/GHITA CODING AGENT/apps/mobile/android/app/.cxx/Debug/83c14322/arm64-v8a/CMakeFiles/cmake.verify_globs	771b7f9356919013
+302	11140	8008887275563052	rnasyncstorage_autolinked_build/CMakeFiles/react_codegen_rnasyncstorage.dir/react/renderer/components/rnasyncstorage/States.cpp.o	6e888bba80267a6b
+60	297	8008981127854521	build.ninja	db4041ec0b1fe5ff
+284	11195	8008887277122028	rnasyncstorage_autolinked_build/CMakeFiles/react_codegen_rnasyncstorage.dir/react/renderer/components/rnasyncstorage/EventEmitters.cpp.o	5fd72a7cc655b913
+185	6798	8008933165201594	CMakeFiles/appmodules.dir/OnLoad.cpp.o	143a86d5aeefbe0b
+485	12333	8008887287763537	safeareacontext_autolinked_build/CMakeFiles/react_codegen_safeareacontext.dir/41e406b7859f77fe28b8f13147762c23/react/renderer/components/safeareacontext/EventEmitters.cpp.o	e471f32eb3d41254
+4	15263	8008887313575919	rnasyncstorage_autolinked_build/CMakeFiles/react_codegen_rnasyncstorage.dir/react/renderer/components/rnasyncstorage/ComponentDescriptors.cpp.o	870701c51881c873
+358	14737	8008887295834567	rnasyncstorage_autolinked_build/CMakeFiles/react_codegen_rnasyncstorage.dir/rnasyncstorage-generated.cpp.o	3c1814077eb65de5
+47	14896	8008933247019681	CMakeFiles/appmodules.dir/D_/GHITA_CODING_AGENT/apps/mobile/android/app/build/generated/autolinking/src/main/jni/autolinking.cpp.o	811c3b4190c7c2f7
+22313	33288	8008887502054863	rnscreens_autolinked_build/CMakeFiles/react_codegen_rnscreens.dir/f6a3cf4d41a0958e2769fa3fdd4ec0f0/source/codegen/jni/react/renderer/components/rnscreens/Props.cpp.o	cbbc51e37c5f5fb2
+344	14835	8008887292263842	rnasyncstorage_autolinked_build/CMakeFiles/react_codegen_rnasyncstorage.dir/react/renderer/components/rnasyncstorage/ShadowNodes.cpp.o	23d9f5e9c7f3f220
+373	14638	8008887296178071	rnasyncstorage_autolinked_build/CMakeFiles/react_codegen_rnasyncstorage.dir/react/renderer/components/rnasyncstorage/rnasyncstorageJSI-generated.cpp.o	d4c29e0324869a6f
+325	18017	8008887336996787	rnasyncstorage_autolinked_build/CMakeFiles/react_codegen_rnasyncstorage.dir/react/renderer/components/rnasyncstorage/Props.cpp.o	bf95464aeade1334
+464	18249	8008887341528641	safeareacontext_autolinked_build/CMakeFiles/react_codegen_safeareacontext.dir/ff320eb633689d120855a11e8faa7573/components/safeareacontext/RNCSafeAreaViewState.cpp.o	b997ff62f1c2603
+500	19936	8008887351598996	safeareacontext_autolinked_build/CMakeFiles/react_codegen_safeareacontext.dir/50b6fc640334e56fe4f605578fff4fb2/jni/react/renderer/components/safeareacontext/Props.cpp.o	870c688ecf1a505e
+27235	27748	8008887447354124	D:/GHITA CODING AGENT/apps/mobile/android/app/build/intermediates/cxx/Debug/83c14322/obj/arm64-v8a/libreact_codegen_safeareacontext.so	aba2c48cddb6963c
+445	21068	8008887369788054	safeareacontext_autolinked_build/CMakeFiles/react_codegen_safeareacontext.dir/ff320eb633689d120855a11e8faa7573/components/safeareacontext/RNCSafeAreaViewShadowNode.cpp.o	b5453138fed7706d
+425	21681	8008887374343445	safeareacontext_autolinked_build/CMakeFiles/react_codegen_safeareacontext.dir/6f8bcf3a629819df29ebd9932d8fcc72/components/safeareacontext/ComponentDescriptors.cpp.o	8d7542d0cbaedbb4
+12334	22312	8008887382855706	safeareacontext_autolinked_build/CMakeFiles/react_codegen_safeareacontext.dir/50b6fc640334e56fe4f605578fff4fb2/jni/react/renderer/components/safeareacontext/States.cpp.o	ae504085134b4b0a
+18065	29680	8008887464910972	rnscreens_autolinked_build/CMakeFiles/react_codegen_rnscreens.dir/cc85470952cd12a6f86f92e78f789af0/cpp/react/renderer/components/rnscreens/RNSModalScreenShadowNode.cpp.o	b5557e10c3e36d1a
+11196	25419	8008887395277964	safeareacontext_autolinked_build/CMakeFiles/react_codegen_safeareacontext.dir/6f8bcf3a629819df29ebd9932d8fcc72/components/safeareacontext/safeareacontextJSI-generated.cpp.o	fd720ffa41e701de
+14639	26046	8008887423255272	safeareacontext_autolinked_build/CMakeFiles/react_codegen_safeareacontext.dir/8893aa3d04127ab48e580d8b7f603dca/generated/source/codegen/jni/safeareacontext-generated.cpp.o	a6370c450e7f3c9c
+19937	30683	8008887475313217	rnscreens_autolinked_build/CMakeFiles/react_codegen_rnscreens.dir/f6a3cf4d41a0958e2769fa3fdd4ec0f0/source/codegen/jni/react/renderer/components/rnscreens/ShadowNodes.cpp.o	c3659977a2b8fb7c
+14836	26827	8008887435123083	rnscreens_autolinked_build/CMakeFiles/react_codegen_rnscreens.dir/602cfcfbe06123376b83e15e27504fad/common/cpp/react/renderer/components/rnscreens/RNSScreenState.cpp.o	8244406a3087168
+11162	27234	8008887438781091	safeareacontext_autolinked_build/CMakeFiles/react_codegen_safeareacontext.dir/41e406b7859f77fe28b8f13147762c23/react/renderer/components/safeareacontext/ShadowNodes.cpp.o	320aa77a60a2d456
+21069	27528	8008887443498675	rnscreens_autolinked_build/CMakeFiles/react_codegen_rnscreens.dir/f6a3cf4d41a0958e2769fa3fdd4ec0f0/source/codegen/jni/react/renderer/components/rnscreens/States.cpp.o	498b9088da674caa
+14738	28360	8008887450837738	rnscreens_autolinked_build/CMakeFiles/react_codegen_rnscreens.dir/rnscreens.cpp.o	a5881afd7123afcd
+18277	31170	8008887480766477	rnscreens_autolinked_build/CMakeFiles/react_codegen_rnscreens.dir/bd7c437a96b08db300029972e12845c5/codegen/jni/react/renderer/components/rnscreens/EventEmitters.cpp.o	e6495358bd8b8553
+16599	29399	8008887461460380	rnscreens_autolinked_build/CMakeFiles/react_codegen_rnscreens.dir/602cfcfbe06123376b83e15e27504fad/common/cpp/react/renderer/components/rnscreens/RNSScreenShadowNode.cpp.o	7e0c101abd52f43
+21707	30783	8008887476692174	rnscreens_autolinked_build/CMakeFiles/react_codegen_rnscreens.dir/2b1f3e609a24a99caf7841347ea35e60/jni/react/renderer/components/rnscreens/rnscreensJSI-generated.cpp.o	bb0cd16fb3a73707
+15264	33027	8008887498797884	rnscreens_autolinked_build/CMakeFiles/react_codegen_rnscreens.dir/2b1f3e609a24a99caf7841347ea35e60/jni/react/renderer/components/rnscreens/ComponentDescriptors.cpp.o	ebd4b7ff5e0680b2
+33289	33454	8008887505091084	D:/GHITA CODING AGENT/apps/mobile/android/app/build/intermediates/cxx/Debug/83c14322/obj/arm64-v8a/libreact_codegen_rnscreens.so	6c6ece5b8e3138e6
+14897	15184	8008933253074831	D:/GHITA CODING AGENT/apps/mobile/android/app/build/intermediates/cxx/Debug/83c14322/obj/arm64-v8a/libappmodules.so	714125c794df52e6
+2	36	0	D:/GHITA CODING AGENT/apps/mobile/android/app/.cxx/Debug/83c14322/arm64-v8a/CMakeFiles/cmake.verify_globs	771b7f9356919013
+2	41	0	D:/GHITA CODING AGENT/apps/mobile/android/app/.cxx/Debug/83c14322/arm64-v8a/CMakeFiles/cmake.verify_globs	771b7f9356919013
+3	47	0	D:/GHITA CODING AGENT/apps/mobile/android/app/.cxx/Debug/83c14322/arm64-v8a/CMakeFiles/cmake.verify_globs	771b7f9356919013
+5	44	0	D:/GHITA CODING AGENT/apps/mobile/android/app/.cxx/Debug/83c14322/arm64-v8a/CMakeFiles/cmake.verify_globs	771b7f9356919013
+11	50	0	D:/GHITA CODING AGENT/apps/mobile/android/app/.cxx/Debug/83c14322/arm64-v8a/CMakeFiles/cmake.verify_globs	771b7f9356919013
+12	59	0	D:/GHITA CODING AGENT/apps/mobile/android/app/.cxx/Debug/83c14322/arm64-v8a/CMakeFiles/cmake.verify_globs	771b7f9356919013

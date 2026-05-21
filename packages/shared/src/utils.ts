@@ -5,24 +5,49 @@
 import type { Platform } from './types.js';
 
 // --- Platform Detection ---
+
+/**
+ * Detect the current platform using Tauri v2 API if available.
+ * Falls back to user-agent or process.platform detection.
+ */
 export function getPlatform(): Platform {
-  // Tauri desktop
-  if (typeof window !== 'undefined' && '__TAURI__' in window) {
-    const tauriWindow = window as Record<string, unknown>;
-    const tauri = tauriWindow['__TAURI__'] as Record<string, unknown>;
-    const os = tauri['os'] as Record<string, unknown> | undefined;
-    if (os && typeof os === 'object' && 'platform' in os) {
-      return os['platform'] === 'win32' ? 'windows' : 'linux';
+  // React Native (mobile)
+  if (typeof navigator !== 'undefined' && navigator.product === 'ReactNative') {
+    return 'android';
+  }
+  // Tauri v2 — check for __TAURI_INTERNALS__ (available even without withGlobalTauri)
+  if (typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window) {
+    // Tauri always runs natively — detect via user-agent or platform API
+    if (typeof navigator !== 'undefined') {
+      const ua = navigator.userAgent?.toLowerCase() ?? '';
+      if (ua.includes('windows') || ua.includes('win32')) return 'windows';
+      if (ua.includes('mac os') || ua.includes('macintosh')) return 'macos';
+      if (ua.includes('linux')) return 'linux';
     }
   }
-  // Browser (mobile)
+  // Tauri v1 (withGlobalTauri: true) — legacy __TAURI__ global
+  if (typeof window !== 'undefined' && '__TAURI__' in window) {
+    const tauriWindow = window as Record<string, unknown>;
+    const tauri = tauriWindow['__TAURI__'] as Record<string, unknown> | undefined;
+    if (tauri) {
+      const os = tauri['os'] as Record<string, unknown> | undefined;
+      if (os && typeof os === 'object' && 'platform' in os) {
+        return os['platform'] === 'win32' ? 'windows' : 'linux';
+      }
+    }
+  }
+  // Browser / WebView (fallback for mobile)
   if (typeof navigator !== 'undefined') {
-    const ua = navigator.userAgent.toLowerCase();
+    const ua = navigator.userAgent?.toLowerCase() ?? '';
     if (ua.includes('android')) return 'android';
+    if (ua.includes('windows') || ua.includes('win32')) return 'windows';
+    if (ua.includes('mac os') || ua.includes('macintosh')) return 'macos';
+    if (ua.includes('linux')) return 'linux';
   }
   // Node.js
   if (typeof process !== 'undefined' && process.platform) {
     if (process.platform === 'win32') return 'windows';
+    if (process.platform === 'darwin') return 'macos';
     if (process.platform === 'linux') return 'linux';
   }
   return 'linux'; // fallback
@@ -47,6 +72,25 @@ export function isLinux(): boolean {
 }
 
 // --- ID Generation ---
+
+/** Generate a UUID v4 string with fallback for non-secure contexts */
+export function generateUUID(): string {
+  // Try crypto.randomUUID first (secure context)
+  if (typeof crypto !== 'undefined') {
+    try {
+      const result = (crypto as unknown as { randomUUID?: () => string }).randomUUID?.();
+      if (result) return result;
+    } catch {
+      // fall through
+    }
+  }
+  // Fallback: Math.random-based UUID v4
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
 export function generateId(prefix = ''): string {
   const timestamp = Date.now().toString(36);
   const random = Math.random().toString(36).substring(2, 8);
@@ -91,6 +135,9 @@ export function randomInt(min: number, max: number): number {
 
 // --- Array Helpers ---
 export function chunk<T>(array: T[], size: number): T[][] {
+  if (size <= 0) {
+    throw new Error('Chunk size must be greater than 0');
+  }
   const chunks: T[][] = [];
   for (let i = 0; i < array.length; i += size) {
     chunks.push(array.slice(i, i + size));
@@ -149,6 +196,12 @@ export async function retry<T>(
   maxAttempts = 3,
   delayMs = 1000,
 ): Promise<T> {
+  if (maxAttempts < 1) {
+    throw new Error('maxAttempts must be at least 1');
+  }
+  if (delayMs < 0) {
+    throw new Error('delayMs must be non-negative');
+  }
   let lastError: Error | undefined;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {

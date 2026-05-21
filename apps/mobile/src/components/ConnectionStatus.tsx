@@ -41,8 +41,12 @@ export function ConnectionStatus({ state, compact = false }: ConnectionStatusPro
         ]),
       );
       animation.start();
-      return () => animation.stop();
+      return () => {
+        animation.stop();
+        pulseAnim.setValue(1);
+      };
     } else {
+      pulseAnim.stopAnimation();
       pulseAnim.setValue(1);
     }
     return undefined;

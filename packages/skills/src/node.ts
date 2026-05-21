@@ -15,6 +15,25 @@ export interface NodeSkillAdapterOptions {
 
 const DEFAULT_MAX_OUTPUT_BYTES = 1024 * 1024;
 
+/**
+ * Escape a string for safe use as a shell argument.
+ * Wraps in double quotes and escapes internal quotes/backslashes.
+ */
+function escapeShellArg(value: string): string {
+  if (value.length === 0) return '""';
+  // If no special characters, return as-is
+  if (!/[\s"'\\%$`!#&|<>(){}[\];]/.test(value)) return value;
+
+  if (platform === 'win32') {
+    // Windows: escape backslashes before double-quotes, escape %env vars%
+    const escaped = value.replace(/(\\*)"/g, '$1$1\\"').replace(/%(?=\w)/g, '^%');
+    return `"${escaped}"`;
+  }
+  // Unix: escape backslashes and double-quotes
+  const escaped = value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  return `"${escaped}"`;
+}
+
 function trimOutput(value: string, maxBytes: number): string {
   if (Buffer.byteLength(value, 'utf8') <= maxBytes) return value;
   return `${value.slice(0, maxBytes)}\n[output truncated at ${maxBytes} bytes]`;
@@ -137,11 +156,18 @@ export function createNodeSkillAdapters(options: NodeSkillAdapterOptions = {}): 
     },
     app: {
       openApp: async (target, args = []) => {
-        const command = platform === 'win32' ? `start "" "${target}" ${args.join(' ')}` : `"${target}" ${args.join(' ')}`;
+        const safeTarget = escapeShellArg(target);
+        const safeArgs = args.map(escapeShellArg).join(' ');
+        const command = platform === 'win32'
+          ? `start "" ${safeTarget} ${safeArgs}`
+          : `${safeTarget} ${safeArgs}`;
         await runProcess(command, { cwd: defaultCwd, timeoutMs: 5000, maxOutputBytes });
       },
       closeApp: async (target) => {
-        const command = platform === 'win32' ? `taskkill /IM "${target}" /T` : `pkill -f "${target}"`;
+        const safeTarget = escapeShellArg(target);
+        const command = platform === 'win32'
+          ? `taskkill /IM ${safeTarget} /T`
+          : `pkill -f ${safeTarget}`;
         await runProcess(command, { cwd: defaultCwd, timeoutMs: 5000, maxOutputBytes });
       },
     },

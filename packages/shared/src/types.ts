@@ -3,7 +3,7 @@
 // ==============================================================================
 
 // --- Platform ---
-export type Platform = 'windows' | 'linux' | 'android';
+export type Platform = 'windows' | 'linux' | 'android' | 'macos';
 
 // --- AI Provider ---
 export type AIProviderType = 'openai' | 'anthropic' | 'google' | 'ollama' | 'custom';

@@ -1,0 +1,12 @@
+D:/GHITA CODING AGENT/apps/mobile/android/app/.cxx/RelWithDebInfo/46ke5rz2/x86/CMakeFiles/appmodules.dir
+D:/GHITA CODING AGENT/apps/mobile/android/app/.cxx/RelWithDebInfo/46ke5rz2/x86/CMakeFiles/edit_cache.dir
+D:/GHITA CODING AGENT/apps/mobile/android/app/.cxx/RelWithDebInfo/46ke5rz2/x86/CMakeFiles/rebuild_cache.dir
+D:/GHITA CODING AGENT/apps/mobile/android/app/.cxx/RelWithDebInfo/46ke5rz2/x86/rnasyncstorage_autolinked_build/CMakeFiles/react_codegen_rnasyncstorage.dir
+D:/GHITA CODING AGENT/apps/mobile/android/app/.cxx/RelWithDebInfo/46ke5rz2/x86/rnasyncstorage_autolinked_build/CMakeFiles/edit_cache.dir
+D:/GHITA CODING AGENT/apps/mobile/android/app/.cxx/RelWithDebInfo/46ke5rz2/x86/rnasyncstorage_autolinked_build/CMakeFiles/rebuild_cache.dir
+D:/GHITA CODING AGENT/apps/mobile/android/app/.cxx/RelWithDebInfo/46ke5rz2/x86/safeareacontext_autolinked_build/CMakeFiles/react_codegen_safeareacontext.dir
+D:/GHITA CODING AGENT/apps/mobile/android/app/.cxx/RelWithDebInfo/46ke5rz2/x86/safeareacontext_autolinked_build/CMakeFiles/edit_cache.dir
+D:/GHITA CODING AGENT/apps/mobile/android/app/.cxx/RelWithDebInfo/46ke5rz2/x86/safeareacontext_autolinked_build/CMakeFiles/rebuild_cache.dir
+D:/GHITA CODING AGENT/apps/mobile/android/app/.cxx/RelWithDebInfo/46ke5rz2/x86/rnscreens_autolinked_build/CMakeFiles/react_codegen_rnscreens.dir
+D:/GHITA CODING AGENT/apps/mobile/android/app/.cxx/RelWithDebInfo/46ke5rz2/x86/rnscreens_autolinked_build/CMakeFiles/edit_cache.dir
+D:/GHITA CODING AGENT/apps/mobile/android/app/.cxx/RelWithDebInfo/46ke5rz2/x86/rnscreens_autolinked_build/CMakeFiles/rebuild_cache.dir

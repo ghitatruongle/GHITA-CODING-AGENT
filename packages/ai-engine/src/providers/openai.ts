@@ -100,7 +100,12 @@ export class OpenAIProvider extends BaseProvider {
 
     if (!response.ok) {
       const error = await response.text();
-      throw new Error(`OpenAI API error (${response.status}): ${error}`);
+      throw new Error(`OpenAI API error (${response.status}): ${error.slice(0, 200)}`);
+    }
+
+    const contentType = response.headers.get('content-type');
+    if (!contentType?.includes('text/event-stream') && !contentType?.includes('application/json')) {
+      throw new Error(`Unexpected response type: ${contentType}`);
     }
 
     const reader = response.body?.getReader();
@@ -112,7 +117,10 @@ export class OpenAIProvider extends BaseProvider {
     try {
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          yield { content: '', done: true, provider: 'openai', model };
+          return;
+        }
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
@@ -136,15 +144,13 @@ export class OpenAIProvider extends BaseProvider {
               yield { content, done: false, provider: 'openai', model };
             }
           } catch {
-            // skip malformed JSON
+            // Expected: skip malformed JSON chunks in SSE stream
           }
         }
       }
     } finally {
       reader.releaseLock();
     }
-
-    yield { content: '', done: true, provider: 'openai', model };
   }
 
   private mapFinishReason(
