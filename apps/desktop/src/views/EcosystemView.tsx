@@ -3,6 +3,7 @@
 // ==============================================================================
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from '../i18n';
 
 interface RouterRoute {
   provider: string;
@@ -22,6 +23,8 @@ const INITIAL_ROUTER_ROUTES: RouterRoute[] = [
 ];
 
 export function EcosystemView() {
+  const { t } = useTranslation();
+
   // gRPC Server states
   const [grpcActive, setGrpcActive] = useState(true);
   const [grpcPort, setGrpcPort] = useState(50051);
@@ -129,10 +132,10 @@ export function EcosystemView() {
             letterSpacing: '0.5px',
           }}
         >
-          📡 ECOSYSTEM & EXTERNAL CORE INTEGRATION
+          {t('ecosystem.title')}
         </h2>
         <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>
-          Quản lý cổng truyền thông gRPC, API Agent Protocol chuẩn hóa và bộ định tuyến tối ưu hóa chi phí LLMs.
+          {t('ecosystem.subtitle')}
         </p>
       </div>
 
@@ -159,7 +162,7 @@ export function EcosystemView() {
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '13px', fontWeight: 700, color: '#c7d2fe', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              🤖 gRPC DAEMON CORE SERVER
+              {t('ecosystem.grpcDaemon')}
             </span>
             <span
               style={{
@@ -172,17 +175,17 @@ export function EcosystemView() {
                 border: `1px solid ${grpcActive ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
               }}
             >
-              {grpcActive ? '● RUNNING' : '○ STOPPED'}
+              {grpcActive ? `● ${t('ecosystem.running')}` : `○ ${t('ecosystem.stopped')}`}
             </span>
           </div>
 
           <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8', lineHeight: '1.4' }}>
-            Kênh giao tiếp nhị phân hiệu năng cao dành cho VS Code extension, CLI tool, và sidecar agents kết nối với GHITA Core.
+            {t('ecosystem.grpcDesc')}
           </p>
 
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-              <label style={{ fontSize: '10px', color: '#94a3b8' }}>SERVER PORT:</label>
+              <label style={{ fontSize: '10px', color: '#94a3b8' }}>{t('ecosystem.serverPort')}</label>
               <input
                 type="number"
                 value={grpcPort}
@@ -223,12 +226,12 @@ export function EcosystemView() {
                 boxShadow: '0 4px 10px rgba(99, 102, 241, 0.2)',
               }}
             >
-              {grpcActive ? 'Stop Daemon' : 'Start Daemon'}
+              {grpcActive ? t('ecosystem.stopDaemon') : t('ecosystem.startDaemon')}
             </button>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
-            <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 600 }}>DAEMON LIVE CONSOLE:</span>
+            <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 600 }}>{t('ecosystem.daemonConsole')}</span>
             <div
               style={{
                 background: '#090d16',
@@ -268,7 +271,7 @@ export function EcosystemView() {
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '13px', fontWeight: 700, color: '#c7d2fe', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              🔌 AGENT PROTOCOL ENDPOINTS (REST API)
+              {t('ecosystem.agentProtocol')}
             </span>
             <span
               style={{
@@ -281,17 +284,17 @@ export function EcosystemView() {
                 border: `1px solid ${apActive ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
               }}
             >
-              {apActive ? '● COMPLIANT' : '○ DISABLED'}
+              {apActive ? `● ${t('ecosystem.compliant')}` : `○ ${t('ecosystem.disabledLabel')}`}
             </span>
           </div>
 
           <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8', lineHeight: '1.4' }}>
-            Tuân thủ tuyệt đối chuẩn hóa quốc tế <strong>Agent Protocol</strong> (tạo tasks, chạy steps, trích xuất files).
+            {t('ecosystem.agentProtocolDesc')}
           </p>
 
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-              <label style={{ fontSize: '10px', color: '#94a3b8' }}>API PORT:</label>
+              <label style={{ fontSize: '10px', color: '#94a3b8' }}>{t('ecosystem.apiPort')}</label>
               <input
                 type="number"
                 value={apPort}
@@ -326,12 +329,12 @@ export function EcosystemView() {
                 boxShadow: '0 4px 10px rgba(16, 185, 129, 0.2)',
               }}
             >
-              {apActive ? 'Disable AP' : 'Enable AP'}
+              {apActive ? t('ecosystem.disableAp') : t('ecosystem.enableAp')}
             </button>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
-            <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 600 }}>INCOMING REQUESTS MONITOR:</span>
+            <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 600 }}>{t('ecosystem.requestsMonitor')}</span>
             <div
               style={{
                 background: '#090d16',
@@ -348,7 +351,7 @@ export function EcosystemView() {
             >
               {apRequests.length === 0 ? (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '11px', color: '#64748b' }}>
-                  No active REST request logs.
+                  {t('ecosystem.noRequestLogs')}
                 </div>
               ) : (
                 apRequests.map((req) => (
@@ -403,15 +406,15 @@ export function EcosystemView() {
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontSize: '13px', fontWeight: 700, color: '#c7d2fe', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            🧠 DYNAMIC LLM COST & COMPLEXITY ROUTER
+            {t('ecosystem.dynamicRouter')}
           </span>
           <span style={{ fontSize: '11px', color: '#fbbf24', fontWeight: 600 }}>
-            💰 Auto-optimize token costs
+            {t('ecosystem.autoOptimize')}
           </span>
         </div>
 
         <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8', lineHeight: '1.4' }}>
-          Thuật toán tự động đo độ phức tạp của Prompt/Nhiệm vụ để ánh xạ nhà cung cấp tối ưu. Các tác vụ dễ (như gõ shell đơn giản) được chuyển tới Ollama nội bộ hoặc Gemini Flash giá rẻ, các tác vụ cực khó (như phân tích cấu trúc đa tệp) được định tuyến tới Claude 3.5 Sonnet.
+          {t('ecosystem.dynamicRouterDesc')}
         </p>
 
         {/* Configurations inputs */}
@@ -427,7 +430,7 @@ export function EcosystemView() {
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <label style={{ fontSize: '10px', color: '#94a3b8' }}>MAX ALLOWED COST PER TASK ($):</label>
+            <label style={{ fontSize: '10px', color: '#94a3b8' }}>{t('ecosystem.maxCostPerTask')}</label>
             <input
               type="number"
               step="0.001"
@@ -446,7 +449,7 @@ export function EcosystemView() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <label style={{ fontSize: '10px', color: '#94a3b8' }}>COMPLEXITY BOUNDARY ROUTING:</label>
+            <label style={{ fontSize: '10px', color: '#94a3b8' }}>{t('ecosystem.complexityRouting')}</label>
             <select
               value={complexityBoundary}
               onChange={(e) => setComplexityBoundary(e.target.value)}
@@ -460,9 +463,9 @@ export function EcosystemView() {
                 outline: 'none',
               }}
             >
-              <option value="automatic">Automatic Routing (Recommend)</option>
-              <option value="low-cost-forced">Forced Local/Low Cost</option>
-              <option value="high-performance-forced">Forced High Quality</option>
+              <option value="automatic">{t('ecosystem.automaticRouting')}</option>
+              <option value="low-cost-forced">{t('ecosystem.forcedLowCost')}</option>
+              <option value="high-performance-forced">{t('ecosystem.forcedHighQuality')}</option>
             </select>
           </div>
         </div>
@@ -479,12 +482,12 @@ export function EcosystemView() {
           >
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)', color: '#94a3b8' }}>
-                <th style={{ padding: '8px' }}>PROVIDER</th>
-                <th style={{ padding: '8px' }}>MODEL NAME</th>
-                <th style={{ padding: '8px' }}>MAPPED COMPLEXITY</th>
-                <th style={{ padding: '8px', textAlign: 'right' }}>COST / 1K TOKENS</th>
-                <th style={{ padding: '8px', textAlign: 'right' }}>AVG LATENCY</th>
-                <th style={{ padding: '8px', textAlign: 'center' }}>ROUTING STATE</th>
+                <th style={{ padding: '8px' }}>{t('ecosystem.provider')}</th>
+                <th style={{ padding: '8px' }}>{t('ecosystem.modelName')}</th>
+                <th style={{ padding: '8px' }}>{t('ecosystem.mappedComplexity')}</th>
+                <th style={{ padding: '8px', textAlign: 'right' }}>{t('ecosystem.costPer1k')}</th>
+                <th style={{ padding: '8px', textAlign: 'right' }}>{t('ecosystem.avgLatency')}</th>
+                <th style={{ padding: '8px', textAlign: 'center' }}>{t('ecosystem.routingState')}</th>
               </tr>
             </thead>
             <tbody>

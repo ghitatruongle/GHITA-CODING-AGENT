@@ -7,6 +7,7 @@ import { io, Socket } from 'socket.io-client';
 import { invoke } from '@tauri-apps/api/core';
 import { generateUUID, type AgentEvent } from '@ghita/shared';
 import { useAppStore } from '../stores/appStore';
+import { useTranslation } from '../i18n';
 
 // --- Types mirroring ApiManager storage schema ---
 type ProviderId =
@@ -122,15 +123,6 @@ interface ToolApprovalRequest {
   arguments: string;
   warningMessage?: string;
 }
-
-const INITIAL_MESSAGES: ChatMessage[] = [
-  {
-    id: '1',
-    role: 'assistant',
-    content: '👋 Xin chào! Tôi là **GHITA AI Assistant** tích hợp lõi gRPC của **OpenClaude** và **Claude Code**. Tôi có khả năng stream token cực nhanh, chạy các workflow thông minh và thực thi command an toàn dưới sự duyệt quyền của bạn. Hãy hỏi tôi bất cứ điều gì!',
-    timestamp: Date.now() - 60000,
-  },
-];
 
 interface ComputerUsePreviewProps {
   preview: {
@@ -486,6 +478,19 @@ function renderInline(text: string): React.ReactNode {
 }
 
 export function ChatPanel() {
+  const { t } = useTranslation();
+  const tRef = useRef(t);
+  tRef.current = t;
+
+  const INITIAL_MESSAGES: ChatMessage[] = [
+    {
+      id: '1',
+      role: 'assistant',
+      content: `👋 ${t('chat.welcomeMessage')}`,
+      timestamp: Date.now() - 60000,
+    },
+  ];
+
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -568,12 +573,12 @@ export function ChatPanel() {
   // Phase 6A: Slash command autocomplete
   const [showSlashMenu, setShowSlashMenu] = useState(false);
   const [slashCommands] = useState<Array<{ trigger: string; name: string; description: string }>>([
-    { trigger: '/compact', name: 'Compact Context', description: 'Tóm tắt conversation' },
-    { trigger: '/clear', name: 'Clear Chat', description: 'Xóa lịch sử chat' },
-    { trigger: '/help', name: 'Help', description: 'Hiển thị trợ giúp' },
-    { trigger: '/code-review', name: 'Code Review', description: 'Review code' },
-    { trigger: '/feature-dev', name: 'Feature Dev', description: 'Phát triển tính năng' },
-    { trigger: '/deploy-check', name: 'Deploy Check', description: 'Kiểm tra deploy' },
+    { trigger: '/compact', name: 'Compact Context', description: t('chat.compactContext') },
+    { trigger: '/clear', name: 'Clear Chat', description: t('chat.clearChat') },
+    { trigger: '/help', name: 'Help', description: t('chat.help') },
+    { trigger: '/code-review', name: 'Code Review', description: t('chat.codeReview') },
+    { trigger: '/feature-dev', name: 'Feature Dev', description: t('chat.featureDev') },
+    { trigger: '/deploy-check', name: 'Deploy Check', description: t('chat.deployCheck') },
   ]);
   const [filteredSlashCmds, setFilteredSlashCmds] = useState<typeof slashCommands>([]);
 
@@ -714,7 +719,7 @@ export function ChatPanel() {
           setMessages((prev) =>
             prev.map((msg) =>
               msg.id === 'streaming-message'
-                ? { id: generateUUID(), role: 'assistant', content: `❌ **Lỗi Hệ Thống:** ${data.message}`, timestamp: Date.now() }
+                ? { id: generateUUID(), role: 'assistant', content: `❌ **${tRef.current('chat.systemError')}** ${data.message}`, timestamp: Date.now() }
                 : msg
             )
           );
@@ -745,7 +750,7 @@ export function ChatPanel() {
                 {
                   id: generateUUID(),
                   role: 'assistant',
-                  content: `⚡ **Học Skill Tự Động:** Agent vừa đề xuất và tự học một kỹ năng mới:\n\n**${event.payload?.name || 'Unnamed Skill'}**\n*Mô tả:* ${event.payload?.description || ''}\n\nĐã tự động lưu vào **Skill Hub** và sẵn sàng sử dụng!`,
+                  content: `⚡ **${tRef.current('chat.skillLearned')}**\n\n**${event.payload?.name || 'Unnamed Skill'}**\n*${tRef.current('chat.description')}:* ${event.payload?.description || ''}\n\n${tRef.current('chat.skillSaved')}`,
                   timestamp: Date.now(),
                 }
               ]);
@@ -777,7 +782,7 @@ export function ChatPanel() {
               {
                 id: generateUUID(),
                 role: 'assistant',
-                content: data.action ? `🤖 **[Computer Action]** ${data.action}` : '🤖 **[Computer Action]** Running screen automation step...',
+                content: data.action ? `🤖 **[Computer Action]** ${data.action}` : `🤖 **[Computer Action]** ${tRef.current('chat.runningAutomation')}`,
                 timestamp: Date.now(),
                 computerUsePreview: {
                   screenshot: data.screenshot,
@@ -877,7 +882,7 @@ export function ChatPanel() {
         {
           id: generateUUID(),
           role: 'assistant',
-          content: '⚠️ **Chưa kết nối được tới Server.**\n\nVui lòng nhấn nút **"Kết nối lại"** ở góc trên bên trái để kết nối lại với Sidecar Server.',
+          content: `⚠️ **${t('chat.notConnected')}**\n\n${t('chat.notConnectedHint')}`,
           timestamp: Date.now(),
         },
       ]);
@@ -898,7 +903,7 @@ export function ChatPanel() {
         {
           id: generateUUID(),
           role: 'assistant',
-          content: '⚙️ **Chưa cấu hình AI Provider.**\n\nĐể sử dụng Chat AI, bạn cần:\n1. Mở tab **"API Manager"** (biểu tượng 🔑) ở sidebar bên trái\n2. Thêm ít nhất 1 nhà cung cấp AI (OpenAI, Anthropic, Google, DeepSeek, Ollama...)\n3. Nhập **API Key** và chọn **Model**\n4. Bật **Active** cho nhà cung cấp đó\n\nSau đó quay lại đây và thử lại!',
+          content: `⚙️ **${t('chat.noProvider')}**\n\n${t('chat.noProviderHint')}`,
           timestamp: Date.now(),
         },
       ]);
@@ -1022,7 +1027,7 @@ export function ChatPanel() {
               WebkitTextFillColor: 'transparent',
             }}
           >
-            OPENCLAUDE ENGINE
+            {t('chat.openclawEngine')}
           </span>
           <span
             style={{
@@ -1064,7 +1069,7 @@ export function ChatPanel() {
                 }
               }}
             >
-              {connectionStatus === 'connecting' ? 'Đang kết nối...' : 'Kết nối lại'}
+              {connectionStatus === 'connecting' ? t('chat.connecting') : t('chat.reconnect')}
             </button>
           )}
         </div>
@@ -1092,7 +1097,7 @@ export function ChatPanel() {
             }}
           >
             {modelOptions.length === 0
-              ? '\u26A0\uFE0F Ch\u01B0a c\u1EA5u h\u00ECnh'
+              ? `⚠️ ${t('chat.noConfig')}`
               : (modelOptions.find((o) => o.value === provider)?.label || provider)}
             <span style={{ fontSize: '8px', marginLeft: '2px', transform: modelDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▼</span>
           </button>
@@ -1111,7 +1116,7 @@ export function ChatPanel() {
                 <input
                   autoFocus
                   type="text"
-                  placeholder="Tìm model..."
+                  placeholder={t('chat.searchModel')}
                   value={modelSearch}
                   onChange={(e) => setModelSearch(e.target.value)}
                   style={{
@@ -1173,7 +1178,7 @@ export function ChatPanel() {
                   o.label.toLowerCase().includes(modelSearch.toLowerCase()) || o.model.toLowerCase().includes(modelSearch.toLowerCase())
                 ).length === 0 && (
                   <div style={{ padding: '12px', textAlign: 'center', color: '#64748b', fontSize: '12px' }}>
-                    Không tìm thấy model
+                    {t('chat.noModelFound')}
                   </div>
                 )}
               </div>
@@ -1512,7 +1517,7 @@ export function ChatPanel() {
           }}
         >
           <span>{showAdvanced ? '▾' : '▸'}</span>
-          <span>Nâng cao</span>
+          <span>{t('chat.advanced')}</span>
         </button>
       </div>
 
@@ -1532,7 +1537,7 @@ export function ChatPanel() {
           {/* Row 1: Agent Router */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', minWidth: '72px' }}>
-              Agent Role:
+              {t('chat.agentRole')}
             </span>
             <div style={{ display: 'flex', gap: '3px' }}>
               {(['default', 'Explore', 'Plan', 'UI'] as const).map((role) => (
@@ -1560,7 +1565,7 @@ export function ChatPanel() {
           {/* Row 2: Ralph Loop + Workflow shortcuts */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', minWidth: '72px' }}>
-              Workflows:
+              {t('chat.workflows')}
             </span>
             <button
               onClick={() => setRalphMode(!ralphMode)}
@@ -1633,7 +1638,7 @@ export function ChatPanel() {
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '11px', fontWeight: 700, color: '#34d399', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span className="pulse-indicator" /> RALPH LOOP ĐANG CHẠY
+              <span className="pulse-indicator" /> {t('chat.ralphRunning')}
             </span>
             <span style={{ fontSize: '10px', color: '#a7f3d0', background: 'rgba(16, 185, 129, 0.2)', padding: '2px 6px', borderRadius: '4px' }}>
               #{ralphProgress.iteration} | ${ralphProgress.cost.toFixed(5)}
@@ -1649,7 +1654,7 @@ export function ChatPanel() {
       {attachedImage && (
         <div style={{ padding: '8px 14px', background: 'rgba(30, 41, 59, 0.3)', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <img src={attachedImage} alt="Preview" style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)' }} />
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Ảnh đã đính kèm</span>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{t('chat.attachedImage')}</span>
           <button onClick={() => setAttachedImage(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '14px' }}>✕</button>
         </div>
       )}
@@ -1733,11 +1738,11 @@ export function ChatPanel() {
           placeholder={
             connectionStatus === 'connected'
               ? modelOptions.length === 0
-                ? "⚠ Chưa cấu hình API — Gõ gì đó để xem hướng dẫn..."
-                : "Hỏi AI hoặc gõ / cho commands..."
+                ? t('chat.placeholderNoApi')
+                : t('chat.placeholderConnected')
               : connectionStatus === 'connecting'
-              ? "Đang kết nối với server..."
-              : "Chưa kết nối server — gõ gì đó để xem hướng dẫn..."
+              ? t('chat.placeholderConnecting')
+              : t('chat.placeholderDisconnected')
           }
           style={{
             flex: 1,
@@ -1793,7 +1798,7 @@ export function ChatPanel() {
         />
         <button
           onClick={() => fileInputRef.current?.click()}
-          title="Đính kèm ảnh"
+          title={t('chat.attachImage')}
           style={{
             width: '32px',
             height: '32px',
@@ -1850,19 +1855,19 @@ export function ChatPanel() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '20px' }}>⚠️</span>
               <span style={{ fontWeight: 700, fontSize: '13px', color: '#f43f5e', letterSpacing: '1px' }}>
-                DUYỆT CHẠY LỆNH (TOOL)
+                {t('chat.approveTool')}
               </span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <span style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>Tên Tool:</span>
+              <span style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>{t('chat.toolName')}</span>
               <span style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9', fontFamily: 'var(--font-mono)' }}>
                 {approvalRequest.name}
               </span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <span style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>Tham số:</span>
+              <span style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>{t('chat.parameters')}</span>
               <pre
                 style={{
                   margin: 0,
@@ -1894,7 +1899,7 @@ export function ChatPanel() {
                   lineHeight: '1.5',
                 }}
               >
-                🚨 **Cảnh Báo:** {approvalRequest.warningMessage}
+                🚨 **{t('chat.warning')}** {approvalRequest.warningMessage}
               </div>
             )}
 
@@ -1916,7 +1921,7 @@ export function ChatPanel() {
                 onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(15, 23, 42, 0.4)')}
               >
-                Từ chối
+                {t('chat.reject')}
               </button>
               <button
                 onClick={handleApproveTool}
@@ -1936,7 +1941,7 @@ export function ChatPanel() {
                 onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.97)')}
                 onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
               >
-                Duyệt Chạy
+                {t('chat.approve')}
               </button>
             </div>
           </div>

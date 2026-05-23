@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { readDir, readTextFile, mkdir, writeTextFile, remove } from '@tauri-apps/plugin-fs';
 import { open } from '@tauri-apps/plugin-dialog';
+import { useTranslation } from '../i18n';
 
 interface FileEntry {
   name: string;
@@ -109,6 +110,7 @@ async function loadDirectory(dirPath: string): Promise<FileEntry[]> {
 }
 
 export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
+  const { t } = useTranslation();
   const [rootEntries, setRootEntries] = useState<FileEntry[]>([]);
   const [tree, setTree] = useState<Map<string, FileEntry[]>>(new Map());
   const [loading, setLoading] = useState(false);
@@ -168,7 +170,7 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
       const selected = await open({
         directory: true,
         multiple: false,
-        title: 'Chọn thư mục để mở',
+        title: t('fileExplorer.openFolder'),
       });
       if (selected && typeof selected === 'string') {
         setRootDir(selected);
@@ -187,7 +189,7 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
   }, []);
 
   const handleNewFile = useCallback(async (dirPath: string) => {
-    const name = prompt('Tên file mới:');
+    const name = prompt(t('fileExplorer.newFilePrompt'));
     if (!name) return;
     const filePath = dirPath + '/' + name;
     try {
@@ -207,7 +209,7 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
   }, []);
 
   const handleNewFolder = useCallback(async (dirPath: string) => {
-    const name = prompt('Tên thư mục mới:');
+    const name = prompt(t('fileExplorer.newFolderPrompt'));
     if (!name) return;
     const folderPath = dirPath + '/' + name;
     try {
@@ -226,7 +228,7 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
   }, []);
 
   const handleDelete = useCallback(async (path: string) => {
-    if (!confirm(`Xóa "${path.split('/').pop()}"?`)) return;
+    if (!confirm(t('fileExplorer.deleteConfirm', { name: path.split('/').pop() || '' }))) return;
     try {
       await remove(path, { recursive: true });
       // Reload parent
@@ -321,12 +323,12 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
           fontSize: '11px', fontWeight: 700, textTransform: 'uppercase',
           letterSpacing: '1px', color: 'var(--text-muted)',
         }}>
-          Explorer
+          {t('fileExplorer.explorer')}
         </span>
         <div style={{ display: 'flex', gap: '4px' }}>
           <button
             onClick={handleSelectFolder}
-            title="Open Folder"
+            title={t('fileExplorer.openFolder')}
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
               fontSize: '14px', padding: '2px', color: 'var(--text-muted)',
@@ -336,7 +338,7 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
           </button>
           <button
             onClick={() => rootDir && handleNewFile(rootDir)}
-            title="New File"
+            title={t('fileExplorer.newFile')}
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
               fontSize: '14px', padding: '2px', color: 'var(--text-muted)',
@@ -346,7 +348,7 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
           </button>
           <button
             onClick={() => rootDir && handleNewFolder(rootDir)}
-            title="New Folder"
+            title={t('fileExplorer.newFolder')}
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
               fontSize: '14px', padding: '2px', color: 'var(--text-muted)',
@@ -377,7 +379,7 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
             fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '8px',
           }}>
             <span style={{ fontSize: '24px' }}>📂</span>
-            <span>Chưa mở thư mục</span>
+            <span>{t('fileExplorer.noFolderOpen')}</span>
             <button
               onClick={handleSelectFolder}
               style={{
@@ -386,16 +388,16 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
                 fontSize: '12px', cursor: 'pointer', fontWeight: 600,
               }}
             >
-              Mở thư mục
+              {t('fileExplorer.openFolderButton')}
             </button>
           </div>
         ) : loading ? (
           <div style={{ padding: '12px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>
-            Đang tải...
+            {t('fileExplorer.loading')}
           </div>
         ) : rootEntries.length === 0 ? (
           <div style={{ padding: '12px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>
-            Thư mục trống
+            {t('fileExplorer.emptyFolder')}
           </div>
         ) : (
           rootEntries.map((entry) => renderEntry(entry))
@@ -412,12 +414,12 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
         }}>
           {contextMenu.isDir && (
             <>
-              <ContextMenuItem icon="📄" label="New File" onClick={() => handleNewFile(contextMenu.path)} />
-              <ContextMenuItem icon="📁" label="New Folder" onClick={() => handleNewFolder(contextMenu.path)} />
+              <ContextMenuItem icon="📄" label={t('fileExplorer.newFile')} onClick={() => handleNewFile(contextMenu.path)} />
+              <ContextMenuItem icon="📁" label={t('fileExplorer.newFolder')} onClick={() => handleNewFolder(contextMenu.path)} />
               <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '4px 0' }} />
             </>
           )}
-          <ContextMenuItem icon="🗑️" label="Delete" onClick={() => handleDelete(contextMenu.path)} danger />
+          <ContextMenuItem icon="🗑️" label={t('fileExplorer.delete')} onClick={() => handleDelete(contextMenu.path)} danger />
         </div>
       )}
     </div>

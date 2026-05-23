@@ -5,7 +5,9 @@
 
 import { createServer, type Server as HttpServer } from 'node:http';
 import { Server as SocketIOServer, type Socket } from 'socket.io';
-import { networkInterfaces, hostname } from 'node:os';
+import { networkInterfaces, hostname, homedir, tmpdir } from 'node:os';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { SOCKET_EVENTS, generateId } from '@ghita/shared';
 import type { DeviceInfo } from '@ghita/shared';
 import { PairingManager } from './pairing.js';
@@ -16,6 +18,8 @@ import type {
   PairedDevice,
   CommandPayload,
 } from './types.js';
+
+const DEFAULT_PAIRED_DEVICES_FILE = path.resolve(homedir(), '.ghita-paired-devices.json');
 
 const DEFAULT_CONFIG: ServerConfig = {
   port: 8080,
@@ -32,12 +36,62 @@ export class CommunicationServer {
   private config: ServerConfig;
   private events: ServerEvents = {};
   private connectedDevices = new Map<string, PairedDevice>();
+  private pairedDevicesFile: string;
+  private pendingApprovals = new Map<string, (approved: boolean) => void>();
+
+  private loadPairedDevices(): void {
+    try {
+      if (fs.existsSync(this.pairedDevicesFile)) {
+        const data = fs.readFileSync(this.pairedDevicesFile, 'utf8');
+        const list = JSON.parse(data);
+        if (Array.isArray(list)) {
+          for (const d of list) {
+            if (d.id && d.name) {
+              this.connectedDevices.set(d.id, {
+                id: d.id,
+                name: d.name,
+                platform: d.platform || 'android',
+                connected: false,
+                lastSeen: d.lastSeen || Date.now(),
+                socketId: '',
+                pairedAt: d.pairedAt || Date.now(),
+              });
+            }
+          }
+          console.log(`[CommServer] Loaded ${list.length} paired devices from persistent storage.`);
+        }
+      }
+    } catch (e: any) {
+      console.error(`[CommServer] Failed to load persistent paired devices: ${e.message}`);
+    }
+  }
+
+  private savePairedDevices(): void {
+    try {
+      const list = Array.from(this.connectedDevices.values())
+        .filter(d => d.id && d.id !== 'cloud_session') // Chỉ lưu thiết bị LAN thực tế, bỏ cloud
+        .map(d => ({
+          id: d.id,
+          name: d.name,
+          platform: d.platform,
+          pairedAt: d.pairedAt,
+          lastSeen: d.lastSeen,
+        }));
+      fs.writeFileSync(this.pairedDevicesFile, JSON.stringify(list, null, 2), 'utf8');
+    } catch (e: any) {
+      console.error(`[CommServer] Failed to save paired devices: ${e.message}`);
+    }
+  }
 
   readonly pairing: PairingManager;
   readonly screenCapture: ScreenCapture;
 
   constructor(config: Partial<ServerConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
+    this.pairedDevicesFile = this.config.pairedDevicesFile || 
+      (process.env.NODE_ENV === 'test'
+        ? path.resolve(tmpdir(), `.ghita-paired-devices-test-${generateId()}.json`)
+        : DEFAULT_PAIRED_DEVICES_FILE);
     this.pairing = new PairingManager();
     this.screenCapture = new ScreenCapture();
   }
@@ -54,6 +108,8 @@ export class CommunicationServer {
       console.warn('[CommServer] Server already running');
       return;
     }
+
+    this.loadPairedDevices();
 
     const getLocalIP = (): string => {
       const interfaces = networkInterfaces();
@@ -152,8 +208,8 @@ export class CommunicationServer {
     this.io = new SocketIOServer(this.httpServer, {
       cors: this.config.cors,
       transports: ['websocket', 'polling'],
-      pingInterval: 25000,
-      pingTimeout: 20000,
+      pingInterval: 5000,
+      pingTimeout: 3000,
     });
 
     this.registerSocketHandlers();
@@ -186,8 +242,15 @@ export class CommunicationServer {
    * Stop the server gracefully
    */
   async stop(): Promise<void> {
+    this.disableGlobalCommandApproval();
     this.screenCapture.dispose();
     this.pairing.dispose();
+
+    if (process.env.NODE_ENV === 'test' && fs.existsSync(this.pairedDevicesFile)) {
+      try {
+        fs.unlinkSync(this.pairedDevicesFile);
+      } catch {}
+    }
 
     // Disconnect all clients
     if (this.io) {
@@ -197,7 +260,7 @@ export class CommunicationServer {
     }
 
     if (this.httpServer) {
-      return new Promise<void>((resolve) => {
+      await new Promise<void>((resolve) => {
         this.httpServer!.close(() => {
           console.log('[CommServer] Server stopped');
           this.httpServer = null;
@@ -207,6 +270,49 @@ export class CommunicationServer {
     }
 
     this.connectedDevices.clear();
+  }
+
+  /**
+   * Enable global terminal command approval handler linked to remote devices
+   */
+  enableGlobalCommandApproval(): void {
+    (globalThis as any).approveCommandHandler = async (command: string): Promise<boolean> => {
+      return new Promise<boolean>((resolve) => {
+        const id = `approve_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+        this.pendingApprovals.set(id, resolve);
+        
+        this.broadcastRequireApproval({
+          id,
+          command,
+          timestamp: Date.now(),
+        });
+      });
+    };
+
+    // Link events to resolve pending approvals
+    this.events.onApproveCommand = (_deviceId, data) => {
+      const resolve = this.pendingApprovals.get(data.id);
+      if (resolve) {
+        resolve(true);
+        this.pendingApprovals.delete(data.id);
+      }
+    };
+
+    this.events.onRejectCommand = (_deviceId, data) => {
+      const resolve = this.pendingApprovals.get(data.id);
+      if (resolve) {
+        resolve(false);
+        this.pendingApprovals.delete(data.id);
+      }
+    };
+  }
+
+  /**
+   * Disable the global terminal command approval handler
+   */
+  disableGlobalCommandApproval(): void {
+    (globalThis as any).approveCommandHandler = null;
+    this.pendingApprovals.clear();
   }
 
   // ===========================================================================
@@ -291,6 +397,40 @@ export class CommunicationServer {
     this.io.to('paired-devices').emit(SOCKET_EVENTS.STATUS, status);
   }
 
+  /**
+   * Send generic broadcast to all connected devices
+   */
+  broadcast(event: string, data: any): void {
+    if (!this.io) return;
+    this.io.to('paired-devices').emit(event, data);
+  }
+
+  /**
+   * Broadcast real-time AI cost telemetry
+   */
+  broadcastCostTelemetry(data: {
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+    costUsd: number;
+    limitUsd: number;
+  }): void {
+    if (!this.io) return;
+    this.io.to('paired-devices').emit(SOCKET_EVENTS.COST_TELEMETRY, data);
+  }
+
+  /**
+   * Broadcast terminal command approval requirement
+   */
+  broadcastRequireApproval(data: {
+    id: string;
+    command: string;
+    timestamp: number;
+  }): void {
+    if (!this.io) return;
+    this.io.to('paired-devices').emit(SOCKET_EVENTS.REQUIRE_APPROVAL, data);
+  }
+
   // ===========================================================================
   // Socket Event Handlers
   // ===========================================================================
@@ -348,6 +488,22 @@ export class CommunicationServer {
         if (device) {
           device.lastSeen = Date.now();
           this.events.onReject?.(device.id);
+        }
+      });
+
+      socket.on(SOCKET_EVENTS.APPROVE_COMMAND, (data: { id: string }) => {
+        const device = this.findDeviceBySocket(socket.id);
+        if (device && data?.id) {
+          device.lastSeen = Date.now();
+          this.events.onApproveCommand?.(device.id, data);
+        }
+      });
+
+      socket.on(SOCKET_EVENTS.REJECT_COMMAND, (data: { id: string }) => {
+        const device = this.findDeviceBySocket(socket.id);
+        if (device && data?.id) {
+          device.lastSeen = Date.now();
+          this.events.onRejectCommand?.(device.id, data);
         }
       });
 
@@ -419,6 +575,7 @@ export class CommunicationServer {
         pairedAt: Date.now(),
       };
       this.connectedDevices.set(device.id, device);
+      this.savePairedDevices();
 
       // Generate new pairing code after successful pair (security)
       this.pairing.regenerate();

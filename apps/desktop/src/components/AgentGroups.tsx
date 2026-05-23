@@ -12,6 +12,7 @@ import {
 } from '@ghita/agents';
 import { AgentMemory } from '@ghita/memory';
 import type { AgentGroup, AgentTask } from '@ghita/shared';
+import { useTranslation } from '../i18n';
 
 const ROLE_COLORS: Record<string, string> = {
   coder: '#818cf8',
@@ -62,6 +63,7 @@ function statusColor(status: string): string {
 }
 
 function AgentRow({ agent }: { agent: ManagedAgent }) {
+  const { t } = useTranslation();
   return (
     <div
       style={{
@@ -85,7 +87,7 @@ function AgentRow({ agent }: { agent: ManagedAgent }) {
             marginTop: '2px',
           }}
         >
-          {agent.role} · {agent.skills.length} skills
+          {agent.role} · {t('agentGroups.skillsCount', { count: agent.skills.length })}
         </div>
       </div>
       <span
@@ -125,6 +127,7 @@ function LatestTask({ task }: { task?: AgentTask }) {
 }
 
 export function AgentGroups() {
+  const { t } = useTranslation();
   const runtime = globalRuntime;
   const [agents, setAgents] = useState<ManagedAgent[]>(() => runtime.manager.list());
   const [groups, setGroups] = useState<AgentGroup[]>(() => runtime.groups.list());
@@ -161,10 +164,10 @@ export function AgentGroups() {
               WebkitTextFillColor: 'transparent',
             }}
           >
-            Agent Groups
+            {t('agentGroups.title')}
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
-            Agent manager, group assignment, task delegation, and memory-backed context.
+            {t('agentGroups.subtitle')}
           </p>
         </div>
         <div
@@ -179,7 +182,7 @@ export function AgentGroups() {
           <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--accent-secondary)' }}>
             {agents.length}
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>registered agents</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{t('agentGroups.registeredAgents')}</div>
         </div>
       </div>
 
@@ -253,7 +256,7 @@ export function AgentGroups() {
                   fontWeight: 700,
                 }}
               >
-                {isRunning ? 'Running Group...' : 'Run Group Task'}
+                {isRunning ? t('agentGroups.runningGroup') : t('agentGroups.runGroupTask')}
               </button>
 
               <LatestTask task={latestTasks[group.id]} />

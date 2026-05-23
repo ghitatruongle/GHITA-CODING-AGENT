@@ -21,10 +21,11 @@
   },
   "dependencies": {
     "@ghita/memory": "workspace:*",
-    "@ghita/skills": "workspace:*",
-    "@ghita/shared": "workspace:*"
+    "@ghita/shared": "workspace:*",
+    "@ghita/skills": "workspace:*"
   },
   "devDependencies": {
+    "@types/node": "^25.9.1",
     "typescript": "^5.6.0"
   }
 }

@@ -4,6 +4,7 @@
 
 import { useState } from 'react';
 import { useAppStore } from '../stores/appStore';
+import { useTranslation } from '../i18n';
 import type { PluginManifest } from '@ghita/shared';
 
 // Pre-defined available marketplace plugins
@@ -88,9 +89,10 @@ const MARKETPLACE_PLUGINS: PluginManifest[] = [
 ];
 
 export function MarketplaceView() {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'code' | 'bundle' | 'installed'>('all');
-  
+
   const installedPlugins = useAppStore((s) => s.plugins);
   const installPlugin = useAppStore((s) => s.installPlugin);
   const uninstallPlugin = useAppStore((s) => s.uninstallPlugin);
@@ -132,10 +134,10 @@ export function MarketplaceView() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h2 style={{ fontSize: '26px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '6px' }}>
-              Extension Marketplace 🧩
+              {t('marketplace.title')} 🧩
             </h2>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
-              Khám phá và quản lý các code plugins, skills pre-packaged và MCP servers giúp nâng tầm GHITA CODING AGENT.
+              {t('marketplace.subtitle')}
             </p>
           </div>
           <div
@@ -149,7 +151,7 @@ export function MarketplaceView() {
               fontWeight: 600,
             }}
           >
-            {installedPlugins.length} Installed
+            {t('marketplace.installedBadge', { count: installedPlugins.length })}
           </div>
         </div>
       </div>
@@ -160,7 +162,7 @@ export function MarketplaceView() {
         <div style={{ flex: 1, minWidth: '260px', position: 'relative' }}>
           <input
             type="text"
-            placeholder="Tìm kiếm plugins, tác giả hoặc mô tả..."
+            placeholder={t('marketplace.searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{
@@ -192,10 +194,10 @@ export function MarketplaceView() {
         >
           {(['all', 'code', 'bundle', 'installed'] as const).map((type) => {
             const label = {
-              all: 'Tất cả',
-              code: 'Code Plugins ⚙️',
-              bundle: 'Bundle Packs 📦',
-              installed: 'Đã Cài Đặt ✅',
+              all: t('marketplace.filterAll'),
+              code: t('marketplace.filterCode') + ' ⚙️',
+              bundle: t('marketplace.filterBundle') + ' 📦',
+              installed: t('marketplace.filterInstalled') + ' ✅',
             }[type];
             
             const active = filterType === type;
@@ -238,8 +240,8 @@ export function MarketplaceView() {
           }}
         >
           <span style={{ fontSize: '48px' }}>🧩</span>
-          <div style={{ color: 'var(--text-primary)', fontWeight: 600 }}>Không tìm thấy plugin phù hợp</div>
-          <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Hãy thử từ khóa khác hoặc chuyển danh mục.</div>
+          <div style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{t('marketplace.emptyTitle')}</div>
+          <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>{t('marketplace.emptyHint')}</div>
         </div>
       ) : (
         <div
@@ -316,7 +318,7 @@ export function MarketplaceView() {
                   <div style={{ display: 'flex', gap: '10px', fontSize: '12px', color: 'var(--text-muted)' }}>
                     <span>v{plugin.version}</span>
                     <span>•</span>
-                    <span>Tác giả: <strong>{plugin.author}</strong></span>
+                    <span>{t('marketplace.author')} <strong>{plugin.author}</strong></span>
                   </div>
 
                   <p style={{ color: 'var(--text-secondary)', fontSize: '13.5px', lineHeight: 1.5, margin: 0 }}>
@@ -327,7 +329,7 @@ export function MarketplaceView() {
                   {plugin.permissions && plugin.permissions.length > 0 && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
                       <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', marginRight: '4px' }}>
-                        Quyền hạn:
+                        {t('marketplace.permissions')}
                       </span>
                       {plugin.permissions.map((perm) => (
                         <span
@@ -400,7 +402,7 @@ export function MarketplaceView() {
                           </label>
                         </div>
                         <span style={{ fontSize: '12px', color: ipState?.enabled ? 'var(--success)' : 'var(--text-muted)', fontWeight: 600 }}>
-                          {ipState?.enabled ? 'Kích hoạt' : 'Vô hiệu'}
+                          {ipState?.enabled ? t('marketplace.activated') : t('marketplace.deactivated')}
                         </span>
                       </div>
                     )}
@@ -428,7 +430,7 @@ export function MarketplaceView() {
                           e.currentTarget.style.background = 'rgba(239,68,68,0.1)';
                         }}
                       >
-                        Uninstall
+                        {t('common.uninstall')}
                       </button>
                     ) : (
                       <button
@@ -452,7 +454,7 @@ export function MarketplaceView() {
                           e.currentTarget.style.boxShadow = '0 2px 10px rgba(139,92,246,0.25)';
                         }}
                       >
-                        Install
+                        {t('common.install')}
                       </button>
                     )}
                   </div>

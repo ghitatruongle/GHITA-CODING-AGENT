@@ -11,8 +11,10 @@ export type RootStackParamList = {
     serverAddress: string;
     deviceName: string;
   };
+  Settings: undefined;
 };
 
 // --- Screen Props ---
 export type PairingScreenProps = NativeStackScreenProps<RootStackParamList, 'Pairing'>;
 export type RemoteControlScreenProps = NativeStackScreenProps<RootStackParamList, 'RemoteControl'>;
+export type SettingsScreenProps = NativeStackScreenProps<RootStackParamList, 'Settings'>;

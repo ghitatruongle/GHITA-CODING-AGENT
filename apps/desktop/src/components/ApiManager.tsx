@@ -4,6 +4,7 @@
 // ==============================================================================
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useTranslation } from '../i18n';
 
 type ProviderId =
   | 'openai'
@@ -272,6 +273,7 @@ export function ApiManager() {
   const [showKey, setShowKey] = useState<ProviderId | null>(null);
   const [search, setSearch] = useState('');
   const [favorites, setFavorites] = useState<Set<ProviderId>>(loadFavorites);
+  const { t } = useTranslation();
 
   // Persist API keys
   useEffect(() => {
@@ -377,12 +379,12 @@ export function ApiManager() {
     const paidList = filtered.filter((p) => p.category === 'paid' && !favorites.has(p.id));
     const customList = filtered.filter((p) => p.category === 'custom' && !favorites.has(p.id));
     return [
-      { label: 'Y\u00EAU THÍCH', emoji: '\u2B50', list: favList },
-      { label: 'MIỄN PHÍ / LOCAL', emoji: '\uD83C\uDF1F', list: freeList },
-      { label: 'TRẢ PHÍ', emoji: '\uD83D\uDCB0', list: paidList },
-      { label: 'TÙY CHỈNH', emoji: '\u2699\uFE0F', list: customList },
+      { label: t('apiManager.favorites'), emoji: '\u2B50', list: favList },
+      { label: t('apiManager.freeLocal'), emoji: '\uD83C\uDF1F', list: freeList },
+      { label: t('apiManager.paid'), emoji: '\uD83D\uDCB0', list: paidList },
+      { label: t('apiManager.custom'), emoji: '\u2699\uFE0F', list: customList },
     ].filter((g) => g.list.length > 0);
-  }, [filtered, favorites]);
+  }, [filtered, favorites, t]);
 
   return (
     <div style={{ padding: '20px', overflow: 'auto', height: '100%' }}>
@@ -392,10 +394,10 @@ export function ApiManager() {
         background: 'var(--accent-gradient)',
         WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
       }}>
-        API Management
+        {t('apiManager.title')}
       </h2>
       <p style={{ color: 'var(--text-muted)', marginBottom: '16px', fontSize: '12px' }}>
-        {activeCount > 0 ? `${activeCount} provider(s) đang hoạt động` : 'Thêm API key để bắt đầu sử dụng AI'}
+        {activeCount > 0 ? t('apiManager.activeProviders', { count: activeCount }) : t('apiManager.addKeyHint')}
       </p>
 
       {/* Search */}
@@ -405,7 +407,7 @@ export function ApiManager() {
         </span>
         <input
           type="text"
-          placeholder="Tìm provider..."
+          placeholder={t('apiManager.searchPlaceholder')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={{
@@ -477,7 +479,7 @@ export function ApiManager() {
                           fontSize: '14px', padding: '2px', opacity: isFav ? 1 : 0.3,
                           transition: 'opacity 0.2s',
                         }}
-                        title={isFav ? 'Bỏ yêu thích' : 'Thêm yêu thích'}
+                        title={isFav ? t('apiManager.removeFavorite') : t('apiManager.addFavorite')}
                       >
                         {isFav ? '\u2B50' : '\u2606'}
                       </button>
@@ -493,7 +495,7 @@ export function ApiManager() {
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         }}>
                           {status === 'active'
-                            ? `Model: ${entry.selectedModel || '\u2014'}`
+                            ? `${t('apiManager.model')}: ${entry.selectedModel || '\u2014'}`
                             : status === 'ready'
                               ? maskKey(entry.apiKey)
                               : provider.keyPlaceholder}
@@ -521,7 +523,7 @@ export function ApiManager() {
                             : '1px solid var(--border-subtle)',
                         whiteSpace: 'nowrap',
                       }}>
-                        {status === 'active' ? 'Active' : status === 'ready' ? 'Ready' : 'Not set'}
+                        {status === 'active' ? t('apiManager.active') : status === 'ready' ? t('apiManager.ready') : t('apiManager.notSet')}
                       </span>
 
                       {/* Chevron */}
@@ -555,7 +557,7 @@ export function ApiManager() {
                             <button
                               onClick={() => setShowKey(showKey === provider.id ? null : provider.id)}
                               style={iconBtnStyle}
-                              title={showKey === provider.id ? 'Hide' : 'Show'}
+                              title={showKey === provider.id ? t('apiManager.hide') : t('apiManager.show')}
                             >
                               {showKey === provider.id ? '\uD83D\uDE48' : '\uD83D\uDC41\uFE0F'}
                             </button>
@@ -565,7 +567,7 @@ export function ApiManager() {
                         {/* Base URL (editable for custom) */}
                         {provider.id === 'custom' && (
                           <div>
-                            <label style={labelStyle}>Base URL</label>
+                            <label style={labelStyle}>{t('apiManager.baseUrl')}</label>
                             <input
                               type="text"
                               value={entry.baseUrl}
@@ -578,14 +580,14 @@ export function ApiManager() {
 
                         {/* Model selector */}
                         <div>
-                          <label style={labelStyle}>Model</label>
+                          <label style={labelStyle}>{t('apiManager.model')}</label>
                           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                             <input
                               type="text"
                               list={`models-list-${provider.id}`}
                               value={entry.selectedModel}
                               onChange={(e) => updateKey(provider.id, { selectedModel: e.target.value })}
-                              placeholder="Chọn hoặc gõ tên model..."
+                              placeholder={t('apiManager.selectModel')}
                               style={{ ...inputStyle, flex: 1 }}
                             />
                             <datalist id={`models-list-${provider.id}`}>
@@ -603,9 +605,9 @@ export function ApiManager() {
                                   opacity: entry.isFetchingModels || (!entry.apiKey && provider.id !== 'ollama' && provider.id !== 'opengateway') ? 0.4 : 1,
                                   whiteSpace: 'nowrap',
                                 }}
-                                title="Lấy danh sách model từ API"
+                                title={t('apiManager.fetchModels')}
                               >
-                                {entry.isFetchingModels ? '\u23F3' : '\uD83D\uDD04'} Fetch
+                                {entry.isFetchingModels ? '\u23F3' : '\uD83D\uDD04'} {t('apiManager.fetch')}
                               </button>
                             )}
                           </div>
@@ -633,7 +635,7 @@ export function ApiManager() {
                               borderRadius: 'var(--radius-sm)', fontSize: '12px', cursor: 'pointer',
                             }}
                           >
-                            Xóa Key
+                            {t('apiManager.deleteKey')}
                           </button>
                           <button
                             onClick={() => handleSave(provider.id)}
@@ -644,7 +646,7 @@ export function ApiManager() {
                               fontWeight: 600, cursor: 'pointer',
                             }}
                           >
-                            Lưu
+                            {t('apiManager.save')}
                           </button>
                         </div>
                       </div>

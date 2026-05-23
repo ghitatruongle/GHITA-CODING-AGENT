@@ -4,7 +4,7 @@
 
 import type { AIStreamChunk } from '@ghita/shared';
 import { OLLAMA_DEFAULT_URL } from '@ghita/shared';
-import type { ChatMessage, ChatOptions, ChatResponse, ProviderConfig } from '../types.js';
+import type { ChatMessage, ChatOptions, ChatResponse, ProviderConfig, EmbeddingResponse, EmbeddingManyResponse } from '../types.js';
 import { BaseProvider } from './base.js';
 
 export class OllamaProvider extends BaseProvider {
@@ -171,5 +171,79 @@ export class OllamaProvider extends BaseProvider {
     }
 
     yield { content: '', done: true, provider: 'ollama', model };
+  }
+
+  async embed(text: string, options?: { model?: string }): Promise<EmbeddingResponse> {
+    const model = options?.model ?? 'nomic-embed-text';
+    const baseUrl = this.getOllamaUrl();
+
+    const response = await fetch(`${baseUrl}/api/embed`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model,
+        input: text,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Ollama error (${response.status}): ${error}`);
+    }
+
+    const data = (await response.json()) as {
+      model: string;
+      embeddings: number[][];
+      prompt_eval_count?: number;
+    };
+
+    return {
+      embedding: data.embeddings[0] ?? [],
+      model: data.model,
+      provider: 'ollama',
+      usage: data.prompt_eval_count
+        ? {
+            promptTokens: data.prompt_eval_count,
+            totalTokens: data.prompt_eval_count,
+          }
+        : undefined,
+    };
+  }
+
+  async embedMany(texts: string[], options?: { model?: string }): Promise<EmbeddingManyResponse> {
+    const model = options?.model ?? 'nomic-embed-text';
+    const baseUrl = this.getOllamaUrl();
+
+    const response = await fetch(`${baseUrl}/api/embed`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model,
+        input: texts,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Ollama error (${response.status}): ${error}`);
+    }
+
+    const data = (await response.json()) as {
+      model: string;
+      embeddings: number[][];
+      prompt_eval_count?: number;
+    };
+
+    return {
+      embeddings: data.embeddings ?? [],
+      model: data.model,
+      provider: 'ollama',
+      usage: data.prompt_eval_count
+        ? {
+            promptTokens: data.prompt_eval_count,
+            totalTokens: data.prompt_eval_count,
+          }
+        : undefined,
+    };
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@ghita/desktop",
-  "version": "0.0.2-beta1",
+  "version": "0.0.2-beta2",
   "private": true,
   "description": "GHITA CODING AGENT — Desktop App (Tauri + React)",
   "type": "module",

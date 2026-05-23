@@ -726,6 +726,7 @@ describe('PONG event (keepalive)', () => {
 
     // Advance time and send pong
     vi.advanceTimersByTime(1000);
+    vi.setSystemTime(Date.now() + 1000);
     triggerSocketEvent(SOCKET_EVENTS.PONG);
 
     const devicesAfter = server.getConnectedDevices();

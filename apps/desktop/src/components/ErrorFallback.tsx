@@ -3,8 +3,10 @@
 // ==============================================================================
 
 import type { FallbackProps } from 'react-error-boundary';
+import { useTranslation } from '../i18n';
 
 export function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
+  const { t } = useTranslation();
   return (
     <div
       role="alert"
@@ -30,7 +32,7 @@ export function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
           WebkitTextFillColor: 'transparent',
         }}
       >
-        Đã xảy ra lỗi
+        {t('errorFallback.title')}
       </h2>
       <pre
         style={{
@@ -64,7 +66,7 @@ export function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
         onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85'; }}
         onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
       >
-        Thử lại
+        {t('errorFallback.retry')}
       </button>
     </div>
   );

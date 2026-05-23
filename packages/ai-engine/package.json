@@ -24,10 +24,17 @@
   "dependencies": {
     "@ghita/shared": "workspace:*",
     "@grpc/grpc-js": "^1.14.3",
-    "@grpc/proto-loader": "^0.8.1"
+    "@grpc/proto-loader": "^0.8.1",
+    "ws": "^8.18.0",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@ghita/agents": "workspace:*",
+    "@types/ws": "^8.5.12",
     "cross-env": "^10.1.0",
+    "debug": "^4.4.0",
+    "socket.io-client": "^4.8.3",
+    "socket.io-parser": "^4.2.6",
     "typescript": "^5.6.0",
     "vitest": "^3.2.4"
   }

@@ -10,6 +10,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PairingScreen } from './screens/PairingScreen';
 import { RemoteControlScreen } from './screens/RemoteControlScreen';
+import { SettingsScreen } from './screens/SettingsScreen';
 import { ErrorFallback } from './components/ErrorFallback';
 import { Colors } from './theme/colors';
 import type { RootStackParamList } from './navigation/types';
@@ -88,6 +89,7 @@ export function App(): React.JSX.Element {
           >
             <Stack.Screen name="Pairing" component={PairingScreen} />
             <Stack.Screen name="RemoteControl" component={RemoteControlScreen} />
+            <Stack.Screen name="Settings" component={SettingsScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaProvider>

@@ -2,9 +2,10 @@
 // GHITA CODING AGENT — Main Layout
 // ==============================================================================
 
-import { useCallback, useRef, useEffect, Component } from 'react';
+import { useState, useCallback, useRef, useEffect, Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { useAppStore } from '../stores/appStore';
+import { useTranslation } from '../i18n';
 import { isWindows, isLinux } from '@ghita/shared';
 import { TabBar } from '../components/TabBar';
 import { Terminal } from '../components/Terminal';
@@ -21,18 +22,51 @@ import { WorkflowView } from '../views/WorkflowView';
 import { EcosystemView } from '../views/EcosystemView';
 
 // --- Per-view Error Boundary ---
-interface ViewErrorBoundaryState {
-  hasError: boolean;
-  error: Error | null;
+function ViewErrorBoundaryInner({ children, t }: { children: ReactNode; t: (key: string) => string }) {
+  const [state, setState] = useState<{ hasError: boolean; error: Error | null }>({
+    hasError: false,
+    error: null,
+  });
+
+  const handleReset = useCallback(() => {
+    setState({ hasError: false, error: null });
+  }, []);
+
+  if (state.hasError && state.error) {
+    return (
+      <div style={{ padding: 24, color: 'var(--error)' }}>
+        <h3>⚠️ {t('mainLayout.viewError')}</h3>
+        <p style={{ fontSize: '13px', opacity: 0.8 }}>{state.error.message}</p>
+        <button
+          onClick={handleReset}
+          style={{
+            marginTop: 12,
+            padding: '6px 16px',
+            borderRadius: 6,
+            border: '1px solid var(--error)',
+            background: 'transparent',
+            color: 'var(--error)',
+            cursor: 'pointer',
+          }}
+        >
+          {t('mainLayout.retry')}
+        </button>
+      </div>
+    );
+  }
+  return <>{children}</>;
 }
 
-class ViewErrorBoundary extends Component<{ children: ReactNode }, ViewErrorBoundaryState> {
-  constructor(props: { children: ReactNode }) {
+class ViewErrorBoundary extends Component<
+  { children: ReactNode; t: (key: string) => string },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: ReactNode; t: (key: string) => string }) {
     super(props);
     this.state = { hasError: false, error: null };
   }
 
-  static getDerivedStateFromError(error: Error): ViewErrorBoundaryState {
+  static getDerivedStateFromError(error: Error) {
     return { hasError: true, error };
   }
 
@@ -40,42 +74,21 @@ class ViewErrorBoundary extends Component<{ children: ReactNode }, ViewErrorBoun
     console.error('[ViewErrorBoundary]', error, errorInfo);
   }
 
-  handleReset = (): void => {
-    this.setState({ hasError: false, error: null });
-  };
-
   render(): ReactNode {
-    if (this.state.hasError && this.state.error) {
-      return (
-        <div style={{ padding: 24, color: 'var(--error)' }}>
-          <h3>⚠️ Lỗi View</h3>
-          <p style={{ fontSize: '13px', opacity: 0.8 }}>{this.state.error.message}</p>
-          <button
-            onClick={this.handleReset}
-            style={{
-              marginTop: 12,
-              padding: '6px 16px',
-              borderRadius: 6,
-              border: '1px solid var(--error)',
-              background: 'transparent',
-              color: 'var(--error)',
-              cursor: 'pointer',
-            }}
-          >
-            Thử lại
-          </button>
-        </div>
-      );
-    }
-    return this.props.children;
+    return (
+      <ViewErrorBoundaryInner t={this.props.t}>
+        {this.props.children}
+      </ViewErrorBoundaryInner>
+    );
   }
 }
 
 function ActiveView() {
   const activeTab = useAppStore((s) => s.activeTab);
+  const { t } = useTranslation();
 
   return (
-    <ViewErrorBoundary key={activeTab}>
+    <ViewErrorBoundary key={activeTab} t={t}>
       {(() => {
         switch (activeTab) {
           case 'code':      return <CodeView />;
@@ -103,6 +116,7 @@ export function MainLayout() {
   const setTerminalHeight = useAppStore((s) => s.setTerminalHeight);
   const connectedDevices = useAppStore((s) => s.connectedDevices);
   const serverStatus = useAppStore((s) => s.serverStatus);
+  const { t } = useTranslation();
 
   // Terminal resize drag
   const isDragging = useRef(false);
@@ -183,13 +197,13 @@ export function MainLayout() {
               flexShrink: 0,
             }}
           >
-            v0.0.2-beta1
+            {t('app.version')}
           </span>
         </div>
         <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
           <button
             onClick={toggleTerminal}
-            title="Toggle Terminal"
+            title={t('mainLayout.terminal')}
             style={{
               padding: '4px 12px',
               fontSize: '12px',
@@ -199,11 +213,11 @@ export function MainLayout() {
               transition: 'all var(--transition-fast)',
             }}
           >
-            💻 Terminal
+            💻 {t('mainLayout.terminal')}
           </button>
           <button
             onClick={toggleChat}
-            title="Toggle Chat"
+            title={t('mainLayout.chat')}
             style={{
               padding: '4px 12px',
               fontSize: '12px',
@@ -213,7 +227,7 @@ export function MainLayout() {
               transition: 'all var(--transition-fast)',
             }}
           >
-            💬 Chat
+            💬 {t('mainLayout.chat')}
           </button>
         </div>
       </div>
@@ -278,14 +292,14 @@ export function MainLayout() {
         }}
       >
         <div style={{ display: 'flex', gap: '12px', minWidth: 0, overflow: 'hidden' }}>
-          <span>🤖 GHITA v0.0.2-beta1</span>
-          <span>{isWindows() ? '🖥️ Windows' : isLinux() ? '🖥️ Linux' : '🖥️ Unknown'}</span>
+          <span>🤖 GHITA {t('app.version')}</span>
+          <span>{isWindows() ? `🖥️ ${t('settings.windows')}` : isLinux() ? `🖥️ ${t('settings.linux')}` : `🖥️ ${t('mainLayout.unknown')}`}</span>
         </div>
         <div style={{ display: 'flex', gap: '12px', minWidth: 0, overflow: 'hidden', justifyContent: 'flex-end' }}>
           <span style={{ color: serverStatus === 'listening' ? 'var(--success)' : undefined }}>
             📡 {connectedDevices.length > 0
-              ? `${connectedDevices.length} device${connectedDevices.length > 1 ? 's' : ''}`
-              : serverStatus === 'listening' ? 'Listening' : 'No devices'
+              ? t('mainLayout.devices', { count: connectedDevices.length, s: connectedDevices.length > 1 ? 's' : '' })
+              : serverStatus === 'listening' ? t('mainLayout.listening') : t('mainLayout.noDevices')
             }
           </span>
           <span>TypeScript</span>

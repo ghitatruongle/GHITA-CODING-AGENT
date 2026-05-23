@@ -4,6 +4,7 @@
 
 import { memo, useCallback } from 'react';
 import Editor, { type OnMount } from '@monaco-editor/react';
+import { useTranslation } from '../i18n';
 
 interface CodeEditorProps {
   value: string;
@@ -13,6 +14,7 @@ interface CodeEditorProps {
 }
 
 function CodeEditorInner({ value, language = 'typescript', onChange, readOnly = false }: CodeEditorProps) {
+  const { t } = useTranslation();
   const handleMount: OnMount = useCallback((editor, monaco) => {
     // Define custom GHITA dark theme
     monaco.editor.defineTheme('ghita-dark', {
@@ -85,7 +87,7 @@ function CodeEditorInner({ value, language = 'typescript', onChange, readOnly = 
           }}
         >
           <span className="animate-pulse">⚡</span>
-          Đang tải editor...
+          {t('codeEditor.loading')}
         </div>
       }
     />

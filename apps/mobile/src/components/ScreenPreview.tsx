@@ -19,6 +19,8 @@ export function ScreenPreview({
   loading = false,
   connected = false,
 }: ScreenPreviewProps): React.JSX.Element {
+  const [imageError, setImageError] = useState(false);
+
   // Loading state
   if (loading) {
     return (
@@ -28,9 +30,6 @@ export function ScreenPreview({
       </View>
     );
   }
-
-  // Has image
-  const [imageError, setImageError] = useState(false);
 
   if (imageBase64 && !imageError) {
     return (
