@@ -72,6 +72,11 @@ export const SOCKET_EVENTS = {
   PING: 'ping',
   PONG: 'pong',
   ERROR: 'error',
+  // --- Phase 8 Events ---
+  REQUIRE_APPROVAL: 'require_approval',
+  APPROVE_COMMAND: 'approve_command',
+  REJECT_COMMAND: 'reject_command',
+  COST_TELEMETRY: 'cost_telemetry',
 } as const;
 
 // --- Screen Stream Defaults ---

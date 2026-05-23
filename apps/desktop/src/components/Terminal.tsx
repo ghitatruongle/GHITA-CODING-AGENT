@@ -5,6 +5,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Command } from '@tauri-apps/plugin-shell';
+import { useTranslation } from '../i18n';
 
 type ShellType = 'cmd' | 'powershell';
 
@@ -61,10 +62,11 @@ function shortCwd(cwd: string): string {
 }
 
 export function Terminal() {
+  const { t } = useTranslation();
   const termRef = useRef<HTMLDivElement>(null);
   const [history, setHistory] = useState<TermLine[]>([
-    { text: 'GHITA CODING AGENT Terminal', type: 'info' },
-    { text: 'Click the shell name to toggle between cmd.exe and PowerShell', type: 'info' },
+    { text: t('terminal.title'), type: 'info' },
+    { text: t('terminal.shellSwitchHint'), type: 'info' },
     { text: '', type: 'info' },
   ]);
   const [input, setInput] = useState('');
@@ -168,7 +170,7 @@ export function Terminal() {
           addLines([{ text: '', type: 'stdout' }]);
         } else {
           addLines([
-            { text: `Cannot find path '${resolved}'`, type: 'stderr' },
+            { text: t('terminal.pathNotFound', { path: resolved }), type: 'stderr' },
             { text: '', type: 'stderr' },
           ]);
         }
@@ -212,7 +214,7 @@ export function Terminal() {
     } catch (e) {
       addLines([
         { text: `Failed to execute: ${String(e)}`, type: 'error' },
-        { text: 'Make sure the command exists and you have permission.', type: 'info' },
+        { text: t('terminal.permissionHint'), type: 'info' },
       ]);
     } finally {
       setIsRunning(false);
@@ -281,7 +283,7 @@ export function Terminal() {
         >
           {config.name}
         </button>
-        {isRunning && <span style={{ color: '#6b7280', fontSize: '11px' }}>⏳ Running...</span>}
+        {isRunning && <span style={{ color: '#6b7280', fontSize: '11px' }}>⏳ {t('terminal.running')}</span>}
       </div>
 
       {/* Output */}
@@ -329,7 +331,7 @@ export function Terminal() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={isRunning ? 'Running...' : 'Type a command...'}
+          placeholder={isRunning ? t('terminal.running') : t('terminal.placeholder')}
           disabled={isRunning}
           style={{
             flex: 1,

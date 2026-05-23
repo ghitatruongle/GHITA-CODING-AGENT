@@ -2,12 +2,13 @@
 // GHITA CODING AGENT — App Root
 // ==============================================================================
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { ErrorFallback } from './components/ErrorFallback';
 import { MainLayout } from './layouts/MainLayout';
 import { Toast } from './components/Toast';
 import { useAppStore } from './stores/appStore';
+import { I18nProvider, useTranslation } from './i18n';
 import toast from 'react-hot-toast';
 import { invoke } from '@tauri-apps/api/core';
 
@@ -34,6 +35,9 @@ function ReadyNotifier() {
 
 function AppContent() {
   const theme = useAppStore((s) => s.theme);
+  const { t } = useTranslation();
+  const tRef = useRef(t);
+  tRef.current = t;
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -71,36 +75,37 @@ function AppContent() {
         unlisten = await listen<{ event: string; data: any }>('sidecar-event', (eventPayload) => {
           const { event, data } = eventPayload.payload;
 
+          const tr = tRef.current;
           switch (event) {
             case 'pair_confirm':
               if (data.resumed) {
-                toast.success(`Khôi phục kết nối với thiết bị: ${data.name || 'Mobile'}`);
+                toast.success(tr('app.deviceReconnected', { name: data.name || 'Mobile' }));
               } else {
-                toast.success(`Đã ghép đôi thành công thiết bị: ${data.name || 'Mobile'}`);
+                toast.success(tr('app.devicePaired', { name: data.name || 'Mobile' }));
               }
               break;
             case 'command':
-              toast(`Đã nhận lệnh từ thiết bị: ${data.action || 'Không rõ'}`, {
+              toast(tr('app.commandReceived', { action: data.action || 'Unknown' }), {
                 icon: '⚡',
               });
               break;
             case 'chat':
-              toast(`Tin nhắn từ di động: "${data.text || ''}"`, {
+              toast(tr('app.messageFromMobile', { text: data.text || '' }), {
                 icon: '💬',
               });
               break;
             case 'approve':
-              toast.success('Thiết bị di động đã ĐỒNG Ý thao tác.', {
+              toast.success(tr('app.deviceApproved'), {
                 duration: 4000,
               });
               break;
             case 'reject':
-              toast.error('Thiết bị di động đã TỪ CHỐI thao tác.', {
+              toast.error(tr('app.deviceRejected'), {
                 duration: 4000,
               });
               break;
             case 'disconnect':
-              toast.error(`Thiết bị ${data.name || 'Mobile'} đã ngắt kết nối.`);
+              toast.error(tr('app.deviceDisconnected', { name: data.name || 'Mobile' }));
               break;
             default:
               console.log('[Sidecar IPC] Unhandled event:', event, data);
@@ -131,8 +136,10 @@ function AppContent() {
 
 export function App() {
   return (
-    <ErrorBoundary FallbackComponent={ErrorFallback}>
-      <AppContent />
-    </ErrorBoundary>
+    <I18nProvider>
+      <ErrorBoundary FallbackComponent={ErrorFallback}>
+        <AppContent />
+      </ErrorBoundary>
+    </I18nProvider>
   );
 }

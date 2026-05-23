@@ -2,6 +2,8 @@
 // GHITA CODING AGENT - Permission Levels System
 // ==============================================================================
 
+import type { PermissionContext } from '../types.js';
+
 /** 3 cấp độ permission */
 export type PermissionLevel = 'read_only' | 'write' | 'destructive';
 
@@ -37,8 +39,15 @@ const DEFAULT_PERMISSIONS: ToolPermission[] = [
   { tool: 'drop_table', level: 'destructive' },
 ];
 
+export type PermissionRule = (
+  toolName: string,
+  context?: PermissionContext
+) => boolean | { level?: PermissionLevel; autoApprove?: boolean } | undefined;
+
 export class PermissionManager {
   private permissions: Map<string, ToolPermission> = new Map();
+  private rules: PermissionRule[] = [];
+  private stepFilters: Map<number, string[]> = new Map();
 
   constructor() {
     this.loadDefaults();
@@ -49,6 +58,47 @@ export class PermissionManager {
     for (const perm of DEFAULT_PERMISSIONS) {
       this.permissions.set(perm.tool, perm);
     }
+  }
+
+  /** Đăng ký một luật kiểm tra context */
+  registerRule(rule: PermissionRule): void {
+    this.rules.push(rule);
+  }
+
+  /** Kiểm tra quyền truy cập tool kèm theo PermissionContext */
+  checkPermission(
+    toolName: string,
+    context?: PermissionContext
+  ): { level: PermissionLevel; autoApprove: boolean } {
+    let level = this.getLevel(toolName);
+    let autoApprove = this.isAutoApprove(toolName);
+
+    for (const rule of this.rules) {
+      const decision = rule(toolName, context);
+      if (decision !== undefined) {
+        if (typeof decision === 'boolean') {
+          autoApprove = decision;
+        } else {
+          if (decision.level !== undefined) level = decision.level;
+          if (decision.autoApprove !== undefined) autoApprove = decision.autoApprove;
+        }
+      }
+    }
+
+    return { level, autoApprove };
+  }
+
+  /** Đăng ký danh sách các tool được phép sử dụng ở một step nhất định */
+  registerStepFilter(stepIndex: number, allowedTools: string[]): void {
+    this.stepFilters.set(stepIndex, allowedTools);
+  }
+
+  /** Trả về danh sách các tool khả dụng cho stepIndex hiện tại */
+  filterActiveTools(stepIndex: number): string[] {
+    if (this.stepFilters.has(stepIndex)) {
+      return this.stepFilters.get(stepIndex)!;
+    }
+    return Array.from(this.permissions.keys());
   }
 
   /** Lấy permission level của tool */

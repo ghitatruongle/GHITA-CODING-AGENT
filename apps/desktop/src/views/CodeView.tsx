@@ -7,6 +7,7 @@ import { useState, Suspense, lazy, useCallback, useRef, useEffect } from 'react'
 import { FileExplorer } from '../components/FileExplorer';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
 import toast from 'react-hot-toast';
+import { useTranslation } from '../i18n';
 
 const CodeEditor = lazy(() =>
   import('../components/CodeEditor').then((m) => ({ default: m.CodeEditor })),
@@ -22,6 +23,10 @@ interface OpenFile {
 }
 
 export function CodeView() {
+  const { t } = useTranslation();
+  const tRef = useRef(t);
+  tRef.current = t;
+
   const [openFiles, setOpenFiles] = useState<OpenFile[]>([]);
   const [activePath, setActivePath] = useState<string>('');
   const [explorerWidth, setExplorerWidth] = useState(240);
@@ -84,9 +89,9 @@ export function CodeView() {
           ? { ...f, originalContent: f.content, modified: false }
           : f,
       ));
-      toast.success(`Đã lưu: ${activeFile.name}`);
+      toast.success(tRef.current('codeView.fileSaved', { name: activeFile.name }));
     } catch (e) {
-      toast.error(`Lưu thất bại: ${e instanceof Error ? e.message : String(e)}`);
+      toast.error(tRef.current('codeView.saveFailed', { error: e instanceof Error ? e.message : String(e) }));
     }
   }, [activeFile, activePath]);
 
@@ -101,9 +106,9 @@ export function CodeView() {
       setOpenFiles((prev) => prev.map((f) => ({
         ...f, originalContent: f.content, modified: false,
       })));
-      toast.success(`Đã lưu ${modified.length} file(s)`);
+      toast.success(tRef.current('codeView.filesSaved', { count: modified.length }));
     } catch (e) {
-      toast.error(`Lưu thất bại: ${e instanceof Error ? e.message : String(e)}`);
+      toast.error(tRef.current('codeView.saveFailed', { error: e instanceof Error ? e.message : String(e) }));
     }
   }, [openFiles]);
 
@@ -235,7 +240,7 @@ export function CodeView() {
                 <span style={{
                   width: '6px', height: '6px', borderRadius: '50%',
                   background: 'var(--warning)', flexShrink: 0,
-                }} title="Chưa lưu" />
+                }} title={t('codeView.unsaved')} />
               )}
               <button
                 onClick={(e) => handleCloseTab(f.path, e)}
@@ -276,11 +281,11 @@ export function CodeView() {
                 padding: '1px 6px', background: 'rgba(245, 158, 11, 0.1)',
                 borderRadius: 'var(--radius-full)',
               }}>
-                Modified
+                {t('codeView.modified')}
               </span>
             )}
             <span style={{ marginLeft: 'auto', fontSize: '10px', opacity: 0.5 }}>
-              Ctrl+S save · Ctrl+Shift+S save all · Ctrl+W close
+              {t('codeView.shortcuts')}
             </span>
           </div>
         )}
@@ -294,7 +299,7 @@ export function CodeView() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   height: '100%', color: 'var(--accent-primary)',
                 }}>
-                  ⚡ Loading editor...
+                  {t('codeView.loadingEditor')}
                 </div>
               }
             >
@@ -313,17 +318,17 @@ export function CodeView() {
               <span style={{ fontSize: '48px', opacity: 0.3 }}>🤖</span>
               <span style={{ fontSize: '14px', fontWeight: 600 }}>GHITA CODING AGENT</span>
               <span style={{ fontSize: '12px', opacity: 0.6 }}>
-                Mở file từ Explorer hoặc nhấn Ctrl+N để bắt đầu
+                {t('codeView.openFileHint')}
               </span>
               <div style={{
                 marginTop: '16px', display: 'flex', gap: '12px', fontSize: '11px',
                 color: 'var(--text-muted)', opacity: 0.5,
               }}>
-                <span>Ctrl+S Save</span>
+                <span>{t('codeView.shortcutSave')}</span>
                 <span>·</span>
-                <span>Ctrl+W Close</span>
+                <span>{t('codeView.shortcutClose')}</span>
                 <span>·</span>
-                <span>Ctrl+Shift+S Save All</span>
+                <span>{t('codeView.shortcutSaveAll')}</span>
               </div>
             </div>
           )}

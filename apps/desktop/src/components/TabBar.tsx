@@ -2,24 +2,27 @@
 // GHITA CODING AGENT — Tab Bar
 // ==============================================================================
 
+import { useMemo } from 'react';
 import { useAppStore, type TabId } from '../stores/appStore';
-
-const TABS: Array<{ id: TabId; label: string; icon: string }> = [
-  { id: 'code',    label: 'Code',    icon: '💻' },
-  { id: 'api',     label: 'API',     icon: '🔑' },
-  { id: 'skills',  label: 'Skills',  icon: '⚡' },
-  { id: 'agents',  label: 'Agents',  icon: '👥' },
-  { id: 'devices', label: 'Devices', icon: '📱' },
-  { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-  { id: 'marketplace', label: 'Marketplace', icon: '🏪' },
-  { id: 'workflow', label: 'Workflow', icon: '🧩' },
-  { id: 'ecosystem', label: 'Ecosystem', icon: '📡' },
-  { id: 'settings', label: 'Settings', icon: '⚙️' },
-];
+import { useTranslation } from '../i18n';
 
 export function TabBar() {
   const activeTab = useAppStore((s) => s.activeTab);
   const setActiveTab = useAppStore((s) => s.setActiveTab);
+  const { t } = useTranslation();
+
+  const TABS: Array<{ id: TabId; label: string; icon: string }> = useMemo(() => [
+    { id: 'code',    label: t('tabBar.code'),    icon: '💻' },
+    { id: 'api',     label: t('tabBar.api'),     icon: '🔑' },
+    { id: 'skills',  label: t('tabBar.skills'),  icon: '⚡' },
+    { id: 'agents',  label: t('tabBar.agents'),  icon: '👥' },
+    { id: 'devices', label: t('tabBar.devices'), icon: '📱' },
+    { id: 'dashboard', label: t('tabBar.dashboard'), icon: '📊' },
+    { id: 'marketplace', label: t('tabBar.marketplace'), icon: '🏪' },
+    { id: 'workflow', label: t('tabBar.workflow'), icon: '🧩' },
+    { id: 'ecosystem', label: t('tabBar.ecosystem'), icon: '📡' },
+    { id: 'settings', label: t('tabBar.settings'), icon: '⚙️' },
+  ], [t]);
 
   return (
     <div

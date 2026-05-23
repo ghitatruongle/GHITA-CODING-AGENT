@@ -12,6 +12,7 @@ export interface ServerConfig {
     origin: string | string[];
     methods?: string[];
   };
+  pairedDevicesFile?: string;
 }
 
 // --- Paired Device (extended from shared DeviceInfo) ---
@@ -45,6 +46,8 @@ export interface ServerEvents {
   onChat?: (deviceId: string, text: string) => void;
   onApprove?: (deviceId: string) => void;
   onReject?: (deviceId: string) => void;
+  onApproveCommand?: (deviceId: string, data: { id: string }) => void;
+  onRejectCommand?: (deviceId: string, data: { id: string }) => void;
   onError?: (error: Error) => void;
 }
 

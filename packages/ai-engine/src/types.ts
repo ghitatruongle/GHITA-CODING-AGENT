@@ -4,6 +4,14 @@
 
 import type { AIProviderType, AIStreamChunk } from '@ghita/shared';
 
+export interface PermissionContext {
+  cwd?: string;
+  filePath?: string;
+  command?: string;
+  stepIndex?: number;
+  [key: string]: any;
+}
+
 // --- Provider Interface ---
 export interface AIProvider {
   readonly type: AIProviderType;
@@ -22,6 +30,24 @@ export interface AIProvider {
 
   /** Test kết nối provider */
   test(): Promise<boolean>;
+
+  /** Tạo vector embedding cho một chuỗi text */
+  embed(text: string, options?: { model?: string }): Promise<EmbeddingResponse>;
+
+  /** Tạo vector embedding cho danh sách các chuỗi text */
+  embedMany(texts: string[], options?: { model?: string }): Promise<EmbeddingManyResponse>;
+
+  /** Sinh ảnh từ văn bản */
+  generateImage?(prompt: string, options?: any): Promise<{ url: string; b64?: string }>;
+
+  /** Chuyển văn bản thành giọng nói */
+  generateSpeech?(text: string, options?: any): Promise<{ audio: Buffer; contentType: string }>;
+
+  /** Sinh video từ văn bản */
+  generateVideo?(prompt: string, options?: any): Promise<{ url: string }>;
+
+  /** Chuyển giọng nói/âm thanh thành văn bản */
+  transcribe?(audio: Buffer, options?: any): Promise<{ text: string }>;
 }
 
 // --- Chat Types ---
@@ -96,6 +122,10 @@ export interface OrchestratorConfig {
     [key: string]: string | undefined;
   };
   mcpServers?: MCPServerEntry[];
+  costLimitUsd?: number;
+  qdrantUrl?: string;
+  collectionName?: string;
+  cacheThreshold?: number;
 }
 
 export interface OrchestratorStatus {
@@ -103,4 +133,25 @@ export interface OrchestratorStatus {
   defaultProvider: AIProviderType | null;
   totalProviders: number;
   readyProviders: number;
+}
+
+// --- Embedding Types ---
+export interface EmbeddingResponse {
+  embedding: number[];
+  model: string;
+  provider: AIProviderType;
+  usage?: {
+    promptTokens: number;
+    totalTokens: number;
+  };
+}
+
+export interface EmbeddingManyResponse {
+  embeddings: number[][];
+  model: string;
+  provider: AIProviderType;
+  usage?: {
+    promptTokens: number;
+    totalTokens: number;
+  };
 }

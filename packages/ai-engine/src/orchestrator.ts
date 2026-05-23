@@ -11,6 +11,8 @@ import type {
   ChatResponse,
   OrchestratorConfig,
   OrchestratorStatus,
+  EmbeddingResponse,
+  EmbeddingManyResponse,
 } from './types.js';
 import { ProviderRegistry } from './registry.js';
 import { MCPClient } from './mcp/client.js';
@@ -21,6 +23,10 @@ import { createBuiltInTools, type BuiltInTool } from './tools/index.js';
 import { ContextManager } from './context/manager.js';
 import { PermissionManager } from './security/permissions.js';
 import { SecurityChecker } from './hooks/security-checkers.js';
+import { z } from 'zod';
+import { generateObject, type GenerateObjectResponse } from './utils/structured.js';
+import { SemanticCache } from './utils/cache.js';
+import { CostTracker, BudgetManager } from './utils/cost.js';
 
 export class Orchestrator {
   private registry: ProviderRegistry;
@@ -34,6 +40,11 @@ export class Orchestrator {
   readonly builtInTools: BuiltInTool[];
   readonly contextManager: ContextManager;
   readonly permissionManager: PermissionManager;
+
+  // Phase 8 modules
+  readonly costTracker: CostTracker;
+  readonly budgetManager: BudgetManager;
+  readonly semanticCache: SemanticCache;
 
   constructor(config: OrchestratorConfig) {
     this.config = config;
@@ -75,6 +86,33 @@ export class Orchestrator {
 
     // Phase 6D: Permission Manager
     this.permissionManager = new PermissionManager();
+
+    // Phase 8: Cost tracking & Budget management
+    this.costTracker = new CostTracker();
+    const limit = config.costLimitUsd ?? 5.0; // Default budget limit e.g. $5.00
+    this.budgetManager = new BudgetManager({
+      limit,
+      period: 'monthly',
+      onAlert: (spent, limit, percentage) => {
+        console.warn(`[Orchestrator] AI budget alert: spent $${spent.toFixed(4)} of $${limit.toFixed(4)} (${(percentage * 100).toFixed(1)}%)`);
+      }
+    });
+
+    // Phase 8: Semantic prompt cache
+    this.semanticCache = new SemanticCache(
+      {
+        embed: async (text) => {
+          const emb = await this.embed(text);
+          return { embedding: emb.embedding };
+        }
+      },
+      {
+        qdrantUrl: config.qdrantUrl,
+        collectionName: config.collectionName,
+        threshold: config.cacheThreshold ?? 0.95,
+        fallbackToInMemory: true
+      }
+    );
   }
 
   /** Lấy registry để truy cập providers trực tiếp */
@@ -87,14 +125,53 @@ export class Orchestrator {
     messages: ChatMessage[],
     options?: ChatOptions & { provider?: AIProviderType },
   ): Promise<ChatResponse> {
+    const serializeMessages = (msgs: ChatMessage[]): string =>
+      msgs.map((m) => `[${m.role}]: ${m.content}`).join('\n');
+    const cacheKey = serializeMessages(messages);
+
+    try {
+      const cached = await this.semanticCache.get(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    } catch {}
+
     const provider = this.resolveProvider(options?.provider, options?.agentRole);
+    this.budgetManager.checkBudget(0);
+
     const maxAttempts = this.config.retryAttempts ?? 2;
 
-    return await this.executeWithFallback(
+    const response = await this.executeWithFallback(
       (p) => p.chat(messages, options),
       provider,
       maxAttempts,
     );
+
+    const modelName = options?.model || provider.defaultModel || 'default';
+    const promptTokens = response.usage?.promptTokens ?? 0;
+    const completionTokens = response.usage?.completionTokens ?? 0;
+
+    const stepCost = this.costTracker.calculateCost(modelName, promptTokens, completionTokens);
+    await this.costTracker.trackCost(modelName, promptTokens, completionTokens);
+    this.budgetManager.recordSpent(stepCost);
+
+    if ((globalThis as any).broadcastCostTelemetryHandler) {
+      try {
+        (globalThis as any).broadcastCostTelemetryHandler({
+          inputTokens: promptTokens,
+          outputTokens: completionTokens,
+          totalTokens: promptTokens + completionTokens,
+          costUsd: this.costTracker.getTotalCost(),
+          limitUsd: this.budgetManager.getLimit(),
+        });
+      } catch {}
+    }
+
+    try {
+      await this.semanticCache.set(cacheKey, response);
+    } catch {}
+
+    return response;
   }
 
   /** Chat streaming với provider ưu tiên, fallback nếu lỗi */
@@ -102,14 +179,54 @@ export class Orchestrator {
     messages: ChatMessage[],
     options?: ChatOptions & { provider?: AIProviderType },
   ): AsyncGenerator<AIStreamChunk> {
-    const provider = this.resolveProvider(options?.provider, options?.agentRole);
-    const maxAttempts = this.config.retryAttempts ?? 2;
+    const serializeMessages = (msgs: ChatMessage[]): string =>
+      msgs.map((m) => `[${m.role}]: ${m.content}`).join('\n');
+    const cacheKey = serializeMessages(messages);
 
+    try {
+      const cached = await this.semanticCache.get(cacheKey);
+      if (cached) {
+        yield {
+          content: cached.content,
+          done: true,
+          provider: cached.provider,
+          model: cached.model,
+          usage: cached.usage,
+        };
+        return;
+      }
+    } catch {}
+
+    const provider = this.resolveProvider(options?.provider, options?.agentRole);
+    this.budgetManager.checkBudget(0);
+
+    const maxAttempts = this.config.retryAttempts ?? 2;
+    let accumulatedContent = '';
+    let resolvedProvider = provider.type;
+    let resolvedModel = options?.model || provider.defaultModel || 'default';
+    let finalUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+    let success = false;
     let lastError: Error | undefined;
+
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        yield* provider.chatStream(messages, options);
-        return;
+        accumulatedContent = '';
+        const stream = provider.chatStream(messages, options);
+        for await (const chunk of stream) {
+          accumulatedContent += chunk.content;
+          if (chunk.provider) resolvedProvider = chunk.provider;
+          if (chunk.model) resolvedModel = chunk.model;
+          if (chunk.usage) {
+            finalUsage = {
+              promptTokens: chunk.usage.promptTokens,
+              completionTokens: chunk.usage.completionTokens,
+              totalTokens: chunk.usage.totalTokens,
+            };
+          }
+          yield chunk;
+        }
+        success = true;
+        break;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
         if (attempt < maxAttempts) {
@@ -118,16 +235,195 @@ export class Orchestrator {
       }
     }
 
-    const fallback = this.findFallbackProvider(provider.type);
-    if (fallback) {
-      try {
-        yield* fallback.chatStream(messages, options);
-        return;
-      } catch {
+    if (!success) {
+      const fallback = this.findFallbackProvider(provider.type);
+      if (fallback) {
+        try {
+          accumulatedContent = '';
+          resolvedProvider = fallback.type;
+          resolvedModel = options?.model || fallback.defaultModel || 'default';
+          const stream = fallback.chatStream(messages, options);
+          for await (const chunk of stream) {
+            accumulatedContent += chunk.content;
+            if (chunk.provider) resolvedProvider = chunk.provider;
+            if (chunk.model) resolvedModel = chunk.model;
+            if (chunk.usage) {
+              finalUsage = {
+                promptTokens: chunk.usage.promptTokens,
+                completionTokens: chunk.usage.completionTokens,
+                totalTokens: chunk.usage.totalTokens,
+              };
+            }
+            yield chunk;
+          }
+          success = true;
+        } catch {
+          throw lastError;
+        }
+      } else {
         throw lastError;
       }
     }
-    throw lastError;
+
+    // Estimate tokens if not returned by API
+    if (finalUsage.totalTokens === 0) {
+      const promptText = serializeMessages(messages);
+      const estPrompt = Math.ceil(promptText.length / 4);
+      const estCompletion = Math.ceil(accumulatedContent.length / 4);
+      finalUsage = {
+        promptTokens: estPrompt,
+        completionTokens: estCompletion,
+        totalTokens: estPrompt + estCompletion,
+      };
+    }
+
+    const stepCost = this.costTracker.calculateCost(resolvedModel, finalUsage.promptTokens, finalUsage.completionTokens);
+    await this.costTracker.trackCost(resolvedModel, finalUsage.promptTokens, finalUsage.completionTokens);
+    this.budgetManager.recordSpent(stepCost);
+
+    if ((globalThis as any).broadcastCostTelemetryHandler) {
+      try {
+        (globalThis as any).broadcastCostTelemetryHandler({
+          inputTokens: finalUsage.promptTokens,
+          outputTokens: finalUsage.completionTokens,
+          totalTokens: finalUsage.totalTokens,
+          costUsd: this.costTracker.getTotalCost(),
+          limitUsd: this.budgetManager.getLimit(),
+        });
+      } catch {}
+    }
+
+    // Cache the fully compiled response
+    const completeResponse: ChatResponse = {
+      content: accumulatedContent,
+      model: resolvedModel,
+      provider: resolvedProvider,
+      usage: finalUsage,
+      finishReason: 'stop',
+    };
+
+    try {
+      await this.semanticCache.set(cacheKey, completeResponse);
+    } catch {}
+  }
+
+  /** Tạo cấu trúc đầu ra (structured output) theo schema của Zod */
+  async generateObject<T>(
+    schema: z.ZodType<T>,
+    messages: ChatMessage[],
+    options?: ChatOptions & { provider?: AIProviderType }
+  ): Promise<GenerateObjectResponse<T>> {
+    return generateObject(this, schema, messages, options);
+  }
+
+  /** Tạo vector embedding cho một chuỗi text */
+  async embed(
+    text: string,
+    options?: { model?: string; provider?: AIProviderType }
+  ): Promise<EmbeddingResponse> {
+    const provider = this.resolveProvider(options?.provider);
+    const maxAttempts = this.config.retryAttempts ?? 2;
+
+    return await this.executeWithFallback(
+      (p) => p.embed(text, options),
+      provider,
+      maxAttempts,
+    );
+  }
+
+  /** Tạo vector embedding cho danh sách các chuỗi text */
+  async embedMany(
+    texts: string[],
+    options?: { model?: string; provider?: AIProviderType }
+  ): Promise<EmbeddingManyResponse> {
+    const provider = this.resolveProvider(options?.provider);
+    const maxAttempts = this.config.retryAttempts ?? 2;
+
+    return await this.executeWithFallback(
+      (p) => p.embedMany(texts, options),
+      provider,
+      maxAttempts,
+    );
+  }
+
+  /** Sinh ảnh từ văn bản */
+  async generateImage(
+    prompt: string,
+    options?: any & { provider?: AIProviderType }
+  ): Promise<{ url: string; b64?: string }> {
+    const provider = this.resolveProvider(options?.provider);
+    const maxAttempts = this.config.retryAttempts ?? 2;
+
+    return await this.executeWithFallback(
+      (p) => {
+        if (!p.generateImage) {
+          throw new Error(`${p.name} does not support generateImage`);
+        }
+        return p.generateImage(prompt, options);
+      },
+      provider,
+      maxAttempts,
+    );
+  }
+
+  /** Chuyển văn bản thành giọng nói */
+  async generateSpeech(
+    text: string,
+    options?: any & { provider?: AIProviderType }
+  ): Promise<{ audio: Buffer; contentType: string }> {
+    const provider = this.resolveProvider(options?.provider);
+    const maxAttempts = this.config.retryAttempts ?? 2;
+
+    return await this.executeWithFallback(
+      (p) => {
+        if (!p.generateSpeech) {
+          throw new Error(`${p.name} does not support generateSpeech`);
+        }
+        return p.generateSpeech(text, options);
+      },
+      provider,
+      maxAttempts,
+    );
+  }
+
+  /** Sinh video từ văn bản */
+  async generateVideo(
+    prompt: string,
+    options?: any & { provider?: AIProviderType }
+  ): Promise<{ url: string }> {
+    const provider = this.resolveProvider(options?.provider);
+    const maxAttempts = this.config.retryAttempts ?? 2;
+
+    return await this.executeWithFallback(
+      (p) => {
+        if (!p.generateVideo) {
+          throw new Error(`${p.name} does not support generateVideo`);
+        }
+        return p.generateVideo(prompt, options);
+      },
+      provider,
+      maxAttempts,
+    );
+  }
+
+  /** Chuyển giọng nói thành văn bản */
+  async transcribe(
+    audio: Buffer,
+    options?: any & { provider?: AIProviderType }
+  ): Promise<{ text: string }> {
+    const provider = this.resolveProvider(options?.provider);
+    const maxAttempts = this.config.retryAttempts ?? 2;
+
+    return await this.executeWithFallback(
+      (p) => {
+        if (!p.transcribe) {
+          throw new Error(`${p.name} does not support transcribe`);
+        }
+        return p.transcribe(audio, options);
+      },
+      provider,
+      maxAttempts,
+    );
   }
 
   /** Test tất cả providers */

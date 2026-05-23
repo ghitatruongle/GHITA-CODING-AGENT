@@ -3,7 +3,7 @@
 // ==============================================================================
 
 import type { AIStreamChunk } from '@ghita/shared';
-import type { ChatMessage, ChatOptions, ChatResponse, ProviderConfig } from '../types.js';
+import type { ChatMessage, ChatOptions, ChatResponse, ProviderConfig, EmbeddingResponse, EmbeddingManyResponse } from '../types.js';
 import { BaseProvider } from './base.js';
 
 const GOOGLE_MODELS = [
@@ -182,5 +182,76 @@ export class GoogleProvider extends BaseProvider {
       default:
         return 'stop';
     }
+  }
+
+  async embed(text: string, options?: { model?: string }): Promise<EmbeddingResponse> {
+    const apiKey = this.getApiKey();
+    const model = options?.model ?? 'text-embedding-004';
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:embedContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: {
+            parts: [{ text }],
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Google API error (${response.status}): ${error}`);
+    }
+
+    const data = (await response.json()) as {
+      embedding: { values: number[] };
+    };
+
+    return {
+      embedding: data.embedding?.values ?? [],
+      model,
+      provider: 'google',
+    };
+  }
+
+  async embedMany(texts: string[], options?: { model?: string }): Promise<EmbeddingManyResponse> {
+    const apiKey = this.getApiKey();
+    const model = options?.model ?? 'text-embedding-004';
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:batchEmbedContents?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requests: texts.map((text) => ({
+            model: `models/${model}`,
+            content: {
+              parts: [{ text }],
+            },
+          })),
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Google API error (${response.status}): ${error}`);
+    }
+
+    const data = (await response.json()) as {
+      embeddings: Array<{ values: number[] }>;
+    };
+
+    const embeddings = data.embeddings?.map((e) => e.values) ?? [];
+
+    return {
+      embeddings,
+      model,
+      provider: 'google',
+    };
   }
 }

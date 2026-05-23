@@ -3,6 +3,7 @@
 // ==============================================================================
 
 import { useState, useRef } from 'react';
+import { useTranslation } from '../i18n';
 
 interface WorkflowNode {
   id: string;
@@ -20,11 +21,11 @@ interface WorkflowConnection {
   toPort: 'input';
 }
 
-const DEFAULT_NODES: WorkflowNode[] = [
+const getDefaultNodes = (t: (key: string) => string): WorkflowNode[] => [
   {
     id: 'node-start',
     type: 'start',
-    title: '🏁 Start Pipeline',
+    title: `🏁 ${t('workflow.startPipeline')}`,
     x: 60,
     y: 180,
     config: { trigger: 'Git Push Event' },
@@ -32,7 +33,7 @@ const DEFAULT_NODES: WorkflowNode[] = [
   {
     id: 'node-test',
     type: 'command',
-    title: '💻 Run Unit Tests',
+    title: `💻 ${t('workflow.runUnitTests')}`,
     x: 240,
     y: 180,
     config: { command: 'pnpm test --passWithNoTests' },
@@ -40,7 +41,7 @@ const DEFAULT_NODES: WorkflowNode[] = [
   {
     id: 'node-check',
     type: 'condition',
-    title: '❓ Tests Passed?',
+    title: `❓ ${t('workflow.testsPassed')}`,
     x: 430,
     y: 170,
     config: { condition: 'exitCode === 0' },
@@ -48,7 +49,7 @@ const DEFAULT_NODES: WorkflowNode[] = [
   {
     id: 'node-deploy',
     type: 'tool',
-    title: '🚀 Deploy to Vercel',
+    title: `🚀 ${t('workflow.deployVercel')}`,
     x: 640,
     y: 70,
     config: { tool: 'vercel-deploy', environment: 'production' },
@@ -56,7 +57,7 @@ const DEFAULT_NODES: WorkflowNode[] = [
   {
     id: 'node-fix',
     type: 'tool',
-    title: '🛠️ Trigger AI Auto-Fix',
+    title: `🛠️ ${t('workflow.triggerAutoFix')}`,
     x: 640,
     y: 280,
     config: { prompt: 'Fix the failed tests in sandbox environment' },
@@ -71,7 +72,8 @@ const DEFAULT_CONNECTIONS: WorkflowConnection[] = [
 ];
 
 export function WorkflowView() {
-  const [nodes, setNodes] = useState<WorkflowNode[]>(DEFAULT_NODES);
+  const { t } = useTranslation();
+  const [nodes, setNodes] = useState<WorkflowNode[]>(getDefaultNodes(t));
   const [connections, setConnections] = useState<WorkflowConnection[]>(DEFAULT_CONNECTIONS);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   
@@ -154,12 +156,12 @@ export function WorkflowView() {
 
   const getPlaceholderTitle = (type: WorkflowNode['type']) => {
     switch (type) {
-      case 'start': return '🏁 Start Trigger';
-      case 'tool': return '🔌 Call Tool';
-      case 'command': return '💻 Exec Command';
-      case 'condition': return '❓ Condition Check';
-      case 'loop': return '🔄 Repeat Loop';
-      case 'end': return '🎯 Finish Flow';
+      case 'start': return `🏁 ${t('workflow.startTrigger')}`;
+      case 'tool': return `🔌 ${t('workflow.callMcpTool')}`;
+      case 'command': return `💻 ${t('workflow.runCommand')}`;
+      case 'condition': return `❓ ${t('workflow.conditionalCheck')}`;
+      case 'loop': return `🔄 ${t('workflow.repeatLoop')}`;
+      case 'end': return `🎯 ${t('workflow.endNode')}`;
     }
   };
 
@@ -325,10 +327,10 @@ export function WorkflowView() {
       >
         <div>
           <h3 style={{ margin: '0 0 6px 0', fontSize: '14px', fontWeight: 700, letterSpacing: '0.5px', color: '#c7d2fe' }}>
-            🧩 DRAG ACTION NODES
+            🧩 {t('workflow.dragNodes')}
           </h3>
           <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>
-            Kéo các node vào canvas để tự thiết kế pipeline tự động hóa.
+            {t('workflow.dragNodesDesc')}
           </p>
         </div>
 
@@ -370,12 +372,12 @@ export function WorkflowView() {
                 {type === 'end' && '🎯'}
               </span>
               <span>
-                {type === 'start' && 'Start Trigger'}
-                {type === 'command' && 'Run Command'}
-                {type === 'tool' && 'Call MCP Tool'}
-                {type === 'condition' && 'Conditional Check'}
-                {type === 'loop' && 'Repeat Loop'}
-                {type === 'end' && 'End Node'}
+                {type === 'start' && t('workflow.startTrigger')}
+                {type === 'command' && t('workflow.runCommand')}
+                {type === 'tool' && t('workflow.callMcpTool')}
+                {type === 'condition' && t('workflow.conditionalCheck')}
+                {type === 'loop' && t('workflow.repeatLoop')}
+                {type === 'end' && t('workflow.endNode')}
               </span>
             </div>
           ))}
@@ -384,7 +386,7 @@ export function WorkflowView() {
         <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <button
             onClick={() => {
-              setNodes(DEFAULT_NODES);
+              setNodes(getDefaultNodes(t));
               setConnections(DEFAULT_CONNECTIONS);
               setSelectedNodeId(null);
             }}
@@ -399,7 +401,7 @@ export function WorkflowView() {
               cursor: 'pointer',
             }}
           >
-            🔄 Reset Default Demo
+            🔄 {t('workflow.resetDemo')}
           </button>
           <button
             onClick={clearCanvas}
@@ -414,7 +416,7 @@ export function WorkflowView() {
               cursor: 'pointer',
             }}
           >
-            🗑️ Clear Canvas
+            🗑️ {t('workflow.clearCanvas')}
           </button>
         </div>
       </div>
@@ -446,19 +448,19 @@ export function WorkflowView() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '18px' }}>🎨</span>
             <span style={{ fontWeight: 700, fontSize: '13px', letterSpacing: '0.5px' }}>
-              VISUAL ACTIONS CANVAS
+              {t('workflow.visualCanvas')}
             </span>
             <span style={{ fontSize: '11px', color: '#94a3b8', background: 'rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: '4px' }}>
-              Double click canvas to add cmd node
+              {t('workflow.doubleClickHint')}
             </span>
           </div>
 
           <div style={{ display: 'flex', gap: '10px' }}>
             <span style={{ fontSize: '11px', color: '#818cf8', fontWeight: 600 }}>
-              Active Steps: {nodes.length}
+              {t('workflow.activeSteps')} {nodes.length}
             </span>
             <span style={{ fontSize: '11px', color: '#34d399', fontWeight: 600 }}>
-              Connections: {connections.length}
+              {t('workflow.connections')} {connections.length}
             </span>
           </div>
         </div>
@@ -727,13 +729,13 @@ export function WorkflowView() {
         }}
       >
         <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: '#c7d2fe', letterSpacing: '0.5px' }}>
-          ⚙️ CONFIGURATION PANEL
+          ⚙️ {t('workflow.configPanel')}
         </h3>
 
         {selectedNode ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', flex: 1 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '11px', color: '#94a3b8' }}>Step Title:</label>
+              <label style={{ fontSize: '11px', color: '#94a3b8' }}>{t('workflow.stepTitle')}</label>
               <input
                 type="text"
                 value={selectedNode.title}
@@ -797,18 +799,18 @@ export function WorkflowView() {
                 color: '#a5b4fc',
               }}
             >
-              💡 <strong>Tip:</strong> Bạn có thể kết nối cổng ra của node này với cổng vào của node tiếp theo bằng cách click-drag chấm tròn màu xanh.
+              💡 <strong>Tip:</strong> {t('workflow.tip')}
             </div>
           </div>
         ) : (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '12px', textAlign: 'center' }}>
-            Chọn một action node trên canvas để tinh chỉnh tham số cấu hình.
+            {t('workflow.selectNodeHint')}
           </div>
         )}
 
         {/* JSON Code Compile Preview */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '16px' }}>
-          <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>COMPILED JSON PREVIEW:</span>
+          <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>{t('workflow.compiledJson')}</span>
           <pre
             style={{
               margin: 0,

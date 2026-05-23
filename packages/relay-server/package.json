@@ -1,0 +1,39 @@
+{
+  "name": "@ghita/relay-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Socket.IO Relay Server for GHITA CODING AGENT WAN connection",
+  "main": "./dist/index.js",
+  "type": "module",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@ghita/shared": "workspace:*",
+    "cors": "^2.8.5",
+    "express": "^4.21.1",
+    "socket.io": "^4.8.3"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^20.0.0",
+    "debug": "^4.4.3",
+    "socket.io-client": "^4.8.3",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.0",
+    "vitest": "^3.2.4"
+  }
+}

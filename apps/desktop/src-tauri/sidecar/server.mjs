@@ -6,8 +6,11 @@
 import { createServer } from 'node:http';
 import { request as httpsRequest } from 'node:https';
 import { Server } from 'socket.io';
+import { io as ioClient } from 'socket.io-client';
 import { randomBytes } from 'node:crypto';
-import { networkInterfaces, hostname } from 'node:os';
+import { networkInterfaces, hostname, homedir } from 'node:os';
+import fs from 'node:fs';
+import path from 'node:path';
 import { execSync } from 'node:child_process';
 import { GrpcServer, Orchestrator, ConfigLoader, RalphLoopManager, SecurityGuard } from '@ghita/ai-engine';
 import { createNodeSkillRegistry } from '@ghita/skills/node';
@@ -15,10 +18,21 @@ import { createComputerUseSkills, ComputerUseController } from '@ghita/computer-
 import { createNutJsAdapter } from '@ghita/computer-use/node';
 import { createBrowserControlSkills, BrowserController } from '@ghita/browser-control';
 import { createPlaywrightAdapter } from '@ghita/browser-control/node';
+import { createReActAgent, AIMessage } from '@ghita/agents';
 
 // --- Config ---
 const PORT = parseInt(process.env.GHITA_PORT || '8080', 10);
 const HOST = '0.0.0.0';
+const CLOUD_RELAY_ENABLED = false; // Tạm vô hiệu hóa — Render.com relay đã bị xóa
+const CLOUD_RELAY_URL = process.env.GHITA_RELAY_URL || 'https://ghita-relay-server.onrender.com';
+let cloudSocket = null;
+
+function broadcast(event, data) {
+  io.emit(event, data);
+  if (cloudSocket && cloudSocket.connected) {
+    cloudSocket.emit(event, data);
+  }
+}
 
 // --- Auto Port Liberation ---
 function liberatePort(port) {
@@ -47,6 +61,31 @@ function liberatePort(port) {
 }
 
 const PAIRING_TTL_MS = 300_000; // 5 minutes
+
+// Pending approvals registry for terminal commands
+const pendingApprovals = new Map();
+
+// Global workspace root initialization
+globalThis.ghitaWorkspaceRoot = globalThis.ghitaWorkspaceRoot || null;
+
+// Global command approval hook integration
+globalThis.approveCommandHandler = async (command) => {
+  return new Promise((resolve) => {
+    const approvalId = `approve_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    pendingApprovals.set(approvalId, resolve);
+    
+    // Broadcast the command execution approval request to connected clients
+    broadcast('require_approval', {
+      id: approvalId,
+      command,
+    });
+  });
+};
+
+// Global cost telemetry handler integration
+globalThis.broadcastCostTelemetryHandler = (data) => {
+  broadcast('cost_telemetry', data);
+};
 
 // --- Pairing Code ---
 function generatePairingCode() {
@@ -185,6 +224,12 @@ function publishToCloudDiscovery() {
     if (pcName) {
       publishToCloud(pcName, value);
     }
+
+    // 3. Register to Cloud Relay (tạm vô hiệu hóa)
+    if (CLOUD_RELAY_ENABLED && cloudSocket && cloudSocket.connected) {
+      log(`Registering code ${currentCode} to Cloud Relay...`);
+      cloudSocket.emit('register_desktop', { pairingCode: currentCode });
+    }
   } catch (e) {
     log(`Cloud discovery preparation exception: ${e.message}`);
   }
@@ -310,6 +355,7 @@ const httpServer = createServer((req, res) => {
         }
       }
       connectedDevices.delete(deviceId);
+      savePairedDevices();
       sendStatus();
       ipcEmit('unpaired', { deviceId });
 
@@ -333,12 +379,59 @@ const io = new Server(httpServer, {
     methods: ['GET', 'POST'],
   },
   transports: ['websocket', 'polling'],
-  pingInterval: 25000,
-  pingTimeout: 20000,
+  pingInterval: 5000,
+  pingTimeout: 3000,
 });
 
 // --- Connected devices ---
 const connectedDevices = new Map();
+
+// --- Persistent Paired Devices Storage ---
+const PAIRED_DEVICES_FILE = path.resolve(homedir(), '.ghita-paired-devices.json');
+
+function loadPairedDevices() {
+  try {
+    if (fs.existsSync(PAIRED_DEVICES_FILE)) {
+      const data = fs.readFileSync(PAIRED_DEVICES_FILE, 'utf8');
+      const list = JSON.parse(data);
+      if (Array.isArray(list)) {
+        for (const d of list) {
+          if (d.id && d.name) {
+            connectedDevices.set(d.id, {
+              id: d.id,
+              name: d.name,
+              platform: d.platform || 'android',
+              connected: false,
+              lastSeen: d.lastSeen || Date.now(),
+              socketId: null,
+              pairedAt: d.pairedAt || Date.now(),
+            });
+          }
+        }
+        log(`Loaded ${list.length} paired devices from persistent storage.`);
+      }
+    }
+  } catch (e) {
+    log(`Failed to load persistent paired devices: ${e.message}`);
+  }
+}
+
+function savePairedDevices() {
+  try {
+    const list = Array.from(connectedDevices.values())
+      .filter(d => d.id && d.id !== 'cloud_session') // Chỉ lưu thiết bị LAN thực tế, bỏ cloud
+      .map(d => ({
+        id: d.id,
+        name: d.name,
+        platform: d.platform,
+        pairedAt: d.pairedAt,
+        lastSeen: d.lastSeen,
+      }));
+    fs.writeFileSync(PAIRED_DEVICES_FILE, JSON.stringify(list, null, 2), 'utf8');
+  } catch (e) {
+    log(`Failed to save paired devices: ${e.message}`);
+  }
+}
 
 // --- Host Skill Registry (Node-capable) ---
 let nodeRegistry = null;
@@ -375,71 +468,11 @@ async function getOrCreateNodeRegistry() {
 }
 
 // --- Socket handlers ---
-io.on('connection', (socket) => {
-  log(`New connection: ${socket.id}`);
 
-  // Pairing
-  socket.on(EVENTS.PAIR, (data) => {
-    const code = data?.code?.toUpperCase();
-    const deviceId = data?.deviceId;
-
-    if (!code && !deviceId) {
-      socket.emit(EVENTS.ERROR, { message: 'Pairing code or device ID is required' });
-      return;
-    }
-
-    let device;
-
-    if (code) {
-      if (!validateCode(code)) {
-        socket.emit(EVENTS.ERROR, { message: 'Invalid or expired pairing code' });
-        return;
-      }
-
-      const dId = deviceId || `device_${Date.now()}_${socket.id.slice(0, 6)}`;
-      device = {
-        id: dId,
-        name: data?.deviceName || `Mobile-${socket.id.slice(0, 6)}`,
-        platform: data?.platform || 'android',
-        connected: true,
-        lastSeen: Date.now(),
-        socketId: socket.id,
-        pairedAt: Date.now(),
-      };
-
-      connectedDevices.set(device.id, device);
-      socket.join('paired-devices');
-
-      socket.emit(EVENTS.PAIR_CONFIRM, {
-        deviceName: 'GHITA Desktop',
-        deviceId: device.id,
-      });
-
-      regenerateCode();
-      log(`Device paired: ${device.name} (${device.id})`);
-      ipcEmit(EVENTS.PAIR_CONFIRM, { deviceId: device.id, name: device.name, platform: device.platform });
-    } else if (deviceId) {
-      device = connectedDevices.get(deviceId);
-      if (device) {
-        device.socketId = socket.id;
-        device.connected = true;
-        device.lastSeen = Date.now();
-        socket.join('paired-devices');
-
-        socket.emit(EVENTS.PAIR_CONFIRM, {
-          deviceName: 'GHITA Desktop',
-          deviceId: device.id,
-        });
-        log(`Session resumed for device: ${device.name} (${device.id})`);
-        ipcEmit(EVENTS.PAIR_CONFIRM, { deviceId: device.id, name: device.name, platform: device.platform, resumed: true });
-      } else {
-        socket.emit(EVENTS.ERROR, { message: 'Session expired. Please re-pair.' });
-        return;
-      }
-    }
-
-    sendStatus();
-  });
+function registerSocketEvents(socket, isCloud = false) {
+  const getDevice = () => {
+    return isCloud ? findCloudDevice() : findDeviceBySocket(socket.id);
+  };
 
   // Ralph Loop Execution
   socket.on('ralph_loop_run', async (data) => {
@@ -450,7 +483,7 @@ io.on('connection', (socket) => {
     log(`Running Ralph Loop for task: "${task}"`);
     
     // Gửi tín hiệu bắt đầu
-    io.emit('chat_start', { text: `[Ralph Loop] Đang khởi động vòng lặp tự sửa sai cho tác vụ: "${task}"`, senderId: 'system', senderName: 'GHITA Engine' });
+    broadcast('chat_start', { text: `[Ralph Loop] Đang khởi động vòng lặp tự sửa sai cho tác vụ: "${task}"`, senderId: 'system', senderName: 'GHITA Engine' });
 
     try {
       if (grpcServerInstance && grpcServerInstance.orchestrator) {
@@ -482,7 +515,7 @@ io.on('connection', (socket) => {
 
         const result = await ralph.run(task, mockExecute, (progress) => {
           log(`[Ralph Loop Progress] Iteration ${progress.iteration}: ${progress.message}`);
-          io.emit('ralph_loop_progress', {
+          broadcast('ralph_loop_progress', {
             iteration: progress.iteration,
             cost: progress.cost,
             message: progress.message,
@@ -490,13 +523,13 @@ io.on('connection', (socket) => {
           });
           
           // Gửi text tiến trình vào chat panel
-          io.emit('chat_chunk', { text: `\n🔄 **[Vòng lặp ${progress.iteration}]** ${progress.message}\n` });
+          broadcast('chat_chunk', { text: `\n🔄 **[Vòng lặp ${progress.iteration}]** ${progress.message}\n` });
           if (progress.code) {
-            io.emit('chat_chunk', { text: `\`\`\`tsx\n${progress.code}\n\`\`\`\n` });
+            broadcast('chat_chunk', { text: `\`\`\`tsx\n${progress.code}\n\`\`\`\n` });
           }
         });
 
-        io.emit('ralph_loop_done', {
+        broadcast('ralph_loop_done', {
           success: result.success,
           iterations: result.currentIteration,
           totalCostUsd: result.totalCostUsd,
@@ -504,7 +537,7 @@ io.on('connection', (socket) => {
           code: result.history[result.history.length - 1]?.content || '',
         });
         
-        io.emit('chat_done', {
+        broadcast('chat_done', {
           text: `### 🎉 Ralph Loop Hoàn Tất!
 - **Trạng thái:** ${result.success ? 'Thành công ✨' : 'Thất bại ❌'}
 - **Số lượt sửa lỗi:** ${result.currentIteration} lần
@@ -514,17 +547,17 @@ io.on('connection', (socket) => {
         });
 
       } else {
-        io.emit('chat_error', { message: '⚙️ AI Orchestrator chưa được cấu hình. Vui lòng mở tab API Manager, thêm API Key và bật Active cho ít nhất 1 provider.' });
+        socket.emit('chat_error', { message: '⚙️ AI Orchestrator chưa được cấu hình. Vui lòng mở tab API Manager, thêm API Key và bật Active cho ít nhất 1 provider.' });
       }
     } catch (err) {
       log(`Error in Ralph Loop execution: ${err.message}`);
-      io.emit('chat_error', { message: `Ralph Loop Exception: ${err.message}` });
+      socket.emit('chat_error', { message: `Ralph Loop Exception: ${err.message}` });
     }
   });
 
   // Commands
   socket.on(EVENTS.COMMAND, (data) => {
-    const device = findDeviceBySocket(socket.id);
+    const device = getDevice();
     if (!device) {
       socket.emit(EVENTS.ERROR, { message: 'Unauthorized: Device is not paired' });
       return;
@@ -559,10 +592,264 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Set Workspace Root
+  socket.on('set_workspace', (data, callback) => {
+    const root = data?.path || null;
+    globalThis.ghitaWorkspaceRoot = root;
+    if (root) {
+      process.env.GHITA_WORKSPACE = root;
+    }
+    log(`Workspace set to: ${root}`);
+    if (typeof callback === 'function') {
+      callback({ success: true, path: root });
+    } else {
+      socket.emit('workspace_updated', { path: root });
+    }
+  });
+
+  // Get Workspace Root
+  socket.on('get_workspace', (callback) => {
+    const root = globalThis.ghitaWorkspaceRoot || null;
+    if (typeof callback === 'function') {
+      callback({ path: root });
+    } else {
+      socket.emit('workspace_status', { path: root });
+    }
+  });
+
+  // Command Approvals Handshake
+  socket.on('approve_command', (data) => {
+    const id = data?.id;
+    const resolve = pendingApprovals.get(id);
+    if (resolve) {
+      log(`Command approval ID ${id} APPROVED by client.`);
+      resolve(true);
+      pendingApprovals.delete(id);
+    }
+  });
+
+  socket.on('reject_command', (data) => {
+    const id = data?.id;
+    const resolve = pendingApprovals.get(id);
+    if (resolve) {
+      log(`Command approval ID ${id} REJECTED by client.`);
+      resolve(false);
+      pendingApprovals.delete(id);
+    }
+  });
+
+  // Local Agentic Execution (Phase 7 ReAct loop)
+  socket.on('agent_run', async (data) => {
+    const task = data?.task || '';
+    const maxIterations = data?.maxIterations || 10;
+    const provider = data?.provider;
+    const model = data?.model;
+    const apiKey = data?.apiKey;
+    const baseUrl = data?.baseUrl;
+
+    log(`Running Agentic ReAct loop for task: "${task}"`);
+    broadcast('chat_start', { text: `🤖 [GHITA ReAct] Đang bắt đầu thực hiện vòng lặp Agentic ReAct cho tác vụ: "${task}"`, senderId: 'system', senderName: 'GHITA ReAct' });
+
+    try {
+      if (grpcServerInstance && grpcServerInstance.orchestrator) {
+        // Sync API credentials dynamically if passed
+        if (provider && (apiKey || baseUrl)) {
+          try {
+            const registry = grpcServerInstance.orchestrator.getRegistry();
+            registry.registerFromConfig({
+              type: provider,
+              apiKey: apiKey || '',
+              baseUrl: baseUrl || '',
+              defaultModel: model || '',
+            });
+            log(`Synced credentials for provider: ${provider}`);
+          } catch (e) {
+            log(`Failed to sync provider credentials: ${e.message}`);
+          }
+        }
+
+        // Gather all workspace and web tools from orchestrator.builtInTools
+        const tools = grpcServerInstance.orchestrator.builtInTools.map(t => ({
+          name: t.name,
+          description: t.description,
+          parameters: t.parameters,
+          execute: t.execute,
+        }));
+
+        // Implement custom parseToolCalls to extract XML and JSON format outputs stably
+        const customParseToolCalls = (message) => {
+          const text = message.getText();
+          const actions = [];
+
+          // 1. Try native toolCalls if present in metadata
+          if (message.metadata?.toolCalls && Array.isArray(message.metadata.toolCalls)) {
+            return message.metadata.toolCalls.map(tc => ({
+              tool: tc.name,
+              toolCallId: tc.id || `call_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+              input: tc.arguments,
+            }));
+          }
+
+          // 2. Parser for XML tags like: <tool_call name="...">{"filePath": "..."}</tool_call>
+          const xmlRegex = /<tool_call\s+name="([^"]+)"[^>]*>([\s\S]*?)<\/tool_call>/gi;
+          let match;
+          while ((match = xmlRegex.exec(text)) !== null) {
+            const toolName = match[1].trim();
+            const body = match[2].trim();
+            let input = {};
+            try {
+              if (body.startsWith('{')) {
+                input = JSON.parse(body);
+              } else {
+                // Nested keys like <filePath>somefile.txt</filePath>
+                const keyValRegex = /<([^>]+)>([\s\S]*?)<\/ \1>/g;
+                const keyValRegex2 = /<([^>]+)>([\s\S]*?)<\/\1>/g;
+                let kvMatch;
+                while ((kvMatch = keyValRegex2.exec(body)) !== null) {
+                  input[kvMatch[1].trim()] = kvMatch[2].trim();
+                }
+              }
+            } catch (err) {
+              log(`Failed to parse XML tool call body: ${body}. Error: ${err.message}`);
+            }
+            actions.push({
+              tool: toolName,
+              toolCallId: `call_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+              input,
+            });
+          }
+          if (actions.length > 0) return actions;
+
+          // 3. Parser for Markdown JSON blocks
+          const markdownJsonRegex = /```json\s*([\s\S]*?)```/gi;
+          let mdMatch;
+          while ((mdMatch = markdownJsonRegex.exec(text)) !== null) {
+            try {
+              const parsed = JSON.parse(mdMatch[1].trim());
+              if (Array.isArray(parsed)) {
+                for (const item of parsed) {
+                  const name = item.name || item.tool;
+                  if (name) {
+                    actions.push({
+                      tool: name,
+                      toolCallId: item.toolCallId || `call_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+                      input: item.arguments || item.input || {},
+                    });
+                  }
+                }
+              } else if (parsed && typeof parsed === 'object') {
+                const name = parsed.name || parsed.tool;
+                if (name) {
+                  actions.push({
+                    tool: name,
+                    toolCallId: parsed.toolCallId || `call_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+                    input: parsed.arguments || parsed.input || {},
+                  });
+                }
+              }
+            } catch (e) {
+              // Ignore invalid JSON inside markdown blocks
+            }
+          }
+
+          return actions;
+        };
+
+        const agent = createReActAgent({
+          config: {
+            name: 'GHITA-ReAct-Local',
+            systemPrompt: `You are GHITA, a powerful AI coding agent. You operate locally inside the user's workspace directory.
+You can use the following tools:
+- list_dir: List files in the workspace.
+- read_file: Read file contents (supports startLine/endLine).
+- write_file: Write a new file.
+- replace_file_content: Edit a contiguous block of text in an existing file.
+- grep_search: Search for a query inside the files.
+- run_command: Run terminal commands (will require user consent).
+- web_search: Search the web.
+- web_fetch: Fetch a URL.
+
+When using tools, you must output either standard function calling metadata or a markdown code block containing a JSON tool call object, or an XML tag like:
+<tool_call name="read_file">{"filePath": "package.json"}</tool_call>
+
+If you choose JSON code block, output in this exact structure:
+\`\`\`json
+{
+  "name": "tool_name",
+  "arguments": {
+    "arg1": "val1"
+  }
+}
+\`\`\`
+State your reasoning step by step, then invoke a tool call. Repeat this cycle until you have achieved the goal, then output your final answer.`,
+            maxIterations,
+            tools,
+            model,
+            provider,
+          },
+          llmCall: async (messages) => {
+            const chatMessages = messages.map(msg => ({
+              role: msg.role === 'assistant' ? 'assistant' : msg.role === 'system' ? 'system' : 'user',
+              content: msg.getText(),
+            }));
+            const res = await grpcServerInstance.orchestrator.chat(chatMessages, {
+              provider,
+              model,
+            });
+            return new AIMessage(res.content, {
+              metadata: {
+                usage: res.usage,
+              }
+            });
+          },
+          parseToolCalls: customParseToolCalls,
+        });
+
+        // Run agent and emit socket events for real-time telemetry
+        const result = await agent.run(task, {
+          onStepStart: (step, action) => {
+            broadcast('agent_step_start', { step, action });
+            broadcast('chat_chunk', { text: `\n🤔 *[Bước ${step + 1}] Suy nghĩ...* Gọi công cụ \`${action.tool}\`...\n` });
+          },
+          onStepEnd: (step, observation) => {
+            broadcast('agent_step_end', { step, observation });
+            const preview = observation.length > 500 ? observation.slice(0, 500) + '... (trực quan hóa bị rút gọn)' : observation;
+            broadcast('chat_chunk', { text: `\n📝 *Kết quả công cụ:* \n\`\`\`\n${preview}\n\`\`\`\n` });
+          },
+          onToolCall: (tool, input) => {
+            broadcast('agent_tool_call', { tool, input });
+          },
+          onToolResult: (tool, result) => {
+            broadcast('agent_tool_result', { tool, result });
+          },
+        });
+
+        broadcast('agent_run_done', {
+          output: result.output,
+          iterations: result.iterations,
+          duration: result.duration,
+          stepsCount: result.steps.length,
+        });
+
+        broadcast('chat_done', {
+          text: `### ✅ Hoàn thành tác vụ Agentic ReAct!
+${result.output}`
+        });
+
+      } else {
+        socket.emit('chat_error', { message: '⚙️ AI Orchestrator chưa được cấu hình. Vui lòng mở tab API Manager, thêm API Key và bật Active cho ít nhất 1 provider.' });
+      }
+    } catch (err) {
+      log(`Error in agent run: ${err.message}`);
+      socket.emit('chat_error', { message: `ReAct Agent Exception: ${err.message}` });
+      broadcast('chat_done', { text: `❌ Vòng lặp Agentic ReAct gặp lỗi: ${err.message}` });
+    }
+  });
+
   // Chat
   socket.on(EVENTS.CHAT, async (data) => {
-    const device = findDeviceBySocket(socket.id);
-    const isDesktop = data?.isDesktop || !device;
+    const device = getDevice();
+    const isDesktop = data?.isDesktop || (!device && !isCloud);
 
     if (!isDesktop && !device) {
       socket.emit(EVENTS.ERROR, { message: 'Unauthorized: Device is not paired' });
@@ -597,7 +884,7 @@ io.on('connection', (socket) => {
       }
 
       // Phát sự kiện bắt đầu streaming token cho cả hai thiết bị
-      io.emit('chat_start', { text: data.text, senderId, senderName });
+      broadcast('chat_start', { text: data.text, senderId, senderName });
 
       let fullResponse = '';
       try {
@@ -639,7 +926,7 @@ io.on('connection', (socket) => {
           for await (const chunk of stream) {
             if (chunk.content) {
               fullResponse += chunk.content;
-              io.emit('chat_chunk', { text: chunk.content });
+              broadcast('chat_chunk', { text: chunk.content });
             }
             if (chunk.usage) {
               lastUsage = chunk.usage;
@@ -653,26 +940,25 @@ io.on('connection', (socket) => {
             totalTokens: Math.ceil(((data.text || '').length + fullResponse.length) / 4),
           };
 
-          io.emit('chat_done', { text: fullResponse, usage });
+          broadcast('chat_done', { text: fullResponse, usage });
         } else {
           // Fallback response nếu orchestrator chưa sẵn sàng
           const fallbackText = `⚙️ **AI Engine chưa sẵn sàng.**\n\nHệ thống nhận được tin nhắn: "${data.text}"\n\nĐể sử dụng Chat AI, vui lòng:\n1. Mở tab **API Manager** (🔑) trên ứng dụng Desktop\n2. Thêm ít nhất 1 nhà cung cấp AI và nhập API Key\n3. Bật **Active** cho provider đó\n\nSau đó hãy thử lại!`;
-          io.emit('chat_chunk', { text: fallbackText });
-          io.emit('chat_done', { text: fallbackText });
+          broadcast('chat_chunk', { text: fallbackText });
+          broadcast('chat_done', { text: fallbackText });
         }
       } catch (err) {
         log(`Error generating AI streaming: ${err.message}`);
-        io.emit('chat_error', { message: err.message });
+        broadcast('chat_error', { message: err.message });
         // Luôn phát chat_done để giải phóng trạng thái UI trên client
-        io.emit('chat_done', { text: fullResponse || `Lỗi: ${err.message}` });
+        broadcast('chat_done', { text: fullResponse || `Lỗi: ${err.message}` });
       }
-
     }
   });
 
   // Screenshot
   socket.on(EVENTS.SCREENSHOT, async () => {
-    const device = findDeviceBySocket(socket.id);
+    const device = getDevice();
     if (!device) {
       socket.emit(EVENTS.ERROR, { message: 'Unauthorized: Device is not paired' });
       return;
@@ -696,12 +982,12 @@ io.on('connection', (socket) => {
   // Computer Use step feedback/preview
   socket.on('computer_use_step', (data) => {
     log(`Computer Use step preview received: ${data?.action || 'unknown action'}`);
-    io.emit('computer_use_step', data);
+    broadcast('computer_use_step', data);
   });
 
   // Approve/Reject
   socket.on(EVENTS.APPROVE, () => {
-    const device = findDeviceBySocket(socket.id);
+    const device = getDevice();
     if (device) {
       device.lastSeen = Date.now();
       ipcEmit(EVENTS.APPROVE, { deviceId: device.id });
@@ -709,7 +995,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on(EVENTS.REJECT, () => {
-    const device = findDeviceBySocket(socket.id);
+    const device = getDevice();
     if (device) {
       device.lastSeen = Date.now();
       ipcEmit(EVENTS.REJECT, { deviceId: device.id });
@@ -718,30 +1004,105 @@ io.on('connection', (socket) => {
 
   // Pong
   socket.on(EVENTS.PONG, () => {
-    const device = findDeviceBySocket(socket.id);
+    const device = getDevice();
     if (device) device.lastSeen = Date.now();
   });
 
   // Unpair
   socket.on(EVENTS.UNPAIR, (data) => {
-    const deviceId = data?.deviceId || findDeviceBySocket(socket.id)?.id;
+    const deviceId = data?.deviceId || getDevice()?.id;
     if (deviceId) {
       const device = connectedDevices.get(deviceId);
       if (device) {
         log(`Unpairing device via socket event: ${device.name} (${device.id})`);
-        const socketId = device.socketId;
-        if (socketId) {
-          const activeSocket = io.sockets.sockets.get(socketId);
-          if (activeSocket) {
-            activeSocket.emit('unpaired');
-            activeSocket.disconnect(true);
+        const sId = device.socketId;
+        if (sId) {
+          if (sId === 'cloud_relay') {
+            if (cloudSocket) {
+              cloudSocket.emit('disconnect_peer', { reason: 'Unpaired by desktop' });
+            }
+          } else {
+            const activeSocket = io.sockets.sockets.get(sId);
+            if (activeSocket) {
+              activeSocket.emit('unpaired');
+              activeSocket.disconnect(true);
+            }
           }
         }
         connectedDevices.delete(deviceId);
+        savePairedDevices();
         sendStatus();
         ipcEmit('unpaired', { deviceId });
       }
     }
+  });
+}
+
+io.on('connection', (socket) => {
+  log(`New connection: ${socket.id}`);
+
+  // Pairing
+  socket.on(EVENTS.PAIR, (data) => {
+    const code = data?.code?.toUpperCase();
+    const deviceId = data?.deviceId;
+
+    if (!code && !deviceId) {
+      socket.emit(EVENTS.ERROR, { message: 'Pairing code or device ID is required' });
+      return;
+    }
+
+    let device;
+
+    if (code) {
+      if (!validateCode(code)) {
+        socket.emit(EVENTS.ERROR, { message: 'Invalid or expired pairing code' });
+        return;
+      }
+
+      const dId = deviceId || `device_${Date.now()}_${socket.id.slice(0, 6)}`;
+      device = {
+        id: dId,
+        name: data?.deviceName || `Mobile-${socket.id.slice(0, 6)}`,
+        platform: data?.platform || 'android',
+        connected: true,
+        lastSeen: Date.now(),
+        socketId: socket.id,
+        pairedAt: Date.now(),
+      };
+
+      connectedDevices.set(device.id, device);
+      savePairedDevices();
+      socket.join('paired-devices');
+
+      socket.emit(EVENTS.PAIR_CONFIRM, {
+        deviceName: 'GHITA Desktop',
+        deviceId: device.id,
+      });
+
+      regenerateCode();
+      log(`Device paired: ${device.name} (${device.id})`);
+      ipcEmit(EVENTS.PAIR_CONFIRM, { deviceId: device.id, name: device.name, platform: device.platform });
+    } else if (deviceId) {
+      device = connectedDevices.get(deviceId);
+      if (device) {
+        device.socketId = socket.id;
+        device.connected = true;
+        device.lastSeen = Date.now();
+        socket.join('paired-devices');
+
+        socket.emit(EVENTS.PAIR_CONFIRM, {
+          deviceName: 'GHITA Desktop',
+          deviceId: device.id,
+        });
+        log(`Session resumed for device: ${device.name} (${device.id})`);
+        ipcEmit(EVENTS.PAIR_CONFIRM, { deviceId: device.id, name: device.name, platform: device.platform, resumed: true });
+      } else {
+        socket.emit(EVENTS.ERROR, { message: 'Session expired. Please re-pair.' });
+        return;
+      }
+    }
+
+    sendStatus();
   });
 
   // Disconnect
@@ -755,12 +1116,20 @@ io.on('connection', (socket) => {
     }
   });
 
+  registerSocketEvents(socket, false);
   sendStatus();
 });
 
 function findDeviceBySocket(socketId) {
   for (const device of connectedDevices.values()) {
     if (device.socketId === socketId) return device;
+  }
+  return undefined;
+}
+
+function findCloudDevice() {
+  for (const device of connectedDevices.values()) {
+    if (device.socketId === 'cloud_relay') return device;
   }
   return undefined;
 }
@@ -778,6 +1147,109 @@ function sendStatus() {
     deviceCount: connectedCount,
     devices,
   });
+
+  if (cloudSocket && cloudSocket.connected) {
+    cloudSocket.emit(EVENTS.STATUS, {
+      deviceCount: connectedCount,
+      devices,
+    });
+  }
+}
+
+let keepAliveInterval = null;
+
+function startKeepAlivePing() {
+  if (keepAliveInterval) {
+    clearInterval(keepAliveInterval);
+  }
+
+  log(`[Cloud] Starting Keep-Alive self-pings every 10 minutes.`);
+  keepAliveInterval = setInterval(async () => {
+    if (!cloudSocket || !cloudSocket.connected) return;
+    
+    const pingUrl = `${CLOUD_RELAY_URL}/health`;
+    log(`[Cloud] Sending self-ping to ${pingUrl} to prevent sleep...`);
+    
+    try {
+      const res = await fetch(pingUrl);
+      log(`[Cloud] Ping response status: ${res.status}`);
+    } catch (e) {
+      log(`[Cloud] Ping error: ${e.message}`);
+    }
+  }, 600_000); // 10 minutes
+  
+  if (typeof keepAliveInterval.unref === 'function') {
+    keepAliveInterval.unref();
+  }
+}
+
+function initCloudSocket() {
+  if (cloudSocket) {
+    try {
+      cloudSocket.removeAllListeners();
+      cloudSocket.disconnect();
+    } catch (e) {}
+  }
+
+  log(`Initializing Cloud Relay client connection to: ${CLOUD_RELAY_URL}`);
+  cloudSocket = ioClient(CLOUD_RELAY_URL, {
+    transports: ['websocket', 'polling'],
+    reconnection: true,
+    reconnectionDelay: 2000,
+    reconnectionDelayMax: 10000,
+    timeout: 10000,
+  });
+
+  cloudSocket.on('connect', () => {
+    log(`[Cloud] Connected to Cloud Relay! Registering code: ${currentCode}`);
+    cloudSocket.emit('register_desktop', { pairingCode: currentCode });
+  });
+
+  cloudSocket.on('disconnect', (reason) => {
+    log(`[Cloud] Disconnected from Cloud Relay: ${reason}`);
+    // Clean up cloud device
+    const device = findCloudDevice();
+    if (device) {
+      device.connected = false;
+      log(`[Cloud] Virtual Cloud Device disconnected.`);
+      ipcEmit(EVENTS.DISCONNECT, { deviceId: device.id, name: device.name, reason });
+      sendStatus();
+    }
+  });
+
+  cloudSocket.on('pair_confirm', (data) => {
+    log(`[Cloud] Paired with Mobile via Cloud Relay! Peer socket: ${data.peerId}`);
+    
+    // Create virtual cloud device
+    const device = {
+      id: 'cloud_session',
+      name: 'Mobile (Cloud)',
+      platform: 'android',
+      connected: true,
+      lastSeen: Date.now(),
+      socketId: 'cloud_relay',
+      pairedAt: Date.now(),
+    };
+
+    connectedDevices.set(device.id, device);
+    log(`[Cloud] Paired successfully: ${device.name} (${device.id})`);
+    ipcEmit(EVENTS.PAIR_CONFIRM, { deviceId: device.id, name: device.name, platform: device.platform });
+    sendStatus();
+  });
+
+  cloudSocket.on('disconnect_peer', (data) => {
+    log(`[Cloud] Mobile peer disconnected via Cloud Relay: ${data?.reason || 'No reason'}`);
+    const device = findCloudDevice();
+    if (device) {
+      device.connected = false;
+      connectedDevices.delete(device.id);
+      ipcEmit(EVENTS.DISCONNECT, { deviceId: device.id, name: device.name, reason: data?.reason || 'Mobile offline' });
+      sendStatus();
+    }
+  });
+
+  registerSocketEvents(cloudSocket, true);
+  startKeepAlivePing();
 }
 
 function log(msg) {
@@ -864,12 +1336,14 @@ httpServer.on('error', (err) => {
 });
 
 httpServer.listen(PORT, HOST, async () => {
+  loadPairedDevices();
   const ip = getLocalIP();
   log(`Server listening on ${HOST}:${PORT}`);
   log(`Local IP: ${ip}`);
   const code = getCode();
   log(`Pairing code: ${code}`);
   publishToCloudDiscovery();
+  // initCloudSocket(); // Cloud Relay tạm vô hiệu hóa — Render.com relay đã bị xóa
 
   // Khởi động gRPC Server
   try {

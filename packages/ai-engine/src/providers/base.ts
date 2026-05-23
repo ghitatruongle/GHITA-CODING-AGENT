@@ -9,7 +9,10 @@ import type {
   ChatOptions,
   ChatResponse,
   ProviderConfig,
+  EmbeddingResponse,
+  EmbeddingManyResponse,
 } from '../types.js';
+import { AIUnsupportedFeatureError } from '../errors/index.js';
 
 export abstract class BaseProvider implements AIProvider {
   abstract readonly type: AIProviderType;
@@ -62,5 +65,29 @@ export abstract class BaseProvider implements AIProvider {
 
   protected getBaseUrl(): string | undefined {
     return this.config.baseUrl;
+  }
+
+  async embed(_text: string, _options?: { model?: string }): Promise<EmbeddingResponse> {
+    throw new AIUnsupportedFeatureError(this.name, 'embed');
+  }
+
+  async embedMany(_texts: string[], _options?: { model?: string }): Promise<EmbeddingManyResponse> {
+    throw new AIUnsupportedFeatureError(this.name, 'embedMany');
+  }
+
+  async generateImage(_prompt: string, _options?: any): Promise<{ url: string; b64?: string }> {
+    throw new AIUnsupportedFeatureError(this.name, 'generateImage');
+  }
+
+  async generateSpeech(_text: string, _options?: any): Promise<{ audio: Buffer; contentType: string }> {
+    throw new AIUnsupportedFeatureError(this.name, 'generateSpeech');
+  }
+
+  async generateVideo(_prompt: string, _options?: any): Promise<{ url: string }> {
+    throw new AIUnsupportedFeatureError(this.name, 'generateVideo');
+  }
+
+  async transcribe(_audio: Buffer, _options?: any): Promise<{ text: string }> {
+    throw new AIUnsupportedFeatureError(this.name, 'transcribe');
   }
 }

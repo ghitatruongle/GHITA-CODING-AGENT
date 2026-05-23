@@ -4,23 +4,12 @@
 
 import { useState } from 'react';
 import { useAppStore, type ThemeMode } from '../stores/appStore';
+import { useTranslation } from '../i18n';
 import { isWindows, isLinux } from '@ghita/shared';
-
-const THEME_OPTIONS: Array<{ value: ThemeMode; label: string; icon: string }> = [
-  { value: 'dark', label: 'Dark', icon: '🌙' },
-  { value: 'light', label: 'Light', icon: '☀️' },
-];
 
 const LANGUAGE_OPTIONS = [
   { value: 'vi', label: 'Tiếng Việt' },
   { value: 'en', label: 'English' },
-];
-
-const LOG_LEVEL_OPTIONS = [
-  { value: 'debug', label: 'Debug' },
-  { value: 'info', label: 'Info' },
-  { value: 'warn', label: 'Warning' },
-  { value: 'error', label: 'Error' },
 ];
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -117,6 +106,19 @@ export function SettingsView() {
   const setTheme = useAppStore((s) => s.setTheme);
   const setLanguage = useAppStore((s) => s.setLanguage);
   const setLogLevel = useAppStore((s) => s.setLogLevel);
+  const { t } = useTranslation();
+
+  const THEME_OPTIONS: Array<{ value: ThemeMode; label: string; icon: string }> = [
+    { value: 'dark', label: t('settings.themeDark'), icon: '🌙' },
+    { value: 'light', label: t('settings.themeLight'), icon: '☀️' },
+  ];
+
+  const LOG_LEVEL_OPTIONS = [
+    { value: 'debug', label: t('settings.logDebug') },
+    { value: 'info', label: t('settings.logInfo') },
+    { value: 'warn', label: t('settings.logWarn') },
+    { value: 'error', label: t('settings.logError') },
+  ];
 
   // Phase 5: MCP & Hooks state
   const mcpServers = useAppStore((s) => s.mcpServers);
@@ -151,21 +153,21 @@ export function SettingsView() {
           marginBottom: '8px',
         }}
       >
-        ⚙️ Settings
+        ⚙️ {t('settings.title')}
       </h2>
       <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '32px' }}>
-        Cấu hình ứng dụng GHITA CODING AGENT
+        {t('settings.subtitle')}
       </p>
 
-      <Section title="🎨 Giao diện">
-        <SettingRow label="Theme" description="Chọn giao diện sáng hoặc tối">
+      <Section title={`🎨 ${t('settings.appearance')}`}>
+        <SettingRow label={t('settings.theme')} description={t('settings.themeDesc')}>
           <Select
             value={theme}
             options={THEME_OPTIONS}
             onChange={(v) => setTheme(v as ThemeMode)}
           />
         </SettingRow>
-        <SettingRow label="Ngôn ngữ" description="Ngôn ngữ hiển thị">
+        <SettingRow label={t('settings.language')} description={t('settings.languageDesc')}>
           <Select
             value={language}
             options={LANGUAGE_OPTIONS}
@@ -174,8 +176,8 @@ export function SettingsView() {
         </SettingRow>
       </Section>
 
-      <Section title="📝 Logging">
-        <SettingRow label="Log Level" description="Mức độ chi tiết của log">
+      <Section title={`📝 ${t('settings.logging')}`}>
+        <SettingRow label={t('settings.logLevel')} description={t('settings.logLevelDesc')}>
           <Select
             value={logLevel}
             options={LOG_LEVEL_OPTIONS}
@@ -184,10 +186,10 @@ export function SettingsView() {
         </SettingRow>
       </Section>
 
-      <Section title="🤖 AI Providers">
+      <Section title={`🤖 ${t('settings.aiProviders')}`}>
         <SettingRow
-          label="API Keys"
-          description="Quản lý trong tab API"
+          label={t('settings.apiKeys')}
+          description={t('settings.apiKeysDesc')}
         >
           <button
             onClick={() => useAppStore.getState().setActiveTab('api')}
@@ -201,21 +203,21 @@ export function SettingsView() {
               cursor: 'pointer',
             }}
           >
-            Mở API Manager
+            {t('settings.openApiManager')}
           </button>
         </SettingRow>
       </Section>
 
       {/* Phase 5A: MCP Servers */}
-      <Section title="🔌 MCP Servers (Model Context Protocol)">
+      <Section title={`🔌 ${t('settings.mcpServers')}`}>
         <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-          Cấu hình MCP servers để mở rộng tool capabilities cho AI.
+          {t('settings.mcpServersDesc')}
         </p>
         {mcpServers.map((server, i) => (
           <SettingRow
             key={i}
             label={`${server.name} (${server.transport})`}
-            description={server.enabled ? 'Enabled' : 'Disabled'}
+            description={server.enabled ? t('common.enabled') : t('common.disabled')}
           >
             <div style={{ display: 'flex', gap: '8px' }}>
               <span
@@ -229,7 +231,7 @@ export function SettingsView() {
                   border: `1px solid ${server.connected ? 'rgba(16,185,129,0.3)' : 'rgba(148,163,184,0.2)'}`,
                 }}
               >
-                {server.connected ? '● Connected' : '○ Disconnected'}
+                {server.connected ? `● ${t('common.connected')}` : `○ ${t('common.disconnected')}`}
               </span>
               <button
                 onClick={() => {
@@ -247,7 +249,7 @@ export function SettingsView() {
                   cursor: 'pointer',
                 }}
               >
-                {server.enabled ? 'Disable' : 'Enable'}
+                {server.enabled ? t('common.disable') : t('common.enable')}
               </button>
               <button
                 onClick={() => setMcpServers(mcpServers.filter((_, idx) => idx !== i))}
@@ -261,15 +263,15 @@ export function SettingsView() {
                   cursor: 'pointer',
                 }}
               >
-                Remove
+                {t('common.remove')}
               </button>
             </div>
           </SettingRow>
         ))}
         <div style={{ display: 'flex', gap: '8px', marginTop: '12px', alignItems: 'center' }}>
-          <input type="text" placeholder="Name" value={mcpName} onChange={(e) => setMcpName(e.target.value)}
+          <input type="text" placeholder={t('settings.mcpNamePlaceholder')} value={mcpName} onChange={(e) => setMcpName(e.target.value)}
             style={{ flex: '0 0 100px', padding: '6px 10px', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', color: '#f8fafc', fontSize: '12px', outline: 'none' }} />
-          <input type="text" placeholder="Command (e.g. npx -y @mcp/server)" value={mcpCommand} onChange={(e) => setMcpCommand(e.target.value)}
+          <input type="text" placeholder={t('settings.mcpCommandPlaceholder')} value={mcpCommand} onChange={(e) => setMcpCommand(e.target.value)}
             style={{ flex: 1, padding: '6px 10px', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', color: '#f8fafc', fontSize: '12px', outline: 'none' }} />
           <select value={mcpTransport} onChange={(e) => setMcpTransport(e.target.value as 'stdio' | 'sse')}
             style={{ padding: '6px 10px', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', color: '#f8fafc', fontSize: '12px' }}>
@@ -278,29 +280,29 @@ export function SettingsView() {
           </select>
           <button onClick={() => { if (mcpName && mcpCommand) { setMcpServers([...mcpServers, { name: mcpName, transport: mcpTransport, enabled: true, connected: false }]); setMcpName(''); setMcpCommand(''); } }}
             style={{ padding: '6px 14px', borderRadius: '6px', border: 'none', background: 'linear-gradient(135deg, #6366f1, #4f46e5)', color: '#fff', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
-            + Add
+            + {t('common.add')}
           </button>
         </div>
       </Section>
 
       {/* Phase 5B: Hooks */}
-      <Section title="🪝 Hooks (Lifecycle Scripts)">
+      <Section title={`🪝 ${t('settings.hooks')}`}>
         <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-          Scripts chạy trước/sau mỗi tool call để tự động hóa workflow.
+          {t('settings.hooksDesc')}
         </p>
         {hooks.map((hook, i) => (
           <SettingRow key={i} label={`${hook.event}: ${hook.tool || '*'}`} description={hook.command}>
             <div style={{ display: 'flex', gap: '8px' }}>
               <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600, background: hook.enabled ? 'rgba(16,185,129,0.1)' : 'rgba(148,163,184,0.1)', color: hook.enabled ? '#34d399' : '#94a3b8', border: `1px solid ${hook.enabled ? 'rgba(16,185,129,0.3)' : 'rgba(148,163,184,0.2)'}` }}>
-                {hook.enabled ? '● Active' : '○ Disabled'}
+                {hook.enabled ? `● ${t('common.active')}` : `○ ${t('common.disabled')}`}
               </span>
               <button onClick={() => { const u = [...hooks]; u[i] = { ...u[i]!, enabled: !u[i]!.enabled }; setHooks(u); }}
                 style={{ padding: '2px 10px', borderRadius: '4px', fontSize: '11px', border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: '#cbd5e1', cursor: 'pointer' }}>
-                {hook.enabled ? 'Disable' : 'Enable'}
+                {hook.enabled ? t('common.disable') : t('common.enable')}
               </button>
               <button onClick={() => setHooks(hooks.filter((_, idx) => idx !== i))}
                 style={{ padding: '2px 10px', borderRadius: '4px', fontSize: '11px', border: '1px solid rgba(239,68,68,0.3)', background: 'transparent', color: '#f87171', cursor: 'pointer' }}>
-                Remove
+                {t('common.remove')}
               </button>
             </div>
           </SettingRow>
@@ -312,26 +314,26 @@ export function SettingsView() {
             <option value="post_tool">post_tool</option>
             <option value="pre_response">pre_response</option>
           </select>
-          <input type="text" placeholder="Tool (e.g. write_file)" value={hookTool} onChange={(e) => setHookTool(e.target.value)}
+          <input type="text" placeholder={t('settings.hookToolPlaceholder')} value={hookTool} onChange={(e) => setHookTool(e.target.value)}
             style={{ flex: '0 0 120px', padding: '6px 10px', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', color: '#f8fafc', fontSize: '12px', outline: 'none' }} />
-          <input type="text" placeholder="Command" value={hookCommand} onChange={(e) => setHookCommand(e.target.value)}
+          <input type="text" placeholder={t('settings.hookCommandPlaceholder')} value={hookCommand} onChange={(e) => setHookCommand(e.target.value)}
             style={{ flex: 1, padding: '6px 10px', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', color: '#f8fafc', fontSize: '12px', outline: 'none' }} />
           <button onClick={() => { if (hookCommand) { setHooks([...hooks, { event: hookEvent, tool: hookTool, command: hookCommand, enabled: true }]); setHookTool(''); setHookCommand(''); } }}
             style={{ padding: '6px 14px', borderRadius: '6px', border: 'none', background: 'linear-gradient(135deg, #6366f1, #4f46e5)', color: '#fff', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
-            + Add
+            + {t('common.add')}
           </button>
         </div>
       </Section>
 
-      <Section title="ℹ️ Thông tin">
-        <SettingRow label="Phiên bản" description="GHITA CODING AGENT">
+      <Section title={`ℹ️ ${t('settings.info')}`}>
+        <SettingRow label={t('settings.version')} description="GHITA CODING AGENT">
           <span style={{ fontSize: '14px', color: 'var(--accent-primary)', fontWeight: 600 }}>
-            v0.1.0
+            {t('app.version')}
           </span>
         </SettingRow>
-        <SettingRow label="Platform" description="Nền tảng đang chạy">
+        <SettingRow label={t('settings.platform')} description={t('settings.platformDesc')}>
           <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
-            {isWindows() ? '🖥️ Windows (Tauri)' : isLinux() ? '🖥️ Linux (Tauri)' : '🖥️ Unknown'}
+            {isWindows() ? `🖥️ ${t('settings.windows')}` : isLinux() ? `🖥️ ${t('settings.linux')}` : `🖥️ ${t('mainLayout.unknown')}`}
           </span>
         </SettingRow>
       </Section>

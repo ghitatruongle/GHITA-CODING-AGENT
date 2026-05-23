@@ -6,6 +6,122 @@ import type { Agent, AgentGroup, AgentRole, AgentTask } from '@ghita/shared';
 import type { SkillRegistry } from '@ghita/skills';
 import type { AgentMemory } from '@ghita/memory';
 
+// --- Phase 4: Multi-Agent & Pipeline exports ---
+
+// Message System
+export {
+  HumanMessage,
+  AIMessage,
+  SystemMessage,
+  ToolMessage,
+  FunctionMessage,
+  messageFromData,
+} from './messages/message.js';
+export type {
+  MessageRole,
+  ContentType,
+  ContentPart,
+  ToolCall,
+  MessageMetadata,
+  BaseMessageData,
+  HumanMessageData,
+  AIMessageData,
+  SystemMessageData,
+  ToolMessageData,
+  FunctionMessageData,
+  MessageData,
+} from './messages/types.js';
+export { BaseMessage } from './messages/message.js';
+
+// ReAct Agent
+export { ReActAgent, createReActAgent } from './react/agent.js';
+export type {
+  ReActAgentConfig,
+  ReActTool,
+  AgentAction,
+  AgentFinish,
+  AgentStep,
+  CreateReActAgentInput,
+  ReActAgentRunResult,
+  ReActAgentCallbacks,
+  StructuredOutputSchema,
+} from './react/types.js';
+
+// Agent Middleware
+export { MiddlewarePipeline } from './middleware/pipeline.js';
+export type {
+  AgentMiddleware,
+  MiddlewareContext,
+  PreModelResult,
+  PostModelResult,
+  AgentStepContext,
+  AgentStepResult,
+  HumanApprovalRequest,
+  HumanApprovalResponse,
+} from './middleware/types.js';
+
+// Flow Orchestration
+export { Flow, createStep } from './flow/flow.js';
+export type {
+  FlowStep,
+  FlowStepResult,
+  FlowContext,
+  FlowConfig,
+  FlowRunResult,
+  FlowProcessMode,
+} from './flow/types.js';
+
+// Agent Adapters
+export { LangGraphAdapter } from './adapters/langgraph.js';
+export { OpenAIAgentsAdapter } from './adapters/openai-agents.js';
+export type {
+  AgentAdapter,
+  AdapterConvertedConfig,
+  AdapterRunResult,
+  LangGraphAgentConfig,
+  LangGraphTool,
+  LangGraphNode,
+  LangGraphEdge,
+  OpenAIAgentConfig,
+  OpenAIAgentTool,
+  OpenAIAgentResult,
+} from './adapters/types.js';
+
+// Runnable Pipeline
+export { Runnable, LambdaRunnable, runnable, sequence, parallel } from './pipeline/runnable.js';
+export type {
+  RunnableConfig,
+  StreamChunk,
+  RunnableInput,
+  TransformFn,
+  StreamTransformFn,
+} from './pipeline/types.js';
+
+// Storage Backends
+export { InMemoryStorage } from './storage/memory.js';
+export { FileSystemStorage } from './storage/filesystem.js';
+export { EncoderBackedStorage, JSONEncoder } from './storage/encoder.js';
+export type {
+  StorageBackend,
+  SerializedEntry,
+  StorageOptions,
+  EncoderFn,
+  DecoderFn,
+} from './storage/types.js';
+export type { FileSystemStorageOptions } from './storage/filesystem.js';
+
+// Hub Integration
+export { HubClient } from './hub/hub.js';
+export type {
+  HubPrompt,
+  HubConfig,
+  HubSearchQuery,
+  HubPushInput,
+  HubCacheEntry,
+} from './hub/types.js';
+
+// --- Original exports below ---
+
 export const AGENTS_VERSION = '0.1.0';
 
 export type AgentStatus = 'idle' | 'working' | 'completed' | 'error';
@@ -333,4 +449,9 @@ export { AgentProtocolServer } from './protocol/ap.js';
 export type { APTask, APStep, APArtifact } from './protocol/ap.js';
 export { AgentRouter } from './router/router.js';
 export type { ComplexityLevel, RouteResolution } from './router/router.js';
+
+// --- Phase 5: Workflow Engine ---
+export { WorkflowAgent } from './workflow/engine.js';
+export type { WorkflowStep, WorkflowCallbacks } from './workflow/engine.js';
+
 

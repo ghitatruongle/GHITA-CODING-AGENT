@@ -3,7 +3,7 @@
 // ==============================================================================
 
 import type { AIStreamChunk } from '@ghita/shared';
-import type { ChatMessage, ChatOptions, ChatResponse, ProviderConfig } from '../types.js';
+import type { ChatMessage, ChatOptions, ChatResponse, ProviderConfig, EmbeddingResponse, EmbeddingManyResponse } from '../types.js';
 import { BaseProvider } from './base.js';
 
 const OPENAI_MODELS = [
@@ -165,4 +165,192 @@ export class OpenAIProvider extends BaseProvider {
         return 'stop';
     }
   }
+
+  async embed(text: string, options?: { model?: string }): Promise<EmbeddingResponse> {
+    const apiKey = this.getApiKey();
+    const model = options?.model ?? 'text-embedding-3-small';
+    const baseUrl = this.getBaseUrl() || 'https://api.openai.com/v1';
+
+    const response = await fetch(`${baseUrl}/embeddings`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        input: text,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`OpenAI API error (${response.status}): ${error}`);
+    }
+
+    const data = (await response.json()) as {
+      model: string;
+      data: Array<{ embedding: number[]; index: number }>;
+      usage?: { prompt_tokens: number; total_tokens: number };
+    };
+
+    return {
+      embedding: data.data[0]?.embedding ?? [],
+      model: data.model,
+      provider: 'openai',
+      usage: data.usage
+        ? {
+            promptTokens: data.usage.prompt_tokens,
+            totalTokens: data.usage.total_tokens,
+          }
+        : undefined,
+    };
+  }
+
+  async embedMany(texts: string[], options?: { model?: string }): Promise<EmbeddingManyResponse> {
+    const apiKey = this.getApiKey();
+    const model = options?.model ?? 'text-embedding-3-small';
+    const baseUrl = this.getBaseUrl() || 'https://api.openai.com/v1';
+
+    const response = await fetch(`${baseUrl}/embeddings`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        input: texts,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`OpenAI API error (${response.status}): ${error}`);
+    }
+
+    const data = (await response.json()) as {
+      model: string;
+      data: Array<{ embedding: number[]; index: number }>;
+      usage?: { prompt_tokens: number; total_tokens: number };
+    };
+
+    const sorted = [...data.data].sort((a, b) => a.index - b.index);
+    const embeddings = sorted.map((item) => item.embedding);
+
+    return {
+      embeddings,
+      model: data.model,
+      provider: 'openai',
+      usage: data.usage
+        ? {
+            promptTokens: data.usage.prompt_tokens,
+            totalTokens: data.usage.total_tokens,
+          }
+        : undefined,
+    };
+  }
+
+  async generateImage(prompt: string, options?: any): Promise<{ url: string; b64?: string }> {
+    const apiKey = this.getApiKey();
+    const model = options?.model ?? 'dall-e-3';
+    const baseUrl = this.getBaseUrl() || 'https://api.openai.com/v1';
+
+    const response = await fetch(`${baseUrl}/images/generations`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        prompt,
+        n: options?.n ?? 1,
+        size: options?.size ?? '1024x1024',
+        response_format: options?.responseFormat ?? 'url',
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`OpenAI API error (${response.status}): ${error}`);
+    }
+
+    const data = (await response.json()) as {
+      data: Array<{ url?: string; b64_json?: string }>;
+    };
+
+    const first = data.data[0];
+    if (!first) throw new Error('No image returned from OpenAI');
+
+    return {
+      url: first.url ?? '',
+      b64: first.b64_json,
+    };
+  }
+
+  async generateSpeech(text: string, options?: any): Promise<{ audio: Buffer; contentType: string }> {
+    const apiKey = this.getApiKey();
+    const model = options?.model ?? 'tts-1';
+    const baseUrl = this.getBaseUrl() || 'https://api.openai.com/v1';
+
+    const response = await fetch(`${baseUrl}/audio/speech`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        input: text,
+        voice: options?.voice ?? 'alloy',
+        response_format: options?.responseFormat ?? 'mp3',
+        speed: options?.speed,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`OpenAI API error (${response.status}): ${error}`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const audio = Buffer.from(arrayBuffer);
+    const contentType = response.headers.get('content-type') || 'audio/mpeg';
+
+    return { audio, contentType };
+  }
+
+  async transcribe(audio: Buffer, options?: any): Promise<{ text: string }> {
+    const apiKey = this.getApiKey();
+    const model = options?.model ?? 'whisper-1';
+    const baseUrl = this.getBaseUrl() || 'https://api.openai.com/v1';
+
+    const formData = new FormData();
+    const blob = new Blob([new Uint8Array(audio)], { type: options?.contentType || 'audio/mpeg' });
+    formData.append('file', blob, options?.filename || 'audio.mp3');
+    formData.append('model', model);
+
+    if (options?.language) formData.append('language', options.language);
+    if (options?.prompt) formData.append('prompt', options.prompt);
+    if (options?.responseFormat) formData.append('response_format', options.responseFormat);
+    if (options?.temperature !== undefined) formData.append('temperature', String(options.temperature));
+
+    const response = await fetch(`${baseUrl}/audio/transcriptions`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`OpenAI API error (${response.status}): ${error}`);
+    }
+
+    const data = (await response.json()) as { text: string };
+    return { text: data.text };
+  }
 }
+

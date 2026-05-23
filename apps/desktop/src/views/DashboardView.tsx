@@ -3,6 +3,7 @@
 // ==============================================================================
 
 import { useAppStore } from '../stores/appStore';
+import { useTranslation } from '../i18n';
 
 function StatCard({
   icon,
@@ -43,6 +44,7 @@ function StatCard({
 }
 
 export function DashboardView() {
+  const { t } = useTranslation();
   const serverStatus = useAppStore((s) => s.serverStatus);
   const connectedDevices = useAppStore((s) => s.connectedDevices);
   const mcpServers = useAppStore((s) => s.mcpServers);
@@ -53,10 +55,10 @@ export function DashboardView() {
   return (
     <div style={{ height: '100%', overflow: 'auto', padding: '32px' }}>
       <h2 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px' }}>
-        Dashboard
+        {t('dashboard.title')}
       </h2>
       <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '32px' }}>
-        Monitoring real-time cho GHITA CODING AGENT
+        {t('dashboard.subtitle')}
       </p>
 
       {/* Stats Grid */}
@@ -70,30 +72,30 @@ export function DashboardView() {
       >
         <StatCard
           icon="📊"
-          title="Total Tokens"
+          title={t('dashboard.totalTokens')}
           value={dashboardStats.totalTokens.toLocaleString()}
-          subtitle={`Context: ${contextUsage.percentage}% used`}
+          subtitle={t('dashboard.contextUsed', { percent: contextUsage.percentage })}
           color="var(--accent-primary)"
         />
         <StatCard
           icon="💰"
-          title="Total Cost"
+          title={t('dashboard.totalCost')}
           value={`$${dashboardStats.totalCost.toFixed(4)}`}
-          subtitle="Ralph Loop + session"
+          subtitle={t('dashboard.ralphLoopSession')}
           color="var(--success)"
         />
         <StatCard
           icon="🤖"
-          title="Active Agents"
+          title={t('dashboard.activeAgents')}
           value={dashboardStats.activeAgents}
-          subtitle="Explore / Plan / UI"
+          subtitle={t('dashboard.explorePlanUI')}
           color="#a78bfa"
         />
         <StatCard
           icon="🔌"
-          title="MCP Connections"
+          title={t('dashboard.mcpConnections')}
           value={`${mcpServers.filter((s) => s.connected).length}/${mcpServers.length}`}
-          subtitle="Model Context Protocol"
+          subtitle={t('dashboard.modelContextProtocol')}
           color="#60a5fa"
         />
       </div>
@@ -103,17 +105,17 @@ export function DashboardView() {
         {/* Server Status */}
         <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '24px', border: '1px solid rgba(255,255,255,0.05)' }}>
           <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            Server & Devices
+            {t('dashboard.serverAndDevices')}
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-              <span style={{ color: 'var(--text-muted)' }}>Socket.IO Server</span>
+              <span style={{ color: 'var(--text-muted)' }}>{t('dashboard.socketServer')}</span>
               <span style={{ color: serverStatus === 'listening' ? 'var(--success)' : 'var(--error)', fontWeight: 600 }}>
-                {serverStatus === 'listening' ? '● Listening' : serverStatus === 'error' ? '● Error' : '● Offline'}
+                {serverStatus === 'listening' ? `● ${t('dashboard.listening')}` : serverStatus === 'error' ? `● ${t('dashboard.error')}` : `● ${t('dashboard.offline')}`}
               </span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-              <span style={{ color: 'var(--text-muted)' }}>Connected Devices</span>
+              <span style={{ color: 'var(--text-muted)' }}>{t('dashboard.connectedDevices')}</span>
               <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{connectedDevices.length}</span>
             </div>
             {connectedDevices.map((d) => (
@@ -130,10 +132,10 @@ export function DashboardView() {
         {/* MCP Servers */}
         <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '24px', border: '1px solid rgba(255,255,255,0.05)' }}>
           <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            MCP Servers
+            {t('dashboard.mcpServers')}
           </h3>
           {mcpServers.length === 0 ? (
-            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Chưa cấu hình MCP server nào. Thêm trong Settings.</p>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{t('dashboard.mcpEmpty')}</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {mcpServers.map((s) => (
@@ -151,10 +153,10 @@ export function DashboardView() {
         {/* Hooks */}
         <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '24px', border: '1px solid rgba(255,255,255,0.05)' }}>
           <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            Hooks
+            {t('dashboard.hooks')}
           </h3>
           {hooks.length === 0 ? (
-            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Chưa cấu hình hook nào. Thêm trong Settings.</p>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{t('dashboard.hooksEmpty')}</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {hooks.map((h, i) => (
@@ -172,11 +174,11 @@ export function DashboardView() {
         {/* Context Usage */}
         <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '24px', border: '1px solid rgba(255,255,255,0.05)' }}>
           <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            Context Window
+            {t('dashboard.contextWindow')}
           </h3>
           <div style={{ marginBottom: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '8px' }}>
-              <span style={{ color: 'var(--text-muted)' }}>Token Usage</span>
+              <span style={{ color: 'var(--text-muted)' }}>{t('dashboard.tokenUsage')}</span>
               <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
                 {contextUsage.used.toLocaleString()} / {contextUsage.max.toLocaleString()}
               </span>
@@ -195,8 +197,8 @@ export function DashboardView() {
           </div>
           <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
             {contextUsage.percentage > 80
-              ? 'Gần đầy! Sẽ tự động compact khi cần.'
-              : `${100 - contextUsage.percentage}% còn lại`}
+              ? t('dashboard.contextWarning')
+              : t('dashboard.contextRemaining', { percent: 100 - contextUsage.percentage })}
           </p>
         </div>
       </div>

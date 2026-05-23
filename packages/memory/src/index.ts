@@ -8,6 +8,32 @@ import type { SessionRecord, CrossSessionResult } from './search.js';
 import { MemoryNudgeEngine } from './nudge.js';
 import type { NudgeSuggestion, NudgeConfig } from './nudge.js';
 
+// --- Phase 4: Knowledge / RAG exports ---
+export { KnowledgeEngine } from './knowledge/knowledge.js';
+export type {
+  KnowledgeDocument,
+  KnowledgeChunk,
+  KnowledgeSource,
+  IngestOptions,
+  SearchOptions as KnowledgeSearchOptions,
+  KnowledgeSearchResult,
+  EmbeddingFunction,
+} from './knowledge/types.js';
+
+// --- Phase 4: LLM Guardrail exports ---
+export { LLMGuardrail } from './guardrail/guardrail.js';
+export type { AuditLogEntry } from './guardrail/guardrail.js';
+export type {
+  GuardrailAction,
+  GuardrailResult,
+  GuardrailRule,
+  GuardrailContext,
+  PIIEntityType,
+  LLMJudgeConfig,
+  ContentFilterConfig,
+  GuardrailConfig,
+} from './guardrail/types.js';
+
 export const MEMORY_VERSION = '0.1.0';
 
 export interface RememberInput {

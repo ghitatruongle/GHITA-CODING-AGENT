@@ -11,6 +11,7 @@ import {
   type SkillRegistrySnapshot,
 } from '@ghita/skills';
 import type { SkillCategory, SkillResult } from '@ghita/shared';
+import { useTranslation } from '../i18n';
 
 const MOCK_COMPUTER_SKILLS: SkillDefinition[] = [
   {
@@ -203,6 +204,7 @@ function ResultLine({ result }: { result?: SkillResult }) {
 }
 
 export function SkillManager() {
+  const { t } = useTranslation();
   const registryRef = useRef<ReturnType<typeof createDefaultSkillRegistry> | null>(null);
   if (!registryRef.current) {
     registryRef.current = createRegistry();
@@ -320,10 +322,10 @@ export function SkillManager() {
               WebkitTextFillColor: 'transparent',
             }}
           >
-            Skill Management
+            {t('skillManager.title')}
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
-            Registry, enable/disable controls, and safe test runs for built-in and automation skills.
+            {t('skillManager.subtitle')}
           </p>
         </div>
         <div
@@ -338,7 +340,7 @@ export function SkillManager() {
           <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--accent-secondary)' }}>
             {snapshot.enabled}/{snapshot.total}
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>enabled skills</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{t('skillManager.enabledSkills')}</div>
         </div>
       </div>
 
@@ -400,7 +402,7 @@ export function SkillManager() {
                           whiteSpace: 'nowrap',
                         }}
                       >
-                        {skill.enabled ? 'Active' : 'Off'}
+                        {skill.enabled ? t('common.active') : t('common.off')}
                       </span>
                     </div>
 
@@ -421,7 +423,7 @@ export function SkillManager() {
                           fontWeight: 600,
                         }}
                       >
-                        {skill.enabled ? 'Disable' : 'Enable'}
+                        {skill.enabled ? t('common.disable') : t('common.enable')}
                       </button>
                       <button
                         type="button"
@@ -438,7 +440,7 @@ export function SkillManager() {
                           fontWeight: 600,
                         }}
                       >
-                        {isRunning ? 'Running...' : 'Test Run'}
+                        {isRunning ? t('skillManager.running') : t('skillManager.testRun')}
                       </button>
                     </div>
 

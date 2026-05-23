@@ -125,6 +125,7 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
 
     const discoverAndConnect = async () => {
       let addressesToTry: string[] = [];
+      let isManualAddress = false;
 
       if (!serverAddress.trim()) {
         try {
@@ -146,15 +147,15 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
           const rawIps = parts.slice(0, parts.length - 1);
           addressesToTry = rawIps.map(ip => `http://${ip.replace(/-/g, '.')}:${port}`);
         } catch (e: any) {
-          clearTimers();
-          setConnectionState('error');
-          setErrorMessage(e.message || 'Lỗi khi dò tìm máy tính qua Cloud.');
-          return;
+          // If auto discovery fails, fallback to Cloud Relay in ping phase
+          console.log('Auto discovery fetch failed. Proceeding with fallback candidates.');
+          addressesToTry = [];
         }
       } else {
         const address = serverAddress.includes('://') ? serverAddress : `http://${serverAddress}`;
         const fullAddress = address.includes(':') ? address : `${address}:8080`;
         addressesToTry = [fullAddress];
+        isManualAddress = true;
       }
 
       try {
@@ -176,21 +177,40 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
           throw new Error('Failed');
         });
 
-        const firstSuccess = await new Promise<{ url: string; pairingCode: string }>((resolve, reject) => {
-          let rejectedCount = 0;
-          pingPromises.forEach((p) => {
-            p.then(resolve).catch(() => {
-              rejectedCount++;
-              if (rejectedCount === pingPromises.length) {
-                reject(new Error('Không kết nối được tới máy tính. Hãy chắc chắn điện thoại và máy tính kết nối cùng Wi-Fi.'));
-              }
+        let firstSuccess;
+        try {
+          if (pingPromises.length === 0) {
+            throw new Error('No local IP addresses to try');
+          }
+          firstSuccess = await new Promise<{ url: string; pairingCode: string }>((resolve, reject) => {
+            let rejectedCount = 0;
+            pingPromises.forEach((p) => {
+              p.then(resolve).catch(() => {
+                rejectedCount++;
+                if (rejectedCount === pingPromises.length) {
+                  reject(new Error('All local pings failed'));
+                }
+              });
             });
           });
-        });
+        } catch (fallbackError) {
+          if (isManualAddress) {
+            throw new Error('Không kết nối được tới địa chỉ IP đã nhập. Vui lòng kiểm tra lại mạng.');
+          }
+
+          // Cloud Relay tạm vô hiệu hóa — Render.com relay đã bị xóa
+          // console.log('Local connection failed. Silently falling back to Cloud Relay...');
+          // const CLOUD_RELAY_URL = 'https://ghita-relay-server.onrender.com';
+          // firstSuccess = {
+          //   url: CLOUD_RELAY_URL,
+          //   pairingCode: code,
+          // };
+          throw new Error('Không kết nối được qua LAN. Cloud Relay tạm thời không khả dụng.');
+        }
 
         clearTimeout(timeoutId);
 
-        const savedAddr = firstSuccess.url.replace('http://', '');
+        const savedAddr = firstSuccess.url.replace('http://', '').replace('https://', '');
         setServerAddress(savedAddr);
         activeAddressRef.current = savedAddr;
 
