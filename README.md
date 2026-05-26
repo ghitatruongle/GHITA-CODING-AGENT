@@ -19,7 +19,7 @@
 <details open>
 <summary><b>🇺🇸 English Version</b></summary>
 
-**AI Desktop Agent** — A versatile AI desktop application with VS Code-style interface, supporting remote computer control via Android phone.
+**GHITA CODING AGENT** — A versatile AI desktop application with VS Code-style interface, supporting remote computer control via Android phone.
 
 ---
 
@@ -166,7 +166,7 @@ pnpm dev:android
 <details>
 <summary><b>🇻🇳 Phiên bản Tiếng Việt</b></summary>
 
-**AI Desktop Agent** — Ứng dụng AI trên máy tính đa năng với giao diện kiểu VS Code, hỗ trợ điều khiển máy tính từ xa qua điện thoại Android.
+**GHITA CODING AGENT** — Ứng dụng AI trên máy tính đa năng với giao diện kiểu VS Code, hỗ trợ điều khiển máy tính từ xa qua điện thoại Android.
 
 ---
 
