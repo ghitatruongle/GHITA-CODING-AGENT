@@ -60,18 +60,11 @@ coverage/
 # OpenClaude config
 .openclaude/
 
-# Refer projects (cloned repos - too large for main repo)
-refer_project/ai-core/*/
-refer_project/ai-framework/*/
-refer_project/ai-tools/*/
-refer_project/browser/*/
-refer_project/desktop/*/
-refer_project/infra/*/
-refer_project/memory/*/
+# Refer projects (cloned repos - too large for main repo, local only)
+refer_project/
 
-# Keep reference.md and .gitkeep
-!refer_project/**/reference.md
-!refer_project/**/.gitkeep
+# Local scripts
+scripts/
 
 # OS
 .DS_Store
