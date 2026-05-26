@@ -73,3 +73,10 @@ desktop.ini
 
 # Plan
 Plan/
+
+# Python scratch/fix scripts
+*.py
+
+# Root launch image
+android-ghita-launch.png
+
