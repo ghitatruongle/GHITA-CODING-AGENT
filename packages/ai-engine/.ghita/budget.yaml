@@ -1,0 +1,5 @@
+# Cấu hình giới hạn ngân sách API cho GHITA
+budget:
+  max_cost_per_session: 5.0
+  max_cost_per_day: 20.0
+  alert_threshold_percent: 50.0

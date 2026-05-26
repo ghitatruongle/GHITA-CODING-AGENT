@@ -1,0 +1,28 @@
+# ==============================================================================
+# GHITA CODING AGENT - AST-Lock Configuration
+# ==============================================================================
+# Tệp quy định các quy tắc khoá ranh giới cú pháp cho các file mã nguồn
+# ==============================================================================
+
+astLock:
+  # Trạng thái kích hoạt tính năng AST-Lock (mặc định: true)
+  enabled: true
+
+  # Danh sách các tên symbol (class, method, function) cần khóa cứng bảo vệ.
+  # Nếu danh sách này rỗng, mặc định sẽ khóa TOÀN BỘ symbol definition lân cận
+  # trong file để bảo đảm an toàn tuyệt đối.
+  # Ví dụ:
+  #   - "SecurityGate"
+  #   - "calculateInternal"
+  #   - "Auth.login"
+  lockedSymbols:
+    - "SecurityGate"
+    - "calculateInternal"
+
+  # Danh sách các tệp tin được bỏ qua không áp dụng bộ lọc AST-Lock.
+  # Hỗ trợ ký tự đại diện wildcard (*).
+  excludeFiles:
+    - "**/tests/**"
+    - "**/*.test.ts"
+    - "**/*.spec.ts"
+    - "**/node_modules/**"

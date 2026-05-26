@@ -13,7 +13,20 @@ export type {
   ProviderConfig,
   OrchestratorConfig,
   OrchestratorStatus,
+  KeyRotationStrategy,
 } from './types.js';
+
+// --- Phase 1.1: Multi-Key Manager ---
+export { KeyManager } from './key-manager.js';
+export type { KeyEntry, KeyHealthStatus, KeyUsageStats } from './key-manager.js';
+
+// --- Phase 1.3: Model Discovery ---
+export { ModelDiscovery, parseOpenAICompat, parseOllamaTags, parseGoogleModels, parseReplicateModels } from './discovery/model-discovery.js';
+export type { ModelInfo, DiscoveryResult, DiscoveryConfig } from './discovery/types.js';
+
+// --- Phase 1.4: Smart Router ---
+export { SmartRouter } from './routing/smart-router.js';
+export type { RoutingStrategy, RoutingDecision, RoutingConfig, ProviderMetrics } from './routing/types.js';
 
 // --- Providers ---
 export { BaseProvider } from './providers/base.js';
@@ -94,6 +107,10 @@ export {
 export { InMemoryCache, RedisCache, SemanticCache } from './utils/cache.js';
 export type { BaseCache, SemanticCacheOptions } from './utils/cache.js';
 
+// --- Phase 3.2: Token Counter ---
+export { estimateTokens, estimateMessagesTokens, fitsInContext, truncateToFit, getContextInfo } from './utils/token-counter.js';
+export type { ContextWindow } from './utils/token-counter.js';
+
 // --- Cost & Budget ---
 export { CostTracker, BudgetManager, DEFAULT_PRICING_TABLE, getModelPricing } from './utils/cost.js';
 export type { ModelPricing, BudgetOptions } from './utils/cost.js';
@@ -129,6 +146,14 @@ export type {
 // --- Universal Chat Model Router ---
 export { UniversalChatModel } from './utils/universal.js';
 export type { UniversalChatModelOptions } from './utils/universal.js';
+
+// --- Unified Chat Model Router (Phase 15) ---
+export { UnifiedRouter } from './router/unifiedRouter.js';
+export type { UnifiedRouterOptions, LatencyMetric } from './router/unifiedRouter.js';
+
+// --- API Cost Tracker & Usage Failover Manager (Phase 16) ---
+export { FallbackManager, MODEL_PRICING } from './gateway/fallbackManager.js';
+export type { BudgetConfig, CostRecord } from './gateway/fallbackManager.js';
 
 // --- Output Parsers ---
 export {
@@ -250,6 +275,47 @@ export type {
   WebhookConfig,
   AlertingConfig,
 } from './enterprise/index.js';
+
+// --- Phase 10: Anti-Slop Output Filtration ---
+export {
+  AntiSlopFilter,
+  createAntiSlopStreamMiddleware,
+  createAntiSlopMiddleware,
+  cleanSlop,
+} from './middleware/antiSlop.js';
+export type { AntiSlopConfig } from './middleware/antiSlop.js';
+
+// --- Phase 3.3: Guardrails Middleware ---
+export {
+  createContentFilterMiddleware,
+  createPIIDetectorMiddleware,
+  createPIIDetectorStreamMiddleware,
+  createSecretDetectorMiddleware,
+  createRateLimiterMiddleware,
+  createAuditLoggerMiddleware,
+  createGuardrailsMiddlewares,
+} from './middleware/guardrails.js';
+export type {
+  GuardrailsConfig,
+  ContentFilterConfig,
+  PIIDetectorConfig,
+  SecretDetectorConfig,
+  RateLimiterConfig,
+  AuditLoggerConfig,
+  AuditEntry,
+} from './middleware/guardrails.js';
+
+// --- Phase 9: SCTI (Self-Correcting Trajectory Injection) ---
+export {
+  SCTIEngine,
+  injectSctiTrajectories,
+  createSctiMiddleware,
+  createSctiStreamMiddleware,
+  extractErrorCode,
+  getJaccardSimilarity,
+  compressDiff,
+} from './middleware/sctiCalibrator.js';
+export type { SCTITrajectory } from './middleware/sctiCalibrator.js';
 
 // --- Phase 5: Advanced & Platform ---
 export { FineTuningManager } from './platform/fine-tuning.js';

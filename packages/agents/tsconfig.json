@@ -9,7 +9,6 @@
   "exclude": ["node_modules", "dist"],
   "references": [
     { "path": "../shared" },
-    { "path": "../skills" },
     { "path": "../memory" }
   ]
 }

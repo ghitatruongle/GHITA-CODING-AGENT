@@ -1,0 +1,121 @@
+// ==============================================================================
+// GHITA CODING AGENT — i18n Types for Mobile App
+// ==============================================================================
+
+export interface TranslationKeys {
+  common: {
+    cancel: string;
+    delete: string;
+    remove: string;
+    success: string;
+    error: string;
+    retry: string;
+    ok: string;
+    loading: string;
+  };
+  pairing: {
+    title: string;
+    subtitle: string;
+    wifiTab: string;
+    bluetoothTab: string;
+    ipLabel: string;
+    ipPlaceholder: string;
+    codeLabel: string;
+    codePlaceholder: string;
+    connectBtn: string;
+    wifiInstructionsTitle: string;
+    wifiInstructions: string[];
+    manualNameLabel: string;
+    manualNamePlaceholder: string;
+    btDevicesHeader: string;
+    btScanning: string;
+    btRescan: string;
+    btNoDevicesScanning: string;
+    btNoDevicesRescan: string;
+    btBonded: string;
+    btNewDevice: string;
+    btInstructionsTitle: string;
+    btInstructions: string[];
+    connectSuccess: string;
+    pairingCodeLengthErr: string;
+    pairErrNoComputer: string;
+    pairErrCloudFail: string;
+    pairErrConnection: string;
+    pairErrSocket: string;
+    pairErrBtPermission: string;
+    pairErrBtStart: string;
+    pairErrInvalidName: string;
+    pairErrNoIpCloud: string;
+    pairErrCloudPcFail: string;
+    pairErrLanPingFail: string;
+    pairErrNoIp: string;
+    pairErrBtFail: string;
+    pairErrBtFindFail: string;
+  };
+  remote: {
+    disconnectTitle: string;
+    disconnectDesc: string;
+    stay: string;
+    disconnectBtn: string;
+    lostConnectionTitle: string;
+    lostConnectionDesc: string;
+    goBack: string;
+    chatTimeoutTitle: string;
+    chatTimeoutDesc: string;
+    screenTitle: string;
+    screenPreviewPlaceholder: string;
+    screenPreviewConnecting: string;
+    screenPreviewLoading: string;
+    screenPreviewError: string;
+    costTitle: string;
+    costSpent: string;
+    costLimit: string;
+    costSessionLimit: string;
+    tokensIn: string;
+    tokensOut: string;
+    tokensTotal: string;
+    chatTitle: string;
+    chatInputLabel: string;
+    chatInputPlaceholder: string;
+    quickActionsTitle: string;
+    actionScreenshot: string;
+    actionCancel: string;
+    actionApprove: string;
+    actionReject: string;
+    securityApprovalTitle: string;
+    securityApprovalDesc: string;
+    securityApproveBtn: string;
+    securityRejectBtn: string;
+  };
+  settings: {
+    title: string;
+    deviceSection: string;
+    deviceNameLabel: string;
+    deviceNamePlaceholder: string;
+    optionsSection: string;
+    autoReconnectLabel: string;
+    vibrateLabel: string;
+    languageLabel: string;
+    pairedSection: string;
+    noPairedDevices: string;
+    actionsSection: string;
+    clearAllBtn: string;
+    clearAllConfirmTitle: string;
+    clearAllConfirmDesc: string;
+    removeDeviceConfirmTitle: string;
+    removeDeviceConfirmDesc: string;
+  };
+  status: {
+    connected: string;
+    connecting: string;
+    pairing: string;
+    disconnected: string;
+    error: string;
+    lanConnection: string;
+    cloudConnection: string;
+  };
+  errorFallback: {
+    title: string;
+    subtitle: string;
+  };
+}

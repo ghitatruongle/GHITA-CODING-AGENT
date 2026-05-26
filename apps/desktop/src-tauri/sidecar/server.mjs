@@ -22,15 +22,49 @@ import { createReActAgent, AIMessage } from '@ghita/agents';
 
 // --- Config ---
 const PORT = parseInt(process.env.GHITA_PORT || '8080', 10);
-const HOST = '0.0.0.0';
+const HOST = process.env.GHITA_BIND_HOST || '0.0.0.0';
+const CLOUD_DISCOVERY_ENABLED = process.env.GHITA_CLOUD_DISCOVERY === '1';
+const AUTO_LIBERATE_PORTS = process.env.GHITA_LIBERATE_PORTS === '1';
 const CLOUD_RELAY_ENABLED = false; // Tạm vô hiệu hóa — Render.com relay đã bị xóa
 const CLOUD_RELAY_URL = process.env.GHITA_RELAY_URL || 'https://ghita-relay-server.onrender.com';
 let cloudSocket = null;
 
 function broadcast(event, data) {
-  io.emit(event, data);
+  io.to(['desktop', 'paired-devices']).emit(event, data);
   if (cloudSocket && cloudSocket.connected) {
     cloudSocket.emit(event, data);
+  }
+}
+
+function normalizeAddress(address = '') {
+  return address
+    .replace(/^::ffff:/, '')
+    .replace(/^\[|\]$/g, '')
+    .trim()
+    .toLowerCase();
+}
+
+function isLoopbackAddress(address = '') {
+  const normalized = normalizeAddress(address);
+  return normalized === '127.0.0.1' || normalized === '::1' || normalized === 'localhost';
+}
+
+function isLoopbackRequest(req) {
+  return isLoopbackAddress(req.socket.remoteAddress || '');
+}
+
+function isTrustedDesktopSocket(socket, isCloud = false) {
+  if (isCloud) return false;
+  return isLoopbackAddress(socket.handshake?.address || socket.conn?.remoteAddress || socket.request?.socket?.remoteAddress || '');
+}
+
+function isAllowedLocalOrigin(origin) {
+  if (!origin) return true;
+  try {
+    const url = new URL(origin);
+    return ['localhost', '127.0.0.1', 'tauri.localhost'].includes(url.hostname);
+  } catch {
+    return false;
   }
 }
 
@@ -212,6 +246,10 @@ function publishToCloud(key, value) {
 
 
 function publishToCloudDiscovery() {
+  if (!CLOUD_DISCOVERY_ENABLED && !CLOUD_RELAY_ENABLED) {
+    return;
+  }
+
   try {
     const formattedIps = getAllLocalIPs().map(ip => ip.replace(/\./g, '-'));
     const value = `${formattedIps.join('_')}_${PORT}`;
@@ -284,6 +322,7 @@ const EVENTS = {
   PONG: 'pong',
   SCREEN_STREAM: 'screen_stream',
   UNPAIR: 'unpair',
+  SYNC_LANGUAGE: 'sync_language',
 };
 
 // --- HTTP Server ---
@@ -297,33 +336,51 @@ const httpServer = createServer((req, res) => {
     return;
   }
 
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const isLoopback = isLoopbackRequest(req);
+  const origin = req.headers.origin;
+  if (isAllowedLocalOrigin(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin || 'http://localhost');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
 
   if (req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
       status: 'ok',
-      connectedDevices: connectedDevices.size,
+      connectedDevices: getConnectedDeviceCount(),
+      pairedDevices: connectedDevices.size,
       uptime: process.uptime(),
       localIP: getLocalIP(),
       port: PORT,
-      pairingCode: getCode(),
-      codeExpiresAt,
+      ...(isLoopback ? { pairingCode: getCode(), codeExpiresAt } : {}),
       hostname: hostname().toUpperCase().replace(/[^A-Z0-9-]/g, ''),
-      devices: Array.from(connectedDevices.values()).map(d => ({
-        id: d.id,
-        name: d.name,
-        platform: d.platform,
-        connected: d.connected,
-        lastSeen: d.lastSeen,
-      })),
+      ...(isLoopback ? {
+        devices: Array.from(connectedDevices.values()).map(d => ({
+          id: d.id,
+          name: d.name,
+          platform: d.platform,
+          connected: d.connected,
+          lastSeen: d.lastSeen,
+        })),
+      } : {}),
     }));
     return;
   }
 
   if (req.url === '/pair') {
+    if (!isLoopback) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Pairing code is only available from the desktop app.' }));
+      return;
+    }
+
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
       code: getCode(),
@@ -334,7 +391,44 @@ const httpServer = createServer((req, res) => {
     return;
   }
 
+  if (req.url === '/sync-language' && req.method === 'POST') {
+    if (!isLoopback) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Sync language is only available from the desktop app.' }));
+      return;
+    }
+
+    let body = '';
+    req.on('data', (chunk) => {
+      body += chunk;
+    });
+
+    req.on('end', () => {
+      try {
+        const parsed = JSON.parse(body);
+        if (parsed.language) {
+          log(`Sync language from HTTP: ${parsed.language}`);
+          broadcast(EVENTS.SYNC_LANGUAGE, { language: parsed.language });
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ status: 'ok' }));
+          return;
+        }
+      } catch (err) {
+        log(`Failed to parse sync-language body: ${err.message}`);
+      }
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Bad request' }));
+    });
+    return;
+  }
+
   if (req.url.startsWith('/unpair')) {
+    if (!isLoopback) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Unpairing is only available from the desktop app.' }));
+      return;
+    }
+
     const urlObj = new URL(req.url, `http://localhost:${PORT}`);
     const deviceId = urlObj.searchParams.get('deviceId');
     if (!deviceId) {
@@ -375,7 +469,13 @@ const httpServer = createServer((req, res) => {
 // --- Socket.IO Server ---
 const io = new Server(httpServer, {
   cors: {
-    origin: '*',
+    origin: (origin, callback) => {
+      if (isAllowedLocalOrigin(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error('Origin is not allowed by GHITA sidecar CORS policy'));
+    },
     methods: ['GET', 'POST'],
   },
   transports: ['websocket', 'polling'],
@@ -387,7 +487,20 @@ const io = new Server(httpServer, {
 const connectedDevices = new Map();
 
 // --- Persistent Paired Devices Storage ---
-const PAIRED_DEVICES_FILE = path.resolve(homedir(), '.ghita-paired-devices.json');
+const DATA_DIR = process.env.GHITA_DATA_DIR || homedir();
+try {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+} catch (e) {
+  log(`Failed to create sidecar data directory: ${e.message}`);
+}
+const PAIRED_DEVICES_FILE = process.env.GHITA_DATA_DIR
+  ? path.resolve(DATA_DIR, 'paired-devices.json')
+  : path.resolve(DATA_DIR, '.ghita-paired-devices.json');
+const API_CONFIG_FILE = path.resolve(DATA_DIR, 'api-config.json');
+
+function getConnectedDeviceCount() {
+  return Array.from(connectedDevices.values()).filter((device) => device.connected).length;
+}
 
 function loadPairedDevices() {
   try {
@@ -405,6 +518,7 @@ function loadPairedDevices() {
               lastSeen: d.lastSeen || Date.now(),
               socketId: null,
               pairedAt: d.pairedAt || Date.now(),
+              secret: typeof d.secret === 'string' ? d.secret : null,
             });
           }
         }
@@ -426,11 +540,91 @@ function savePairedDevices() {
         platform: d.platform,
         pairedAt: d.pairedAt,
         lastSeen: d.lastSeen,
+        secret: d.secret,
       }));
     fs.writeFileSync(PAIRED_DEVICES_FILE, JSON.stringify(list, null, 2), 'utf8');
   } catch (e) {
     log(`Failed to save paired devices: ${e.message}`);
   }
+}
+
+function readApiConfigSnapshot() {
+  try {
+    if (!fs.existsSync(API_CONFIG_FILE)) return {};
+    const content = fs.readFileSync(API_CONFIG_FILE, 'utf8');
+    const parsed = JSON.parse(content);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (e) {
+    log(`Failed to read API config: ${e.message}`);
+    return {};
+  }
+}
+
+function normalizeApiKeys(entry) {
+  if (!entry || typeof entry !== 'object') return [];
+  if (Array.isArray(entry.apiKeys)) {
+    return entry.apiKeys.filter((key) => typeof key === 'string' && key.trim()).map((key) => key.trim());
+  }
+  if (typeof entry.apiKey === 'string' && entry.apiKey.trim()) {
+    return [entry.apiKey.trim()];
+  }
+  return [];
+}
+
+function activeApiProviderConfigs() {
+  const snapshot = readApiConfigSnapshot();
+  const configs = [];
+
+  for (const [type, entry] of Object.entries(snapshot)) {
+    if (!entry || typeof entry !== 'object' || entry.active !== true) continue;
+
+    const apiKeys = normalizeApiKeys(entry);
+    if (type !== 'ollama' && type !== 'opengateway' && apiKeys.length === 0) continue;
+
+    configs.push({
+      type,
+      apiKey: apiKeys[0] || '',
+      apiKeys,
+      baseUrl: typeof entry.baseUrl === 'string' ? entry.baseUrl : undefined,
+      defaultModel: typeof entry.selectedModel === 'string' ? entry.selectedModel : undefined,
+      rotationStrategy: typeof entry.rotationStrategy === 'string' ? entry.rotationStrategy : undefined,
+    });
+  }
+
+  return configs;
+}
+
+function syncApiConfigToOrchestrator(preferredProvider) {
+  const orchestrator = grpcServerInstance?.orchestrator;
+  if (!orchestrator) return null;
+
+  const configs = activeApiProviderConfigs();
+  const registered = [];
+  const registry = orchestrator.getRegistry();
+
+  for (const config of configs) {
+    try {
+      registry.registerFromConfig(config);
+      registered.push(config);
+    } catch (e) {
+      log(`Failed to register persisted provider ${config.type}: ${e.message}`);
+    }
+  }
+
+  const preferred = registered.find((config) => config.type === preferredProvider);
+  const selected = preferred || registered[0] || null;
+  if (selected && typeof orchestrator.setDefaultProvider === 'function') {
+    orchestrator.setDefaultProvider(selected.type);
+  }
+  if (registered.length > 0 && typeof orchestrator.setFallbackOrder === 'function') {
+    orchestrator.setFallbackOrder(registered.map((config) => config.type));
+  }
+
+  if (registered.length > 0) {
+    log(`Synced ${registered.length} persisted API provider(s) from API Manager config.`);
+  }
+
+  return selected;
 }
 
 // --- Host Skill Registry (Node-capable) ---
@@ -474,8 +668,24 @@ function registerSocketEvents(socket, isCloud = false) {
     return isCloud ? findCloudDevice() : findDeviceBySocket(socket.id);
   };
 
+  const getAuthorizedClient = (options = {}) => {
+    const { allowDesktop = true, allowDevice = true } = options;
+    const device = getDevice();
+    if (allowDevice && device) {
+      device.lastSeen = Date.now();
+      return { device, isDesktop: false, senderId: device.id, senderName: device.name };
+    }
+    if (allowDesktop && isTrustedDesktopSocket(socket, isCloud)) {
+      return { device: null, isDesktop: true, senderId: 'desktop', senderName: 'Desktop' };
+    }
+    socket.emit(EVENTS.ERROR, { message: 'Unauthorized: pair the device before using this action' });
+    return null;
+  };
+
   // Ralph Loop Execution
   socket.on('ralph_loop_run', async (data) => {
+    if (!getAuthorizedClient()) return;
+
     const task = data?.task || '';
     const maxIterations = data?.maxIterations || 3;
     const costLimitUsd = data?.costLimitUsd || 0.10;
@@ -569,6 +779,12 @@ function registerSocketEvents(socket, isCloud = false) {
 
   // Skill Execution Proxying
   socket.on('run_skill', async (data, callback) => {
+    if (!getAuthorizedClient()) {
+      const errResult = { success: false, error: 'Unauthorized: pair the device before running skills' };
+      if (typeof callback === 'function') callback(errResult);
+      return;
+    }
+
     const skillId = data?.id;
     const input = data?.input || {};
     log(`[run_skill] Requested ${skillId} with inputs: ${JSON.stringify(input)}`);
@@ -594,6 +810,11 @@ function registerSocketEvents(socket, isCloud = false) {
 
   // Set Workspace Root
   socket.on('set_workspace', (data, callback) => {
+    if (!getAuthorizedClient()) {
+      if (typeof callback === 'function') callback({ success: false, error: 'Unauthorized' });
+      return;
+    }
+
     const root = data?.path || null;
     globalThis.ghitaWorkspaceRoot = root;
     if (root) {
@@ -609,6 +830,11 @@ function registerSocketEvents(socket, isCloud = false) {
 
   // Get Workspace Root
   socket.on('get_workspace', (callback) => {
+    if (!getAuthorizedClient()) {
+      if (typeof callback === 'function') callback({ path: null, error: 'Unauthorized' });
+      return;
+    }
+
     const root = globalThis.ghitaWorkspaceRoot || null;
     if (typeof callback === 'function') {
       callback({ path: root });
@@ -619,6 +845,8 @@ function registerSocketEvents(socket, isCloud = false) {
 
   // Command Approvals Handshake
   socket.on('approve_command', (data) => {
+    if (!getAuthorizedClient()) return;
+
     const id = data?.id;
     const resolve = pendingApprovals.get(id);
     if (resolve) {
@@ -629,6 +857,8 @@ function registerSocketEvents(socket, isCloud = false) {
   });
 
   socket.on('reject_command', (data) => {
+    if (!getAuthorizedClient()) return;
+
     const id = data?.id;
     const resolve = pendingApprovals.get(id);
     if (resolve) {
@@ -640,6 +870,8 @@ function registerSocketEvents(socket, isCloud = false) {
 
   // Local Agentic Execution (Phase 7 ReAct loop)
   socket.on('agent_run', async (data) => {
+    if (!getAuthorizedClient()) return;
+
     const task = data?.task || '';
     const maxIterations = data?.maxIterations || 10;
     const provider = data?.provider;
@@ -848,19 +1080,12 @@ ${result.output}`
 
   // Chat
   socket.on(EVENTS.CHAT, async (data) => {
-    const device = getDevice();
-    const isDesktop = data?.isDesktop || (!device && !isCloud);
+    const authorized = getAuthorizedClient();
+    if (!authorized) return;
 
-    if (!isDesktop && !device) {
-      socket.emit(EVENTS.ERROR, { message: 'Unauthorized: Device is not paired' });
-      return;
-    }
-
-    const senderName = device ? device.name : 'Desktop';
-    const senderId = device ? device.id : 'desktop';
+    const { device, isDesktop, senderId, senderName } = authorized;
 
     if (data?.text) {
-      if (device) device.lastSeen = Date.now();
       log(`Chat from ${senderName}: ${data.text}`);
 
       // Nếu từ Mobile, emit lên Tauri qua stdout
@@ -901,15 +1126,25 @@ ${result.output}`
         }
 
         if (grpcServerInstance && grpcServerInstance.orchestrator) {
+          const persistedProvider = syncApiConfigToOrchestrator(data.provider);
+          const selectedProvider = data.provider || persistedProvider?.type;
+          const selectedModel = data.model || persistedProvider?.defaultModel;
+
           // Sync API credentials from frontend (localStorage) into orchestrator registry
-          if (data.provider && (data.apiKey || data.baseUrl)) {
+          if (data.provider && (data.apiKey || data.apiKeys || data.baseUrl)) {
             try {
               const registry = grpcServerInstance.orchestrator.getRegistry();
+              const apiKeys = Array.isArray(data.apiKeys)
+                ? data.apiKeys.filter((key) => typeof key === 'string' && key.trim())
+                : data.apiKey
+                  ? [data.apiKey]
+                  : [];
               registry.registerFromConfig({
                 type: data.provider,
-                apiKey: data.apiKey || '',
+                apiKey: apiKeys[0] || '',
+                apiKeys,
                 baseUrl: data.baseUrl || '',
-                defaultModel: data.model || '',
+                defaultModel: selectedModel || '',
               });
               log(`Synced credentials for provider: ${data.provider}`);
             } catch (e) {
@@ -918,8 +1153,8 @@ ${result.output}`
           }
 
           const stream = grpcServerInstance.orchestrator.chatStream(messages, {
-            provider: data.provider || undefined,
-            model: data.model || undefined,
+            provider: selectedProvider || undefined,
+            model: selectedModel || undefined,
           });
 
           let lastUsage = null;
@@ -981,6 +1216,8 @@ ${result.output}`
 
   // Computer Use step feedback/preview
   socket.on('computer_use_step', (data) => {
+    if (!getAuthorizedClient()) return;
+
     log(`Computer Use step preview received: ${data?.action || 'unknown action'}`);
     broadcast('computer_use_step', data);
   });
@@ -1008,8 +1245,20 @@ ${result.output}`
     if (device) device.lastSeen = Date.now();
   });
 
+  // Sync Language
+  socket.on(EVENTS.SYNC_LANGUAGE, (data) => {
+    const authorized = getAuthorizedClient();
+    if (!authorized) return;
+    const { senderId, senderName } = authorized;
+    log(`Sync language from ${senderName}: ${data?.language}`);
+    broadcast(EVENTS.SYNC_LANGUAGE, data);
+    ipcEmit(EVENTS.SYNC_LANGUAGE, data);
+  });
+
   // Unpair
   socket.on(EVENTS.UNPAIR, (data) => {
+    if (!getAuthorizedClient()) return;
+
     const deviceId = data?.deviceId || getDevice()?.id;
     if (deviceId) {
       const device = connectedDevices.get(deviceId);
@@ -1040,11 +1289,15 @@ ${result.output}`
 
 io.on('connection', (socket) => {
   log(`New connection: ${socket.id}`);
+  if (isTrustedDesktopSocket(socket)) {
+    socket.join('desktop');
+  }
 
   // Pairing
   socket.on(EVENTS.PAIR, (data) => {
     const code = data?.code?.toUpperCase();
     const deviceId = data?.deviceId;
+    const authToken = data?.authToken;
 
     if (!code && !deviceId) {
       socket.emit(EVENTS.ERROR, { message: 'Pairing code or device ID is required' });
@@ -1068,6 +1321,7 @@ io.on('connection', (socket) => {
         lastSeen: Date.now(),
         socketId: socket.id,
         pairedAt: Date.now(),
+        secret: randomBytes(32).toString('hex'),
       };
 
       connectedDevices.set(device.id, device);
@@ -1077,6 +1331,7 @@ io.on('connection', (socket) => {
       socket.emit(EVENTS.PAIR_CONFIRM, {
         deviceName: 'GHITA Desktop',
         deviceId: device.id,
+        authToken: device.secret,
       });
 
       regenerateCode();
@@ -1084,7 +1339,7 @@ io.on('connection', (socket) => {
       ipcEmit(EVENTS.PAIR_CONFIRM, { deviceId: device.id, name: device.name, platform: device.platform });
     } else if (deviceId) {
       device = connectedDevices.get(deviceId);
-      if (device) {
+      if (device && device.secret && authToken === device.secret) {
         device.socketId = socket.id;
         device.connected = true;
         device.lastSeen = Date.now();
@@ -1093,6 +1348,7 @@ io.on('connection', (socket) => {
         socket.emit(EVENTS.PAIR_CONFIRM, {
           deviceName: 'GHITA Desktop',
           deviceId: device.id,
+          authToken: device.secret,
         });
         log(`Session resumed for device: ${device.name} (${device.id})`);
         ipcEmit(EVENTS.PAIR_CONFIRM, { deviceId: device.id, name: device.name, platform: device.platform, resumed: true });
@@ -1326,8 +1582,12 @@ process.on('unhandledRejection', (reason, promise) => {
 
 // --- Start ---
 log(`Preparing ports...`);
-liberatePort(PORT);
-liberatePort(50051); // Dọn dẹp cổng gRPC mặc định trước khi khởi tạo
+if (AUTO_LIBERATE_PORTS) {
+  liberatePort(PORT);
+  liberatePort(50051); // Legacy opt-in: force-close processes that own GHITA ports.
+} else {
+  log('Port auto-liberation disabled. Set GHITA_LIBERATE_PORTS=1 to enable legacy kill-on-port behavior.');
+}
 
 httpServer.on('error', (err) => {
   log(`CRITICAL: HTTP Server failed to start: ${err.message}`);
@@ -1358,6 +1618,7 @@ httpServer.listen(PORT, HOST, async () => {
     });
 
     grpcServerInstance = new GrpcServer(orchestrator);
+    syncApiConfigToOrchestrator();
     
     // Cố gắng khởi động gRPC, tự động thử cổng tiếp theo nếu bận
     let grpcPort = 50051;
@@ -1386,4 +1647,3 @@ httpServer.listen(PORT, HOST, async () => {
     process.send({ type: 'started', port: PORT, localIP: ip, pairingCode: code });
   }
 });
-

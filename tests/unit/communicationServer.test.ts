@@ -464,6 +464,7 @@ describe('pairing flow (PAIR event)', () => {
     expect(mockSocketEmit).toHaveBeenCalledWith(SOCKET_EVENTS.PAIR_CONFIRM, {
       deviceName: 'GHITA Desktop',
       deviceId: expect.any(String),
+      authToken: expect.any(String),
     });
 
     // Device should be registered
@@ -810,6 +811,9 @@ describe('session resumption', () => {
     const pairCode = server.pairing.getCode();
     triggerSocketEvent(SOCKET_EVENTS.PAIR, { code: pairCode, deviceId: 'device-123' });
     expect(server.deviceCount).toBe(1);
+    const firstPairConfirm = mockSocketEmit.mock.calls.find(
+      ([event]) => event === SOCKET_EVENTS.PAIR_CONFIRM,
+    )?.[1] as { authToken: string };
 
     // 2. Disconnect (should remain in Map but connected = false)
     triggerSocketEvent(SOCKET_EVENTS.DISCONNECT, 'transport close');
@@ -817,12 +821,13 @@ describe('session resumption', () => {
 
     // 3. Reconnect with deviceId
     mockSocketEmit.mockClear();
-    triggerSocketEvent(SOCKET_EVENTS.PAIR, { deviceId: 'device-123' });
+    triggerSocketEvent(SOCKET_EVENTS.PAIR, { deviceId: 'device-123', authToken: firstPairConfirm.authToken });
 
     expect(server.deviceCount).toBe(1);
     expect(mockSocketEmit).toHaveBeenCalledWith(SOCKET_EVENTS.PAIR_CONFIRM, {
       deviceName: 'GHITA Desktop',
       deviceId: 'device-123',
+      authToken: firstPairConfirm.authToken,
     });
   });
 
@@ -856,6 +861,9 @@ describe('session resumption', () => {
     simulateConnection({ id: 'test-socket-1' });
     triggerSocketEvent(SOCKET_EVENTS.PAIR, { code: pairCode, deviceId: 'device-abc' });
     expect(server.deviceCount).toBe(1);
+    const firstPairConfirm = mockSocketEmit.mock.calls.find(
+      ([event]) => event === SOCKET_EVENTS.PAIR_CONFIRM,
+    )?.[1] as { authToken: string };
 
     // 2. Disconnect
     triggerSocketEvent(SOCKET_EVENTS.DISCONNECT, 'ping timeout');
@@ -864,12 +872,13 @@ describe('session resumption', () => {
     // 3. Connect a new socket test-socket-2 and resume session
     simulateConnection({ id: 'test-socket-2' });
     mockSocketEmit.mockClear();
-    triggerSocketEvent(SOCKET_EVENTS.PAIR, { deviceId: 'device-abc' });
+    triggerSocketEvent(SOCKET_EVENTS.PAIR, { deviceId: 'device-abc', authToken: firstPairConfirm.authToken });
 
     expect(server.deviceCount).toBe(1);
     expect(mockSocketEmit).toHaveBeenCalledWith(SOCKET_EVENTS.PAIR_CONFIRM, {
       deviceName: 'GHITA Desktop',
       deviceId: 'device-abc',
+      authToken: firstPairConfirm.authToken,
     });
   });
 });

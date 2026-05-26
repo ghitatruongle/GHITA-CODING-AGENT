@@ -1,5 +1,7 @@
 use tauri::{Emitter, Listener, Manager};
 use tauri_plugin_updater::UpdaterExt;
+use std::fs;
+use std::path::PathBuf;
 use std::sync::Mutex;
 
 // --- Server sidecar state ---
@@ -51,10 +53,16 @@ fn start_server(
 
     // Try multiple possible locations for the server script
     let candidates = [
+        exe_dir.join("sidecar").join("server.bundle.mjs"),
         exe_dir.join("sidecar").join("server.mjs"),
+        exe_dir.join("../sidecar/server.bundle.mjs"),
         exe_dir.join("../sidecar/server.mjs"),
+        exe_dir.join("../../src-tauri/sidecar/server.bundle.mjs"),
         exe_dir.join("../../src-tauri/sidecar/server.mjs"),
         // Dev mode: relative to src-tauri
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("sidecar")
+            .join("server.bundle.mjs"),
         std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("sidecar")
             .join("server.mjs"),
@@ -65,7 +73,7 @@ fn start_server(
         .find(|p| p.exists())
         .ok_or_else(|| {
             format!(
-                "server.mjs not found. Searched: {}",
+                "sidecar server script not found. Searched: {}",
                 candidates
                      .iter()
                      .map(|p| p.display().to_string())
@@ -74,13 +82,29 @@ fn start_server(
             )
         })?;
 
-    let mut child = std::process::Command::new("node")
+    let data_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| e.to_string())?;
+    fs::create_dir_all(&data_dir).map_err(|e| e.to_string())?;
+
+    let bundled_node = server_script
+        .parent()
+        .map(|dir| dir.join("node.exe"))
+        .filter(|path| path.exists());
+    let node_command = bundled_node
+        .as_ref()
+        .map(|path| path.as_os_str())
+        .unwrap_or_else(|| std::ffi::OsStr::new("node"));
+
+    let mut child = std::process::Command::new(node_command)
         .arg(&server_script)
         .env("GHITA_PORT", s.port.to_string())
+        .env("GHITA_DATA_DIR", data_dir)
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::inherit())
         .spawn()
-        .map_err(|e| format!("Failed to start server: {}. Is Node.js installed?", e))?;
+        .map_err(|e| format!("Failed to start sidecar server: {}", e))?;
 
     // Spawn a thread to read stdout line-by-line
     if let Some(stdout) = child.stdout.take() {
@@ -139,7 +163,6 @@ fn get_local_ips() -> Vec<String> {
     ips
 }
 
-/// Get server status
 #[tauri::command]
 fn get_server_status(state: tauri::State<'_, Mutex<ServerState>>) -> Result<serde_json::Value, String> {
     let mut s = state.lock().map_err(|e| e.to_string())?;
@@ -199,6 +222,31 @@ fn get_server_status(state: tauri::State<'_, Mutex<ServerState>>) -> Result<serd
         "localIps": ips
     }))
 }
+
+fn api_config_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    Ok(dir.join("api-config.json"))
+}
+
+#[tauri::command]
+fn load_api_config(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
+    let path = api_config_path(&app)?;
+    if !path.exists() {
+        return Ok(serde_json::json!({}));
+    }
+
+    let content = fs::read_to_string(path).map_err(|e| e.to_string())?;
+    serde_json::from_str(&content).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn save_api_config(app: tauri::AppHandle, config: serde_json::Value) -> Result<(), String> {
+    let path = api_config_path(&app)?;
+    let content = serde_json::to_string_pretty(&config).map_err(|e| e.to_string())?;
+    fs::write(path, content).map_err(|e| e.to_string())
+}
+
 pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
@@ -216,6 +264,8 @@ pub fn run() {
             stop_server,
             get_server_status,
             get_local_ips,
+            load_api_config,
+            save_api_config,
         ])
         .setup(|app| {
             // Get splash and main windows — gracefully handle if not found

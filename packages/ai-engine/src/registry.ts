@@ -84,6 +84,7 @@ export class ProviderRegistry {
       case 'custom':
         return new CustomProvider(config);
       // OpenAI-compatible providers (reuse CustomProvider)
+      // Phase 1.2 providers use the same path.
       case 'opengateway':
       case 'mimo':
       case 'openrouter':
@@ -92,6 +93,17 @@ export class ProviderRegistry {
       case 'mistral':
       case 'hicap':
       case 'github-models':
+      case 'cerebras':
+      case 'together':
+      case 'fireworks':
+      case 'cohere':
+      case 'xai':
+      case 'replicate':
+      case 'perplexity':
+      case 'voyage':
+      case 'ai21':
+      case 'sambanova':
+      case 'novita':
         return new CustomProvider({
           ...config,
           providerType: config.type,

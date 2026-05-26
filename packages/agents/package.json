@@ -10,6 +10,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./runtime": {
+      "types": "./dist/runtime.d.ts",
+      "import": "./dist/runtime.js"
     }
   },
   "scripts": {
@@ -22,9 +26,10 @@
   "dependencies": {
     "@ghita/memory": "workspace:*",
     "@ghita/shared": "workspace:*",
-    "@ghita/skills": "workspace:*"
+    "better-sqlite3": "^11.8.0"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
     "@types/node": "^25.9.1",
     "typescript": "^5.6.0"
   }

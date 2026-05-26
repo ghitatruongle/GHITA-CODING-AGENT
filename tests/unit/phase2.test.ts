@@ -166,8 +166,11 @@ describe('Phase 2 Core AI Engine Features Test Suite', () => {
       mockRedisStorage.clear();
       triggerRedisError = false;
       cache = new RedisCache();
-      // Wait for mock redis client async connection
-      await new Promise((resolve) => setTimeout(resolve, 15));
+      // Wait for mock redis client connection state to be ready
+      for (let i = 0; i < 50; i++) {
+        if ((cache as any).isConnected) break;
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      }
     });
 
     it('should write to Redis and read back successfully when connected', async () => {

@@ -82,10 +82,17 @@ export interface TokenUsage {
   totalTokens: number;
 }
 
+// --- Key Rotation ---
+export type KeyRotationStrategy = 'round-robin' | 'failover' | 'random';
+
 // --- Provider Config ---
 export interface ProviderConfig {
   type: AIProviderType;
   apiKey?: string;
+  /** Phase 1.1: Multiple API keys for rotation/failover */
+  apiKeys?: string[];
+  /** Phase 1.1: Key rotation strategy (default: 'failover') */
+  rotationStrategy?: KeyRotationStrategy;
   baseUrl?: string;
   defaultModel?: string;
   maxTokens?: number;
@@ -126,6 +133,13 @@ export interface OrchestratorConfig {
   qdrantUrl?: string;
   collectionName?: string;
   cacheThreshold?: number;
+  /** Phase 1.4: Smart routing configuration */
+  smartRouting?: {
+    strategy: 'cost-first' | 'quality-first' | 'balanced' | 'latency-first';
+    maxCostPerRequest?: number;
+    maxLatencyMs?: number;
+    minQualityScore?: number;
+  };
 }
 
 export interface OrchestratorStatus {

@@ -13,6 +13,7 @@ interface ServerHealth {
   pairingCode?: string;
   codeExpiresAt?: number;
   connectedDevices?: number;
+  pairedDevices?: number;
   port?: number;
   uptime?: number;
   localIP?: string;
@@ -20,6 +21,8 @@ interface ServerHealth {
   hostname?: string;
   devices?: DeviceInfo[];
 }
+
+const getOnlineDevices = (devices?: DeviceInfo[]) => (devices ?? []).filter((device) => device.connected);
 
 export function DevicesView() {
   const { t } = useTranslation();
@@ -41,11 +44,7 @@ export function DevicesView() {
       if (result.status === 'ok') {
         setServerStatus('listening');
         setPairingCode(result.pairingCode || null);
-        if (result.devices) {
-          setConnectedDevices(result.devices);
-        } else {
-          setConnectedDevices([]);
-        }
+        setConnectedDevices(getOnlineDevices(result.devices));
       } else {
         setServerStatus('offline');
         setPairingCode(null);
@@ -68,11 +67,7 @@ export function DevicesView() {
         if (result.status === 'ok') {
           setServerStatus('listening');
           setPairingCode(result.pairingCode || null);
-          if (result.devices) {
-            setConnectedDevices(result.devices);
-          } else {
-            setConnectedDevices([]);
-          }
+          setConnectedDevices(getOnlineDevices(result.devices));
         } else {
           setServerStatus('offline');
           setPairingCode(null);

@@ -8,6 +8,8 @@
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist"],
   "references": [
-    { "path": "../shared" }
+    { "path": "../shared" },
+    { "path": "../agents" },
+    { "path": "../ai-engine" }
   ]
 }

@@ -180,3 +180,27 @@ export function createNodeSkillRegistry(options: NodeSkillAdapterOptions = {}) {
 
 export { SkillHub } from './registry/hub.js';
 
+// --- Phase 5: Socratic Docs-Aware /grill-me ---
+export { DocsGriller, createGrillMeCommand } from './engineering/docsGriller.js';
+export type {
+  DocEntry,
+  GrillQuestion,
+  GrillSession,
+  Contradiction,
+  DocsGrillerConfig,
+} from './engineering/docsGriller.js';
+
+// --- Phase 6A: Slash Commands ---
+export { SlashCommandRegistry } from './commands/registry.js';
+export type { SlashCommand, SlashCommandFlag, ParsedArgs } from './commands/registry.js';
+export { createBuiltinSlashCommands } from './commands/builtins.js';
+
+// --- Phase 7: Dynamic Skill Generation Loop ---
+export { DynamicSkillGenerator, createSkillsSyncCommand } from './registry/dynamicGenerator.js';
+
+// Phase 2.3: Marketplace
+export { SkillCatalogClient } from './marketplace/catalog.js';
+export { SkillInstaller } from './marketplace/installer.js';
+export { SkillRatingsStore } from './marketplace/ratings.js';
+export type { SkillManifest, InstalledSkill, SkillCatalog, CatalogFilters, SkillRating } from './marketplace/types.js';
+

@@ -35,13 +35,38 @@ function ReadyNotifier() {
 
 function AppContent() {
   const theme = useAppStore((s) => s.theme);
+  const language = useAppStore((s) => s.language);
   const { t } = useTranslation();
   const tRef = useRef(t);
   tRef.current = t;
 
+  const lastSyncedLangRef = useRef(language);
+
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
+
+  // Sync language changes from desktop React state to the Node sidecar server
+  useEffect(() => {
+    const syncLanguageToServer = async () => {
+      if (language === lastSyncedLangRef.current) return;
+      lastSyncedLangRef.current = language;
+
+      try {
+        const status = await invoke<{ port: number }>('get_server_status');
+        const port = status.port || 8080;
+        await fetch(`http://127.0.0.1:${port}/sync-language`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ language }),
+        });
+        console.log('[AppContent] Language synced to server:', language);
+      } catch (err) {
+        console.warn('[AppContent] Failed to sync language to server:', err);
+      }
+    };
+    void syncLanguageToServer();
+  }, [language]);
 
   // Auto-start the sidecar server if it is offline on startup
   useEffect(() => {
@@ -77,6 +102,13 @@ function AppContent() {
 
           const tr = tRef.current;
           switch (event) {
+            case 'sync_language':
+              if (data.language) {
+                console.log('[AppContent] Sync language received from sidecar:', data.language);
+                lastSyncedLangRef.current = data.language;
+                useAppStore.getState().setLanguage(data.language);
+              }
+              break;
             case 'pair_confirm':
               if (data.resumed) {
                 toast.success(tr('app.deviceReconnected', { name: data.name || 'Mobile' }));

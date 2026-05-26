@@ -2,7 +2,7 @@
 // GHITA CODING AGENT — Code Editor (Monaco)
 // ==============================================================================
 
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useEffect, useRef } from 'react';
 import Editor, { type OnMount } from '@monaco-editor/react';
 import { useTranslation } from '../i18n';
 
@@ -11,10 +11,28 @@ interface CodeEditorProps {
   language?: string;
   onChange?: (value: string) => void;
   readOnly?: boolean;
+  onSave?: () => void;
+  onSaveAll?: () => void;
 }
 
-function CodeEditorInner({ value, language = 'typescript', onChange, readOnly = false }: CodeEditorProps) {
+function CodeEditorInner({
+  value,
+  language = 'typescript',
+  onChange,
+  readOnly = false,
+  onSave,
+  onSaveAll
+}: CodeEditorProps) {
   const { t } = useTranslation();
+
+  const onSaveRef = useRef(onSave);
+  const onSaveAllRef = useRef(onSaveAll);
+
+  useEffect(() => {
+    onSaveRef.current = onSave;
+    onSaveAllRef.current = onSaveAll;
+  }, [onSave, onSaveAll]);
+
   const handleMount: OnMount = useCallback((editor, monaco) => {
     // Define custom GHITA dark theme
     monaco.editor.defineTheme('ghita-dark', {
@@ -44,6 +62,15 @@ function CodeEditorInner({ value, language = 'typescript', onChange, readOnly = 
     });
     monaco.editor.setTheme('ghita-dark');
 
+    // Register save keybindings directly in Monaco
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+      onSaveRef.current?.();
+    });
+
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyS, () => {
+      onSaveAllRef.current?.();
+    });
+
     // Focus editor
     editor.focus();
   }, []);
@@ -55,7 +82,7 @@ function CodeEditorInner({ value, language = 'typescript', onChange, readOnly = 
       value={value}
       onChange={(v) => onChange?.(v ?? '')}
       onMount={handleMount}
-      theme="vs-dark"
+      theme="ghita-dark"
       options={{
         readOnly,
         minimap: { enabled: false },

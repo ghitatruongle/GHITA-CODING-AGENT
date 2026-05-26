@@ -2,24 +2,50 @@
 // GHITA CODING AGENT — Main Layout
 // ==============================================================================
 
-import { useState, useCallback, useRef, useEffect, Component } from 'react';
+import { useState, useCallback, useRef, useEffect, Component, lazy, Suspense } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
-import { useAppStore } from '../stores/appStore';
+import { useAppStore, type TabId } from '../stores/appStore';
 import { useTranslation } from '../i18n';
 import { isWindows, isLinux } from '@ghita/shared';
 import { TabBar } from '../components/TabBar';
-import { Terminal } from '../components/Terminal';
-import { ChatPanel } from '../components/ChatPanel';
-import { CodeView } from '../views/CodeView';
-import { ApiView } from '../views/ApiView';
-import { SkillsView } from '../views/SkillsView';
-import { AgentsView } from '../views/AgentsView';
-import { DevicesView } from '../views/DevicesView';
-import { DashboardView } from '../views/DashboardView';
-import { SettingsView } from '../views/SettingsView';
-import { MarketplaceView } from '../views/MarketplaceView';
-import { WorkflowView } from '../views/WorkflowView';
-import { EcosystemView } from '../views/EcosystemView';
+
+const Terminal = lazy(() => import('../components/Terminal').then((module) => ({ default: module.Terminal })));
+const ChatPanel = lazy(() => import('../components/ChatPanel').then((module) => ({ default: module.ChatPanel })));
+const CodeView = lazy(() => import('../views/CodeView').then((module) => ({ default: module.CodeView })));
+const ApiView = lazy(() => import('../views/ApiView').then((module) => ({ default: module.ApiView })));
+const SkillsView = lazy(() => import('../views/SkillsView').then((module) => ({ default: module.SkillsView })));
+const AgentsView = lazy(() => import('../views/AgentsView').then((module) => ({ default: module.AgentsView })));
+const DevicesView = lazy(() => import('../views/DevicesView').then((module) => ({ default: module.DevicesView })));
+const DashboardView = lazy(() => import('../views/DashboardView').then((module) => ({ default: module.DashboardView })));
+const SettingsView = lazy(() => import('../views/SettingsView').then((module) => ({ default: module.SettingsView })));
+const MarketplaceView = lazy(() => import('../views/MarketplaceView').then((module) => ({ default: module.MarketplaceView })));
+const WorkflowView = lazy(() => import('../views/WorkflowView').then((module) => ({ default: module.WorkflowView })));
+const EcosystemView = lazy(() => import('../views/EcosystemView').then((module) => ({ default: module.EcosystemView })));
+
+function LoadingPanel() {
+  return (
+    <div
+      aria-busy="true"
+      style={{
+        height: '100%',
+        display: 'grid',
+        placeItems: 'center',
+        color: 'var(--text-muted)',
+      }}
+    >
+      <div
+        style={{
+          width: 22,
+          height: 22,
+          borderRadius: '50%',
+          border: '2px solid var(--border-subtle)',
+          borderTopColor: 'var(--accent-primary)',
+          animation: 'spin 700ms linear infinite',
+        }}
+      />
+    </div>
+  );
+}
 
 // --- Per-view Error Boundary ---
 function ViewErrorBoundaryInner({ children, t }: { children: ReactNode; t: (key: string) => string }) {
@@ -86,24 +112,52 @@ class ViewErrorBoundary extends Component<
 function ActiveView() {
   const activeTab = useAppStore((s) => s.activeTab);
   const { t } = useTranslation();
+  
+  // Track visited tabs to keep them alive lazy-mounted
+  const [visited, setVisited] = useState<Record<TabId, boolean>>({
+    [activeTab]: true
+  } as Record<TabId, boolean>);
+
+  useEffect(() => {
+    setVisited((prev) => {
+      if (prev[activeTab]) return prev;
+      return { ...prev, [activeTab]: true };
+    });
+  }, [activeTab]);
+
+  const TABS: Array<{ id: TabId; component: ReactNode }> = [
+    { id: 'code',      component: <CodeView /> },
+    { id: 'api',       component: <ApiView /> },
+    { id: 'skills',    component: <SkillsView /> },
+    { id: 'agents',    component: <AgentsView /> },
+    { id: 'devices',   component: <DevicesView /> },
+    { id: 'dashboard', component: <DashboardView /> },
+    { id: 'marketplace', component: <MarketplaceView /> },
+    { id: 'workflow',  component: <WorkflowView /> },
+    { id: 'ecosystem', component: <EcosystemView /> },
+    { id: 'settings',  component: <SettingsView /> },
+  ];
 
   return (
-    <ViewErrorBoundary key={activeTab} t={t}>
-      {(() => {
-        switch (activeTab) {
-          case 'code':      return <CodeView />;
-          case 'api':       return <ApiView />;
-          case 'skills':    return <SkillsView />;
-          case 'agents':    return <AgentsView />;
-          case 'devices':   return <DevicesView />;
-          case 'dashboard': return <DashboardView />;
-          case 'marketplace': return <MarketplaceView />;
-          case 'workflow':  return <WorkflowView />;
-          case 'ecosystem': return <EcosystemView />;
-          case 'settings':  return <SettingsView />;
-        }
-      })()}
-    </ViewErrorBoundary>
+    <Suspense fallback={<LoadingPanel />}>
+      {TABS.map((tab) => {
+        if (!visited[tab.id]) return null;
+        return (
+          <div
+            key={tab.id}
+            style={{
+              display: activeTab === tab.id ? 'block' : 'none',
+              height: '100%',
+              width: '100%',
+            }}
+          >
+            <ViewErrorBoundary t={t}>
+              {tab.component}
+            </ViewErrorBoundary>
+          </div>
+        );
+      })}
+    </Suspense>
   );
 }
 
@@ -253,7 +307,9 @@ export function MainLayout() {
                 className="drag-handle"
               />
               <div style={{ height: terminalHeight, flexShrink: 0 }}>
-                <Terminal />
+                <Suspense fallback={<LoadingPanel />}>
+                  <Terminal />
+                </Suspense>
               </div>
             </>
           )}
@@ -269,7 +325,9 @@ export function MainLayout() {
               animation: 'fadeIn 200ms ease forwards',
             }}
           >
-            <ChatPanel />
+            <Suspense fallback={<LoadingPanel />}>
+              <ChatPanel />
+            </Suspense>
           </div>
         )}
       </div>

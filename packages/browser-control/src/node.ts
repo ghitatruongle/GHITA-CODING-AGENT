@@ -4,6 +4,8 @@
 
 import type { BrowserControlAdapter } from './index.js';
 
+export { HybridBrowserController } from './hybrid.js';
+
 export interface PlaywrightAdapterOptions {
   headless?: boolean;
   channel?: string;

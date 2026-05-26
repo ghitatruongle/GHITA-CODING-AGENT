@@ -27,6 +27,10 @@ import { z } from 'zod';
 import { generateObject, type GenerateObjectResponse } from './utils/structured.js';
 import { SemanticCache } from './utils/cache.js';
 import { CostTracker, BudgetManager } from './utils/cost.js';
+import { SmartRouter } from './routing/smart-router.js';
+import type { RoutingDecision } from './routing/types.js';
+import { ModelDiscovery } from './discovery/model-discovery.js';
+import type { DiscoveryResult } from './discovery/types.js';
 
 export class Orchestrator {
   private registry: ProviderRegistry;
@@ -45,6 +49,10 @@ export class Orchestrator {
   readonly costTracker: CostTracker;
   readonly budgetManager: BudgetManager;
   readonly semanticCache: SemanticCache;
+
+  // Phase 1.3+1.4: Discovery & Smart Routing
+  readonly modelDiscovery: ModelDiscovery;
+  readonly smartRouter: SmartRouter | null = null;
 
   constructor(config: OrchestratorConfig) {
     this.config = config;
@@ -113,11 +121,52 @@ export class Orchestrator {
         fallbackToInMemory: true
       }
     );
+
+    // Phase 1.3: Model Discovery
+    this.modelDiscovery = new ModelDiscovery();
+
+    // Phase 1.4: Smart Router
+    if (config.smartRouting) {
+      this.smartRouter = new SmartRouter({
+        strategy: config.smartRouting.strategy,
+        maxCostPerRequest: config.smartRouting.maxCostPerRequest,
+        maxLatencyMs: config.smartRouting.maxLatencyMs,
+        minQualityScore: config.smartRouting.minQualityScore,
+      });
+    }
   }
 
   /** Lấy registry để truy cập providers trực tiếp */
   getRegistry(): ProviderRegistry {
     return this.registry;
+  }
+
+  /** Phase 1.3: Discover models từ provider API */
+  async discoverModels(providerType?: AIProviderType): Promise<DiscoveryResult> {
+    const config = this.config.providers.find((p) => p.type === providerType);
+    if (!config) throw new Error(`Provider ${providerType} not configured`);
+    return this.modelDiscovery.discoverModels({
+      baseUrl: config.baseUrl ?? '',
+      apiKey: config.apiKey,
+      providerType: providerType as string,
+      authStyle: 'bearer',
+      parseResponse: (data: unknown) => {
+        const d = data as { data?: { id: string }[] };
+        return (d.data ?? []).map((m) => ({ id: m.id, name: m.id, provider: providerType as string }));
+      },
+    });
+  }
+
+  /** Phase 1.4: Get routing metrics */
+  getRoutingMetrics() {
+    return this.smartRouter?.getMetrics() ?? [];
+  }
+
+  /** Phase 1.4: Get routing decision */
+  getRoutingDecision(_preferred?: AIProviderType, _agentRole?: string): RoutingDecision | null {
+    if (!this.smartRouter) return null;
+    const available = this.registry.getAll().map((p) => ({ type: p.type, model: p.defaultModel }));
+    return this.smartRouter.route(available);
   }
 
   /** Chat với provider ưu tiên, fallback nếu lỗi */
@@ -546,6 +595,8 @@ export class Orchestrator {
       'openai', 'anthropic', 'google', 'ollama', 'custom',
       'opengateway', 'mimo', 'openrouter', 'deepseek', 'groq',
       'mistral', 'hicap', 'github-models',
+      'cerebras', 'together', 'fireworks', 'cohere', 'xai',
+      'replicate', 'perplexity', 'voyage', 'ai21', 'sambanova', 'novita',
     ];
     for (const type of allTypes) {
       if (key === type || key.includes(type)) return type;

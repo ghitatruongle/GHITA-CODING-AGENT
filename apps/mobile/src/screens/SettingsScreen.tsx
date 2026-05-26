@@ -27,15 +27,17 @@ import { FontSize, Spacing, Radius } from '../theme/styles';
 import type { MobileSettings, PairedDevice } from '../types';
 import { DEFAULT_MOBILE_SETTINGS } from '../types';
 import type { SettingsScreenProps } from '../navigation/types';
+import { useTranslation } from '../i18n/context';
 
 export function SettingsScreen({ navigation }: SettingsScreenProps): React.JSX.Element {
+  const { t, lang, changeLanguage } = useTranslation();
   const [settings, setSettings] = useState<MobileSettings>(DEFAULT_MOBILE_SETTINGS);
   const [pairedDevices, setPairedDevices] = useState<PairedDevice[]>([]);
 
   useEffect(() => {
     loadAllSettings();
     loadAllDevices();
-  }, []);
+  }, [lang]);
 
   const loadAllSettings = async () => {
     const saved = await loadSettings();
@@ -53,10 +55,10 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): React.JSX.E
   };
 
   const handleRemoveDevice = async (deviceId: string) => {
-    Alert.alert('Xoa thiet bi', 'Ban co chac muon xoa thiet bi nay?', [
-      { text: 'Huy', style: 'cancel' },
+    Alert.alert(t('settings.removeDeviceConfirmTitle'), t('settings.removeDeviceConfirmDesc'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Xoa',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           await removePairedDevice(deviceId);
@@ -67,10 +69,10 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): React.JSX.E
   };
 
   const handleClearAll = async () => {
-    Alert.alert('Xoa tat ca', 'Xoa toan bo du lieu va cai dat?', [
-      { text: 'Huy', style: 'cancel' },
+    Alert.alert(t('settings.clearAllConfirmTitle'), t('settings.clearAllConfirmDesc'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Xoa',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           await clearAllData();
@@ -88,7 +90,7 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): React.JSX.E
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={styles.backBtnText}>{'<'}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Cai dat</Text>
+        <Text style={styles.headerTitle}>{t('settings.title')}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -99,14 +101,14 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): React.JSX.E
       >
         {/* Device Name */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Thiet bi</Text>
+          <Text style={styles.sectionTitle}>{t('settings.deviceSection')}</Text>
           <View style={styles.row}>
-            <Text style={styles.label}>Ten thiet bi</Text>
+            <Text style={styles.label}>{t('settings.deviceNameLabel')}</Text>
             <TextInput
               style={styles.input}
               value={settings.deviceName}
               onChangeText={(v) => handleSaveSettings({ ...settings, deviceName: v })}
-              placeholder="Nhap ten..."
+              placeholder={t('settings.deviceNamePlaceholder')}
               placeholderTextColor={Colors.textDark}
             />
           </View>
@@ -114,9 +116,9 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): React.JSX.E
 
         {/* Preferences */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Tuy chon</Text>
+          <Text style={styles.sectionTitle}>{t('settings.optionsSection')}</Text>
           <View style={styles.row}>
-            <Text style={styles.label}>Tu dong ket noi lai</Text>
+            <Text style={styles.label}>{t('settings.autoReconnectLabel')}</Text>
             <Switch
               value={settings.autoReconnect}
               onValueChange={(v) => handleSaveSettings({ ...settings, autoReconnect: v })}
@@ -124,22 +126,46 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): React.JSX.E
             />
           </View>
           <View style={styles.row}>
-            <Text style={styles.label}>Rung khi co thong bao</Text>
+            <Text style={styles.label}>{t('settings.vibrateLabel')}</Text>
             <Switch
               value={settings.vibrationEnabled}
               onValueChange={(v) => handleSaveSettings({ ...settings, vibrationEnabled: v })}
               trackColor={{ true: Colors.primary }}
             />
           </View>
+          {/* Language selection */}
+          <View style={styles.row}>
+            <Text style={styles.label}>{t('settings.languageLabel')}</Text>
+            <View style={styles.langSelector}>
+              <TouchableOpacity
+                style={[styles.langBtn, lang === 'vi' && styles.langBtnActive]}
+                onPress={() => changeLanguage('vi')}
+              >
+                <Text style={[styles.langBtnText, lang === 'vi' && styles.langBtnTextActive]}>VI</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.langBtn, lang === 'en' && styles.langBtnActive]}
+                onPress={() => changeLanguage('en')}
+              >
+                <Text style={[styles.langBtnText, lang === 'en' && styles.langBtnTextActive]}>EN</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.langBtn, lang === 'zh' && styles.langBtnActive]}
+                onPress={() => changeLanguage('zh')}
+              >
+                <Text style={[styles.langBtnText, lang === 'zh' && styles.langBtnTextActive]}>ZH</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
 
         {/* Paired Devices */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
-            Thiet bi da ghep doi ({pairedDevices.length})
+            {t('settings.pairedSection')} ({pairedDevices.length})
           </Text>
           {pairedDevices.length === 0 ? (
-            <Text style={styles.emptyText}>Chua co thiet bi nao</Text>
+            <Text style={styles.emptyText}>{t('settings.noPairedDevices')}</Text>
           ) : (
             pairedDevices.map((device) => (
               <View key={device.id} style={styles.deviceRow}>
@@ -148,7 +174,7 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): React.JSX.E
                   <Text style={styles.deviceId}>{device.address}</Text>
                 </View>
                 <TouchableOpacity onPress={() => handleRemoveDevice(device.id)}>
-                  <Text style={styles.removeBtn}>Xoa</Text>
+                  <Text style={styles.removeBtn}>{t('common.remove')}</Text>
                 </TouchableOpacity>
               </View>
             ))
@@ -158,12 +184,12 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): React.JSX.E
         {/* Actions */}
         <View style={styles.section}>
           <TouchableOpacity style={styles.dangerBtn} onPress={handleClearAll}>
-            <Text style={styles.dangerBtnText}>Xoa tat ca du lieu</Text>
+            <Text style={styles.dangerBtnText}>{t('settings.clearAllBtn')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Version */}
-        <Text style={styles.version}>GHITA Agent Remote v0.0.2-beta2</Text>
+        <Text style={styles.version}>GHITA Agent Remote v0.0.2</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -289,5 +315,29 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: Spacing.xl,
     marginBottom: Spacing.xl,
+  },
+  langSelector: {
+    flexDirection: 'row',
+    gap: Spacing.xs,
+  },
+  langBtn: {
+    backgroundColor: Colors.backgroundTertiary,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+  },
+  langBtnActive: {
+    backgroundColor: Colors.primaryMuted,
+    borderColor: Colors.primary,
+  },
+  langBtnText: {
+    color: Colors.textSecondary,
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+  },
+  langBtnTextActive: {
+    color: Colors.primary,
   },
 });

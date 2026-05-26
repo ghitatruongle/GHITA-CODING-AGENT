@@ -13,6 +13,7 @@ const KEYS = {
   PAIRED_DEVICES: '@ghita/paired_devices',
   LAST_SERVER: '@ghita/last_server',
   DEVICE_ID: '@ghita/device_id',
+  AUTH_TOKEN: '@ghita/auth_token',
 } as const;
 
 // --- Settings ---
@@ -106,6 +107,30 @@ export async function getDeviceId(): Promise<string> {
     return id;
   } catch {
     return `mobile_fallback_${Date.now()}`;
+  }
+}
+
+export async function getAuthToken(): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem(KEYS.AUTH_TOKEN);
+  } catch {
+    return null;
+  }
+}
+
+export async function saveAuthToken(token: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem(KEYS.AUTH_TOKEN, token);
+  } catch (error) {
+    console.error('[Storage] Failed to save auth token:', error);
+  }
+}
+
+export async function clearAuthToken(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(KEYS.AUTH_TOKEN);
+  } catch (error) {
+    console.error('[Storage] Failed to clear auth token:', error);
   }
 }
 

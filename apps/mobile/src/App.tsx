@@ -1,6 +1,7 @@
 // ==============================================================================
 // GHITA CODING AGENT — Mobile App Root
 // Navigation + SafeArea + ErrorBoundary
+// Cache invalidation test.
 // ==============================================================================
 
 import React, { Component } from 'react';
@@ -14,6 +15,7 @@ import { SettingsScreen } from './screens/SettingsScreen';
 import { ErrorFallback } from './components/ErrorFallback';
 import { Colors } from './theme/colors';
 import type { RootStackParamList } from './navigation/types';
+import { I18nProvider } from './i18n/context';
 
 // --- Navigation Stack ---
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -77,22 +79,24 @@ class AppErrorBoundary extends Component<
 export function App(): React.JSX.Element {
   return (
     <AppErrorBoundary>
-      <SafeAreaProvider>
-        <NavigationContainer theme={DarkNavigationTheme}>
-          <Stack.Navigator
-            initialRouteName="Pairing"
-            screenOptions={{
-              headerShown: false,
-              animation: 'slide_from_right',
-              contentStyle: { backgroundColor: Colors.background },
-            }}
-          >
-            <Stack.Screen name="Pairing" component={PairingScreen} />
-            <Stack.Screen name="RemoteControl" component={RemoteControlScreen} />
-            <Stack.Screen name="Settings" component={SettingsScreen} />
-          </Stack.Navigator>
-        </NavigationContainer>
-      </SafeAreaProvider>
+      <I18nProvider>
+        <SafeAreaProvider>
+          <NavigationContainer theme={DarkNavigationTheme}>
+            <Stack.Navigator
+              initialRouteName="Pairing"
+              screenOptions={{
+                headerShown: false,
+                animation: 'slide_from_right',
+                contentStyle: { backgroundColor: Colors.background },
+              }}
+            >
+              <Stack.Screen name="Pairing" component={PairingScreen} />
+              <Stack.Screen name="RemoteControl" component={RemoteControlScreen} />
+              <Stack.Screen name="Settings" component={SettingsScreen} />
+            </Stack.Navigator>
+          </NavigationContainer>
+        </SafeAreaProvider>
+      </I18nProvider>
     </AppErrorBoundary>
   );
 }

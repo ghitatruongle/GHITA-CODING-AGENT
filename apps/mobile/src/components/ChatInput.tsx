@@ -7,6 +7,7 @@ import React, { useState, useCallback } from 'react';
 import { View, TextInput, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { Colors } from '../theme/colors';
 import { FontSize, Spacing, Radius } from '../theme/styles';
+import { useTranslation } from '../i18n/context';
 
 interface ChatInputProps {
   disabled?: boolean;
@@ -17,8 +18,9 @@ interface ChatInputProps {
 export function ChatInput({
   disabled = false,
   onSend,
-  placeholder = 'Nhập lệnh...',
+  placeholder,
 }: ChatInputProps): React.JSX.Element {
+  const { t } = useTranslation();
   const [text, setText] = useState('');
 
   const handleSend = useCallback(() => {
@@ -28,13 +30,15 @@ export function ChatInput({
     setText('');
   }, [text, onSend]);
 
+  const defaultPlaceholder = placeholder || t('remote.chatInputPlaceholder');
+
   return (
     <View style={styles.container}>
       <TextInput
         style={[styles.input, disabled && styles.inputDisabled]}
         value={text}
         onChangeText={setText}
-        placeholder={placeholder}
+        placeholder={defaultPlaceholder}
         placeholderTextColor={Colors.textDark}
         editable={!disabled}
         returnKeyType="send"
@@ -47,7 +51,7 @@ export function ChatInput({
         onPress={handleSend}
         disabled={disabled || text.trim().length === 0}
         activeOpacity={0.7}
-        accessibilityLabel="Gửi lệnh"
+        accessibilityLabel={t('remote.chatInputLabel')}
         accessibilityRole="button"
       >
         <Text style={styles.sendIcon}>➤</Text>

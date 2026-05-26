@@ -32,6 +32,18 @@ export const AI_PROVIDERS: Record<AIProviderType, { name: string; defaultModel: 
   mistral: { name: 'Mistral', defaultModel: 'mistral-large-latest' },
   hicap: { name: 'Hicap', defaultModel: '' },
   'github-models': { name: 'GitHub Models', defaultModel: 'gpt-4o' },
+  // Phase 1.2: New providers
+  cerebras: { name: 'Cerebras', defaultModel: 'llama3.1-8b' },
+  together: { name: 'Together AI', defaultModel: 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo' },
+  fireworks: { name: 'Fireworks AI', defaultModel: 'accounts/fireworks/models/llama-v3p1-8b-instruct' },
+  cohere: { name: 'Cohere', defaultModel: 'command-r-plus' },
+  xai: { name: 'xAI (Grok)', defaultModel: 'grok-beta' },
+  replicate: { name: 'Replicate', defaultModel: 'meta/llama-3.1-8b-instruct' },
+  perplexity: { name: 'Perplexity', defaultModel: 'llama-3.1-sonar-small-128k-online' },
+  voyage: { name: 'Voyage AI', defaultModel: 'voyage-3' },
+  ai21: { name: 'AI21 Labs', defaultModel: 'jamba-1.5-large' },
+  sambanova: { name: 'SambaNova', defaultModel: 'Meta-Llama-3.1-8B-Instruct' },
+  novita: { name: 'Novita AI', defaultModel: 'meta-llama/llama-3.1-8b-instruct' },
 };
 
 export const OLLAMA_DEFAULT_URL = 'http://localhost:11434';
@@ -77,6 +89,7 @@ export const SOCKET_EVENTS = {
   APPROVE_COMMAND: 'approve_command',
   REJECT_COMMAND: 'reject_command',
   COST_TELEMETRY: 'cost_telemetry',
+  SYNC_LANGUAGE: 'sync_language',
 } as const;
 
 // --- Screen Stream Defaults ---

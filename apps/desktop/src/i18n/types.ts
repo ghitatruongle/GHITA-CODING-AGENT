@@ -110,6 +110,9 @@ export interface TranslationKeys {
     shortcutSave: string;
     shortcutClose: string;
     shortcutSaveAll: string;
+    unsavedChangesConfirm: string;
+    binaryNotSupported: string;
+    readFailed: string;
   };
   devices: {
     title: string;
@@ -187,6 +190,23 @@ export interface TranslationKeys {
     permissions: string;
     activated: string;
     deactivated: string;
+    version: string;
+    downloads: string;
+    rating: string;
+    update: string;
+    updateAvailable: string;
+    sortBy: string;
+    sortByDownloads: string;
+    sortByRating: string;
+    sortByNewest: string;
+    plugin_ghita_github_assistant_desc: string;
+    plugin_ghita_docker_orchestrator_desc: string;
+    skill_docker_list_desc: string;
+    plugin_ghita_vercel_deployer_desc: string;
+    plugin_ghita_db_client_desc: string;
+    skill_db_query_desc: string;
+    plugin_ghita_jira_connector_desc: string;
+    plugin_ghita_vision_grounding_extra_desc: string;
   };
   workflow: {
     dragNodes: string;
@@ -282,6 +302,7 @@ export interface TranslationKeys {
     featureDev: string;
     deployCheck: string;
     summary: string;
+    systemPrompt: string;
     openclawEngine: string;
     skillLearned: string;
     runningAutomation: string;
@@ -289,6 +310,17 @@ export interface TranslationKeys {
     description: string;
     skillSaved: string;
     attachImage: string;
+    chatHistory: string;
+    newChat: string;
+    deleteChat: string;
+    backToChat: string;
+    noHistory: string;
+    runningCmd: string;
+    runSuccessNoOutput: string;
+    runErrorExitCode: string;
+    runSuccess: string;
+    runError: string;
+    messagesCount: string;
   };
   terminal: {
     title: string;
@@ -343,6 +375,18 @@ export interface TranslationKeys {
     hide: string;
     show: string;
     fetch: string;
+    // Phase 1.1: Multi-key
+    addKey: string;
+    removeKey: string;
+    keyStrategy: string;
+    strategyRoundRobin: string;
+    strategyFailover: string;
+    strategyRandom: string;
+    keysCount: string;
+    keyHealth: string;
+    keyHealthy: string;
+    keyCoolingDown: string;
+    keyDisabled: string;
   };
   skillManager: {
     title: string;
@@ -361,5 +405,34 @@ export interface TranslationKeys {
   };
   codeEditor: {
     loading: string;
+  };
+  docsGriller: {
+    title: string;
+    scanDocs: string;
+    scanning: string;
+    scanPrompt: string;
+    supportedFormats: string;
+    docsScanned: string;
+    contradictions: string;
+    questions: string;
+    contradictionsFound: string;
+    older: string;
+    newer: string;
+    socraticQuestions: string;
+    sources: string;
+    designDecisions: string;
+    allConsistent: string;
+  };
+  sandbox: {
+    loadingStatus: string;
+    notReadyTitle: string;
+    retry: string;
+    title: string;
+    containers: string;
+    totalCpu: string;
+    totalRam: string;
+    networkIo: string;
+    noContainers: string;
+    noContainersDesc: string;
   };
 }

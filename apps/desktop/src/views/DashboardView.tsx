@@ -4,6 +4,8 @@
 
 import { useAppStore } from '../stores/appStore';
 import { useTranslation } from '../i18n';
+import { SandboxDashboard } from '../components/SandboxDashboard';
+import { DocsGrillerDashboard } from '../components/DocsGrillerDashboard';
 
 function StatCard({
   icon,
@@ -201,6 +203,16 @@ export function DashboardView() {
               : t('dashboard.contextRemaining', { percent: 100 - contextUsage.percentage })}
           </p>
         </div>
+      </div>
+
+      {/* Phase 12: Docker Sandbox Dashboard */}
+      <div style={{ marginTop: '24px' }}>
+        <SandboxDashboard />
+      </div>
+
+      {/* Phase 5: DocsGriller Dashboard */}
+      <div style={{ marginTop: '24px' }}>
+        <DocsGrillerDashboard />
       </div>
     </div>
   );

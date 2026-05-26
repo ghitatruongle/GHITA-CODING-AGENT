@@ -10,6 +10,7 @@ export * from './vision/types.js';
 export { GuiGrounder } from './vision/grounding.js';
 export { VisionScreenshotAnalyzer } from './vision/analyzer.js';
 export { ActionParser } from './actionParser.js';
+export { HeadlessSearchScanner, type HeadlessSearchOptions, type HeadlessSearchResult } from './scanner/headlessSearch.js';
 
 export const COMPUTER_USE_VERSION = '0.1.0';
 
@@ -262,8 +263,7 @@ export class ComputerUseController {
   }
 }
 
-// NOTE: sandbox.js re-exports removed to avoid bundling Node.js APIs (child_process, fs, etc.)
-// in browser/frontend builds. Import from '@ghita/computer-use/sandbox' directly in Node.js contexts.
+// Node-only sandbox and guardrail exports live in '@ghita/computer-use/node'.
 
 export function createComputerUseSkills(controller = new ComputerUseController()): SkillDefinition[] {
   return [

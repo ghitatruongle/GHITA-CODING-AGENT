@@ -6,12 +6,12 @@ import { useState } from 'react';
 import {
   createDefaultAgentGroupManager,
   createDefaultAgentManager,
+  type AgentMemoryLike,
   type AgentGroupManager,
   type AgentManager,
   type ManagedAgent,
-} from '@ghita/agents';
-import { AgentMemory } from '@ghita/memory';
-import type { AgentGroup, AgentTask } from '@ghita/shared';
+} from '@ghita/agents/runtime';
+import type { AgentGroup, AgentTask, MemoryEntry } from '@ghita/shared';
 import { useTranslation } from '../i18n';
 
 const ROLE_COLORS: Record<string, string> = {
@@ -28,8 +28,51 @@ interface AgentRuntimeState {
   groups: AgentGroupManager;
 }
 
+class InMemoryAgentContext implements AgentMemoryLike {
+  private readonly entries = new Map<string, MemoryEntry>();
+
+  constructor(initialEntries: MemoryEntry[] = []) {
+    for (const entry of initialEntries) {
+      this.entries.set(entry.id, entry);
+    }
+  }
+
+  remember(input: {
+    type: MemoryEntry['type'];
+    content: string;
+    metadata?: Record<string, unknown>;
+    timestamp?: number;
+  }): MemoryEntry {
+    const entry: MemoryEntry = {
+      id: `mem_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+      type: input.type,
+      content: input.content,
+      metadata: input.metadata,
+      timestamp: input.timestamp ?? Date.now(),
+    };
+    this.entries.set(entry.id, entry);
+    return entry;
+  }
+
+  injectContext(query: string, options: { limit?: number } = {}): string {
+    const tokens = new Set(query.toLowerCase().split(/\W+/).filter((token) => token.length > 2));
+    const scored = [...this.entries.values()]
+      .map((entry) => {
+        const content = entry.content.toLowerCase();
+        const score = [...tokens].reduce((count, token) => count + (content.includes(token) ? 1 : 0), 0);
+        return { entry, score };
+      })
+      .filter(({ score }) => score > 0)
+      .sort((a, b) => b.score - a.score || b.entry.timestamp - a.entry.timestamp)
+      .slice(0, options.limit ?? 3);
+
+    if (scored.length === 0) return '';
+    return ['Relevant memory:', ...scored.map(({ entry }) => `- [${entry.type}] ${entry.content}`)].join('\n');
+  }
+}
+
 function createRuntime(): AgentRuntimeState {
-  const memory = new AgentMemory([
+  const memory = new InMemoryAgentContext([
     {
       id: 'mem_phase5_goal',
       type: 'context',

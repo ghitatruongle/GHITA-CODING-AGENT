@@ -4,6 +4,13 @@
 
 import type { ComputerUseAdapter, MouseButton, Point, ScreenCapture } from './index.js';
 
+export { DSOOrchestrator } from './sandbox/dsoOrchestrator.js';
+export { SandboxSecurityFilter } from './guardrails/sandboxFilter.js';
+export { SandboxLogger } from './sandbox/sandboxLogger.js';
+export { SecurityLogger } from './guardrails/securityLogger.js';
+export { SandboxValidationReporter, type SandboxValidationReport, type ValidationResult } from './sandboxValidationReporter.js';
+export * from './guardrails/index.js';
+
 type NutButtonMap = Record<string, unknown>;
 type NutKeyMap = Record<string, unknown>;
 

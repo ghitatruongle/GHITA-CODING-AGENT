@@ -7,11 +7,12 @@
     "android": "react-native run-android",
     "start": "react-native start",
     "dev": "react-native start",
-    "build": "tsc --noEmit",
+    "build": "tsc --noEmit && node -e \"const fs = require('fs'); fs.mkdirSync('dist', { recursive: true }); fs.writeFileSync('dist/build.txt', 'built');\"",
     "build:release": "react-native build-android --mode=release",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
-    "clean": "rm -rf node_modules android/app/build"
+    "clean": "rm -rf node_modules android/app/build",
+    "postinstall": "node scripts/patch-jcenter.js"
   },
   "dependencies": {
     "@babel/runtime": "^7.29.2",
@@ -22,7 +23,7 @@
     "react": "^18.3.1",
     "react-native": "^0.76.0",
     "react-native-bluetooth-classic": "^1.60.0-rc.29",
-    "react-native-safe-area-context": "^4.12.0",
+    "react-native-safe-area-context": "^5.4.1",
     "react-native-screens": "^3.35.0",
     "socket.io-client": "^4.8.0"
   },
