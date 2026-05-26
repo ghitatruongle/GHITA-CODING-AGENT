@@ -19,7 +19,19 @@ export type AIProviderType =
   | 'groq'
   | 'mistral'
   | 'hicap'
-  | 'github-models';
+  | 'github-models'
+  // Phase 1.2: New providers
+  | 'cerebras'
+  | 'together'
+  | 'fireworks'
+  | 'cohere'
+  | 'xai'
+  | 'replicate'
+  | 'perplexity'
+  | 'voyage'
+  | 'ai21'
+  | 'sambanova'
+  | 'novita';
 
 export interface AIProviderConfig {
   type: AIProviderType;

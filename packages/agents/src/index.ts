@@ -3,8 +3,11 @@
 // ==============================================================================
 
 import type { Agent, AgentGroup, AgentRole, AgentTask } from '@ghita/shared';
-import type { SkillRegistry } from '@ghita/skills';
 import type { AgentMemory } from '@ghita/memory';
+
+export interface SkillRegistry {
+  [key: string]: any;
+}
 
 // --- Phase 4: Multi-Agent & Pipeline exports ---
 
@@ -440,6 +443,10 @@ export type { SubagentSpawnInput, SubagentSpawnResult, SubagentState } from './s
 export { CronScheduler } from './scheduler/cron.js';
 export type { ScheduledTaskConfig, ScheduledTask } from './scheduler/types.js';
 
+// --- Phase 6: Debate-Driven Architectural Alignment ---
+export { DebateEngine } from './orchestrator/debateEngine.js';
+export type { DebateResult, DebateCallbacks, DebateEngineOptions } from './orchestrator/debateEngine.js';
+
 // --- Phase 7A: Agent SDK ---
 export { GhitAgentClient } from './sdk/client.js';
 export type { AgentSDKConfig, SendMessageOptions, AgentMessage } from './sdk/types.js';
@@ -453,5 +460,16 @@ export type { ComplexityLevel, RouteResolution } from './router/router.js';
 // --- Phase 5: Workflow Engine ---
 export { WorkflowAgent } from './workflow/engine.js';
 export type { WorkflowStep, WorkflowCallbacks } from './workflow/engine.js';
+
+// --- Phase 3: AST-Lock ---
+export { ASTLockEngine, ASTLockMiddleware, buildHierarchy, computeSemanticHash, loadASTLockConfig } from './checker/astLock.js';
+export type { HierarchicalSymbol, ASTLockConfig } from './checker/astLock.js';
+
+// --- Phase 8: Git Safe-Points & Safe-Rollback Loop ---
+export { GitSafePointManager, GitSafePointMiddleware } from './git/workflow.js';
+
+// --- Phase 11: Source-Controlled Markdown CI Checks Gates ---
+export { MarkdownRulesChecker, MarkdownChecksMiddleware } from './checker/markdownRules.js';
+export type { MarkdownRule, CheckIssue } from './checker/markdownRules.js';
 
 

@@ -21,14 +21,20 @@
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "test": "vitest run"
   },
   "dependencies": {
     "@ghita/skills": "workspace:*",
-    "@ghita/shared": "workspace:*"
+    "@ghita/shared": "workspace:*",
+    "dockerode": "^3.3.5",
+    "better-sqlite3": "^11.7.0"
   },
   "devDependencies": {
+    "@types/dockerode": "^3.3.31",
+    "@types/better-sqlite3": "^7.6.12",
     "@types/node": "^22.10.0",
-    "typescript": "^5.6.0"
+    "typescript": "^5.6.0",
+    "vitest": "^3.1.0"
   }
 }

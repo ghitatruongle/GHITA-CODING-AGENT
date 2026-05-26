@@ -5,6 +5,7 @@
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from '../i18n';
+import { loadApiConfig, saveApiConfig } from '../utils/apiConfig';
 
 type ProviderId =
   | 'openai'
@@ -19,7 +20,19 @@ type ProviderId =
   | 'groq'
   | 'mistral'
   | 'hicap'
-  | 'github-models';
+  | 'github-models'
+  // Phase 1.2: New providers
+  | 'cerebras'
+  | 'together'
+  | 'fireworks'
+  | 'cohere'
+  | 'xai'
+  | 'replicate'
+  | 'perplexity'
+  | 'voyage'
+  | 'ai21'
+  | 'sambanova'
+  | 'novita';
 
 interface ProviderConfig {
   id: ProviderId;
@@ -178,6 +191,118 @@ const PROVIDERS: ProviderConfig[] = [
       return (d.data ?? []).map((m) => m.id).sort();
     },
   },
+  // Phase 1.2: New providers
+  {
+    id: 'cerebras',
+    name: 'Cerebras',
+    icon: '⚡',
+    baseUrl: 'https://api.cerebras.ai/v1',
+    keyPlaceholder: 'csk-...',
+    defaultModels: ['llama3.1-8b', 'llama3.1-70b'],
+    category: 'paid',
+    fetchModelsUrl: (_key, base) => `${base}/models`,
+    parseModels: (data) => { const d = data as { data?: { id: string }[] }; return (d.data ?? []).map((m) => m.id).sort(); },
+  },
+  {
+    id: 'together',
+    name: 'Together AI',
+    icon: '🤝',
+    baseUrl: 'https://api.together.xyz/v1',
+    keyPlaceholder: 'Nhập Together API key...',
+    defaultModels: ['meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo', 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo', 'mistralai/Mixtral-8x7B-Instruct-v0.1'],
+    category: 'paid',
+    fetchModelsUrl: (_key, base) => `${base}/models`,
+    parseModels: (data) => { const d = data as { data?: { id: string }[] }; return (d.data ?? []).map((m) => m.id).sort(); },
+  },
+  {
+    id: 'fireworks',
+    name: 'Fireworks AI',
+    icon: '🎆',
+    baseUrl: 'https://api.fireworks.ai/inference/v1',
+    keyPlaceholder: 'Nhập Fireworks API key...',
+    defaultModels: ['accounts/fireworks/models/llama-v3p1-8b-instruct', 'accounts/fireworks/models/llama-v3p1-70b-instruct'],
+    category: 'paid',
+    fetchModelsUrl: (_key, base) => `${base}/models`,
+    parseModels: (data) => { const d = data as { data?: { id: string }[] }; return (d.data ?? []).map((m) => m.id).sort(); },
+  },
+  {
+    id: 'cohere',
+    name: 'Cohere',
+    icon: '🔷',
+    baseUrl: 'https://api.cohere.com/v2',
+    keyPlaceholder: 'Nhập Cohere API key...',
+    defaultModels: ['command-r-plus', 'command-r', 'command-light'],
+    category: 'paid',
+  },
+  {
+    id: 'xai',
+    name: 'xAI (Grok)',
+    icon: '❌',
+    baseUrl: 'https://api.x.ai/v1',
+    keyPlaceholder: 'Nhập xAI API key...',
+    defaultModels: ['grok-beta', 'grok-2'],
+    category: 'paid',
+    fetchModelsUrl: (_key, base) => `${base}/models`,
+    parseModels: (data) => { const d = data as { data?: { id: string }[] }; return (d.data ?? []).map((m) => m.id).sort(); },
+  },
+  {
+    id: 'replicate',
+    name: 'Replicate',
+    icon: '🔁',
+    baseUrl: 'https://api.replicate.com/v1',
+    keyPlaceholder: 'r8_...',
+    defaultModels: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.1-70b-instruct'],
+    category: 'paid',
+  },
+  {
+    id: 'perplexity',
+    name: 'Perplexity',
+    icon: '🔎',
+    baseUrl: 'https://api.perplexity.ai',
+    keyPlaceholder: 'Nhập Perplexity API key...',
+    defaultModels: ['llama-3.1-sonar-small-128k-online', 'llama-3.1-sonar-large-128k-online'],
+    category: 'paid',
+  },
+  {
+    id: 'voyage',
+    name: 'Voyage AI',
+    icon: '🧭',
+    baseUrl: 'https://api.voyageai.com/v1',
+    keyPlaceholder: 'Nhập Voyage API key...',
+    defaultModels: ['voyage-3', 'voyage-code-3'],
+    category: 'paid',
+  },
+  {
+    id: 'ai21',
+    name: 'AI21 Labs',
+    icon: '🧪',
+    baseUrl: 'https://api.ai21.com/studio/v1',
+    keyPlaceholder: 'Nhập AI21 API key...',
+    defaultModels: ['jamba-1.5-large', 'jamba-1.5-mini'],
+    category: 'paid',
+  },
+  {
+    id: 'sambanova',
+    name: 'SambaNova',
+    icon: '🔥',
+    baseUrl: 'https://api.sambanova.ai/v1',
+    keyPlaceholder: 'Nhập SambaNova API key...',
+    defaultModels: ['Meta-Llama-3.1-8B-Instruct', 'Meta-Llama-3.1-70B-Instruct'],
+    category: 'paid',
+    fetchModelsUrl: (_key, base) => `${base}/models`,
+    parseModels: (data) => { const d = data as { data?: { id: string }[] }; return (d.data ?? []).map((m) => m.id).sort(); },
+  },
+  {
+    id: 'novita',
+    name: 'Novita AI',
+    icon: '🌟',
+    baseUrl: 'https://api.novita.ai/v3/openai',
+    keyPlaceholder: 'Nhập Novita API key...',
+    defaultModels: ['meta-llama/llama-3.1-8b-instruct', 'meta-llama/llama-3.1-70b-instruct'],
+    category: 'paid',
+    fetchModelsUrl: (_key, base) => `${base}/models`,
+    parseModels: (data) => { const d = data as { data?: { id: string }[] }; return (d.data ?? []).map((m) => m.id).sort(); },
+  },
   {
     id: 'custom',
     name: 'Custom Provider',
@@ -198,58 +323,61 @@ const PROVIDERS: ProviderConfig[] = [
   },
 ];
 
+type KeyRotationStrategy = 'round-robin' | 'failover' | 'random';
+
 interface ApiKeyEntry {
   providerId: ProviderId;
-  apiKey: string;
+  apiKeys: string[];
   baseUrl: string;
   selectedModel: string;
   active: boolean;
   availableModels: string[];
   isFetchingModels: boolean;
   fetchError: string | null;
+  rotationStrategy: KeyRotationStrategy;
 }
 
 type ApiKeysState = Record<ProviderId, ApiKeyEntry>;
 
-const STORAGE_KEY = 'ghita_api_keys';
 const FAVORITES_KEY = 'ghita_api_favorites';
 
-function buildInitialState(): ApiKeysState {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved) as Partial<Record<ProviderId, Partial<ApiKeyEntry>>>;
-      const state = {} as ApiKeysState;
-      for (const p of PROVIDERS) {
-        const savedEntry = parsed[p.id];
-        state[p.id] = {
-          providerId: p.id,
-          apiKey: savedEntry?.apiKey ?? '',
-          baseUrl: savedEntry?.baseUrl ?? p.baseUrl,
-          selectedModel: savedEntry?.selectedModel ?? p.defaultModels[0] ?? '',
-          active: savedEntry?.active ?? false,
-          availableModels: savedEntry?.availableModels ?? p.defaultModels,
-          isFetchingModels: false,
-          fetchError: null,
-        };
-      }
-      return state;
-    }
-  } catch {
-    // Ignore
+function serializeApiKeysState(keys: ApiKeysState): Record<string, Record<string, unknown>> {
+  const toSave: Record<string, Record<string, unknown>> = {};
+  for (const [id, entry] of Object.entries(keys)) {
+    toSave[id] = {
+      apiKeys: entry.apiKeys,
+      baseUrl: entry.baseUrl,
+      selectedModel: entry.selectedModel,
+      active: entry.active,
+      availableModels: entry.availableModels,
+      rotationStrategy: entry.rotationStrategy,
+    };
   }
+  return toSave;
+}
 
+function buildStateFromSnapshot(snapshot: Record<string, Record<string, unknown>> = {}): ApiKeysState {
   const state = {} as ApiKeysState;
   for (const p of PROVIDERS) {
+    const savedEntry = snapshot[p.id];
+    let apiKeys: string[] = [];
+    if (savedEntry) {
+      if (Array.isArray(savedEntry['apiKeys'])) {
+        apiKeys = (savedEntry['apiKeys'] as string[]).filter(Boolean);
+      } else if (typeof savedEntry['apiKey'] === 'string' && savedEntry['apiKey']) {
+        apiKeys = [savedEntry['apiKey'] as string];
+      }
+    }
     state[p.id] = {
       providerId: p.id,
-      apiKey: '',
-      baseUrl: p.baseUrl,
-      selectedModel: p.defaultModels[0] ?? '',
-      active: false,
-      availableModels: p.defaultModels,
+      apiKeys,
+      baseUrl: (savedEntry?.['baseUrl'] as string) ?? p.baseUrl,
+      selectedModel: (savedEntry?.['selectedModel'] as string) ?? p.defaultModels[0] ?? '',
+      active: (savedEntry?.['active'] as boolean) ?? false,
+      availableModels: (savedEntry?.['availableModels'] as string[]) ?? p.defaultModels,
       isFetchingModels: false,
       fetchError: null,
+      rotationStrategy: (savedEntry?.['rotationStrategy'] as KeyRotationStrategy) ?? 'failover',
     };
   }
   return state;
@@ -268,29 +396,56 @@ function saveFavorites(favs: Set<ProviderId>) {
 }
 
 export function ApiManager() {
-  const [keys, setKeys] = useState<ApiKeysState>(buildInitialState);
+  const [keys, setKeys] = useState<ApiKeysState>(() => buildStateFromSnapshot());
+  const [isConfigLoaded, setIsConfigLoaded] = useState(false);
   const [expandedId, setExpandedId] = useState<ProviderId | null>(null);
-  const [showKey, setShowKey] = useState<ProviderId | null>(null);
+  const [showKey, setShowKey] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [favorites, setFavorites] = useState<Set<ProviderId>>(loadFavorites);
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
 
-  // Persist API keys
-  useEffect(() => {
-    try {
-      const toSave: Partial<Record<ProviderId, Partial<ApiKeyEntry>>> = {};
-      for (const [id, entry] of Object.entries(keys)) {
-        toSave[id as ProviderId] = {
-          apiKey: entry.apiKey,
-          baseUrl: entry.baseUrl,
-          selectedModel: entry.selectedModel,
-          active: entry.active,
-          availableModels: entry.availableModels,
-        };
+  const getPlaceholder = useCallback((provider: ProviderConfig) => {
+    if (provider.id === 'opengateway' || provider.id === 'ollama') {
+      return t('apiManager.noKeyNeeded');
+    }
+    if (provider.keyPlaceholder.startsWith('Nhập ') || provider.keyPlaceholder.includes('API key') || provider.keyPlaceholder.includes('key')) {
+      if (lang === 'vi') {
+        return provider.keyPlaceholder.startsWith('Nhập') 
+          ? provider.keyPlaceholder 
+          : `Nhập ${provider.name} API key...`;
+      } else if (lang === 'en') {
+        return `Enter ${provider.name} API key...`;
+      } else {
+        return `请输入 ${provider.name} API key...`;
       }
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+    }
+    return provider.keyPlaceholder;
+  }, [t, lang]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    loadApiConfig()
+      .then((snapshot) => {
+        if (!cancelled) setKeys(buildStateFromSnapshot(snapshot));
+      })
+      .finally(() => {
+        if (!cancelled) setIsConfigLoaded(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Persist API keys outside webview localStorage.
+  useEffect(() => {
+    if (!isConfigLoaded) return;
+
+    try {
+      void saveApiConfig(serializeApiKeysState(keys));
     } catch { /* ignore */ }
-  }, [keys]);
+  }, [keys, isConfigLoaded]);
 
   const updateKey = useCallback((id: ProviderId, patch: Partial<ApiKeyEntry>) => {
     setKeys((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
@@ -308,7 +463,22 @@ export function ApiManager() {
   const handleSave = (id: ProviderId) => {
     const entry = keys[id];
     const needsNoKey = id === 'ollama' || id === 'opengateway';
-    updateKey(id, { active: entry.apiKey.length > 0 || needsNoKey });
+    const input = document.getElementById(`new-key-${id}`) as HTMLInputElement | null;
+    const pendingKey = input?.value?.trim();
+    const apiKeys = pendingKey && !entry.apiKeys.includes(pendingKey)
+      ? [...entry.apiKeys, pendingKey]
+      : entry.apiKeys;
+    const nextKeys = {
+      ...keys,
+      [id]: {
+        ...entry,
+        apiKeys,
+        active: apiKeys.length > 0 || needsNoKey,
+      },
+    };
+    if (input) input.value = '';
+    setKeys(nextKeys);
+    void saveApiConfig(serializeApiKeysState(nextKeys));
     setExpandedId(null);
   };
 
@@ -320,14 +490,16 @@ export function ApiManager() {
     updateKey(id, { isFetchingModels: true, fetchError: null });
 
     try {
-      const url = provider.fetchModelsUrl(entry.apiKey, entry.baseUrl);
+      const activeKey = entry.apiKeys[0] ?? '';
+      const url = provider.fetchModelsUrl(activeKey, entry.baseUrl);
       const headers: Record<string, string> = {};
-      const openAiCompat = ['openai', 'opengateway', 'mimo', 'openrouter', 'deepseek', 'groq', 'mistral', 'hicap', 'github-models'];
-      if (entry.apiKey && openAiCompat.includes(id)) {
-        headers['Authorization'] = `Bearer ${entry.apiKey}`;
+      const openAiCompat = ['openai', 'opengateway', 'mimo', 'openrouter', 'deepseek', 'groq', 'mistral', 'hicap', 'github-models',
+        'cerebras', 'together', 'fireworks', 'cohere', 'xai', 'replicate', 'perplexity', 'voyage', 'ai21', 'sambanova', 'novita'];
+      if (activeKey && openAiCompat.includes(id)) {
+        headers['Authorization'] = `Bearer ${activeKey}`;
       }
-      if (entry.apiKey && id === 'anthropic') {
-        headers['x-api-key'] = entry.apiKey;
+      if (activeKey && id === 'anthropic') {
+        headers['x-api-key'] = activeKey;
         headers['anthropic-version'] = '2023-06-01';
       }
 
@@ -443,7 +615,7 @@ export function ApiManager() {
                 const entry = keys[provider.id];
                 const isExpanded = expandedId === provider.id;
                 const isFav = favorites.has(provider.id);
-                const status = entry.active ? 'active' : entry.apiKey ? 'ready' : 'none';
+                const status = entry.active ? 'active' : entry.apiKeys.length > 0 ? 'ready' : 'none';
 
                 return (
                   <div
@@ -497,8 +669,8 @@ export function ApiManager() {
                           {status === 'active'
                             ? `${t('apiManager.model')}: ${entry.selectedModel || '\u2014'}`
                             : status === 'ready'
-                              ? maskKey(entry.apiKey)
-                              : provider.keyPlaceholder}
+                              ? maskKey(entry.apiKeys[0] ?? '')
+                              : getPlaceholder(provider)}
                         </div>
                       </div>
 
@@ -543,25 +715,87 @@ export function ApiManager() {
                         borderTop: '1px solid var(--border-subtle)',
                         display: 'flex', flexDirection: 'column', gap: '12px', paddingTop: '14px',
                       }}>
-                        {/* API Key input */}
+                        {/* Phase 1.1: Multi-Key Management */}
                         <div>
-                          <label style={labelStyle}>API Key</label>
-                          <div style={{ display: 'flex', gap: '6px' }}>
+                          <label style={labelStyle}>{t('apiManager.apiKey')} ({entry.apiKeys.length > 1 ? t('apiManager.keysCount', { count: entry.apiKeys.length }) : entry.apiKeys.length === 1 ? '1 key' : t('apiManager.notSet')})</label>
+                          {/* Existing keys list */}
+                          {entry.apiKeys.map((k, idx) => (
+                            <div key={idx} style={{ display: 'flex', gap: '6px', marginBottom: '4px' }}>
+                              <input
+                                type={showKey === `${provider.id}-${idx}` ? 'text' : 'password'}
+                                value={k}
+                                readOnly
+                                style={{ ...inputStyle, flex: 1, opacity: 0.8 }}
+                              />
+                              <button
+                                onClick={() => setShowKey(showKey === `${provider.id}-${idx}` ? null : `${provider.id}-${idx}`)}
+                                style={iconBtnStyle}
+                                title={showKey === `${provider.id}-${idx}` ? t('apiManager.hide') : t('apiManager.show')}
+                              >
+                                {showKey === `${provider.id}-${idx}` ? '\uD83D\uDE48' : '\uD83D\uDC41\uFE0F'}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  const newKeys = entry.apiKeys.filter((_, i) => i !== idx);
+                                  updateKey(provider.id, { apiKeys: newKeys, active: newKeys.length > 0 || provider.id === 'ollama' || provider.id === 'opengateway' });
+                                }}
+                                style={{ ...iconBtnStyle, color: 'var(--error)' }}
+                                title={t('apiManager.removeKey')}
+                              >
+                                {'\u274C'}
+                              </button>
+                            </div>
+                          ))}
+                          {/* Add new key input */}
+                          <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
                             <input
-                              type={showKey === provider.id ? 'text' : 'password'}
-                              value={entry.apiKey}
-                              onChange={(e) => updateKey(provider.id, { apiKey: e.target.value, active: false })}
-                              placeholder={provider.keyPlaceholder}
+                              type={showKey === `${provider.id}-new` ? 'text' : 'password'}
+                              defaultValue=""
+                              placeholder={getPlaceholder(provider)}
+                              id={`new-key-${provider.id}`}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleSave(provider.id);
+                                }
+                              }}
                               style={{ ...inputStyle, flex: 1 }}
                             />
                             <button
-                              onClick={() => setShowKey(showKey === provider.id ? null : provider.id)}
+                              onClick={() => setShowKey(showKey === `${provider.id}-new` ? null : `${provider.id}-new`)}
                               style={iconBtnStyle}
-                              title={showKey === provider.id ? t('apiManager.hide') : t('apiManager.show')}
                             >
-                              {showKey === provider.id ? '\uD83D\uDE48' : '\uD83D\uDC41\uFE0F'}
+                              {showKey === `${provider.id}-new` ? '\uD83D\uDE48' : '\uD83D\uDC41\uFE0F'}
+                            </button>
+                            <button
+                              onClick={() => {
+                                const input = document.getElementById(`new-key-${provider.id}`) as HTMLInputElement;
+                                const newKey = input?.value?.trim();
+                                if (newKey && !entry.apiKeys.includes(newKey)) {
+                                  updateKey(provider.id, { apiKeys: [...entry.apiKeys, newKey] });
+                                  if (input) input.value = '';
+                                }
+                              }}
+                              style={iconBtnStyle}
+                              title={t('apiManager.addKey')}
+                            >
+                              {'\u2795'}
                             </button>
                           </div>
+                          {/* Rotation strategy selector */}
+                          {entry.apiKeys.length > 1 && (
+                            <div style={{ marginTop: '8px' }}>
+                              <label style={labelStyle}>{t('apiManager.keyStrategy')}</label>
+                              <select
+                                value={entry.rotationStrategy}
+                                onChange={(e) => updateKey(provider.id, { rotationStrategy: e.target.value as KeyRotationStrategy })}
+                                style={inputStyle}
+                              >
+                                <option value="failover">{t('apiManager.strategyFailover')}</option>
+                                <option value="round-robin">{t('apiManager.strategyRoundRobin')}</option>
+                                <option value="random">{t('apiManager.strategyRandom')}</option>
+                              </select>
+                            </div>
+                          )}
                         </div>
 
                         {/* Base URL (editable for custom) */}
@@ -599,10 +833,10 @@ export function ApiManager() {
                             {provider.fetchModelsUrl && (
                               <button
                                 onClick={() => handleFetchModels(provider.id)}
-                                disabled={entry.isFetchingModels || (!entry.apiKey && provider.id !== 'ollama' && provider.id !== 'opengateway')}
+                                disabled={entry.isFetchingModels || (entry.apiKeys.length === 0 && provider.id !== 'ollama' && provider.id !== 'opengateway')}
                                 style={{
                                   ...iconBtnStyle,
-                                  opacity: entry.isFetchingModels || (!entry.apiKey && provider.id !== 'ollama' && provider.id !== 'opengateway') ? 0.4 : 1,
+                                  opacity: entry.isFetchingModels || (entry.apiKeys.length === 0 && provider.id !== 'ollama' && provider.id !== 'opengateway') ? 0.4 : 1,
                                   whiteSpace: 'nowrap',
                                 }}
                                 title={t('apiManager.fetchModels')}
@@ -623,7 +857,7 @@ export function ApiManager() {
                           <button
                             onClick={() => {
                               updateKey(provider.id, {
-                                apiKey: '', active: false,
+                                apiKeys: [], active: false,
                                 selectedModel: provider.defaultModels[0] ?? '',
                                 availableModels: provider.defaultModels,
                                 fetchError: null,

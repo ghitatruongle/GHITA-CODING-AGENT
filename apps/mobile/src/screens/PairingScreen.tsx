@@ -26,10 +26,12 @@ import { getLastServer, saveLastServer, getDeviceId } from '../services/storageS
 import { bluetoothService, BluetoothDevice } from '../services/bluetoothService';
 import type { ConnectionState } from '../types';
 import type { PairingScreenProps } from '../navigation/types';
+import { useTranslation } from '../i18n/context';
 
 const PAIRING_CODE_LENGTH = 6;
 
 export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Element {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'wifi' | 'bluetooth'>('wifi');
   const [pairingCode, setPairingCode] = useState('');
   const [serverAddress, setServerAddress] = useState('');
@@ -79,7 +81,7 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
         setConnectionState(state);
         connectionStateRef.current = state;
         if (state === 'error') {
-          setErrorMessage('Không thể kết nối. Kiểm tra mạng hoặc địa chỉ IP và thử lại.');
+          setErrorMessage(t('pairing.pairErrConnection'));
           clearTimers();
         }
       },
@@ -89,7 +91,7 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
         connectionStateRef.current = 'connected';
         const addrToSave = activeAddressRef.current || serverAddress;
         void saveLastServer(addrToSave);
-        Alert.alert('Thành công', `Đã kết nối với ${deviceName}`);
+        Alert.alert(t('common.success'), t('pairing.connectSuccess', { deviceName }));
         navigation.replace('RemoteControl', { serverAddress: addrToSave, deviceName });
       },
       onError: (error) => {
@@ -97,7 +99,7 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
         setErrorMessage(error);
       },
     });
-  }, [navigation, clearTimers, serverAddress]);
+  }, [navigation, clearTimers, serverAddress, t]);
 
   // Standard Wi-Fi / Cloud connection logic
   const handleConnect = useCallback(() => {
@@ -114,7 +116,7 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
     }
 
     if (!pairingCode.trim() || pairingCode.length < PAIRING_CODE_LENGTH) {
-      setErrorMessage(`Vui lòng nhập mã ghép đôi ${PAIRING_CODE_LENGTH} ký tự`);
+      setErrorMessage(t('pairing.pairingCodeLengthErr', { length: PAIRING_CODE_LENGTH }));
       return;
     }
 
@@ -135,19 +137,18 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
           const cleanedData = dataText.replace(/^"|"$/g, '').trim();
 
           if (!cleanedData) {
-            throw new Error('Không tìm thấy máy tính tương ứng với mã này. Hãy chắc chắn mã đã đúng và server trên máy tính đang chạy.');
+            throw new Error(t('pairing.pairErrNoComputer'));
           }
 
           const parts = cleanedData.split('_');
           if (parts.length < 2) {
-            throw new Error('Dữ liệu Cloud Discovery bị lỗi hoặc đã hết hạn.');
+            throw new Error(t('pairing.pairErrCloudFail'));
           }
 
           const port = parts[parts.length - 1];
           const rawIps = parts.slice(0, parts.length - 1);
           addressesToTry = rawIps.map(ip => `http://${ip.replace(/-/g, '.')}:${port}`);
         } catch (e: any) {
-          // If auto discovery fails, fallback to Cloud Relay in ping phase
           console.log('Auto discovery fetch failed. Proceeding with fallback candidates.');
           addressesToTry = [];
         }
@@ -172,7 +173,7 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
               }
             }
           } catch (err) {
-            // Ignore error
+            // Ignore
           }
           throw new Error('Failed');
         });
@@ -195,17 +196,9 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
           });
         } catch (fallbackError) {
           if (isManualAddress) {
-            throw new Error('Không kết nối được tới địa chỉ IP đã nhập. Vui lòng kiểm tra lại mạng.');
+            throw new Error(t('pairing.pairErrConnection'));
           }
-
-          // Cloud Relay tạm vô hiệu hóa — Render.com relay đã bị xóa
-          // console.log('Local connection failed. Silently falling back to Cloud Relay...');
-          // const CLOUD_RELAY_URL = 'https://ghita-relay-server.onrender.com';
-          // firstSuccess = {
-          //   url: CLOUD_RELAY_URL,
-          //   pairingCode: code,
-          // };
-          throw new Error('Không kết nối được qua LAN. Cloud Relay tạm thời không khả dụng.');
+          throw new Error(t('pairing.pairErrLanPingFail'));
         }
 
         clearTimeout(timeoutId);
@@ -238,9 +231,9 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
             socketService.disconnect();
             setConnectionState('error');
             if (wasSocketConnected) {
-              setErrorMessage('Ghép đôi thất bại. Vui lòng kiểm tra lại mã ghép đôi.');
+              setErrorMessage(t('pairing.pairErrBtFail'));
             } else {
-              setErrorMessage('Không kết nối được Socket.io. Vui lòng thử lại.');
+              setErrorMessage(t('pairing.pairErrSocket'));
             }
           }
         }, 10000);
@@ -248,12 +241,12 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
       } catch (err: any) {
         clearTimers();
         setConnectionState('error');
-        setErrorMessage(err.message || 'Không tìm thấy hoặc kết nối tới máy tính.');
+        setErrorMessage(err.message || t('pairing.pairErrBtFindFail'));
       }
     };
 
     void discoverAndConnect();
-  }, [serverAddress, pairingCode, clearTimers]);
+  }, [serverAddress, pairingCode, clearTimers, t]);
 
   // Bluetooth scanning flow
   const handleScanBluetooth = useCallback(async () => {
@@ -270,7 +263,7 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
       if (bluetoothService.isModuleAvailable) {
         const hasPermission = await bluetoothService.requestPermissions();
         if (!hasPermission) {
-          throw new Error('Chưa cấp quyền Bluetooth hoặc định vị.');
+          throw new Error(t('pairing.pairErrBtPermission'));
         }
 
         const success = await bluetoothService.startDiscovery((devices) => {
@@ -278,7 +271,7 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
         });
 
         if (!success) {
-          throw new Error('Không khởi động được quét Bluetooth. Vui lòng bật Bluetooth.');
+          throw new Error(t('pairing.pairErrBtStart'));
         }
 
         // Stop scanning after 8s
@@ -289,7 +282,6 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
         }, 8000);
       } else {
         // Fallback: Virtual/Simulated Bluetooth scanner
-        // Reads from the active Hostnames registry or provides standard mock
         scanTimeoutRef.current = setTimeout(() => {
           const mockDevices: BluetoothDevice[] = [
             { address: 'VIRTUAL-01', name: 'PC-GHITA (Tự động Bluetooth/Cloud)', bonded: true },
@@ -302,11 +294,11 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
       }
     } catch (err: any) {
       setIsScanningBt(false);
-      setErrorMessage(err.message || 'Lỗi khi quét Bluetooth.');
+      setErrorMessage(err.message || t('pairing.pairErrBtStart'));
     }
-  }, []);
+  }, [t]);
 
-  // Connect to a Bluetooth device (using PC Name resolution over Cloud Key-Value registry)
+  // Connect to a Bluetooth device
   const handleConnectBtDevice = useCallback(async (device: BluetoothDevice) => {
     setErrorMessage(null);
     clearTimers();
@@ -317,14 +309,13 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
       let resolvedAddress: string | null = null;
       let remotePairingCode: string | null = null;
 
-      // 1. If it's a real Bluetooth device and module is available, try direct RFCOMM query first
+      // 1. If it's a real Bluetooth device, try RFCOMM
       if (bluetoothService.isModuleAvailable && !device.address.startsWith('VIRTUAL-')) {
         resolvedAddress = await bluetoothService.connectToDevice(device);
       }
 
-      // 2. Resolve via Hostname Cloud Registry mapping (highly reliable)
+      // 2. Resolve via Hostname Cloud Registry
       if (!resolvedAddress) {
-        // Extract raw name e.g., "DESKTOP-R7T92A"
         const cleanName = device.name
           .replace(/\s*\(Tự động Bluetooth\/Cloud\)/gi, '')
           .trim()
@@ -332,7 +323,7 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
           .replace(/[^A-Z0-9-]/g, '');
 
         if (!cleanName) {
-          throw new Error('Tên thiết bị không hợp lệ để tự động tìm kiếm.');
+          throw new Error(t('pairing.pairErrInvalidName'));
         }
 
         const appKey = 'an6h273b';
@@ -341,12 +332,12 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
         const cleanedData = dataText.replace(/^"|"$/g, '').trim();
 
         if (!cleanedData) {
-          throw new Error(`Không tìm thấy IP của máy tính '${cleanName}' trên Cloud Registry. Hãy chắc chắn Server đã bật trên máy tính.`);
+          throw new Error(t('pairing.pairErrNoIpCloud', { name: cleanName }));
         }
 
         const parts = cleanedData.split('_');
         if (parts.length < 2) {
-          throw new Error('Dữ liệu Cloud Discovery của PC bị lỗi hoặc hết hạn.');
+          throw new Error(t('pairing.pairErrCloudPcFail'));
         }
 
         const port = parts[parts.length - 1];
@@ -378,7 +369,7 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
             p.then(resolve).catch(() => {
               rejectedCount++;
               if (rejectedCount === pingPromises.length) {
-                reject(new Error('Không thể kết nối đến máy tính trong mạng LAN Wi-Fi.'));
+                reject(new Error(t('pairing.pairErrLanPingFail')));
               }
             });
           });
@@ -390,17 +381,16 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
       }
 
       if (!resolvedAddress) {
-        throw new Error('Không lấy được địa chỉ kết nối của máy tính.');
+        throw new Error(t('pairing.pairErrNoIp'));
       }
 
-      // If we don't have the pairing code yet, fetch it from health endpoint
       if (!remotePairingCode) {
         try {
           const res = await fetch(`${resolvedAddress}/health`);
           const data = await res.json();
           remotePairingCode = data.pairingCode;
         } catch {
-          // Ignore, we will ask user or try default
+          // Ignore
         }
       }
 
@@ -434,9 +424,9 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
           socketService.disconnect();
           setConnectionState('error');
           if (wasSocketConnected) {
-            setErrorMessage('Ghép đôi Bluetooth thất bại. Vui lòng thử lại.');
+            setErrorMessage(t('pairing.pairErrBtFail'));
           } else {
-            setErrorMessage('Không kết nối được Socket.io. Vui lòng thử lại.');
+            setErrorMessage(t('pairing.pairErrSocket'));
           }
         }
       }, 10000);
@@ -444,14 +434,14 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
     } catch (err: any) {
       clearTimers();
       setConnectionState('error');
-      setErrorMessage(err.message || 'Không tìm thấy máy tính qua Bluetooth.');
+      setErrorMessage(err.message || t('pairing.pairErrBtFindFail'));
     }
-  }, [clearTimers]);
+  }, [clearTimers, t]);
 
   // Connect using manual hostname input
   const handleConnectByManualName = useCallback(() => {
     if (!manualPcName.trim()) {
-      setErrorMessage('Vui lòng nhập tên máy tính');
+      setErrorMessage(t('pairing.pairErrInvalidName'));
       return;
     }
     const dev: BluetoothDevice = {
@@ -459,7 +449,7 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
       name: manualPcName.toUpperCase().trim(),
     };
     void handleConnectBtDevice(dev);
-  }, [manualPcName, handleConnectBtDevice]);
+  }, [manualPcName, handleConnectBtDevice, t]);
 
   // Automatically start Bluetooth scanning when tab switches to Bluetooth
   useEffect(() => {
@@ -469,6 +459,8 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
   }, [activeTab, handleScanBluetooth]);
 
   const isConnecting = connectionState === 'connecting' || connectionState === 'pairing';
+  const wifiInstructions = t('pairing.wifiInstructions');
+  const btInstructions = t('pairing.btInstructions');
 
   return (
     <SafeAreaView style={styles.container}>
@@ -477,8 +469,8 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.logoText}>GHITA</Text>
-            <Text style={styles.subtitle}>Kết nối với máy tính</Text>
+            <Text style={styles.logoText}>{t('pairing.title')}</Text>
+            <Text style={styles.subtitle}>{t('pairing.subtitle')}</Text>
           </View>
 
           <ConnectionStatus state={connectionState} />
@@ -490,7 +482,7 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
               onPress={() => setActiveTab('wifi')}
             >
               <Text style={[styles.tabButtonText, activeTab === 'wifi' && styles.tabButtonTextActive]}>
-                📶 Wi-Fi / Cloud
+                {t('pairing.wifiTab')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -498,7 +490,7 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
               onPress={() => setActiveTab('bluetooth')}
             >
               <Text style={[styles.tabButtonText, activeTab === 'bluetooth' && styles.tabButtonTextActive]}>
-                🔵 Bluetooth
+                {t('pairing.bluetoothTab')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -507,10 +499,10 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
             {activeTab === 'wifi' ? (
               <View style={styles.form}>
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Địa chỉ IP máy tính (Để trống để tự động dò tìm)</Text>
+                  <Text style={styles.label}>{t('pairing.ipLabel')}</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="Tự động dò tìm (hoặc nhập IP ví dụ: 192.168.1.100)"
+                    placeholder={t('pairing.ipPlaceholder')}
                     placeholderTextColor={Colors.textMuted}
                     value={serverAddress}
                     onChangeText={setServerAddress}
@@ -522,10 +514,10 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Mã ghép đôi</Text>
+                  <Text style={styles.label}>{t('pairing.codeLabel')}</Text>
                   <TextInput
                     style={[styles.input, styles.codeInput]}
-                    placeholder="Mã 6 chữ số"
+                    placeholder={t('pairing.codePlaceholder')}
                     placeholderTextColor={Colors.textMuted}
                     value={pairingCode}
                     onChangeText={(t) => setPairingCode(t.toUpperCase().slice(0, PAIRING_CODE_LENGTH))}
@@ -550,28 +542,27 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
                   {isConnecting ? (
                     <ActivityIndicator color={Colors.textPrimary} />
                   ) : (
-                    <Text style={styles.connectButtonText}>Kết nối</Text>
+                    <Text style={styles.connectButtonText}>{t('pairing.connectBtn')}</Text>
                   )}
                 </TouchableOpacity>
 
                 {/* Instructions */}
                 <View style={styles.instructions}>
-                  <Text style={styles.instructionTitle}>Hướng dẫn kết nối Wi-Fi:</Text>
-                  <Text style={styles.instructionText}>1. Mở ứng dụng GHITA trên máy tính.</Text>
-                  <Text style={styles.instructionText}>2. Vào tab Devices và đảm bảo Server đã bật.</Text>
-                  <Text style={styles.instructionText}>3. Chỉ cần nhập mã ghép đôi 6 ký tự trên điện thoại và nhấn Kết nối (ô IP để trống).</Text>
-                  <Text style={styles.instructionText}>4. Nếu không tự động tìm thấy, nhập thủ công địa chỉ IP hiển thị trên máy tính.</Text>
+                  <Text style={styles.instructionTitle}>{t('pairing.wifiInstructionsTitle')}</Text>
+                  {Array.isArray(wifiInstructions) && wifiInstructions.map((inst: string, index: number) => (
+                    <Text key={index} style={styles.instructionText}>{inst}</Text>
+                  ))}
                 </View>
               </View>
             ) : (
               <View style={styles.form}>
                 {/* Manual PC Hostname Input */}
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Nhập Tên máy tính của bạn (Nếu không quét thấy)</Text>
+                  <Text style={styles.label}>{t('pairing.manualNameLabel')}</Text>
                   <View style={styles.manualNameRow}>
                     <TextInput
                       style={[styles.input, styles.manualNameInput]}
-                      placeholder="Ví dụ: DESKTOP-ABC123"
+                      placeholder={t('pairing.manualNamePlaceholder')}
                       placeholderTextColor={Colors.textMuted}
                       value={manualPcName}
                       onChangeText={setManualPcName}
@@ -584,7 +575,7 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
                       onPress={handleConnectByManualName}
                       disabled={isConnecting}
                     >
-                      <Text style={styles.manualNameButtonText}>Kết nối</Text>
+                      <Text style={styles.manualNameButtonText}>{t('pairing.connectBtn')}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -592,12 +583,12 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
                 {/* Bluetooth Device List */}
                 <View style={styles.deviceListContainer}>
                   <View style={styles.deviceListHeader}>
-                    <Text style={styles.label}>Thiết bị Bluetooth ở gần</Text>
+                    <Text style={styles.label}>{t('pairing.btDevicesHeader')}</Text>
                     {isScanningBt ? (
                       <ActivityIndicator size="small" color={Colors.accent} />
                     ) : (
                       <TouchableOpacity onPress={handleScanBluetooth}>
-                        <Text style={styles.scanActionText}>Quét lại</Text>
+                        <Text style={styles.scanActionText}>{t('pairing.btRescan')}</Text>
                       </TouchableOpacity>
                     )}
                   </View>
@@ -605,7 +596,7 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
                   {btDevices.length === 0 ? (
                     <View style={styles.emptyDeviceContainer}>
                       <Text style={styles.emptyDeviceText}>
-                        {isScanningBt ? 'Đang tìm kiếm thiết bị...' : 'Không tìm thấy thiết bị nào. Nhấp quét lại.'}
+                        {isScanningBt ? t('pairing.btNoDevicesScanning') : t('pairing.btNoDevicesRescan')}
                       </Text>
                     </View>
                   ) : (
@@ -619,10 +610,10 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
                         <View style={styles.deviceInfo}>
                           <Text style={styles.deviceName}>{device.name}</Text>
                           <Text style={styles.deviceAddress}>
-                            {device.bonded ? '🔵 Đã ghép đôi' : '⚪ Thiết bị mới'} • {device.address}
+                            {device.bonded ? t('pairing.btBonded') : t('pairing.btNewDevice')} • {device.address}
                           </Text>
                         </View>
-                        <Text style={styles.connectDeviceAction}>Kết nối</Text>
+                        <Text style={styles.connectDeviceAction}>{t('pairing.connectBtn')}</Text>
                       </TouchableOpacity>
                     ))
                   )}
@@ -636,11 +627,10 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
 
                 {/* Instructions */}
                 <View style={styles.instructions}>
-                  <Text style={styles.instructionTitle}>Hướng dẫn kết nối Bluetooth:</Text>
-                  <Text style={styles.instructionText}>1. Đảm bảo điện thoại và máy tính đã bật Bluetooth.</Text>
-                  <Text style={styles.instructionText}>2. Ghép đôi điện thoại và máy tính trong Cài đặt Bluetooth của điện thoại.</Text>
-                  <Text style={styles.instructionText}>3. Mở GHITA Desktop, tìm tên máy hiển thị ở phần "Tên Máy (Bluetooth)".</Text>
-                  <Text style={styles.instructionText}>4. Chọn tên máy của bạn trong danh sách trên điện thoại hoặc nhập thủ công để kết nối.</Text>
+                  <Text style={styles.instructionTitle}>{t('pairing.btInstructionsTitle')}</Text>
+                  {Array.isArray(btInstructions) && btInstructions.map((inst: string, index: number) => (
+                    <Text key={index} style={styles.instructionText}>{inst}</Text>
+                  ))}
                 </View>
               </View>
             )}

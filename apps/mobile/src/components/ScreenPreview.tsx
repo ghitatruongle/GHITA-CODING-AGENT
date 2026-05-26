@@ -3,10 +3,11 @@
 // Shows desktop screenshot received via Socket.io
 // ==============================================================================
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Image, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { Colors } from '../theme/colors';
 import { FontSize, Spacing, Radius } from '../theme/styles';
+import { useTranslation } from '../i18n/context';
 
 interface ScreenPreviewProps {
   imageBase64: string | null;
@@ -19,14 +20,19 @@ export function ScreenPreview({
   loading = false,
   connected = false,
 }: ScreenPreviewProps): React.JSX.Element {
+  const { t } = useTranslation();
   const [imageError, setImageError] = useState(false);
+
+  useEffect(() => {
+    setImageError(false);
+  }, [imageBase64]);
 
   // Loading state
   if (loading) {
     return (
       <View style={[styles.container, styles.placeholder]}>
         <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.placeholderText}>Đang tải screenshot...</Text>
+        <Text style={styles.placeholderText}>{t('remote.screenPreviewLoading')}</Text>
       </View>
     );
   }
@@ -49,7 +55,7 @@ export function ScreenPreview({
     return (
       <View style={[styles.container, styles.placeholder]}>
         <Text style={styles.placeholderIcon}>⚠️</Text>
-        <Text style={styles.placeholderText}>Ảnh bị lỗi</Text>
+        <Text style={styles.placeholderText}>{t('remote.screenPreviewError')}</Text>
       </View>
     );
   }
@@ -59,10 +65,10 @@ export function ScreenPreview({
     <View style={[styles.container, styles.placeholder]}>
       <Text style={styles.placeholderIcon}>📸</Text>
       <Text style={styles.placeholderText}>
-        {connected ? 'Nhấn Screenshot để xem màn hình' : 'Screen Preview'}
+        {connected ? t('remote.screenPreviewPlaceholder') : 'Screen Preview'}
       </Text>
       {!connected && (
-        <Text style={styles.placeholderSubtext}>Kết nối để xem màn hình desktop</Text>
+        <Text style={styles.placeholderSubtext}>{t('remote.screenPreviewConnecting')}</Text>
       )}
     </View>
   );

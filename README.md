@@ -6,7 +6,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-0.0.2--beta2-purple.svg)
+![Version](https://img.shields.io/badge/version-0.0.2-purple.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Node](https://img.shields.io/badge/node-%3E%3D20-green.svg)
 ![TypeScript](https://img.shields.io/badge/typescript-5.6-blue.svg)
@@ -147,7 +147,8 @@ pnpm dev:android
 | DEMO | 19/05/2026 | Initial demo release |
 | Update 0.0.1 | 21/05/2026 | Optimized phone-computer connection and fixed minor bugs |
 | Update 0.0.2 beta1 | 21/05/2026 | Code Editor VSCode-style, File Explorer, Multi-tab, 13 AI providers, Dashboard real-time, API Manager redesign, Chat markdown rendering, Token counter |
-| Update 0.0.2 beta2 | 22/05/2026 | Sandboxed workspace tools (CRUD, pure-Node grep search, block traversal), Socket.IO live telemetry and terminal command approval consent gate, integration testing and compilation |
+| Update 0.0.2 | 22/05/2026 | Sandboxed workspace tools (CRUD, pure-Node grep search, block traversal), Socket.IO live telemetry and terminal command approval consent gate, integration testing and compilation |
+| Update 0.0.2 | 26/05/2026 | Added 6 breakthrough features: SCTI trajectory self-healing, AST-Lock method protection, Live Telepresence stream, Rust memory addon, AHPI performance heatmap, DebateEngine reviewer panel, and /deep-research command |
 
 ---
 

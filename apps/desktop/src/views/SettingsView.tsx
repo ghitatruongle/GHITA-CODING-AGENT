@@ -10,6 +10,7 @@ import { isWindows, isLinux } from '@ghita/shared';
 const LANGUAGE_OPTIONS = [
   { value: 'vi', label: 'Tiếng Việt' },
   { value: 'en', label: 'English' },
+  { value: 'zh', label: '简体中文 (Beta)' },
 ];
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {

@@ -171,6 +171,37 @@ function getSampleInput(skill: SkillDefinition): Record<string, unknown> {
       return { x: 10, y: 10 };
     case 'computer.typeText':
       return { text: 'GHITA' };
+    // Phase 2.1: New skill samples
+    case 'git.status':
+      return { porcelain: true };
+    case 'git.commit':
+      return { message: 'test: verify skill integration' };
+    case 'git.diff':
+      return { target: 'HEAD' };
+    case 'git.branch':
+      return { action: 'list' };
+    case 'docker.run':
+      return { image: 'hello-world' };
+    case 'docker.build':
+      return { tag: 'test:latest', context: '.' };
+    case 'docker.ps':
+      return { all: false };
+    case 'db.query':
+      return { database: 'test.db', query: 'SELECT 1' };
+    case 'http.request':
+      return { url: 'https://httpbin.org/get', method: 'GET' };
+    case 'code.format':
+      return { path: 'README.md', formatter: 'prettier' };
+    case 'code.lint':
+      return { path: '.', linter: 'eslint' };
+    case 'test.run':
+      return { framework: 'vitest' };
+    case 'search.codebase':
+      return { query: 'SkillRegistry', path: 'packages/skills/src' };
+    case 'compress.zip':
+      return { source: 'README.md', output: 'test-archive.tar.gz' };
+    case 'deploy.check':
+      return {};
     default:
       return {};
   }

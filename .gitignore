@@ -15,6 +15,16 @@ build/
 target/
 out/
 .next/
+*.tsbuildinfo
+apps/desktop/src-tauri/sidecar/server.bundle.mjs
+apps/desktop/src-tauri/sidecar/node.exe
+
+# Android / native build caches
+apps/mobile/android/.gradle/
+apps/mobile/android/app/.cxx/
+apps/mobile/android/app/build/
+apps/mobile/android/build/
+apps/mobile/android/.kotlin/
 
 # Rust / Tauri
 apps/desktop/src-tauri/target/
@@ -67,3 +77,6 @@ refer_project/memory/*/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Plan
+Plan/

@@ -8,6 +8,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Colors } from '../theme/colors';
 import { FontSize, Spacing, Radius } from '../theme/styles';
 import type { QuickAction } from '../types';
+import { useTranslation } from '../i18n/context';
 
 interface QuickActionsProps {
   disabled?: boolean;
@@ -22,6 +23,18 @@ const ACTIONS: QuickAction[] = [
 ];
 
 export function QuickActions({ disabled = false, onAction }: QuickActionsProps): React.JSX.Element {
+  const { t } = useTranslation();
+
+  const getActionLabel = (id: string) => {
+    switch (id) {
+      case 'screenshot': return t('remote.actionScreenshot');
+      case 'cancel': return t('remote.actionCancel');
+      case 'approve': return t('remote.actionApprove');
+      case 'reject': return t('remote.actionReject');
+      default: return id;
+    }
+  };
+
   return (
     <View style={styles.grid}>
       {ACTIONS.map((action) => (
@@ -31,12 +44,12 @@ export function QuickActions({ disabled = false, onAction }: QuickActionsProps):
           onPress={() => onAction(action.type)}
           disabled={disabled}
           activeOpacity={0.7}
-          accessibilityLabel={action.label}
+          accessibilityLabel={getActionLabel(action.id)}
           accessibilityRole="button"
         >
           <Text style={styles.actionIcon}>{action.icon}</Text>
           <Text style={[styles.actionLabel, disabled && styles.actionLabelDisabled]}>
-            {action.label}
+            {getActionLabel(action.id)}
           </Text>
         </TouchableOpacity>
       ))}

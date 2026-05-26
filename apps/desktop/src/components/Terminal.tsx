@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Command } from '@tauri-apps/plugin-shell';
 import { useTranslation } from '../i18n';
+import { useAppStore } from '../stores/appStore';
 
 type ShellType = 'cmd' | 'powershell';
 
@@ -73,8 +74,22 @@ export function Terminal() {
   const [isRunning, setIsRunning] = useState(false);
   const [cwd, setCwd] = useState('C:\\Users');
   const [shell, setShell] = useState<ShellType>('cmd');
+  const setTerminalCwd = useAppStore((s) => s.setTerminalCwd);
+  const terminalCwd = useAppStore((s) => s.terminalCwd);
 
   const config = SHELL_CONFIGS[shell];
+
+  // Sync cwd to global store for ChatPanel project context
+  useEffect(() => {
+    setTerminalCwd(cwd);
+  }, [cwd, setTerminalCwd]);
+
+  // Sync global terminalCwd to local cwd
+  useEffect(() => {
+    if (terminalCwd && terminalCwd !== cwd) {
+      setCwd(terminalCwd);
+    }
+  }, [terminalCwd]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -97,7 +112,6 @@ export function Terminal() {
       }
       // init complete — home dir resolved;
     })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shell]);
 
   const addLines = useCallback((lines: TermLine[]) => {

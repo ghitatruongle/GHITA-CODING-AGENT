@@ -37,14 +37,15 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self' asset:; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: asset: http: https:; connect-src ipc: http://127.0.0.1:* ws://127.0.0.1:* http://localhost:* ws://localhost:* https:; font-src 'self' data:; object-src 'none'; frame-ancestors 'none'"
     }
   },
   "bundle": {
     "active": true,
     "targets": "all",
     "resources": [
-      "sidecar/*"
+      "sidecar/*",
+      "proto/*"
     ],
     "icon": [
       "icons/32x32.png",

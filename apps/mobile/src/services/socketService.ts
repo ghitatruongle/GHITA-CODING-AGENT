@@ -6,6 +6,7 @@
 import { io, Socket } from 'socket.io-client';
 import { SOCKET_EVENTS } from '@ghita/shared';
 import type { ConnectionState, ChatMessage } from '../types';
+import { clearAuthToken, getAuthToken, saveAuthToken } from './storageService';
 
 // --- Event callback types ---
 export interface SocketCallbacks {
@@ -31,10 +32,13 @@ export class SocketService {
   private reconnectAttempts = 0;
   private readonly maxReconnectAttempts = Infinity;
   private deviceId: string | null = null;
+  private authToken: string | null = null;
   private lastUrl: string | null = null;
   private lastLocalAddress: string | null = null;
   private cloudAddress: string = 'https://ghita-relay-server.onrender.com';
   private healthCheckInterval: any = null;
+  private languageListeners: ((lang: string) => void)[] = [];
+
 
   get connectionState(): ConnectionState {
     return this._connectionState;
@@ -114,6 +118,7 @@ export class SocketService {
       this.socket = null;
     }
     this.deviceId = null;
+    this.authToken = null;
     this.lastPairingCode = null;
     this.connectionType = null;
     this.setConnectionState('disconnected');
@@ -128,11 +133,14 @@ export class SocketService {
     if (!this.socket) return;
     this.setConnectionState('pairing');
     this.lastPairingCode = code;
-    if (this.connectionType === 'cloud') {
-      this.socket.emit('pair_mobile', { pairingCode: code });
-    } else {
-      this.socket.emit(SOCKET_EVENTS.PAIR, { code, deviceId, timestamp: Date.now() });
-    }
+    void getAuthToken().then((authToken) => {
+      this.authToken = authToken;
+      if (this.connectionType === 'cloud') {
+        this.socket?.emit('pair_mobile', { pairingCode: code });
+      } else {
+        this.socket?.emit(SOCKET_EVENTS.PAIR, { code, deviceId, authToken, timestamp: Date.now() });
+      }
+    });
   }
 
   /**
@@ -195,6 +203,24 @@ export class SocketService {
       action,
       timestamp: Date.now(),
     });
+  }
+
+  /**
+   * Register listener for language synchronization
+   */
+  onLanguageSync(callback: (lang: string) => void): () => void {
+    this.languageListeners.push(callback);
+    return () => {
+      this.languageListeners = this.languageListeners.filter((cb) => cb !== callback);
+    };
+  }
+
+  /**
+   * Broadcast language change to desktop
+   */
+  sendSyncLanguage(language: string): void {
+    if (!this.socket || !this.isConnected) return;
+    this.socket.emit(SOCKET_EVENTS.SYNC_LANGUAGE, { language });
   }
 
   /**
@@ -276,7 +302,10 @@ export class SocketService {
       } else {
         if (this.deviceId) {
           this.setConnectionState('pairing');
-          this.socket?.emit(SOCKET_EVENTS.PAIR, { deviceId: this.deviceId, timestamp: Date.now() });
+          void getAuthToken().then((authToken) => {
+            this.authToken = authToken;
+            this.socket?.emit(SOCKET_EVENTS.PAIR, { deviceId: this.deviceId, authToken, timestamp: Date.now() });
+          });
         } else {
           this.setConnectionState('disconnected');
         }
@@ -309,11 +338,15 @@ export class SocketService {
     });
 
     // Pairing confirmation
-    this.socket.on(SOCKET_EVENTS.PAIR_CONFIRM, (data: { deviceName?: string; deviceId?: string }) => {
+    this.socket.on(SOCKET_EVENTS.PAIR_CONFIRM, (data: { deviceName?: string; deviceId?: string; authToken?: string }) => {
       if (data.deviceId) {
         this.deviceId = data.deviceId;
       } else if (this.connectionType === 'cloud') {
         this.deviceId = 'cloud_session';
+      }
+      if (data.authToken) {
+        this.authToken = data.authToken;
+        void saveAuthToken(data.authToken);
       }
       this.setConnectionState('connected');
 
@@ -336,6 +369,54 @@ export class SocketService {
       if (data.image) {
         this.callbacks.onScreenshot?.(data.image);
       }
+    });
+
+    let streamingChatResponse = '';
+
+    this.socket.on('chat_chunk', (data: { text?: string }) => {
+      if (data.text) {
+        streamingChatResponse += data.text;
+      }
+    });
+
+    this.socket.on('chat_done', (data: {
+      text?: string;
+      timestamp?: number;
+      usage?: {
+        promptTokens?: number;
+        completionTokens?: number;
+        totalTokens?: number;
+        costUsd?: number;
+        limitUsd?: number;
+      };
+    }) => {
+      const text = data.text ?? streamingChatResponse;
+      streamingChatResponse = '';
+
+      if (data.usage) {
+        this.callbacks.onCostTelemetry?.({
+          inputTokens: data.usage.promptTokens ?? 0,
+          outputTokens: data.usage.completionTokens ?? 0,
+          totalTokens: data.usage.totalTokens ?? 0,
+          costUsd: data.usage.costUsd ?? 0,
+          limitUsd: data.usage.limitUsd ?? 5,
+        });
+      }
+
+      if (text) {
+        const message: ChatMessage = {
+          id: `ai_${Date.now()}_${++aiMsgCounter}`,
+          text,
+          sender: 'ai',
+          timestamp: data.timestamp ?? Date.now(),
+        };
+        this.callbacks.onChatResponse?.(message);
+      }
+    });
+
+    this.socket.on('chat_error', (data: { message?: string }) => {
+      streamingChatResponse = '';
+      this.callbacks.onError?.(data.message ?? 'Chat request failed');
     });
 
     // Chat response
@@ -366,10 +447,19 @@ export class SocketService {
       this.callbacks.onStatusUpdate?.(data);
     });
 
+    // Language Sync
+    this.socket.on(SOCKET_EVENTS.SYNC_LANGUAGE, (data: { language: string }) => {
+      if (data?.language) {
+        this.languageListeners.forEach((cb) => cb(data.language));
+      }
+    });
+
     // Error from server
     this.socket.on(SOCKET_EVENTS.ERROR, (data: { message?: string }) => {
       if (data.message === 'Session expired. Please re-pair.') {
         this.deviceId = null;
+        this.authToken = null;
+        void clearAuthToken();
         this.setConnectionState('disconnected');
       }
       this.callbacks.onError?.(data.message ?? 'Unknown error from server');

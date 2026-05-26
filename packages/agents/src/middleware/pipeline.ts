@@ -89,13 +89,13 @@ export class MiddlewarePipeline {
     toolName: string,
     args: Record<string, unknown>,
     context: MiddlewareContext,
-  ): Promise<{ proceed: boolean; args: Record<string, unknown> }> {
+  ): Promise<{ proceed: boolean; args: Record<string, unknown>; reason?: string }> {
     let currentArgs = { ...args };
     for (const mw of this.middlewares) {
       if (!mw.preTool) continue;
       const result = await mw.preTool(toolName, currentArgs, context);
       if (!result) continue;
-      if (!result.proceed) return { proceed: false, args: currentArgs };
+      if (!result.proceed) return { proceed: false, args: currentArgs, reason: result.reason };
       if (result.modifiedArgs) currentArgs = { ...currentArgs, ...result.modifiedArgs };
     }
     return { proceed: true, args: currentArgs };

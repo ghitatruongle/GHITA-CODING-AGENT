@@ -27,14 +27,14 @@ export class OpenAIProvider extends BaseProvider {
   }
 
   async isReady(): Promise<boolean> {
-    return !!this.config.apiKey;
+    return this.keyManager.hasHealthyKey();
   }
 
   async chat(messages: ChatMessage[], options?: ChatOptions): Promise<ChatResponse> {
     const apiKey = this.getApiKey();
     const model = this.getModel(options);
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch(this.getChatCompletionsUrl(), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -52,9 +52,12 @@ export class OpenAIProvider extends BaseProvider {
     });
 
     if (!response.ok) {
+      this.reportKeyFailure(apiKey, response.status);
       const error = await response.text();
       throw new Error(`OpenAI API error (${response.status}): ${error}`);
     }
+
+    this.reportKeySuccess(apiKey);
 
     const data = (await response.json()) as {
       choices: Array<{ message: { content: string }; finish_reason: string }>;
@@ -82,7 +85,7 @@ export class OpenAIProvider extends BaseProvider {
     const apiKey = this.getApiKey();
     const model = this.getModel(options);
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch(this.getChatCompletionsUrl(), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -99,9 +102,12 @@ export class OpenAIProvider extends BaseProvider {
     });
 
     if (!response.ok) {
+      this.reportKeyFailure(apiKey, response.status);
       const error = await response.text();
       throw new Error(`OpenAI API error (${response.status}): ${error.slice(0, 200)}`);
     }
+
+    this.reportKeySuccess(apiKey);
 
     const contentType = response.headers.get('content-type');
     if (!contentType?.includes('text/event-stream') && !contentType?.includes('application/json')) {
@@ -164,6 +170,11 @@ export class OpenAIProvider extends BaseProvider {
       default:
         return 'stop';
     }
+  }
+
+  private getChatCompletionsUrl(): string {
+    const baseUrl = (this.getBaseUrl() || 'https://api.openai.com/v1').replace(/\/+$/, '');
+    return `${baseUrl}/chat/completions`;
   }
 
   async embed(text: string, options?: { model?: string }): Promise<EmbeddingResponse> {
@@ -353,4 +364,3 @@ export class OpenAIProvider extends BaseProvider {
     return { text: data.text };
   }
 }
-

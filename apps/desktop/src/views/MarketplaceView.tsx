@@ -2,10 +2,12 @@
 // GHITA CODING AGENT — Extension Marketplace View
 // ==============================================================================
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppStore } from '../stores/appStore';
 import { useTranslation } from '../i18n';
 import type { PluginManifest } from '@ghita/shared';
+import { getDefaultCatalog } from '@ghita/skills';
+import type { SkillManifest } from '@ghita/skills';
 
 // Pre-defined available marketplace plugins
 const MARKETPLACE_PLUGINS: PluginManifest[] = [
@@ -92,31 +94,83 @@ export function MarketplaceView() {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'code' | 'bundle' | 'installed'>('all');
+  const [sortBy, setSortBy] = useState<'downloads' | 'rating' | 'newest'>('downloads');
+
+  // Phase 2.3: Load catalog skills
+  const [catalogSkills, setCatalogSkills] = useState<SkillManifest[]>([]);
+  useEffect(() => {
+    setCatalogSkills(getDefaultCatalog());
+  }, []);
+
+  // Merge hardcoded plugins with catalog skills, converting catalog to PluginManifest format
+  const allPlugins: PluginManifest[] = useMemo(() => {
+    const localizedHardcoded = MARKETPLACE_PLUGINS.map((p) => {
+      const key = `marketplace.plugin_${p.id.replace(/-/g, '_')}_desc` as any;
+      const skills = p.skills?.map((s) => {
+        const sKey = `marketplace.skill_${s.id.replace(/-/g, '_')}_desc` as any;
+        return {
+          ...s,
+          description: t(sKey) !== sKey ? t(sKey) : s.description,
+        };
+      });
+      return {
+        ...p,
+        description: t(key) !== key ? t(key) : p.description,
+        skills,
+      };
+    });
+
+    const catalogAsPlugins: PluginManifest[] = catalogSkills.map((s) => ({
+      id: s.id,
+      name: s.name,
+      description: s.description,
+      version: s.version,
+      author: s.author,
+      type: 'code' as const,
+      permissions: s.permissions,
+    }));
+    // Avoid duplicates: hardcoded plugins take priority
+    const hardcodedIds = new Set(localizedHardcoded.map((p) => p.id));
+    const merged = [...localizedHardcoded, ...catalogAsPlugins.filter((p) => !hardcodedIds.has(p.id))];
+    return merged;
+  }, [catalogSkills, t]);
+
+  // Sort catalog skills for display metadata
+  const catalogMeta = useMemo(() => {
+    const meta = new Map<string, SkillManifest>();
+    for (const s of catalogSkills) meta.set(s.id, s);
+    return meta;
+  }, [catalogSkills]);
 
   const installedPlugins = useAppStore((s) => s.plugins);
   const installPlugin = useAppStore((s) => s.installPlugin);
   const uninstallPlugin = useAppStore((s) => s.uninstallPlugin);
   const togglePlugin = useAppStore((s) => s.togglePlugin);
 
-  // Filter logic
-  const filteredPlugins = MARKETPLACE_PLUGINS.filter((plugin) => {
-    // Search matching
-    const matchesSearch =
-      plugin.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      plugin.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      plugin.author.toLowerCase().includes(searchQuery.toLowerCase());
-
-    if (!matchesSearch) return false;
-
-    // Tab matching
-    if (filterType === 'all') return true;
-    if (filterType === 'code') return plugin.type === 'code';
-    if (filterType === 'bundle') return plugin.type === 'bundle';
-    if (filterType === 'installed') {
-      return installedPlugins.some((ip) => ip.manifest.id === plugin.id);
-    }
-    return true;
-  });
+  // Filter + sort logic
+  const filteredPlugins = allPlugins
+    .filter((plugin) => {
+      const matchesSearch =
+        plugin.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        plugin.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        plugin.author.toLowerCase().includes(searchQuery.toLowerCase());
+      if (!matchesSearch) return false;
+      if (filterType === 'all') return true;
+      if (filterType === 'code') return plugin.type === 'code';
+      if (filterType === 'bundle') return plugin.type === 'bundle';
+      if (filterType === 'installed') {
+        return installedPlugins.some((ip) => ip.manifest.id === plugin.id);
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      const metaA = catalogMeta.get(a.id);
+      const metaB = catalogMeta.get(b.id);
+      if (!metaA || !metaB) return 0;
+      if (sortBy === 'downloads') return metaB.downloads - metaA.downloads;
+      if (sortBy === 'rating') return metaB.rating - metaA.rating;
+      return metaB.publishedAt - metaA.publishedAt;
+    });
 
   const isInstalled = (pluginId: string) => {
     return installedPlugins.some((p) => p.manifest.id === pluginId);
@@ -222,6 +276,25 @@ export function MarketplaceView() {
             );
           })}
         </div>
+
+        {/* Phase 2.3: Sort dropdown */}
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as 'downloads' | 'rating' | 'newest')}
+          style={{
+            padding: '8px 12px',
+            borderRadius: '8px',
+            background: 'rgba(0,0,0,0.15)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            color: 'var(--text-secondary)',
+            fontSize: '13px',
+            cursor: 'pointer',
+          }}
+        >
+          <option value="downloads">{t('marketplace.sortByDownloads')}</option>
+          <option value="rating">{t('marketplace.sortByRating')}</option>
+          <option value="newest">{t('marketplace.sortByNewest')}</option>
+        </select>
       </div>
 
       {/* Plugins Grid */}
@@ -315,10 +388,18 @@ export function MarketplaceView() {
                     </span>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '10px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                  <div style={{ display: 'flex', gap: '10px', fontSize: '12px', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
                     <span>v{plugin.version}</span>
                     <span>•</span>
                     <span>{t('marketplace.author')} <strong>{plugin.author}</strong></span>
+                    {catalogMeta.get(plugin.id) && (
+                      <>
+                        <span>•</span>
+                        <span>{catalogMeta.get(plugin.id)!.downloads.toLocaleString()} {t('marketplace.downloads')}</span>
+                        <span>•</span>
+                        <span>{'★'.repeat(Math.round(catalogMeta.get(plugin.id)!.rating))} ({catalogMeta.get(plugin.id)!.rating.toFixed(1)})</span>
+                      </>
+                    )}
                   </div>
 
                   <p style={{ color: 'var(--text-secondary)', fontSize: '13.5px', lineHeight: 1.5, margin: 0 }}>

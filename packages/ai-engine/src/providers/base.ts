@@ -13,6 +13,7 @@ import type {
   EmbeddingManyResponse,
 } from '../types.js';
 import { AIUnsupportedFeatureError } from '../errors/index.js';
+import { KeyManager } from '../key-manager.js';
 
 export abstract class BaseProvider implements AIProvider {
   abstract readonly type: AIProviderType;
@@ -21,9 +22,17 @@ export abstract class BaseProvider implements AIProvider {
   abstract readonly models: string[];
 
   protected config: ProviderConfig;
+  protected keyManager: KeyManager;
 
   constructor(config: ProviderConfig) {
     this.config = config;
+    // Phase 1.1: Initialize multi-key manager
+    const keys = config.apiKeys && config.apiKeys.length > 0
+      ? config.apiKeys
+      : config.apiKey
+        ? [config.apiKey]
+        : [];
+    this.keyManager = new KeyManager(keys, config.rotationStrategy ?? 'failover');
   }
 
   abstract isReady(): Promise<boolean>;
@@ -57,10 +66,24 @@ export abstract class BaseProvider implements AIProvider {
   }
 
   protected getApiKey(): string {
-    if (!this.config.apiKey) {
-      throw new Error(`${this.name}: API key not configured`);
+    const key = this.keyManager.getNextKey();
+    if (!key) {
+      throw new Error(`${this.name}: No healthy API key available`);
     }
-    return this.config.apiKey;
+    return key;
+  }
+
+  protected reportKeySuccess(key: string): void {
+    this.keyManager.reportSuccess(key);
+  }
+
+  protected reportKeyFailure(key: string, statusCode?: number): void {
+    this.keyManager.reportFailure(key, statusCode);
+  }
+
+  /** Get key manager for health status reporting */
+  getKeyManager(): KeyManager {
+    return this.keyManager;
   }
 
   protected getBaseUrl(): string | undefined {

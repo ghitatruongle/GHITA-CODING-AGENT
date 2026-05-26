@@ -19,6 +19,7 @@ export interface ServerConfig {
 export interface PairedDevice extends DeviceInfo {
   socketId: string;
   pairedAt: number;
+  secret?: string | null;
 }
 
 // --- Command Payload ---

@@ -37,7 +37,7 @@ if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
   file(TOUCH_NOCREATE "D:/GHITA CODING AGENT/apps/mobile/android/app/.cxx/Debug/83c14322/x86/CMakeFiles/cmake.verify_globs")
 endif()
 
-# LIB_CUSTOM_SRCS at D:/GHITA CODING AGENT/apps/mobile/node_modules/react-native-safe-area-context/android/src/main/jni/CMakeLists.txt:21 (file)
+# LIB_CUSTOM_SRCS at D:/GHITA CODING AGENT/apps/mobile/node_modules/react-native-safe-area-context/android/src/main/jni/CMakeLists.txt:22 (file)
 file(GLOB NEW_GLOB LIST_DIRECTORIES true "D:/GHITA CODING AGENT/apps/mobile/node_modules/react-native-safe-area-context/android/src/main/jni/*.cpp")
 set(OLD_GLOB
   )
@@ -46,7 +46,7 @@ if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
   file(TOUCH_NOCREATE "D:/GHITA CODING AGENT/apps/mobile/android/app/.cxx/Debug/83c14322/x86/CMakeFiles/cmake.verify_globs")
 endif()
 
-# LIB_CUSTOM_SRCS at D:/GHITA CODING AGENT/apps/mobile/node_modules/react-native-safe-area-context/android/src/main/jni/CMakeLists.txt:21 (file)
+# LIB_CUSTOM_SRCS at D:/GHITA CODING AGENT/apps/mobile/node_modules/react-native-safe-area-context/android/src/main/jni/CMakeLists.txt:22 (file)
 file(GLOB NEW_GLOB LIST_DIRECTORIES true "D:/GHITA CODING AGENT/apps/mobile/node_modules/react-native-safe-area-context/android/src/main/jni/../../../../common/cpp/react/renderer/components/safeareacontext/*.cpp")
 set(OLD_GLOB
   "D:/GHITA CODING AGENT/apps/mobile/node_modules/react-native-safe-area-context/android/src/main/jni/../../../../common/cpp/react/renderer/components/safeareacontext/RNCSafeAreaViewShadowNode.cpp"
@@ -57,7 +57,7 @@ if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
   file(TOUCH_NOCREATE "D:/GHITA CODING AGENT/apps/mobile/android/app/.cxx/Debug/83c14322/x86/CMakeFiles/cmake.verify_globs")
 endif()
 
-# LIB_CODEGEN_SRCS at D:/GHITA CODING AGENT/apps/mobile/node_modules/react-native-safe-area-context/android/src/main/jni/CMakeLists.txt:22 (file)
+# LIB_CODEGEN_SRCS at D:/GHITA CODING AGENT/apps/mobile/node_modules/react-native-safe-area-context/android/src/main/jni/CMakeLists.txt:23 (file)
 file(GLOB NEW_GLOB LIST_DIRECTORIES true "D:/GHITA CODING AGENT/apps/mobile/node_modules/react-native-safe-area-context/android/src/main/jni/../../../build/generated/source/codegen/jni/*.cpp")
 set(OLD_GLOB
   "D:/GHITA CODING AGENT/apps/mobile/node_modules/react-native-safe-area-context/android/src/main/jni/../../../build/generated/source/codegen/jni/safeareacontext-generated.cpp"
@@ -67,7 +67,7 @@ if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
   file(TOUCH_NOCREATE "D:/GHITA CODING AGENT/apps/mobile/android/app/.cxx/Debug/83c14322/x86/CMakeFiles/cmake.verify_globs")
 endif()
 
-# LIB_CODEGEN_SRCS at D:/GHITA CODING AGENT/apps/mobile/node_modules/react-native-safe-area-context/android/src/main/jni/CMakeLists.txt:22 (file)
+# LIB_CODEGEN_SRCS at D:/GHITA CODING AGENT/apps/mobile/node_modules/react-native-safe-area-context/android/src/main/jni/CMakeLists.txt:23 (file)
 file(GLOB NEW_GLOB LIST_DIRECTORIES true "D:/GHITA CODING AGENT/apps/mobile/node_modules/react-native-safe-area-context/android/src/main/jni/../../../build/generated/source/codegen/jni/react/renderer/components/safeareacontext/*.cpp")
 set(OLD_GLOB
   "D:/GHITA CODING AGENT/apps/mobile/node_modules/react-native-safe-area-context/android/src/main/jni/../../../build/generated/source/codegen/jni/react/renderer/components/safeareacontext/ComponentDescriptors.cpp"

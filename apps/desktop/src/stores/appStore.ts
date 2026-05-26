@@ -22,8 +22,10 @@ interface AppState {
   // Terminal
   isTerminalOpen: boolean;
   terminalHeight: number;
+  terminalCwd: string;
   toggleTerminal: () => void;
   setTerminalHeight: (h: number) => void;
+  setTerminalCwd: (cwd: string) => void;
 
   // Chat
   isChatOpen: boolean;
@@ -83,8 +85,10 @@ export const useAppStore = create<AppState>()(
       // Terminal
       isTerminalOpen: true,
       terminalHeight: 250,
+      terminalCwd: '',
       toggleTerminal: () => set((s) => ({ isTerminalOpen: !s.isTerminalOpen })),
       setTerminalHeight: (h) => set({ terminalHeight: Math.max(120, Math.min(600, h)) }),
+      setTerminalCwd: (cwd) => set({ terminalCwd: cwd }),
 
       // Chat
       isChatOpen: false,

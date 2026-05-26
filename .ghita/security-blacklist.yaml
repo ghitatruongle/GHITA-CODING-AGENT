@@ -1,0 +1,63 @@
+# =============================================================================
+# GHITA CODING AGENT - Security Blacklist Configuration
+# Cấu hình danh sách cấm lệnh terminal tùy chỉnh (Phase 13)
+# =============================================================================
+
+# Bật/tắt kiểm tra base64 obfuscation (mặc định: true)
+detectBase64: true
+
+# Bật/tắt kiểm tra binary execution (mặc định: true)
+detectBinaryExecution: true
+
+# Yêu cầu phê duyệt cho lệnh high/medium (mặc định: true)
+requireApprovalForHigh: true
+
+# Danh sách lệnh được phép bỏ qua kiểm tra (whitelist)
+whitelist:
+  - "npm run build"
+  - "npm run test"
+  - "npm run dev"
+  - "npm run lint"
+  - "pnpm install"
+  - "pnpm build"
+  - "pnpm test"
+  - "pnpm dev"
+  - "pnpm lint"
+  - "pnpm --filter"
+  - "git add"
+  - "git commit"
+  - "git push"
+  - "git status"
+  - "git log"
+  - "git diff"
+  - "git checkout"
+  - "git branch"
+  - "git stash"
+  - "git pull"
+  - "tsc"
+  - "npx tsc"
+  - "vitest"
+  - "npx vitest"
+  - "eslint"
+
+# Danh sách pattern cấm tùy chỉnh
+customPatterns:
+  - name: "Block node_modules deletion"
+    pattern: "\\brm\\b.*node_modules"
+    severity: high
+    description: "Do not delete node_modules manually — use package manager"
+
+  - name: "Block env file access"
+    pattern: "\\bcat\\b.*\\.env\\b"
+    severity: medium
+    description: "Do not cat .env files — may expose secrets"
+
+  - name: "Block force push to main"
+    pattern: "git\\s+push\\s+.*--force.*\\bmain\\b"
+    severity: high
+    description: "Force push to main branch is dangerous"
+
+  - name: "Block Docker system prune"
+    pattern: "\\bdocker\\s+system\\s+prune\\s+-a"
+    severity: high
+    description: "Docker system prune -a removes all unused data"

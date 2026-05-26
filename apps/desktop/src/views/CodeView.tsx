@@ -58,16 +58,26 @@ export function CodeView() {
   // Close a tab
   const handleCloseTab = useCallback((path: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setOpenFiles((prev) => {
-      const next = prev.filter((f) => f.path !== path);
-      if (activePath === path) {
-        const idx = prev.findIndex((f) => f.path === path);
-        const newActive = next[Math.min(idx, next.length - 1)]?.path || '';
-        setActivePath(newActive);
-      }
-      return next;
-    });
-  }, [activePath]);
+
+    // Check if file is modified
+    const file = openFiles.find((f) => f.path === path);
+    if (file?.modified) {
+      const confirmDiscard = window.confirm(
+        tRef.current('codeView.unsavedChangesConfirm', { name: file.name })
+      );
+      if (!confirmDiscard) return;
+    }
+
+    // Determine the new active path first
+    const idx = openFiles.findIndex((f) => f.path === path);
+    const nextFiles = openFiles.filter((f) => f.path !== path);
+    
+    if (activePath === path) {
+      const newActive = nextFiles[Math.min(idx, nextFiles.length - 1)]?.path || '';
+      setActivePath(newActive);
+    }
+    setOpenFiles(nextFiles);
+  }, [openFiles, activePath]);
 
   // Handle editor content change
   const handleContentChange = useCallback((value: string) => {
@@ -81,31 +91,44 @@ export function CodeView() {
 
   // Save current file
   const handleSave = useCallback(async () => {
-    if (!activeFile) return;
+    const file = openFiles.find((f) => f.path === activePath);
+    if (!file) return;
+
+    const contentToSave = file.content;
     try {
-      await writeTextFile(activeFile.path, activeFile.content);
+      await writeTextFile(file.path, contentToSave);
       setOpenFiles((prev) => prev.map((f) =>
         f.path === activePath
-          ? { ...f, originalContent: f.content, modified: false }
+          ? { ...f, originalContent: contentToSave, modified: f.content !== contentToSave }
           : f,
       ));
-      toast.success(tRef.current('codeView.fileSaved', { name: activeFile.name }));
+      toast.success(tRef.current('codeView.fileSaved', { name: file.name }));
     } catch (e) {
       toast.error(tRef.current('codeView.saveFailed', { error: e instanceof Error ? e.message : String(e) }));
     }
-  }, [activeFile, activePath]);
+  }, [openFiles, activePath]);
 
   // Save all files
   const handleSaveAll = useCallback(async () => {
     const modified = openFiles.filter((f) => f.modified);
     if (modified.length === 0) return;
     try {
+      const savedContents = new Map<string, string>();
       for (const f of modified) {
+        savedContents.set(f.path, f.content);
         await writeTextFile(f.path, f.content);
       }
-      setOpenFiles((prev) => prev.map((f) => ({
-        ...f, originalContent: f.content, modified: false,
-      })));
+      setOpenFiles((prev) => prev.map((f) => {
+        if (savedContents.has(f.path)) {
+          const savedVal = savedContents.get(f.path)!;
+          return {
+            ...f,
+            originalContent: savedVal,
+            modified: f.content !== savedVal,
+          };
+        }
+        return f;
+      }));
       toast.success(tRef.current('codeView.filesSaved', { count: modified.length }));
     } catch (e) {
       toast.error(tRef.current('codeView.saveFailed', { error: e instanceof Error ? e.message : String(e) }));
@@ -307,6 +330,8 @@ export function CodeView() {
                 value={activeFile.content}
                 language={activeFile.language}
                 onChange={handleContentChange}
+                onSave={handleSave}
+                onSaveAll={handleSaveAll}
               />
             </Suspense>
           ) : (

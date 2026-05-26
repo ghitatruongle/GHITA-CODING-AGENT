@@ -152,7 +152,7 @@ export class ReActAgent {
         // Pre-tool middleware
         const toolCheck = await this.pipeline.runPreTool(action.tool, action.input, ctx);
         if (!toolCheck.proceed) {
-          const obs = `Tool "${action.tool}" blocked by middleware.`;
+          const obs = toolCheck.reason || `Tool "${action.tool}" blocked by middleware.`;
           steps.push({ action, observation: obs });
           messages.push(new ToolMessage(obs, action.toolCallId, action.tool));
           continue;

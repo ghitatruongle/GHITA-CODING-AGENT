@@ -1,8 +1,9 @@
 // ==============================================================================
 // GHITA CODING AGENT - Custom Provider (OpenAI-compatible endpoints)
+// Phase 1.1: Multi-key support, key reporting, provider type fix
 // ==============================================================================
 
-import type { AIProviderType, AIStreamChunk } from '@ghita/shared';
+import { AI_PROVIDERS, type AIProviderType, type AIStreamChunk } from '@ghita/shared';
 import type { ChatMessage, ChatOptions, ChatResponse, ProviderConfig } from '../types.js';
 import { BaseProvider } from './base.js';
 
@@ -16,19 +17,19 @@ export class CustomProvider extends BaseProvider {
     super(config);
     this.type = config.providerType ?? 'custom';
     this.name = config.providerName ?? 'Custom';
-    this.defaultModel = config.defaultModel ?? '';
+    this.defaultModel = config.defaultModel || AI_PROVIDERS[this.type]?.defaultModel || '';
   }
 
   async isReady(): Promise<boolean> {
-    return !!this.config.baseUrl;
+    return !!this.config.baseUrl && this.keyManager.size > 0;
   }
 
   async chat(messages: ChatMessage[], options?: ChatOptions): Promise<ChatResponse> {
-    const baseUrl = this.getBaseUrl();
+    const baseUrl = this.getNormalizedBaseUrl();
     if (!baseUrl) throw new Error('Custom provider: baseUrl not configured');
 
     const model = this.getModel(options);
-    const apiKey = this.config.apiKey;
+    const apiKey = this.getApiKey();
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -51,9 +52,12 @@ export class CustomProvider extends BaseProvider {
     });
 
     if (!response.ok) {
+      this.reportKeyFailure(apiKey, response.status);
       const error = await response.text();
       throw new Error(`Custom API error (${response.status}): ${error}`);
     }
+
+    this.reportKeySuccess(apiKey);
 
     const data = (await response.json()) as {
       choices: Array<{ message: { content: string }; finish_reason: string }>;
@@ -64,7 +68,7 @@ export class CustomProvider extends BaseProvider {
     return {
       content: data.choices[0]?.message?.content ?? '',
       model: data.model || model,
-      provider: 'custom',
+      provider: this.type,
       usage: {
         promptTokens: data.usage?.prompt_tokens ?? 0,
         completionTokens: data.usage?.completion_tokens ?? 0,
@@ -78,11 +82,11 @@ export class CustomProvider extends BaseProvider {
     messages: ChatMessage[],
     options?: ChatOptions,
   ): AsyncGenerator<AIStreamChunk> {
-    const baseUrl = this.getBaseUrl();
+    const baseUrl = this.getNormalizedBaseUrl();
     if (!baseUrl) throw new Error('Custom provider: baseUrl not configured');
 
     const model = this.getModel(options);
-    const apiKey = this.config.apiKey;
+    const apiKey = this.getApiKey();
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -106,9 +110,12 @@ export class CustomProvider extends BaseProvider {
     });
 
     if (!response.ok) {
+      this.reportKeyFailure(apiKey, response.status);
       const error = await response.text();
       throw new Error(`Custom API error (${response.status}): ${error}`);
     }
+
+    this.reportKeySuccess(apiKey);
 
     const reader = response.body?.getReader();
     if (!reader) throw new Error('No response body');
@@ -131,7 +138,7 @@ export class CustomProvider extends BaseProvider {
           if (!trimmed || !trimmed.startsWith('data: ')) continue;
           const data = trimmed.slice(6);
           if (data === '[DONE]') {
-            yield { content: '', done: true, provider: 'custom', model, usage };
+            yield { content: '', done: true, provider: this.type, model, usage };
             return;
           }
 
@@ -141,7 +148,6 @@ export class CustomProvider extends BaseProvider {
               usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
             };
 
-            // Capture usage from the final chunk (when stream_options.include_usage is true)
             if (parsed.usage) {
               usage = {
                 promptTokens: parsed.usage.prompt_tokens ?? 0,
@@ -152,7 +158,7 @@ export class CustomProvider extends BaseProvider {
 
             const content = parsed.choices[0]?.delta?.content;
             if (content) {
-              yield { content, done: false, provider: 'custom', model };
+              yield { content, done: false, provider: this.type, model };
             }
           } catch {
             // skip malformed JSON
@@ -163,6 +169,10 @@ export class CustomProvider extends BaseProvider {
       reader.releaseLock();
     }
 
-    yield { content: '', done: true, provider: 'custom', model, usage };
+    yield { content: '', done: true, provider: this.type, model, usage };
+  }
+
+  private getNormalizedBaseUrl(): string | undefined {
+    return this.getBaseUrl()?.replace(/\/+$/, '');
   }
 }

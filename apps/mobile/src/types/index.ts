@@ -47,6 +47,7 @@ export interface MobileSettings {
   deviceName: string;
   autoReconnect: boolean;
   vibrationEnabled: boolean;
+  language: string;
 }
 
 export const DEFAULT_MOBILE_SETTINGS: MobileSettings = {
@@ -54,4 +55,5 @@ export const DEFAULT_MOBILE_SETTINGS: MobileSettings = {
   deviceName: 'Android Phone',
   autoReconnect: true,
   vibrationEnabled: true,
+  language: 'vi',
 };

@@ -7,6 +7,7 @@ import { View, Text, StyleSheet, Animated } from 'react-native';
 import { Colors } from '../theme/colors';
 import { FontSize, Spacing } from '../theme/styles';
 import type { ConnectionState } from '../types';
+import { useTranslation } from '../i18n/context';
 
 interface ConnectionStatusProps {
   state: ConnectionState;
@@ -14,14 +15,15 @@ interface ConnectionStatusProps {
 }
 
 const STATUS_CONFIG: Record<ConnectionState, { color: string; label: string }> = {
-  connected: { color: Colors.success, label: 'Đã kết nối' },
-  connecting: { color: Colors.warning, label: 'Đang kết nối...' },
-  pairing: { color: Colors.info, label: 'Đang ghép đôi...' },
-  disconnected: { color: Colors.textDark, label: 'Chưa kết nối' },
-  error: { color: Colors.error, label: 'Lỗi kết nối' },
+  connected: { color: Colors.success, label: 'status.connected' },
+  connecting: { color: Colors.warning, label: 'status.connecting' },
+  pairing: { color: Colors.info, label: 'status.pairing' },
+  disconnected: { color: Colors.textDark, label: 'status.disconnected' },
+  error: { color: Colors.error, label: 'status.error' },
 };
 
 export function ConnectionStatus({ state, compact = false }: ConnectionStatusProps): React.JSX.Element {
+  const { t } = useTranslation();
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -64,7 +66,7 @@ export function ConnectionStatus({ state, compact = false }: ConnectionStatusPro
       />
       {!compact && (
         <Text style={[styles.label, { color: config.color }]}>
-          {config.label}
+          {t(config.label)}
         </Text>
       )}
     </View>

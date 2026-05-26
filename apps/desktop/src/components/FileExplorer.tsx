@@ -7,6 +7,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { readDir, readTextFile, mkdir, writeTextFile, remove } from '@tauri-apps/plugin-fs';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useTranslation } from '../i18n';
+import { useAppStore } from '../stores/appStore';
+import toast from 'react-hot-toast';
 
 interface FileEntry {
   name: string;
@@ -43,8 +45,15 @@ const EXT_TO_LANG: Record<string, string> = {
   '.ex': 'elixir', '.exs': 'elixir', '.erl': 'erlang',
 };
 
+const BINARY_EXTS = new Set([
+  '.png', '.jpg', '.jpeg', '.gif', '.ico', '.webp', '.pdf',
+  '.zip', '.gz', '.tar', '.rar', '.7z', '.exe', '.dll', '.bin',
+  '.mp4', '.mkv', '.avi', '.mov', '.mp3', '.wav', '.flac',
+  '.woff', '.woff2', '.ttf', '.eot', '.dmg', '.pkg', '.apk', '.ipa'
+]);
+
 export function detectLanguage(filename: string): string {
-  const ext = filename.lastIndexOf('.') >= 0 ? filename.slice(filename.lastIndexOf('.')) : '';
+  const ext = filename.lastIndexOf('.') >= 0 ? filename.slice(filename.lastIndexOf('.')).toLowerCase() : '';
   if (EXT_TO_LANG[ext]) return EXT_TO_LANG[ext];
   const lower = filename.toLowerCase();
   if (lower === 'dockerfile') return 'dockerfile';
@@ -125,6 +134,13 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
     }
   }, [rootPath]);
 
+  // Sync rootDir to global terminalCwd
+  useEffect(() => {
+    if (rootDir) {
+      useAppStore.getState().setTerminalCwd(rootDir);
+    }
+  }, [rootDir]);
+
   const loadRoot = async (dir: string) => {
     setLoading(true);
     const entries = await loadDirectory(dir);
@@ -155,15 +171,24 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
     }
   }, [tree]);
 
+  const normalizePath = (p: string) => p.replace(/\\/g, '/');
+
   const handleFileClick = useCallback(async (entry: FileEntry) => {
+    const ext = entry.name.lastIndexOf('.') >= 0 ? entry.name.slice(entry.name.lastIndexOf('.')).toLowerCase() : '';
+    if (BINARY_EXTS.has(ext)) {
+      toast.error(t('codeView.binaryNotSupported', { name: entry.name }));
+      return;
+    }
+
     try {
       const content = await readTextFile(entry.path);
       const lang = detectLanguage(entry.name);
       onFileOpen(entry.path, entry.name, content, lang);
     } catch (e) {
       console.error('[FileExplorer] Failed to read file:', e);
+      toast.error(t('codeView.readFailed', { error: e instanceof Error ? e.message : String(e) }));
     }
-  }, [onFileOpen]);
+  }, [onFileOpen, t]);
 
   const handleSelectFolder = useCallback(async () => {
     try {
@@ -178,8 +203,9 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
       }
     } catch (e) {
       console.error('[FileExplorer] Failed to select folder:', e);
+      toast.error(e instanceof Error ? e.message : String(e));
     }
-  }, []);
+  }, [t]);
 
   // Context menu actions
   const handleContextMenu = useCallback((e: React.MouseEvent, path: string, isDir: boolean) => {
@@ -197,16 +223,22 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
       // Reload parent directory
       const parentDir = dirPath;
       const children = await loadDirectory(parentDir);
-      setTree((prev) => {
-        const next = new Map(prev);
-        next.set(parentDir, children);
-        return next;
-      });
+      
+      if (normalizePath(parentDir) === normalizePath(rootDir)) {
+        loadRoot(rootDir);
+      } else {
+        setTree((prev) => {
+          const next = new Map(prev);
+          next.set(parentDir, children);
+          return next;
+        });
+      }
     } catch (e) {
       console.error('[FileExplorer] Failed to create file:', e);
+      toast.error(e instanceof Error ? e.message : String(e));
     }
     setContextMenu(null);
-  }, []);
+  }, [rootDir, t]);
 
   const handleNewFolder = useCallback(async (dirPath: string) => {
     const name = prompt(t('fileExplorer.newFolderPrompt'));
@@ -216,26 +248,34 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
       await mkdir(folderPath, { recursive: true });
       const parentDir = dirPath;
       const children = await loadDirectory(parentDir);
-      setTree((prev) => {
-        const next = new Map(prev);
-        next.set(parentDir, children);
-        return next;
-      });
+
+      if (normalizePath(parentDir) === normalizePath(rootDir)) {
+        loadRoot(rootDir);
+      } else {
+        setTree((prev) => {
+          const next = new Map(prev);
+          next.set(parentDir, children);
+          return next;
+        });
+      }
     } catch (e) {
       console.error('[FileExplorer] Failed to create folder:', e);
+      toast.error(e instanceof Error ? e.message : String(e));
     }
     setContextMenu(null);
-  }, []);
+  }, [rootDir, t]);
 
   const handleDelete = useCallback(async (path: string) => {
-    if (!confirm(t('fileExplorer.deleteConfirm', { name: path.split('/').pop() || '' }))) return;
+    const fileName = path.split(/[/\\]/).pop() || '';
+    if (!confirm(t('fileExplorer.deleteConfirm', { name: fileName }))) return;
     try {
       await remove(path, { recursive: true });
       // Reload parent
-      const parts = path.split('/');
+      const parts = path.split(/[/\\]/);
       parts.pop();
       const parentDir = parts.join('/');
-      if (parentDir === rootDir) {
+      
+      if (normalizePath(parentDir) === normalizePath(rootDir)) {
         loadRoot(rootDir);
       } else {
         const children = await loadDirectory(parentDir);
@@ -247,9 +287,10 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
       }
     } catch (e) {
       console.error('[FileExplorer] Failed to delete:', e);
+      toast.error(e instanceof Error ? e.message : String(e));
     }
     setContextMenu(null);
-  }, [rootDir]);
+  }, [rootDir, t]);
 
   // Close context menu on outside click
   useEffect(() => {

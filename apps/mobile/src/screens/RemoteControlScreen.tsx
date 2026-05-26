@@ -3,7 +3,7 @@
 // Main screen after pairing: screen preview, chat, quick actions
 // ==============================================================================
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -26,14 +26,17 @@ import { socketService } from '../services/socketService';
 import * as storageService from '../services/storageService';
 import type { ConnectionState, QuickAction, ChatMessage } from '../types';
 import type { RemoteControlScreenProps } from '../navigation/types';
+import { useTranslation } from '../i18n/context';
 
 const MAX_CHAT_MESSAGES = 50;
+const SCREENSHOT_TIMEOUT_MS = 15000;
 let msgCounter = 0;
 
 export function RemoteControlScreen({
   route,
   navigation,
 }: RemoteControlScreenProps): React.JSX.Element {
+  const { t } = useTranslation();
   const { deviceName } = route.params;
 
   const [connectionState, setConnectionState] = useState<ConnectionState>(
@@ -42,6 +45,7 @@ export function RemoteControlScreen({
   const [screenshotBase64, setScreenshotBase64] = useState<string | null>(null);
   const [screenshotLoading, setScreenshotLoading] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const screenshotTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Phase 8 States
   const [activeApproval, setActiveApproval] = useState<{ id: string; command: string } | null>(null);
@@ -61,6 +65,13 @@ export function RemoteControlScreen({
 
   const isConnected = connectionState === 'connected';
 
+  const clearScreenshotTimeout = useCallback(() => {
+    if (screenshotTimeoutRef.current) {
+      clearTimeout(screenshotTimeoutRef.current);
+      screenshotTimeoutRef.current = null;
+    }
+  }, []);
+
   // Register socket callbacks
   useEffect(() => {
     socketService.setCallbacks({
@@ -75,12 +86,12 @@ export function RemoteControlScreen({
         } catch {}
         if (state === 'error') {
           Alert.alert(
-            'Mất kết nối',
-            'Không thể kết nối lại với máy tính. Quay lại màn hình ghép đôi?',
+            t('remote.lostConnectionTitle'),
+            t('remote.lostConnectionDesc'),
             [
-              { text: 'Ở lại', style: 'cancel' },
+              { text: t('remote.stay'), style: 'cancel' },
               {
-                text: 'Quay lại',
+                text: t('remote.goBack'),
                 onPress: () => {
                   socketService.disconnect();
                   navigation.replace('Pairing');
@@ -91,6 +102,7 @@ export function RemoteControlScreen({
         }
       },
       onScreenshot: (imageBase64) => {
+        clearScreenshotTimeout();
         setScreenshotBase64(imageBase64);
         setScreenshotLoading(false);
       },
@@ -121,12 +133,14 @@ export function RemoteControlScreen({
         setCostTelemetry(data);
       },
       onError: (error) => {
+        clearScreenshotTimeout();
+        setScreenshotLoading(false);
         Alert.alert(
-          'Lỗi kết nối',
+          t('common.error'),
           error,
           [
             {
-              text: 'OK',
+              text: t('common.ok'),
               onPress: () => {
                 if (
                   error.includes('Session expired') ||
@@ -144,18 +158,17 @@ export function RemoteControlScreen({
     });
 
     return () => {
+      clearScreenshotTimeout();
       socketService.clearCallbacks();
     };
-  }, [navigation]);
+  }, [clearScreenshotTimeout, navigation, t]);
 
   // Auto-reconnect when app comes to foreground
   useEffect(() => {
     const subscription = AppState.addEventListener('change', async (nextState) => {
       if (nextState === 'active') {
-        // App came to foreground
         const settings = await storageService.loadSettings();
         if (settings.autoReconnect && !socketService.isConnected) {
-          // Try to reconnect
           const lastAddress = socketService.getLastUrl();
           if (lastAddress) {
             console.log('[AutoReconnect] Attempting reconnection to', lastAddress);
@@ -171,7 +184,14 @@ export function RemoteControlScreen({
   const handleQuickAction = useCallback((type: QuickAction['type']) => {
     switch (type) {
       case 'screenshot':
+        if (!isConnected) return;
+        clearScreenshotTimeout();
         setScreenshotLoading(true);
+        screenshotTimeoutRef.current = setTimeout(() => {
+          screenshotTimeoutRef.current = null;
+          setScreenshotLoading(false);
+          Alert.alert(t('remote.chatTimeoutTitle'), t('remote.chatTimeoutDesc'));
+        }, SCREENSHOT_TIMEOUT_MS);
         socketService.requestScreenshot();
         break;
       case 'approve':
@@ -184,7 +204,7 @@ export function RemoteControlScreen({
         socketService.sendCommand('cancel');
         break;
     }
-  }, []);
+  }, [clearScreenshotTimeout, isConnected, t]);
 
   // Handle chat send
   const handleChatSend = useCallback((text: string) => {
@@ -201,12 +221,12 @@ export function RemoteControlScreen({
   // Handle disconnect
   const handleDisconnect = useCallback(() => {
     Alert.alert(
-      'Ngắt kết nối',
-      'Bạn có muốn ngắt kết nối với máy tính?',
+      t('remote.disconnectTitle'),
+      t('remote.disconnectDesc'),
       [
-        { text: 'Hủy', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Ngắt kết nối',
+          text: t('remote.disconnectBtn'),
           style: 'destructive',
           onPress: () => {
             socketService.disconnect();
@@ -215,7 +235,7 @@ export function RemoteControlScreen({
         },
       ],
     );
-  }, [navigation]);
+  }, [navigation, t]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -231,7 +251,7 @@ export function RemoteControlScreen({
               <ConnectionStatus state={connectionState} compact />
               {connectionState === 'connected' && (
                 <Text style={{ fontSize: 10, color: Colors.textMuted }}>
-                  {socketService.connectionType === 'local' ? ' • 🟢 LAN (Tốc độ cao)' : ' • 🌐 Cloud (Khác mạng)'}
+                  {socketService.connectionType === 'local' ? t('status.lanConnection') : t('status.cloudConnection')}
                 </Text>
               )}
             </View>
@@ -259,8 +279,8 @@ export function RemoteControlScreen({
         {/* Security Command Approval Request (Phase 8 Human-in-the-loop) */}
         {activeApproval && (
           <View style={[styles.section, styles.approvalSection]}>
-            <Text style={styles.approvalHeader}>🛡️ DUYỆT LỆNH BẢO MẬT</Text>
-            <Text style={styles.approvalDesc}>AI đang yêu cầu thực thi lệnh terminal sau:</Text>
+            <Text style={styles.approvalHeader}>{t('remote.securityApprovalTitle')}</Text>
+            <Text style={styles.approvalDesc}>{t('remote.securityApprovalDesc')}</Text>
             <View style={styles.commandCodeBlock}>
               <Text style={styles.commandCodeText}>{activeApproval.command}</Text>
             </View>
@@ -272,7 +292,7 @@ export function RemoteControlScreen({
                   setActiveApproval(null);
                 }}
               >
-                <Text style={styles.approvalBtnText}>Từ chối (Reject)</Text>
+                <Text style={styles.approvalBtnText}>{t('remote.securityRejectBtn')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.approvalBtn, styles.approveBtn]}
@@ -281,7 +301,7 @@ export function RemoteControlScreen({
                   setActiveApproval(null);
                 }}
               >
-                <Text style={styles.approvalBtnText}>Cho phép (Approve)</Text>
+                <Text style={styles.approvalBtnText}>{t('remote.securityApproveBtn')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -289,7 +309,7 @@ export function RemoteControlScreen({
 
         {/* Screen Preview */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>🖥️ Màn hình Desktop</Text>
+          <Text style={styles.sectionLabel}>{t('remote.screenTitle')}</Text>
           <ScreenPreview
             imageBase64={screenshotBase64}
             loading={screenshotLoading}
@@ -299,15 +319,15 @@ export function RemoteControlScreen({
 
         {/* Cost & Telemetry Resources (Phase 8 Cost Telemetry) */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>📊 Chi phí & Tài nguyên AI</Text>
+          <Text style={styles.sectionLabel}>{t('remote.costTitle')}</Text>
           <View style={styles.costContainer}>
             <View style={styles.costRow}>
               <View>
-                <Text style={styles.costLabel}>Đã chi tiêu (USD)</Text>
+                <Text style={styles.costLabel}>{t('remote.costSpent')}</Text>
                 <Text style={styles.costValue}>${costTelemetry.costUsd.toFixed(4)}</Text>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
-                <Text style={styles.costLabel}>Hạn mức Session</Text>
+                <Text style={styles.costLabel}>{t('remote.costSessionLimit')}</Text>
                 <Text style={styles.costLimit}>${costTelemetry.limitUsd.toFixed(2)}</Text>
               </View>
             </View>
@@ -332,9 +352,9 @@ export function RemoteControlScreen({
             </View>
 
             <View style={styles.tokenRow}>
-              <Text style={styles.tokenText}>📥 In: {costTelemetry.inputTokens.toLocaleString()}</Text>
-              <Text style={styles.tokenText}>📤 Out: {costTelemetry.outputTokens.toLocaleString()}</Text>
-              <Text style={styles.tokenText}>∑ Total: {costTelemetry.totalTokens.toLocaleString()}</Text>
+              <Text style={styles.tokenText}>{t('remote.tokensIn')}: {costTelemetry.inputTokens.toLocaleString()}</Text>
+              <Text style={styles.tokenText}>{t('remote.tokensOut')}: {costTelemetry.outputTokens.toLocaleString()}</Text>
+              <Text style={styles.tokenText}>{t('remote.tokensTotal')}: {costTelemetry.totalTokens.toLocaleString()}</Text>
             </View>
           </View>
         </View>
@@ -342,7 +362,7 @@ export function RemoteControlScreen({
         {/* Chat Messages (latest 20) */}
         {chatMessages.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>💬 Tin nhắn</Text>
+            <Text style={styles.sectionLabel}>{t('remote.chatTitle')}</Text>
             <ScrollView style={styles.messageListScroll} nestedScrollEnabled>
               <View style={styles.messageList}>
               {chatMessages.slice(-20).map((msg) => (
@@ -363,13 +383,13 @@ export function RemoteControlScreen({
 
         {/* Chat Input */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>💬 Gửi lệnh cho AI</Text>
-          <ChatInput disabled={!isConnected} onSend={handleChatSend} />
+          <Text style={styles.sectionLabel}>{t('remote.chatInputLabel')}</Text>
+          <ChatInput disabled={!isConnected} onSend={handleChatSend} placeholder={t('remote.chatInputPlaceholder')} />
         </View>
 
         {/* Quick Actions */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>⚡ Hành động nhanh</Text>
+          <Text style={styles.sectionLabel}>{t('remote.quickActionsTitle')}</Text>
           <QuickActions disabled={!isConnected} onAction={handleQuickAction} />
         </View>
       </ScrollView>

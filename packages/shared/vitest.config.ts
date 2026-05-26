@@ -4,6 +4,6 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['src/**/*.test.ts', '../../tests/unit/sharedUtils.test.ts'],
+    include: ['src/**/*.test.ts', '../../tests/unit/sharedUtils.test.ts', '../../tests/quality-loop/qualityLoop.test.ts'],
   },
 });

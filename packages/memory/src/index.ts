@@ -222,3 +222,7 @@ export { CrossSessionSearch } from './search.js';
 export type { SessionRecord, SessionMessage, CrossSessionResult } from './search.js';
 export { MemoryNudgeEngine } from './nudge.js';
 export type { NudgeSuggestion, NudgeConfig, NudgePattern } from './nudge.js';
+
+// --- Phase 19: SQLite FTS5 Memory Indexer & Rust Cosine similarity Addon ---
+export { RustMemoryAddon } from './semantic/rustAddon.js';
+export type { ChatLogEntry, CacheEntry } from './semantic/rustAddon.js';

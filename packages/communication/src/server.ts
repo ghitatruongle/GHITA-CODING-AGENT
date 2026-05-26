@@ -4,6 +4,7 @@
 // ==============================================================================
 
 import { createServer, type Server as HttpServer } from 'node:http';
+import { randomBytes } from 'node:crypto';
 import { Server as SocketIOServer, type Socket } from 'socket.io';
 import { networkInterfaces, hostname, homedir, tmpdir } from 'node:os';
 import * as fs from 'node:fs';
@@ -20,6 +21,25 @@ import type {
 } from './types.js';
 
 const DEFAULT_PAIRED_DEVICES_FILE = path.resolve(homedir(), '.ghita-paired-devices.json');
+
+function normalizeAddress(address = ''): string {
+  return address.replace(/^::ffff:/, '').replace(/^\[|\]$/g, '').trim().toLowerCase();
+}
+
+function isLoopbackAddress(address = ''): boolean {
+  const normalized = normalizeAddress(address);
+  return normalized === '127.0.0.1' || normalized === '::1' || normalized === 'localhost';
+}
+
+function isAllowedLocalOrigin(origin?: string): boolean {
+  if (!origin) return true;
+  try {
+    const url = new URL(origin);
+    return ['localhost', '127.0.0.1', 'tauri.localhost'].includes(url.hostname);
+  } catch {
+    return false;
+  }
+}
 
 const DEFAULT_CONFIG: ServerConfig = {
   port: 8080,
@@ -55,6 +75,7 @@ export class CommunicationServer {
                 lastSeen: d.lastSeen || Date.now(),
                 socketId: '',
                 pairedAt: d.pairedAt || Date.now(),
+                secret: typeof d.secret === 'string' ? d.secret : null,
               });
             }
           }
@@ -76,6 +97,7 @@ export class CommunicationServer {
           platform: d.platform,
           pairedAt: d.pairedAt,
           lastSeen: d.lastSeen,
+          secret: d.secret,
         }));
       fs.writeFileSync(this.pairedDevicesFile, JSON.stringify(list, null, 2), 'utf8');
     } catch (e: any) {
@@ -169,8 +191,19 @@ export class CommunicationServer {
     };
 
     this.httpServer = createServer((req, res) => {
-      res.setHeader('Access-Control-Allow-Origin', '*');
+      const isLoopback = isLoopbackAddress(req.socket.remoteAddress || '');
+      const origin = req.headers.origin;
+      if (isAllowedLocalOrigin(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin || 'http://localhost');
+      }
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+      if (req.method === 'OPTIONS') {
+        res.writeHead(204);
+        res.end();
+        return;
+      }
 
       if (req.url === '/health') {
         const state = this.pairing.getState();
@@ -181,15 +214,20 @@ export class CommunicationServer {
           uptime: process.uptime(),
           localIP: getLocalIP(),
           port: this.config.port,
-          pairingCode: this.pairing.getCode(),
-          codeExpiresAt: state.expiresAt,
+          ...(isLoopback ? { pairingCode: this.pairing.getCode(), codeExpiresAt: state.expiresAt } : {}),
           hostname: getSanitizedHostname(),
-          devices: this.getConnectedDevices(),
+          ...(isLoopback ? { devices: this.getConnectedDevices() } : {}),
         }));
         return;
       }
 
       if (req.url === '/pair') {
+        if (!isLoopback) {
+          res.writeHead(403, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Pairing code is only available from the desktop app.' }));
+          return;
+        }
+
         const state = this.pairing.getState();
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
@@ -206,7 +244,16 @@ export class CommunicationServer {
     });
 
     this.io = new SocketIOServer(this.httpServer, {
-      cors: this.config.cors,
+      cors: {
+        ...this.config.cors,
+        origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+          if (isAllowedLocalOrigin(origin)) {
+            callback(null, true);
+            return;
+          }
+          callback(new Error('Origin is not allowed by GHITA communication server CORS policy'));
+        },
+      },
       transports: ['websocket', 'polling'],
       pingInterval: 5000,
       pingTimeout: 3000,
@@ -442,7 +489,7 @@ export class CommunicationServer {
       console.log(`[CommServer] New connection: ${socket.id}`);
 
       // --- Pairing ---
-      socket.on(SOCKET_EVENTS.PAIR, (data: { code?: string; deviceId?: string; timestamp?: number }) => {
+      socket.on(SOCKET_EVENTS.PAIR, (data: { code?: string; deviceId?: string; authToken?: string; timestamp?: number }) => {
         this.handlePairing(socket, data);
       });
 
@@ -517,21 +564,45 @@ export class CommunicationServer {
 
       // --- Phase 5A: MCP Tool Call ---
       socket.on('mcp_tool_call', (data: { serverName: string; toolName: string; args: Record<string, unknown> }) => {
+        const device = this.findDeviceBySocket(socket.id);
+        if (!device) {
+          socket.emit(SOCKET_EVENTS.ERROR, { message: 'Unauthorized: Device is not paired' });
+          return;
+        }
+        device.lastSeen = Date.now();
         console.log(`[CommServer] MCP tool call: ${data.toolName} on ${data.serverName}`);
         // Forward to event handler — orchestrator will handle actual MCP call
-        this.events.onChat?.('system', JSON.stringify({ type: 'mcp_tool_call', ...data }));
+        this.events.onChat?.(device.id, JSON.stringify({ type: 'mcp_tool_call', ...data }));
       });
 
       // --- Phase 5C: Web Search ---
       socket.on('web_search', (data: { query: string; maxResults?: number }) => {
+        const device = this.findDeviceBySocket(socket.id);
+        if (!device) {
+          socket.emit(SOCKET_EVENTS.ERROR, { message: 'Unauthorized: Device is not paired' });
+          return;
+        }
+        device.lastSeen = Date.now();
         console.log(`[CommServer] Web search: ${data.query}`);
-        this.events.onChat?.('system', JSON.stringify({ type: 'web_search', ...data }));
+        this.events.onChat?.(device.id, JSON.stringify({ type: 'web_search', ...data }));
       });
 
       // --- Phase 6C: Image Input ---
       socket.on('image_input', (data: { image: string; prompt?: string }) => {
+        const device = this.findDeviceBySocket(socket.id);
+        if (!device) {
+          socket.emit(SOCKET_EVENTS.ERROR, { message: 'Unauthorized: Device is not paired' });
+          return;
+        }
+        device.lastSeen = Date.now();
         console.log(`[CommServer] Image input received`);
-        this.events.onChat?.('system', JSON.stringify({ type: 'image_input', ...data }));
+        this.events.onChat?.(device.id, JSON.stringify({ type: 'image_input', ...data }));
+      });
+
+      // --- Sync Language ---
+      socket.on(SOCKET_EVENTS.SYNC_LANGUAGE, (data: { language: string }) => {
+        console.log(`[CommServer] Sync language received: ${data.language}`);
+        socket.broadcast.emit(SOCKET_EVENTS.SYNC_LANGUAGE, data);
       });
 
       // --- Disconnect ---
@@ -546,9 +617,10 @@ export class CommunicationServer {
     });
   }
 
-  private handlePairing(socket: Socket, data: { code?: string; deviceId?: string; timestamp?: number }): void {
+  private handlePairing(socket: Socket, data: { code?: string; deviceId?: string; authToken?: string; timestamp?: number }): void {
     const code = data.code?.toUpperCase();
     const deviceId = data.deviceId;
+    const authToken = data.authToken;
 
     if (!code && !deviceId) {
       socket.emit(SOCKET_EVENTS.ERROR, { message: 'Pairing code or device ID is required' });
@@ -573,6 +645,7 @@ export class CommunicationServer {
         lastSeen: Date.now(),
         socketId: socket.id,
         pairedAt: Date.now(),
+        secret: randomBytes(32).toString('hex'),
       };
       this.connectedDevices.set(device.id, device);
       this.savePairedDevices();
@@ -583,7 +656,7 @@ export class CommunicationServer {
     } else if (deviceId) {
       // Session Resumption / Reconnection
       device = this.connectedDevices.get(deviceId);
-      if (device) {
+      if (device && device.secret && authToken === device.secret) {
         // Device is already paired on this server session!
         device.socketId = socket.id;
         device.connected = true;
@@ -603,6 +676,7 @@ export class CommunicationServer {
       socket.emit(SOCKET_EVENTS.PAIR_CONFIRM, {
         deviceName: 'GHITA Desktop',
         deviceId: device.id,
+        authToken: device.secret,
       });
 
       this.events.onDeviceConnected?.(device);

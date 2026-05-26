@@ -25,11 +25,13 @@
     "@ghita/shared": "workspace:*",
     "@grpc/grpc-js": "^1.14.3",
     "@grpc/proto-loader": "^0.8.1",
+    "better-sqlite3": "^11.7.0",
     "ws": "^8.18.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@ghita/agents": "workspace:*",
+    "@types/better-sqlite3": "^7.6.12",
     "@types/ws": "^8.5.12",
     "cross-env": "^10.1.0",
     "debug": "^4.4.0",

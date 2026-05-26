@@ -24,7 +24,7 @@ export class GoogleProvider extends BaseProvider {
   }
 
   async isReady(): Promise<boolean> {
-    return !!this.config.apiKey;
+    return this.keyManager.hasHealthyKey();
   }
 
   async chat(messages: ChatMessage[], options?: ChatOptions): Promise<ChatResponse> {
@@ -52,9 +52,12 @@ export class GoogleProvider extends BaseProvider {
     );
 
     if (!response.ok) {
+      this.reportKeyFailure(apiKey, response.status);
       const error = await response.text();
       throw new Error(`Google API error (${response.status}): ${error}`);
     }
+
+    this.reportKeySuccess(apiKey);
 
     const data = (await response.json()) as {
       candidates: Array<{
@@ -109,9 +112,12 @@ export class GoogleProvider extends BaseProvider {
     );
 
     if (!response.ok) {
+      this.reportKeyFailure(apiKey, response.status);
       const error = await response.text();
       throw new Error(`Google API error (${response.status}): ${error.slice(0, 200)}`);
     }
+
+    this.reportKeySuccess(apiKey);
 
     const contentType = response.headers.get('content-type');
     if (!contentType?.includes('text/event-stream') && !contentType?.includes('application/json')) {

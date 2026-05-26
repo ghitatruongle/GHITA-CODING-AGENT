@@ -303,8 +303,10 @@ export class LLMJudge {
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
+        const rawScore = Number(parsed.score);
+        const score = Number.isFinite(rawScore) ? rawScore : 0.5;
         return {
-          score: Math.max(0, Math.min(1, Number(parsed.score) ?? 0.5)),
+          score: Math.max(0, Math.min(1, score)),
           reasoning: String(parsed.reasoning ?? 'No reasoning provided'),
           details: parsed,
         };

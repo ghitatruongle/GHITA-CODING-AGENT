@@ -88,7 +88,7 @@ export interface AgentMiddleware {
     toolName: string,
     args: Record<string, unknown>,
     context: MiddlewareContext,
-  ): Promise<{ proceed: boolean; modifiedArgs?: Record<string, unknown> } | void>;
+  ): Promise<{ proceed: boolean; modifiedArgs?: Record<string, unknown>; reason?: string } | void>;
 
   /** Called after a tool has been executed */
   postTool?(

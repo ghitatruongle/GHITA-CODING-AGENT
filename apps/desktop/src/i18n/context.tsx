@@ -6,12 +6,13 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { useAppStore } from '../stores/appStore';
 import { vi } from './vi';
 import { en } from './en';
+import { zh } from './zh';
 import type { TranslationKeys } from './types';
 
 type Translations = TranslationKeys;
 type TFunction = (key: string, params?: Record<string, string | number>) => string;
 
-const translations: Record<string, Translations> = { vi, en };
+const translations: Record<string, Translations> = { vi, en, zh };
 
 const I18nContext = createContext<{ t: TFunction; lang: string }>({
   t: (key) => key,
