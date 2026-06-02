@@ -196,8 +196,9 @@ pnpm dev:android
 | DEMO | 19/05/2026 | Initial demo release |
 | Update 0.0.1 | 21/05/2026 | Optimized phone-computer connection and fixed minor bugs |
 | Update 0.0.2 beta1 | 21/05/2026 | Code Editor VSCode-style, File Explorer, Multi-tab, 13 AI providers, Dashboard real-time, API Manager redesign, Chat markdown rendering, Token counter |
-| Update 0.0.2 | 22/05/2026 | Sandboxed workspace tools (CRUD, pure-Node grep search, block traversal), Socket.IO live telemetry and terminal command approval consent gate, integration testing and compilation |
+| Update 0.0.2 beta2 | 22/05/2026 | Sandboxed workspace tools (CRUD, pure-Node grep search, block traversal), Socket.IO live telemetry and terminal command approval consent gate, integration testing and compilation |
 | Update 0.0.2 | 26/05/2026 | Added 6 breakthrough features: SCTI trajectory self-healing, AST-Lock method protection, Live Telepresence stream, Rust memory addon, AHPI performance heatmap, DebateEngine reviewer panel, and /deep-research command |
+| Update 0.0.3 beta1 | 02/06/2026 | Real Terminal PTY (node-pty sidecar), Playwright-Stealth multi-tab browser, Agentic Observe & Act layer, Sandbox guardrails, VS Code extension WebSocket sync, Monaco linter diagnostics & diff view, Mobile touch remote control, Embedded Tauri webview, E2E integration & CI benchmark |
 
 ---
 
@@ -387,8 +388,9 @@ pnpm dev:android
 | DEMO | 19/05/2026 | Bản demo phát hành đầu tiên |
 | Cập nhật 0.0.1 | 21/05/2026 | Tối ưu kết nối điện thoại-máy tính và sửa các lỗi nhỏ |
 | Cập nhật 0.0.2 beta1 | 21/05/2026 | Tích hợp trình biên tập mã kiểu VSCode, Trình quản lý tệp, Đa thẻ (Multi-tab), 13 nhà cung cấp AI, Bảng điều khiển thời gian thực, Thiết kế lại quản lý API, Hiển thị chat định dạng markdown, Bộ đếm token |
-| Cập nhật 0.0.2 | 22/05/2026 | Các công cụ không gian làm việc an toàn (CRUD, tìm kiếm grep thuần Node, duyệt khối), Kết nối Socket.IO trực tiếp và cơ chế phê duyệt lệnh terminal, kiểm thử tích hợp và biên dịch |
+| Cập nhật 0.0.2 beta2 | 22/05/2026 | Các công cụ không gian làm việc an toàn (CRUD, tìm kiếm grep thuần Node, duyệt khối), Kết nối Socket.IO trực tiếp và cơ chế phê duyệt lệnh terminal, kiểm thử tích hợp và biên dịch |
 | Cập nhật 0.0.2 | 26/05/2026 | Thêm 6 tính năng đột phá: Tự chữa lành quỹ đạo SCTI, Bảo vệ phương thức AST-Lock, Stream hiện diện trực tiếp, Addon bộ nhớ Rust, Bản đồ nhiệt hiệu năng AHPI, Bảng đánh giá tranh biện DebateEngine và lệnh /deep-research |
+| Cập nhật 0.0.3 beta1 | 02/06/2026 | Terminal PTY thật (node-pty sidecar), Trình duyệt Playwright-Stealth đa thẻ, Lớp Agentic Observe & Act, Bảo vệ sandbox, VS Code extension đồng bộ WebSocket, Monaco chẩn đoán linter & diff view, Mobile điều khiển cảm ứng từ xa, Tauri webview nhúng, Tích hợp E2E & CI benchmark |
 
 ---
 
