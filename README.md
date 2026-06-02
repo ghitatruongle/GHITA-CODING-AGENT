@@ -399,3 +399,195 @@ pnpm dev:android
 Sử dụng giấy phép [MIT](LICENSE) — Bản quyền (c) 2026 thuộc về GHITA CODING AGENT
 
 </details>
+
+<details>
+<summary><b>🇨🇳 中文版本</b></summary>
+
+**GHITA CODING AGENT** — 一款功能强大的 AI 桌面应用程序,采用 VS Code 风格界面,支持通过安卓手机远程控制电脑。
+
+---
+
+## 核心功能
+
+- **代码编辑器** — 基于 Monaco Editor 的 AI 辅助编程
+- **多 AI 服务商支持** — 统一管理 OpenAI、Anthropic、Google、Ollama 等多家服务
+- **技能系统** — 创建与管理 AI 技能
+- **代理群组** — 创建专业化的代理团队协同工作
+- **计算机操作(Computer Use)** — AI 控制鼠标、键盘和应用程序
+- **浏览器自动化** — AI 自动打开 Chrome 执行网页任务
+- **远程控制** — 通过安卓手机远程操控电脑(WiFi/Socket.IO)
+- **安全配对** — 安全的双向身份验证码机制
+
+> **安卓系统要求**:Android 9 (Pie) 或更高版本(API 28+)
+
+---
+
+## 技术栈
+
+| 组件 | 技术 |
+|---|---|
+| 桌面端 | Tauri 2.x + React (TypeScript) |
+| 移动端 | React Native (Android) — minSdk=28 |
+| AI 引擎 | Vercel AI SDK / LiteLLM / LangChain.js |
+| 浏览器自动化 | Playwright / CloakBrowser |
+| 计算机操作 | nut.js / UI-TARS |
+| 通信 | Socket.IO |
+| 本地 AI | Ollama |
+| 代码编辑器 | Monaco Editor |
+| 终端 | xterm.js + node-pty |
+| 构建工具 | Turborepo + pnpm workspace |
+
+---
+
+## 项目结构
+
+```
+GHITA-CODING-AGENT/
+├── apps/
+│   ├── desktop/         # Tauri + React 桌面应用 (Windows/Linux)
+│   └── mobile/          # React Native 移动应用 (Android)
+├── packages/
+│   ├── ai-engine/       # 多 AI 服务商编排
+│   ├── skills/          # 技能系统
+│   ├── agents/          # 代理与代理组管理
+│   ├── communication/   # 桌面端 ↔ 移动端通信
+│   ├── browser-control/ # 浏览器自动化 (Playwright + CloakBrowser)
+│   ├── computer-use/    # 计算机操作 (nut.js + UI-TARS)
+│   ├── memory/          # 代理记忆 (AgentMemory)
+│   └── shared/          # 工具函数、类型、常量
+├── scripts/             # 构建与设置脚本
+├── docs/                # 文档与资源
+├── tests/               # 测试用例
+└── Plan/                # 开发计划
+```
+
+---
+
+## 安装指南
+
+### 系统要求
+
+- **Node.js** >= 20
+- **pnpm** >= 10.x (`npm install -g pnpm`)
+- **Rust**(用于 Tauri 桌面端)
+- **Android Studio**(用于 React Native 移动端)
+- **安卓设备/模拟器**运行 Android 9+(API 28)
+- **Git**
+
+### 步骤 1:克隆项目
+
+```bash
+git clone https://github.com/ghitatruongle/GHITA-CODING-AGENT.git
+cd GHITA-CODING-AGENT
+```
+
+### 步骤 2:安装依赖
+
+```bash
+pnpm install
+```
+
+### 步骤 3:配置环境变量
+
+```bash
+cp .env.example .env
+# 编辑 .env 文件并填入你的 API 密钥
+```
+
+所需环境变量详见 [`.env.example`](.env.example)。
+
+**重要提示:**
+- 至少配置一个 AI 服务商(OpenAI、Anthropic、Google 或 Ollama)
+- 使用本地 AI 时,请设置 `OLLAMA_BASE_URL=http://localhost:11434` 并确保 Ollama 正在运行
+- Socket.IO 服务器默认端口为 `8080`(可通过 `SOCKET_PORT` 配置)
+
+### 步骤 4:构建 sidecar 服务器(桌面端必需)
+
+桌面应用需要 Node.js sidecar 服务器来负责通信和 AI 运算:
+
+```bash
+# 构建 sidecar 服务器打包文件
+cd apps/desktop/src-tauri/sidecar
+node server.mjs --build
+cd ../../..
+```
+
+### 步骤 5:启动开发环境
+
+```bash
+# 桌面端 (Tauri + React)
+pnpm dev:desktop
+
+# 移动端 (React Native - Android)
+pnpm dev:android
+```
+
+---
+
+## 常见问题与故障排除
+
+### 桌面应用无法启动
+- 确认已安装 Rust:`rustc --version`
+- 确认已安装 Node.js >= 20:`node --version`
+- 如有需要请重新构建 sidecar 服务器
+- 检查 8080 端口未被其他程序占用
+
+### 移动应用无法连接桌面端
+- 确认两台设备处于同一网络
+- 检查通信服务器是否正在运行(查看 Dashboard 视图)
+- 验证配对码是否正确
+- 尝试使用手动 IP 地址代替云发现
+
+### AI 服务商无法使用
+- 验证 `.env` 文件中的 API 密钥
+- 检查 API Manager 中该服务商是否已启用
+- 对于 Ollama,确保其正在运行:`ollama serve`
+- 检查云服务商的网络连接
+
+### 技能(Skills)无法使用
+- 部分技能需要特定的适配器(file、terminal、screenshot)
+- 计算机和浏览器技能默认出于安全考虑被禁用
+- 如有需要请在 Skills 视图中启用
+- 检查所需工具是否已安装(例如 git、docker)
+
+---
+
+## 常用脚本命令
+
+| 命令 | 说明 |
+|---|---|
+| `pnpm dev` | 以开发模式运行所有子项目 |
+| `pnpm dev:desktop` | 运行桌面应用(Tauri) |
+| `pnpm dev:android` | 运行安卓应用 |
+| `pnpm build` | 构建整个项目 |
+| `pnpm build:desktop` | 构建桌面应用 |
+| `pnpm build:android` | 构建安卓 APK |
+| `pnpm build:packages` | 仅构建内部库包 |
+| `pnpm lint` | 检查代码风格 |
+| `pnpm lint:fix` | 自动修复代码风格问题 |
+| `pnpm typecheck` | 检查 TypeScript 类型 |
+| `pnpm format` | 使用 Prettier 格式化代码 |
+| `pnpm test` | 运行测试用例 |
+| `pnpm clean` | 清理构建产物 |
+| `pnpm clean:all` | 清理所有文件(包括 node_modules) |
+
+---
+
+## 更新日志
+
+| 版本 | 日期 | 说明 |
+|---|---|---|
+| DEMO | 19/05/2026 | 首次发布演示版 |
+| 更新 0.0.1 | 21/05/2026 | 优化手机与电脑的连接,修复若干小问题 |
+| 更新 0.0.2 beta1 | 21/05/2026 | 集成 VSCode 风格代码编辑器、文件管理器、多标签页、13 家 AI 服务商、实时仪表盘、API 管理器重新设计、聊天 Markdown 渲染、Token 计数器 |
+| 更新 0.0.2 beta2 | 22/05/2026 | 安全的工作区工具(CRUD、纯 Node grep 搜索、区块遍历)、Socket.IO 实时遥测与终端命令审批同意机制、集成测试与编译 |
+| 更新 0.0.2 | 26/05/2026 | 新增 6 项突破性功能:SCTI 轨迹自愈、AST-Lock 方法保护、实时远程呈现流、Rust 内存插件、AHPI 性能热力图、DebateEngine 评审面板以及 /deep-research 命令 |
+| 更新 0.0.3 beta1 | 02/06/2026 | 真实终端 PTY(node-pty sidecar)、Playwright-Stealth 多标签页浏览器、Agentic Observe & Act 层、Sandbox 安全护栏、VS Code 扩展 WebSocket 同步、Monaco linter 诊断与 diff 视图、移动端触摸远程控制、嵌入式 Tauri webview、E2E 集成与 CI 基准测试 |
+
+---
+
+## 许可证
+
+基于 [MIT](LICENSE) 许可证 — 版权所有 (c) 2026 GHITA CODING AGENT
+
+</details>
