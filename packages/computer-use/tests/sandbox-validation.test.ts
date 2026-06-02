@@ -298,6 +298,17 @@ export { hello, TestClass };
       expect(markdown).toContain('## 📋 Module Results');
     });
 
+    it('should generate HTML report', async () => {
+      const report = await reporter.validateAll();
+      const html = reporter.generateHtmlReport(report);
+      expect(typeof html).toBe('string');
+      expect(html.length).toBeGreaterThan(0);
+      expect(html).toContain('<!DOCTYPE html>');
+      expect(html).toContain('Sandbox Validation Report');
+      expect(html).toContain('Module Analysis');
+      expect(html).toContain('chart-container');
+    });
+
     it('should have feedback for DevOps/Rust engineer', async () => {
       const report = await reporter.validateAll();
       expect(report.feedback).toBeDefined();

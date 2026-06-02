@@ -13,13 +13,13 @@
     }
   },
   "scripts": {
-    "build": "tsc && node copy-proto.js",
-    "dev": "tsc --watch",
+    "build": "tsc -b && node copy-proto.js",
+    "dev": "tsc -b --watch",
     "typecheck": "tsc --noEmit",
     "test": "cross-env NODE_OPTIONS='--experimental-vm-modules' vitest run",
     "test:watch": "vitest",
     "lint": "eslint src/",
-    "clean": "rm -rf dist"
+    "clean": "node -e \"const fs=require('fs'); fs.rmSync('dist',{recursive:true,force:true}); fs.readdirSync('.').filter(f=>f.endsWith('.tsbuildinfo')).forEach(f=>fs.rmSync(f,{force:true}))\""
   },
   "dependencies": {
     "@ghita/shared": "workspace:*",

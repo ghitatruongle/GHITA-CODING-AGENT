@@ -76,7 +76,7 @@ export class KeyManager {
     const coolingDown = this.keys.filter((k) => k.isActive && k.cooldownUntil > now);
     if (coolingDown.length > 0) {
       coolingDown.sort((a, b) => a.cooldownUntil - b.cooldownUntil);
-      return coolingDown[0]!.key;
+      return coolingDown[0]?.key ?? null;
     }
 
     // All keys deactivated — return null
@@ -199,18 +199,20 @@ export class KeyManager {
     switch (this.strategy) {
       case 'round-robin': {
         this.roundRobinIndex = this.roundRobinIndex % pool.length;
-        const key = pool[this.roundRobinIndex]!.key;
+        const entry = pool[this.roundRobinIndex];
+      if (!entry) return pool[0]?.key ?? '';
+      const key = entry.key;
         this.roundRobinIndex++;
         return key;
       }
       case 'random': {
         const idx = Math.floor(Math.random() * pool.length);
-        return pool[idx]!.key;
+        return pool[idx]?.key ?? pool[0]?.key ?? '';
       }
       case 'failover':
       default: {
         // Always return first healthy key (stable ordering)
-        return pool[0]!.key;
+        return pool[0]?.key ?? '';
       }
     }
   }

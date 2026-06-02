@@ -90,8 +90,8 @@ const PII_PATTERNS: Record<PIIType, { pattern: RegExp; confidence: number }[]> =
     { pattern: /\b(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}\b/g, confidence: 0.9 },
   ],
   date_of_birth: [
-    { pattern: /\b(?:0[1-9]|1[0-2])[\/\-](?:0[1-9]|[12]\d|3[01])[\/\-](?:19|20)\d{2}\b/g, confidence: 0.6 },
-    { pattern: /\b(?:19|20)\d{2}[\/\-](?:0[1-9]|1[0-2])[\/\-](?:0[1-9]|[12]\d|3[01])\b/g, confidence: 0.6 },
+    { pattern: /\b(?:0[1-9]|1[0-2])[/-](?:0[1-9]|[12]\d|3[01])[/-](?:19|20)\d{2}\b/g, confidence: 0.6 },
+    { pattern: /\b(?:19|20)\d{2}[/-](?:0[1-9]|1[0-2])[/-](?:0[1-9]|[12]\d|3[01])\b/g, confidence: 0.6 },
   ],
   passport: [
     // US passport
@@ -116,7 +116,7 @@ const PII_PATTERNS: Record<PIIType, { pattern: RegExp; confidence: number }[]> =
     { pattern: /\b(?:zip|postal)\s*(?:code)?\s*:?\s*\d{5}(?:-\d{4})?\b/gi, confidence: 0.75 },
   ],
   url: [
-    { pattern: /https?:\/\/[^\s<>"{}|\\^`\[\]]+/g, confidence: 0.9 },
+    { pattern: /https?:\/\/[^\s<>"{}|\\^`[\]]+/g, confidence: 0.9 },
   ],
   api_key: [
     // OpenAI
@@ -126,7 +126,7 @@ const PII_PATTERNS: Record<PIIType, { pattern: RegExp; confidence: number }[]> =
     // AWS
     { pattern: /\bAKIA[A-Z0-9]{16}\b/g, confidence: 0.9 },
     // Generic API key patterns
-    { pattern: /\b(?:api[_-]?key|apikey|api[_-]?secret)\s*[:=]\s*['"]?[A-Za-z0-9_\-]{20,}['"]?\b/gi, confidence: 0.8 },
+    { pattern: /\b(?:api[_-]?key|apikey|api[_-]?secret)\s*[:=]\s*['"]?[A-Za-z0-9_-]{20,}['"]?\b/gi, confidence: 0.8 },
   ],
   jwt_token: [
     { pattern: /\beyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, confidence: 0.95 },
@@ -230,13 +230,17 @@ export class PIIDetector {
 
   /** Remove overlapping findings, keep highest confidence */
   private deduplicateFindings(findings: PIIFinding[]): PIIFinding[] {
-    if (findings.length === 0) return [];
+  if (findings.length === 0) return [];
 
-    const result: PIIFinding[] = [findings[0]!];
+  const first = findings[0];
+  if (!first) return [];
+  const result: PIIFinding[] = [first];
 
-    for (let i = 1; i < findings.length; i++) {
-      const current = findings[i]!;
-      const last = result[result.length - 1]!;
+  for (let i = 1; i < findings.length; i++) {
+    const current = findings[i];
+    if (!current) continue;
+    const last = result[result.length - 1];
+    if (!last) continue;
 
       if (current.start < last.end) {
         // Overlapping — keep higher confidence

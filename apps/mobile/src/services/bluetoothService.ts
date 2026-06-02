@@ -13,6 +13,7 @@ interface RNBluetoothClassicModule {
   startDiscovery?: () => Promise<boolean>;
   cancelDiscovery?: () => Promise<void>;
   onDeviceDiscovered?: (callback: (device: { address: string; name: string; rssi?: number; bonded?: boolean }) => void) => void;
+  removeAllListeners?: (eventName: string) => void;
   connectToDevice?: (address: string, options: { delimiter: string; charset: string }) => Promise<{
     write: (data: string) => Promise<void>;
     disconnect: () => void;
@@ -121,7 +122,10 @@ class BluetoothService {
         // Ignore bonded device errors
       }
 
-      // Start discovery
+      // Start discovery — remove previous listener to prevent accumulation
+      if (RNBluetoothClassic.removeAllListeners) {
+        RNBluetoothClassic.removeAllListeners('onDeviceDiscovered');
+      }
       if (RNBluetoothClassic.onDeviceDiscovered) {
         RNBluetoothClassic.onDeviceDiscovered((device) => {
           if (!this.isDiscovering) return;

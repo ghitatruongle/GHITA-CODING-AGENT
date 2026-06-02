@@ -10,6 +10,7 @@
   --bg-tertiary: #1a1a2e;
   --bg-elevated: #16213e;
   --bg-surface: rgba(255, 255, 255, 0.04);
+  --bg-card: rgba(30, 41, 59, 0.6);
   --bg-hover: rgba(255, 255, 255, 0.07);
   --bg-active: rgba(99, 102, 241, 0.12);
 
@@ -77,6 +78,7 @@
   --bg-tertiary: #f0f1f5;
   --bg-elevated: #ffffff;
   --bg-surface: rgba(0, 0, 0, 0.03);
+  --bg-card: rgba(255, 255, 255, 0.8);
   --bg-hover: rgba(0, 0, 0, 0.05);
   --bg-active: rgba(99, 102, 241, 0.10);
 
@@ -125,21 +127,33 @@
 
 html {
   font-size: 14px;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-
+ 
 body {
   font-family: var(--font-sans);
   background: var(--bg-primary);
   color: var(--text-primary);
-  min-height: 100vh;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
   overflow: hidden;
   line-height: 1.5;
 }
-
+ 
 #root {
+  width: 100vw;
   height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -379,3 +393,14 @@ input::placeholder, textarea::placeholder {
   }
 }
 
+/* --- Reduced Motion --- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

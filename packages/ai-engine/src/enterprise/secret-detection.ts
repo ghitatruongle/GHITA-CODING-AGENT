@@ -173,11 +173,11 @@ const SECRET_PATTERNS: SecretPattern[] = [
 
   // ===== Generic Patterns =====
   { type: 'password', provider: 'generic', pattern: /\b(?:password|passwd|pwd)\s*[:=]\s*['"]?[^\s'"]{8,}['"]?\b/gi, confidence: 0.7, description: 'Password in plaintext' },
-  { type: 'api_key', provider: 'generic', pattern: /\b(?:api[_-]?key|apikey)\s*[:=]\s*['"]?[A-Za-z0-9_\-]{16,}['"]?\b/gi, confidence: 0.7, description: 'Generic API Key' },
-  { type: 'api_key', provider: 'generic', pattern: /\b(?:api[_-]?secret|apisecret)\s*[:=]\s*['"]?[A-Za-z0-9_\-]{16,}['"]?\b/gi, confidence: 0.7, description: 'Generic API Secret' },
-  { type: 'access_token', provider: 'generic', pattern: /\b(?:access[_-]?token)\s*[:=]\s*['"]?[A-Za-z0-9_\-]{16,}['"]?\b/gi, confidence: 0.6, description: 'Generic Access Token' },
+  { type: 'api_key', provider: 'generic', pattern: /\b(?:api[_-]?key|apikey)\s*[:=]\s*['"]?[A-Za-z0-9_-]{16,}['"]?\b/gi, confidence: 0.7, description: 'Generic API Key' },
+  { type: 'api_key', provider: 'generic', pattern: /\b(?:api[_-]?secret|apisecret)\s*[:=]\s*['"]?[A-Za-z0-9_-]{16,}['"]?\b/gi, confidence: 0.7, description: 'Generic API Secret' },
+  { type: 'access_token', provider: 'generic', pattern: /\b(?:access[_-]?token)\s*[:=]\s*['"]?[A-Za-z0-9_-]{16,}['"]?\b/gi, confidence: 0.6, description: 'Generic Access Token' },
   { type: 'private_key', provider: 'generic', pattern: /-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----/g, confidence: 0.95, description: 'Private Key (PEM format)' },
-  { type: 'password', provider: 'generic', pattern: /\b(?:secret[_-]?key|secretkey)\s*[:=]\s*['"]?[A-Za-z0-9_\-]{16,}['"]?\b/gi, confidence: 0.6, description: 'Secret Key in config' },
+  { type: 'password', provider: 'generic', pattern: /\b(?:secret[_-]?key|secretkey)\s*[:=]\s*['"]?[A-Za-z0-9_-]{16,}['"]?\b/gi, confidence: 0.6, description: 'Secret Key in config' },
 ];
 
 // --- Secret Detector ---
@@ -278,13 +278,17 @@ export class SecretDetector {
 
   /** Remove overlapping findings */
   private deduplicateFindings(findings: SecretFinding[]): SecretFinding[] {
-    if (findings.length === 0) return [];
+  if (findings.length === 0) return [];
 
-    const result: SecretFinding[] = [findings[0]!];
+  const first = findings[0];
+  if (!first) return [];
+  const result: SecretFinding[] = [first];
 
-    for (let i = 1; i < findings.length; i++) {
-      const current = findings[i]!;
-      const last = result[result.length - 1]!;
+  for (let i = 1; i < findings.length; i++) {
+    const current = findings[i];
+    if (!current) continue;
+    const last = result[result.length - 1];
+    if (!last) continue;
 
       if (current.start < last.end) {
         if (current.confidence > last.confidence) {

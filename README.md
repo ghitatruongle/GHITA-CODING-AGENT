@@ -112,7 +112,23 @@ cp .env.example .env
 
 See [`.env.example`](.env.example) for required environment variables.
 
-### Step 4: Run development
+**Important:**
+- At minimum, configure one AI provider (OpenAI, Anthropic, Google, or Ollama)
+- For local AI, set `OLLAMA_BASE_URL=http://localhost:11434` and ensure Ollama is running
+- Default port for Socket.IO server is `8080` (configurable via `SOCKET_PORT`)
+
+### Step 4: Build the sidecar server (required for desktop app)
+
+The desktop app requires a Node.js sidecar server for communication and AI operations:
+
+```bash
+# Build the sidecar server bundle
+cd apps/desktop/src-tauri/sidecar
+node server.mjs --build
+cd ../../..
+```
+
+### Step 5: Run development
 
 ```bash
 # Desktop (Tauri + React)
@@ -121,6 +137,34 @@ pnpm dev:desktop
 # Mobile (React Native - Android)
 pnpm dev:android
 ```
+
+---
+
+## Common Issues & Troubleshooting
+
+### Desktop app won't start
+- Ensure Rust is installed: `rustc --version`
+- Ensure Node.js >= 20 is installed: `node --version`
+- Rebuild the sidecar server if needed
+- Check that port 8080 is not already in use
+
+### Mobile app can't connect to desktop
+- Ensure both devices are on the same network
+- Check that the communication server is running (check Dashboard view)
+- Verify the pairing code is correct
+- Try using manual IP address instead of cloud discovery
+
+### AI provider not working
+- Verify API keys in `.env` file
+- Check that the provider is enabled in the API Manager
+- For Ollama, ensure it's running: `ollama serve`
+- Check network connectivity for cloud providers
+
+### Skills not working
+- Some skills require specific adapters (file, terminal, screenshot)
+- Computer and browser skills are disabled by default for security
+- Enable skills in the Skills view if needed
+- Check that required tools are installed (e.g., git, docker)
 
 ---
 
@@ -259,7 +303,23 @@ cp .env.example .env
 
 Xem tệp [`.env.example`](.env.example) để biết danh sách các biến môi trường bắt buộc.
 
-### Bước 4: Khởi chạy môi trường phát triển
+**Lưu ý quan trọng:**
+- Tối thiểu, hãy cấu hình một nhà cung cấp AI (OpenAI, Anthropic, Google hoặc Ollama)
+- Đối với AI cục bộ, hãy đặt `OLLAMA_BASE_URL=http://localhost:11434` và đảm bảo Ollama đang chạy
+- Cổng mặc định cho Socket.IO server là `8080` (có thể cấu hình qua `SOCKET_PORT`)
+
+### Bước 4: Xây dựng sidecar server (bắt buộc cho ứng dụng desktop)
+
+Ứng dụng desktop yêu cầu một Node.js sidecar server để giao tiếp và các hoạt động AI:
+
+```bash
+# Xây dựng gói sidecar server
+cd apps/desktop/src-tauri/sidecar
+node server.mjs --build
+cd ../../..
+```
+
+### Bước 5: Khởi chạy môi trường phát triển
 
 ```bash
 # Ứng dụng Desktop (Tauri + React)
@@ -268,6 +328,34 @@ pnpm dev:desktop
 # Ứng dụng Di động (React Native - Android)
 pnpm dev:android
 ```
+
+---
+
+## Các Vấn đề Thường Gặp & Khắc Phục Sự Cố
+
+### Ứng dụng desktop không khởi động được
+- Đảm bảo Rust đã được cài đặt: `rustc --version`
+- Đảm bảo Node.js >= 20 đã được cài đặt: `node --version`
+- Xây dựng lại sidecar server nếu cần
+- Kiểm tra rằng cổng 8080 không đang được sử dụng bởi ứng dụng khác
+
+### Ứng dụng di động không thể kết nối với desktop
+- Đảm bảo cả hai thiết bị đều trên cùng mạng
+- Kiểm tra rằng communication server đang chạy (xem Dashboard view)
+- Xác minh mã ghép nối (pairing code) là chính xác
+- Thử sử dụng địa chỉ IP thủ công thay vì cloud discovery
+
+### Nhà cung cấp AI không hoạt động
+- Xác minh các khóa API trong tệp `.env`
+- Kiểm tra rằng nhà cung cấp đã được bật trong API Manager
+- Đối với Ollama, đảm bảo nó đang chạy: `ollama serve`
+- Kiểm tra kết nối mạng cho các nhà cung cấp đám mây
+
+### Kỹ năng (Skills) không hoạt động
+- Một số kỹ năng yêu cầu các adapter cụ thể (file, terminal, screenshot)
+- Kỹ năng máy tính và trình duyệt bị tắt mặc định vì lý do bảo mật
+- Bật kỹ năng trong Skills view nếu cần
+- Kiểm tra rằng các công cụ cần thiết đã được cài đặt (ví dụ: git, docker)
 
 ---
 

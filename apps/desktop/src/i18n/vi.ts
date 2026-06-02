@@ -33,7 +33,7 @@ export const vi: TranslationKeys = {
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v0.0.2',
+    version: 'v0.0.3-beta1',
     deviceReconnected: 'Khôi phục kết nối với thiết bị: {{name}}',
     devicePaired: 'Đã ghép đôi thành công thiết bị: {{name}}',
     commandReceived: 'Đã nhận lệnh từ thiết bị: {{action}}',
@@ -270,6 +270,7 @@ export const vi: TranslationKeys = {
     stopped: 'ĐÃ DỪNG',
     compliant: 'HỢP CHUẨN',
     disabledLabel: 'ĐÃ TẮT',
+    demoMode: 'Chế độ Demo — Dữ liệu mô phỏng',
   },
   chat: {
     welcomeMessage: 'Xin chào! Tôi là GHITA Assistant, trợ lý AI của bạn. Tôi có thể hỗ trợ bạn lập trình, thực thi các câu lệnh hệ thống trực tiếp, quản lý tệp tin và nhiều tác vụ tự động hóa khác. Hãy nhập câu hỏi của bạn để bắt đầu!',
@@ -323,6 +324,12 @@ export const vi: TranslationKeys = {
     runSuccess: 'Thành công',
     runError: 'Lỗi',
     messagesCount: '{{count}} tin nhắn',
+    compactSuccess: 'Đã compact ngữ cảnh hiển thị: chỉ giữ các tin nhắn gần nhất cho phiên này.',
+    noWorkspace: 'Chưa mở thư mục làm việc. Hãy mở lại project/thư mục trong Explorer trước khi chạy Agent, Review, Feature hoặc Ralph.',
+    permissionCustom: 'Custom: Xác nhận mỗi lệnh & sửa file',
+    permissionAuto: 'Auto: Tự do, chỉ hỏi lệnh nguy hiểm (install, download...)',
+    liveAgentEvents: 'SỰ KIỆN AGENT TRỰC TUYẾN',
+    clear: 'Xóa',
   },
   terminal: {
     title: 'Cửa sổ dòng lệnh GHITA CODING AGENT Terminal',

@@ -417,7 +417,6 @@ export class SandboxSecurityFilter {
     const threats: ThreatDetection[] = [];
     const trimmedCmd = cmd.trim();
 
-    // Kiểm tra whitelist trước
     if (this.isWhitelisted(trimmedCmd)) {
       return {
         safe: true,
@@ -427,7 +426,6 @@ export class SandboxSecurityFilter {
       };
     }
 
-    // Tác vụ 2: So khớp với built-in blacklist
     for (const rule of BUILTIN_BLACKLIST) {
       if (rule.pattern.test(trimmedCmd)) {
         threats.push({
@@ -439,7 +437,6 @@ export class SandboxSecurityFilter {
       }
     }
 
-    // Tác vụ 10: So khớp với custom patterns từ YAML
     for (const rule of this.customRules) {
       if (rule.pattern.test(trimmedCmd)) {
         threats.push({
@@ -451,17 +448,14 @@ export class SandboxSecurityFilter {
       }
     }
 
-    // Tác vụ 3: Phát hiện base64 obfuscation
     if (this.config.detectBase64) {
       threats.push(...detectBase64Threats(trimmedCmd));
     }
 
-    // Tác vụ 5: Phát hiện binary execution
     if (this.config.detectBinaryExecution) {
       threats.push(...detectBinaryExecution(trimmedCmd));
     }
 
-    // Xác định mức độ cao nhất
     const maxSeverity = this.getMaxSeverity(threats);
     const safe = threats.length === 0;
     const requiresApproval = !safe && (
@@ -477,6 +471,10 @@ export class SandboxSecurityFilter {
       requiresApproval,
       errorCode,
     };
+  }
+
+  validate(cmd: string): SecurityValidationResult {
+    return this.validateCommand(cmd);
   }
 
   // =========================================================================

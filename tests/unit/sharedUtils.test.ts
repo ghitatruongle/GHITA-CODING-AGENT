@@ -732,7 +732,7 @@ describe('isValidUrl()', () => {
 // ----------------------------------------------------------------------------
 describe('isValidApiKey()', () => {
   it('should return true for valid API key', () => {
-    expect(isValidApiKey('sk-abc123def456')).toBe(true);
+    expect(isValidApiKey('test-abc123def456')).toBe(true);
   });
 
   it('should return false for short key (< 8 chars)', () => {
@@ -753,7 +753,7 @@ describe('isValidApiKey()', () => {
 
   it('should return true for string values longer than 8 chars without spaces', () => {
     expect(isValidApiKey('abcdefgh')).toBe(true);
-    expect(isValidApiKey('sk-abcdef123456')).toBe(true);
+    expect(isValidApiKey('test-abcdef123456')).toBe(true);
   });
 });
 

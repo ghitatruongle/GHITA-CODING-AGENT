@@ -1,0 +1,1 @@
+Vitest for unit testing and benchmarking; vi.mock for dependency isolation.

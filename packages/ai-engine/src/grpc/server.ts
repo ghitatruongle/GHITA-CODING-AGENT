@@ -3,7 +3,8 @@ import * as protoLoader from '@grpc/proto-loader';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
-import { Orchestrator } from '../orchestrator.js';
+import type { Orchestrator } from '../orchestrator.js';
+import type { AIProviderType } from '@ghita/shared';
 import type { ChatMessage } from '../types.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -20,8 +21,8 @@ const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
   oneofs: true,
 });
 
-const protoDescriptor = grpc.loadPackageDefinition(packageDefinition) as any;
-const ghitaProto = protoDescriptor.ghita.v1;
+const protoDescriptor = grpc.loadPackageDefinition(packageDefinition) as Record<string, unknown>;
+const ghitaProto = (protoDescriptor.ghita as Record<string, Record<string, unknown>>)?.v1 as Record<string, unknown>;
 
 const MAX_SESSIONS = 1000;
 
@@ -33,7 +34,9 @@ export class GrpcServer {
   constructor(orchestrator: Orchestrator) {
     this.orchestrator = orchestrator;
     this.server = new grpc.Server();
-    this.server.addService(ghitaProto.AgentService.service, {
+    const agentService = (ghitaProto as Record<string, grpc.ServiceDefinition<Record<string, unknown>>> | undefined)?.AgentService;
+    if (!agentService) throw new Error('AgentService not found in proto definition');
+    this.server.addService(agentService.service as unknown as grpc.ServiceDefinition<Record<string, grpc.MethodDefinition<Record<string, unknown>, Record<string, unknown>>>>, {
       Chat: this.handleChat.bind(this),
     });
   }
@@ -52,7 +55,7 @@ export class GrpcServer {
             reject(error);
             return;
           }
-          console.log(`gRPC Server running at ${host}:${boundPort}`);
+          console.info(`gRPC Server running at ${host}:${boundPort}`);
           resolve(boundPort);
         }
       );
@@ -65,7 +68,7 @@ export class GrpcServer {
   stop(): Promise<void> {
     return new Promise((resolve) => {
       this.server.tryShutdown(() => {
-        console.log('gRPC Server stopped.');
+        console.info('gRPC Server stopped.');
         resolve();
       });
     });
@@ -74,7 +77,7 @@ export class GrpcServer {
   /**
    * Xử lý luồng gRPC song phương (duplex stream) Chat
    */
-  private handleChat(call: grpc.ServerDuplexStream<any, any>) {
+  private handleChat(call: grpc.ServerDuplexStream<Record<string, unknown>, Record<string, unknown>>) {
     let sessionId = '';
     let interrupted = false;
     let previousMessages: ChatMessage[] = [];
@@ -82,30 +85,31 @@ export class GrpcServer {
     // Map lưu trữ các hàm resolve đang chờ user duyệt chạy tool
     const pendingRequests = new Map<string, (reply: { approved: boolean; reason?: string }) => void>();
 
-    call.on('data', async (clientMessage: any) => {
-      try {
-        sessionId = clientMessage.session_id || sessionId || randomUUID();
+  call.on('data', async (clientMessage: Record<string, unknown>) => {
+    try {
+      sessionId = (clientMessage.session_id as string) || sessionId || randomUUID();
 
-        // 1. Nhận tin nhắn khởi đầu
-        if (clientMessage.request) {
-          interrupted = false;
-          const req = clientMessage.request;
-          const userPrompt = req.prompt;
-          const requestedProvider = req.provider || undefined;
+      // 1. Nhận tin nhắn khởi đầu
+      if (clientMessage.request) {
+        interrupted = false;
+        const req = clientMessage.request as Record<string, unknown>;
+        const userPrompt = req.prompt as string;
+        const requestedProvider = (req.provider as string) || undefined;
 
-          // Hỗ trợ khôi phục session cũ
-          if (sessionId && this.sessions.has(sessionId)) {
-            previousMessages = [...this.sessions.get(sessionId)!];
-          } else {
-            previousMessages = [];
-          }
+        // Hỗ trợ khôi phục session cũ
+        if (sessionId && this.sessions.has(sessionId)) {
+          previousMessages = [...(this.sessions.get(sessionId) ?? [])];
+        } else {
+          previousMessages = [];
+        }
 
-          // Cập nhật lịch sử message từ request
-          if (req.history && req.history.length > 0) {
-            previousMessages = req.history.map((msg: any) => ({
-              role: msg.role,
-              content: msg.content,
-            }));
+        // Cập nhật lịch sử message từ request
+        const history = req.history as Array<Record<string, string>> | undefined;
+        if (history && history.length > 0) {
+          previousMessages = history.map((msg) => ({
+            role: msg.role as ChatMessage['role'],
+            content: msg.content ?? '',
+          }));
           }
 
           // Đưa prompt mới của user vào lịch sử
@@ -113,14 +117,14 @@ export class GrpcServer {
           previousMessages.push(userMessage);
 
           let fullText = '';
-          let promptTokens = 0;
-          let completionTokens = 0;
+          const promptTokens = 0;
+          const completionTokens = 0;
 
           // Viết luồng stream token tới Client
           try {
-            const stream = this.orchestrator.chatStream(previousMessages, {
-              provider: requestedProvider as any,
-            });
+        const stream = this.orchestrator.chatStream(previousMessages, {
+          provider: requestedProvider as AIProviderType | undefined,
+        });
 
             for await (const chunk of stream) {
               if (interrupted) break;
@@ -169,29 +173,31 @@ export class GrpcServer {
               });
             }
 
-          } catch (err: any) {
-            console.error('Error generating streaming response:', err);
-            call.write({
-              session_id: sessionId,
-              error: {
-                code: 'PROVIDER_ERROR',
-                message: err.message || 'LLM provider encountered an error',
-              },
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'LLM provider encountered an error';
+        console.error('Error generating streaming response:', err);
+        call.write({
+          session_id: sessionId,
+          error: {
+            code: 'PROVIDER_ERROR',
+            message,
+          },
             });
             call.end();
           }
 
         // 2. Nhận phản hồi duyệt quyền chạy Tool từ người dùng (Human-in-the-loop)
-        } else if (clientMessage.response) {
-          const resp = clientMessage.response;
-          const toolCallId = resp.tool_call_id;
-          const approved = resp.approved;
-          const reason = resp.reason;
+    } else if (clientMessage.response) {
+      const resp = clientMessage.response as Record<string, unknown>;
+      const toolCallId = resp.tool_call_id as string | undefined;
+      const approved = resp.approved as boolean | undefined;
+      const reason = resp.reason as string | undefined;
 
-          if (pendingRequests.has(toolCallId)) {
-            pendingRequests.get(toolCallId)!({ approved, reason });
-            pendingRequests.delete(toolCallId);
-          }
+      if (toolCallId && pendingRequests.has(toolCallId)) {
+        const resolve = pendingRequests.get(toolCallId);
+        if (resolve) resolve({ approved: approved ?? false, reason });
+        pendingRequests.delete(toolCallId);
+      }
 
         // 3. Nhận tín hiệu hủy tiến trình
         } else if (clientMessage.cancel) {
@@ -205,14 +211,15 @@ export class GrpcServer {
           call.end();
         }
 
-      } catch (err: any) {
-        console.error('gRPC Error processing stream item:', err);
-        call.write({
-          session_id: sessionId,
-          error: {
-            code: 'INTERNAL',
-            message: err.message || 'Internal server error',
-          },
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Internal server error';
+      console.error('gRPC Error processing stream item:', err);
+      call.write({
+        session_id: sessionId,
+        error: {
+          code: 'INTERNAL',
+          message,
+        },
         });
         call.end();
       }

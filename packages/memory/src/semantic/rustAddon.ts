@@ -21,8 +21,32 @@ export interface CacheEntry {
   sizeBytes: number;
 }
 
+type StatementResultLike = {
+  changes?: number;
+};
+
+type StatementLike = {
+  run: (...args: unknown[]) => StatementResultLike;
+  all: (...args: unknown[]) => unknown[];
+};
+
+type DatabaseLike = {
+  exec: (sql: string) => void;
+  prepare: (sql: string) => StatementLike;
+  transaction: <T>(fn: (items: T) => void) => (items: T) => void;
+  close: () => void;
+};
+
+type RustBindingsLike = {
+  cosine_similarity?: (a: number[], b: number[]) => number;
+};
+
+// Safe require that avoids Function constructor (CSP-safe)
+declare const require: ((id: string) => unknown) | undefined;
+const runtimeRequire: ((id: string) => unknown) | null = typeof require !== 'undefined' ? require : null;
+
 export class RustMemoryAddon {
-  private db: any = null;
+  private db: DatabaseLike | null = null;
   private isFallbackDb = true;
   private mockDbLogs: ChatLogEntry[] = [];
   
@@ -33,7 +57,7 @@ export class RustMemoryAddon {
   private readonly MAX_CACHE_SIZE_BYTES = 100 * 1024 * 1024; // 100MB limit
 
   // Try to load precompiled Rust N-API bindings if they exist
-  private rustBindings: any = null;
+  private rustBindings: RustBindingsLike | null = null;
 
   constructor(dbPath: string = ':memory:') {
     this.initDatabase(dbPath);
@@ -45,9 +69,8 @@ export class RustMemoryAddon {
    */
   private initDatabase(dbPath: string): void {
     try {
-      // Dynamic import better-sqlite3
-      // @ts-ignore
-      const DatabaseConstructor = require('better-sqlite3');
+      if (!runtimeRequire) throw new Error('require is not available in this environment');
+      const DatabaseConstructor = runtimeRequire('better-sqlite3') as new (path: string) => DatabaseLike;
       if (DatabaseConstructor) {
         this.db = new DatabaseConstructor(dbPath);
         
@@ -88,8 +111,8 @@ export class RustMemoryAddon {
    */
   private initRustBindings(): void {
     try {
-      // @ts-ignore
-      this.rustBindings = require('./rust/index.node');
+      if (!runtimeRequire) { this.rustBindings = null; return; }
+      this.rustBindings = runtimeRequire('./rust/index.node') as RustBindingsLike;
     } catch {
       // Không load được Rust addon -> tự động fallback sang thuật toán JS thuần
       this.rustBindings = null;
@@ -127,9 +150,9 @@ export class RustMemoryAddon {
       }
     }
 
-    // Cơ chế Auto-Vacuum định kỳ chạy sau mỗi 10 lệnh ghi để giải phóng phân mảnh SQLite
+    // Auto-Vacuum runs once per 1000 writes to reduce fragmentation without excessive overhead.
     this.writeCounter++;
-    if (this.writeCounter % 10 === 0) {
+    if (this.writeCounter % 1000 === 0) {
       await this.autoVacuum();
     }
   }
@@ -139,13 +162,14 @@ export class RustMemoryAddon {
    */
   public async indexManyMessages(msgs: ChatLogEntry[]): Promise<void> {
     if (!this.isFallbackDb && this.db) {
-      const insert = this.db.transaction((items: ChatLogEntry[]) => {
-        const stmt1 = this.db.prepare(`
+      const db = this.db;
+      const insert = db.transaction((items: ChatLogEntry[]) => {
+        const stmt1 = db.prepare(`
           INSERT OR REPLACE INTO old_chats (id, session_id, role, content, timestamp, symbol_attached)
           VALUES (?, ?, ?, ?, ?, ?)
         `);
-        const deleteFts = this.db.prepare('DELETE FROM old_chats_fts WHERE id = ?');
-        const stmt2 = this.db.prepare(`
+        const deleteFts = db.prepare('DELETE FROM old_chats_fts WHERE id = ?');
+        const stmt2 = db.prepare(`
           INSERT INTO old_chats_fts (id, session_id, role, content, timestamp)
           VALUES (?, ?, ?, ?, ?)
         `);
@@ -246,7 +270,7 @@ export class RustMemoryAddon {
       
       // Auto-Vacuum ngay sau khi dọn dẹp dung lượng lớn
       await this.autoVacuum();
-      return info1.changes;
+      return info1.changes ?? 0;
     } else {
       // Fallback
       const prevLength = this.mockDbLogs.length;

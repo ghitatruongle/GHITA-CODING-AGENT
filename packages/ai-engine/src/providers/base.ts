@@ -98,19 +98,19 @@ export abstract class BaseProvider implements AIProvider {
     throw new AIUnsupportedFeatureError(this.name, 'embedMany');
   }
 
-  async generateImage(_prompt: string, _options?: any): Promise<{ url: string; b64?: string }> {
+  async generateImage(_prompt: string, _options?: Record<string, unknown>): Promise<{ url: string; b64?: string }> {
     throw new AIUnsupportedFeatureError(this.name, 'generateImage');
   }
 
-  async generateSpeech(_text: string, _options?: any): Promise<{ audio: Buffer; contentType: string }> {
+  async generateSpeech(_text: string, _options?: Record<string, unknown>): Promise<{ audio: Buffer; contentType: string }> {
     throw new AIUnsupportedFeatureError(this.name, 'generateSpeech');
   }
 
-  async generateVideo(_prompt: string, _options?: any): Promise<{ url: string }> {
+  async generateVideo(_prompt: string, _options?: Record<string, unknown>): Promise<{ url: string }> {
     throw new AIUnsupportedFeatureError(this.name, 'generateVideo');
   }
 
-  async transcribe(_audio: Buffer, _options?: any): Promise<{ text: string }> {
+  async transcribe(_audio: Buffer, _options?: Record<string, unknown>): Promise<{ text: string }> {
     throw new AIUnsupportedFeatureError(this.name, 'transcribe');
   }
 }

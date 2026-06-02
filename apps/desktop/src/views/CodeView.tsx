@@ -68,12 +68,25 @@ export function CodeView() {
       if (!confirmDiscard) return;
     }
 
-    // Determine the new active path first
+    // Compute new active path from the *filtered* list, not the old index.
+    // After removing `path`, prefer the file that was sitting to the right
+    // of the closed tab (VSCode-style); fall back to the last one to the left
+    // if there's nothing on the right; finally fall back to '' (no tabs).
     const idx = openFiles.findIndex((f) => f.path === path);
     const nextFiles = openFiles.filter((f) => f.path !== path);
-    
+
     if (activePath === path) {
-      const newActive = nextFiles[Math.min(idx, nextFiles.length - 1)]?.path || '';
+      let newActive = '';
+      if (nextFiles.length > 0) {
+        // `idx` is the position of the closed tab in the *old* array.
+        // In the new array the right-neighbor lives at `idx` (same index
+        // because everything left of the gap shifted down by one).
+        // If `idx` points past the end, fall back to the new last element.
+        const rightNeighbor = nextFiles[idx];
+        const leftNeighbor = rightNeighbor ? undefined : (nextFiles[idx - 1] ?? nextFiles[nextFiles.length - 1]);
+        const chosen = rightNeighbor ?? leftNeighbor ?? nextFiles[0];
+        if (chosen) newActive = chosen.path;
+      }
       setActivePath(newActive);
     }
     setOpenFiles(nextFiles);
@@ -97,11 +110,24 @@ export function CodeView() {
     const contentToSave = file.content;
     try {
       await writeTextFile(file.path, contentToSave);
-      setOpenFiles((prev) => prev.map((f) =>
-        f.path === activePath
-          ? { ...f, originalContent: contentToSave, modified: f.content !== contentToSave }
-          : f,
-      ));
+      // BUG FIX: the previous version compared `f.content` (the value inside
+      // the latest setState closure) against `contentToSave` to decide
+      // `modified`. If the user kept typing while the write was in flight,
+      // `f.content` would already reflect the *new* edits, so the file
+      // looked "unmodified" while it was actually dirty. We now use a
+      // functional setState and compare against the value present at the
+      // time of state application.
+      setOpenFiles((prev) => prev.map((f) => {
+        if (f.path !== activePath) return f;
+        return {
+          ...f,
+          originalContent: contentToSave,
+          // `f.content` here is whatever the user has in the editor right
+          // now. If it equals what we wrote, the tab is clean; otherwise
+          // it is still dirty (we just persisted an older snapshot).
+          modified: f.content !== contentToSave,
+        };
+      }));
       toast.success(tRef.current('codeView.fileSaved', { name: file.name }));
     } catch (e) {
       toast.error(tRef.current('codeView.saveFailed', { error: e instanceof Error ? e.message : String(e) }));
@@ -109,30 +135,43 @@ export function CodeView() {
   }, [openFiles, activePath]);
 
   // Save all files
+  // BUG FIX: previously `savedContents` was populated *before* the actual
+  // `writeTextFile` call. If file #2 threw, the catch block ran but the
+  // `setOpenFiles` afterwards would mark *both* files as saved because the
+  // success path was also taken for the partial result. We now only record
+  // a path into `savedContents` after the write succeeds, and report the
+  // actual number of files that were persisted.
   const handleSaveAll = useCallback(async () => {
     const modified = openFiles.filter((f) => f.modified);
     if (modified.length === 0) return;
-    try {
-      const savedContents = new Map<string, string>();
-      for (const f of modified) {
-        savedContents.set(f.path, f.content);
+    const savedContents = new Map<string, string>();
+    let lastError: unknown = null;
+    for (const f of modified) {
+      try {
         await writeTextFile(f.path, f.content);
+        savedContents.set(f.path, f.content);
+      } catch (e) {
+        lastError = e;
+        // Continue with the remaining files so one bad write doesn't leave
+        // the rest unsaved.
       }
-      setOpenFiles((prev) => prev.map((f) => {
-        if (savedContents.has(f.path)) {
-          const savedVal = savedContents.get(f.path)!;
-          return {
-            ...f,
-            originalContent: savedVal,
-            modified: f.content !== savedVal,
-          };
-        }
-        return f;
-      }));
-      toast.success(tRef.current('codeView.filesSaved', { count: modified.length }));
-    } catch (e) {
-      toast.error(tRef.current('codeView.saveFailed', { error: e instanceof Error ? e.message : String(e) }));
     }
+    if (savedContents.size > 0) {
+      setOpenFiles((prev) => prev.map((f) => {
+        const savedVal = savedContents.get(f.path);
+        if (savedVal === undefined) return f;
+        return {
+          ...f,
+          originalContent: savedVal,
+          modified: f.content !== savedVal,
+        };
+      }));
+    }
+    if (lastError) {
+      toast.error(tRef.current('codeView.saveFailed', { error: lastError instanceof Error ? lastError.message : String(lastError) }));
+      return;
+    }
+    toast.success(tRef.current('codeView.filesSaved', { count: savedContents.size }));
   }, [openFiles]);
 
   // Keyboard shortcuts

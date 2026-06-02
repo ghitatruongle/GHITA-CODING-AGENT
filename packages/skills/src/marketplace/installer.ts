@@ -92,9 +92,17 @@ export class SkillInstaller {
     return true;
   }
 
+  /**
+   * Compare semver version strings (e.g. "1.2.3").
+   * Note: Pre-release suffixes (e.g. "1.0.0-beta") are stripped before comparison.
+   * @returns negative if a < b, positive if a > b, 0 if equal
+   */
   compareVersions(a: string, b: string): number {
-    const pa = a.split('.').map(Number);
-    const pb = b.split('.').map(Number);
+    // Strip pre-release suffixes (e.g. "1.0.0-beta" -> "1.0.0")
+    const cleanA = a.split('-')[0] ?? a;
+    const cleanB = b.split('-')[0] ?? b;
+    const pa = cleanA.split('.').map(Number);
+    const pb = cleanB.split('.').map(Number);
     for (let i = 0; i < 3; i++) {
       const na = pa[i] ?? 0;
       const nb = pb[i] ?? 0;

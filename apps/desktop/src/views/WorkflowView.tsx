@@ -514,7 +514,7 @@ export function WorkflowView() {
               // Output anchor point: Right-middle of fromNode
               const fromWidth = 160;
               const fromHeight = fromNode.type === 'condition' ? 76 : 58;
-              let outX = fromNode.x + fromWidth;
+              const outX = fromNode.x + fromWidth;
               let outY = fromNode.y + fromHeight / 2;
 
               if (fromNode.type === 'condition') {
@@ -554,7 +554,7 @@ export function WorkflowView() {
 
               const fromWidth = 160;
               const fromHeight = fromNode.type === 'condition' ? 76 : 58;
-              let outX = fromNode.x + fromWidth;
+              const outX = fromNode.x + fromWidth;
               let outY = fromNode.y + fromHeight / 2;
 
               if (fromNode.type === 'condition') {

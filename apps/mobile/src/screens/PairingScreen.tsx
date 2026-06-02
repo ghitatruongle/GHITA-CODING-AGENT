@@ -16,14 +16,19 @@ import {
   TouchableWithoutFeedback,
   ActivityIndicator,
   ScrollView,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../theme/colors';
 import { FontSize, Spacing, Radius } from '../theme/styles';
 import { ConnectionStatus } from '../components/ConnectionStatus';
 import { socketService } from '../services/socketService';
+import { CLOUD_DISCOVERY_API_KEY, CLOUD_DISCOVERY_API_URL } from '../config';
 import { getLastServer, saveLastServer, getDeviceId } from '../services/storageService';
-import { bluetoothService, BluetoothDevice } from '../services/bluetoothService';
+import type { BluetoothDevice } from '../services/bluetoothService';
+import { bluetoothService } from '../services/bluetoothService';
 import type { ConnectionState } from '../types';
 import type { PairingScreenProps } from '../navigation/types';
 import { useTranslation } from '../i18n/context';
@@ -131,8 +136,8 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
 
       if (!serverAddress.trim()) {
         try {
-          const appKey = 'an6h273b';
-          const res = await fetch(`https://keyvalue.immanuel.co/api/KeyVal/GetValue/${appKey}/${code}`);
+          if (!CLOUD_DISCOVERY_API_KEY) throw new Error('Cloud discovery API key not configured');
+          const res = await fetch(`${CLOUD_DISCOVERY_API_URL}/${CLOUD_DISCOVERY_API_KEY}/${code}`);
           const dataText = await res.text();
           const cleanedData = dataText.replace(/^"|"$/g, '').trim();
 
@@ -148,8 +153,8 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
           const port = parts[parts.length - 1];
           const rawIps = parts.slice(0, parts.length - 1);
           addressesToTry = rawIps.map(ip => `http://${ip.replace(/-/g, '.')}:${port}`);
-        } catch (e: any) {
-          console.log('Auto discovery fetch failed. Proceeding with fallback candidates.');
+} catch (e: unknown) {
+      console.info('Auto discovery fetch failed. Proceeding with fallback candidates.');
           addressesToTry = [];
         }
       } else {
@@ -172,13 +177,13 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
                 return { url, pairingCode: data.pairingCode || code };
               }
             }
-          } catch (err) {
-            // Ignore
-          }
-          throw new Error('Failed');
-        });
+} catch (err) {
+        console.warn('[PairingScreen] Error:', err);
+      }
+      throw new Error('Failed');
+    });
 
-        let firstSuccess;
+    let firstSuccess;
         try {
           if (pingPromises.length === 0) {
             throw new Error('No local IP addresses to try');
@@ -238,15 +243,15 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
           }
         }, 10000);
 
-      } catch (err: any) {
-        clearTimers();
-        setConnectionState('error');
-        setErrorMessage(err.message || t('pairing.pairErrBtFindFail'));
-      }
-    };
+} catch (err: unknown) {
+      clearTimers();
+      setConnectionState('error');
+      setErrorMessage(err instanceof Error ? err.message : t('pairing.pairErrBtFindFail'));
+    }
+  };
 
-    void discoverAndConnect();
-  }, [serverAddress, pairingCode, clearTimers, t]);
+  void discoverAndConnect();
+}, [pairingCode, serverAddress, t, clearTimers]);
 
   // Bluetooth scanning flow
   const handleScanBluetooth = useCallback(async () => {
@@ -292,9 +297,9 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
           scanTimeoutRef.current = null;
         }, 1500);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setIsScanningBt(false);
-      setErrorMessage(err.message || t('pairing.pairErrBtStart'));
+      setErrorMessage(err instanceof Error ? err.message : t('pairing.pairErrBtStart'));
     }
   }, [t]);
 
@@ -326,8 +331,8 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
           throw new Error(t('pairing.pairErrInvalidName'));
         }
 
-        const appKey = 'an6h273b';
-        const res = await fetch(`https://keyvalue.immanuel.co/api/KeyVal/GetValue/${appKey}/${cleanName}`);
+        if (!CLOUD_DISCOVERY_API_KEY) throw new Error('Cloud discovery API key not configured');
+        const res = await fetch(`${CLOUD_DISCOVERY_API_URL}/${CLOUD_DISCOVERY_API_KEY}/${cleanName}`);
         const dataText = await res.text();
         const cleanedData = dataText.replace(/^"|"$/g, '').trim();
 
@@ -357,9 +362,9 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
                 return { url, pairingCode: data.pairingCode };
               }
             }
-          } catch (err) {
-            // Ignore
-          }
+ } catch (err) {
+        console.warn('[PairingScreen] Error:', err);
+ }
           throw new Error('Failed');
         });
 
@@ -431,10 +436,10 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
         }
       }, 10000);
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       clearTimers();
       setConnectionState('error');
-      setErrorMessage(err.message || t('pairing.pairErrBtFindFail'));
+      setErrorMessage(err instanceof Error ? err.message : t('pairing.pairErrBtFindFail'));
     }
   }, [clearTimers, t]);
 
@@ -465,6 +470,11 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.content}>
           {/* Header */}
@@ -480,6 +490,7 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
             <TouchableOpacity
               style={[styles.tabButton, activeTab === 'wifi' && styles.tabButtonActive]}
               onPress={() => setActiveTab('wifi')}
+              accessibilityLabel={t('pairing.wifiTab')}
             >
               <Text style={[styles.tabButtonText, activeTab === 'wifi' && styles.tabButtonTextActive]}>
                 {t('pairing.wifiTab')}
@@ -488,6 +499,7 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
             <TouchableOpacity
               style={[styles.tabButton, activeTab === 'bluetooth' && styles.tabButtonActive]}
               onPress={() => setActiveTab('bluetooth')}
+              accessibilityLabel={t('pairing.bluetoothTab')}
             >
               <Text style={[styles.tabButtonText, activeTab === 'bluetooth' && styles.tabButtonTextActive]}>
                 {t('pairing.bluetoothTab')}
@@ -520,7 +532,7 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
                     placeholder={t('pairing.codePlaceholder')}
                     placeholderTextColor={Colors.textMuted}
                     value={pairingCode}
-                    onChangeText={(t) => setPairingCode(t.toUpperCase().slice(0, PAIRING_CODE_LENGTH))}
+                    onChangeText={(val) => setPairingCode(val.toUpperCase().slice(0, PAIRING_CODE_LENGTH))}
                     maxLength={PAIRING_CODE_LENGTH}
                     autoCapitalize="characters"
                     returnKeyType="go"
@@ -538,6 +550,7 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
                   style={[styles.connectButton, isConnecting && styles.connectButtonDisabled]}
                   onPress={handleConnect}
                   disabled={isConnecting}
+                  accessibilityLabel={t('pairing.connectBtn')}
                 >
                   {isConnecting ? (
                     <ActivityIndicator color={Colors.textPrimary} />
@@ -587,7 +600,12 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
                     {isScanningBt ? (
                       <ActivityIndicator size="small" color={Colors.accent} />
                     ) : (
-                      <TouchableOpacity onPress={handleScanBluetooth}>
+                      <TouchableOpacity
+                        onPress={handleScanBluetooth}
+                        style={styles.rescanBtn}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        activeOpacity={0.7}
+                      >
                         <Text style={styles.scanActionText}>{t('pairing.btRescan')}</Text>
                       </TouchableOpacity>
                     )}
@@ -600,22 +618,25 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
                       </Text>
                     </View>
                   ) : (
-                    btDevices.map((device, index) => (
-                      <TouchableOpacity
-                        key={`${device.address}-${index}`}
-                        style={styles.deviceItem}
-                        onPress={() => handleConnectBtDevice(device)}
-                        disabled={isConnecting}
-                      >
-                        <View style={styles.deviceInfo}>
-                          <Text style={styles.deviceName}>{device.name}</Text>
-                          <Text style={styles.deviceAddress}>
-                            {device.bonded ? t('pairing.btBonded') : t('pairing.btNewDevice')} • {device.address}
-                          </Text>
-                        </View>
-                        <Text style={styles.connectDeviceAction}>{t('pairing.connectBtn')}</Text>
-                      </TouchableOpacity>
-                    ))
+                    <FlatList
+                      data={btDevices}
+                      keyExtractor={(item, index) => `${item.address}-${index}`}
+                      renderItem={({ item }) => (
+                        <TouchableOpacity
+                          style={styles.deviceItem}
+                          onPress={() => handleConnectBtDevice(item)}
+                          disabled={isConnecting}
+                        >
+                          <View style={styles.deviceInfo}>
+                            <Text style={styles.deviceName}>{item.name}</Text>
+                            <Text style={styles.deviceAddress}>
+                              {item.bonded ? t('pairing.btBonded') : t('pairing.btNewDevice')} • {item.address}
+                            </Text>
+                          </View>
+                          <Text style={styles.connectDeviceAction}>{t('pairing.connectBtn')}</Text>
+                        </TouchableOpacity>
+                      )}
+                    />
                   )}
                 </View>
 
@@ -637,6 +658,7 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
           </ScrollView>
         </View>
       </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -724,6 +746,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Spacing.sm,
+  },
+  rescanBtn: {
+    minWidth: 48,
+    minHeight: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   scanActionText: {
     color: Colors.accent,

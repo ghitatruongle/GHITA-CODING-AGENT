@@ -55,7 +55,7 @@ const DEFAULT_PII_ENTITIES: PIIEntityType[] = [
     patterns: [
       /\b(?:sk|pk|api)[_-][A-Za-z0-9]{20,}\b/g,
       /\bghp_[A-Za-z0-9]{36}\b/g,
-      /\bglpat-[A-Za-z0-9\-]{20,}\b/g,
+      /\bglpat-[A-Za-z0-9-]{20,}\b/g,
     ],
     replacement: '[API_KEY_REDACTED]',
     severity: 'high',

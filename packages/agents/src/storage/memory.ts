@@ -27,14 +27,16 @@ export class InMemoryStorage<T = unknown> implements StorageBackend<T> {
 
   private evict(): void {
     if (this.store.size <= this.opts.maxSize) return;
-    // Remove oldest entries
+    // PERFORMANCE NOTE: This sorts the entire store on every write, which is O(n log n).
+    // For better performance, consider an LRU cache (e.g. doubly-linked list + Map) for O(1) eviction.
     const entries = [...this.store.entries()].sort(
       (a, b) => a[1].timestamp - b[1].timestamp,
     );
-    const toRemove = entries.length - this.opts.maxSize;
-    for (let i = 0; i < toRemove; i++) {
-      this.store.delete(entries[i]![0]);
-    }
+ const toRemove = entries.length - this.opts.maxSize;
+ for (let i = 0; i < toRemove; i++) {
+ const entry = entries[i];
+ if (entry) this.store.delete(entry[0]);
+ }
   }
 
   async get(key: string): Promise<T | undefined> {

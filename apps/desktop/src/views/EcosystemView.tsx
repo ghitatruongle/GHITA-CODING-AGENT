@@ -60,7 +60,7 @@ export function EcosystemView() {
           `[gRPC] Invoking remote procedure CallSubagent.`,
           `[gRPC] Stream channel heartbeats processed.`,
         ];
-        const randomLog = logTemplates[Math.floor(Math.random() * logTemplates.length)]!;
+        const randomLog = logTemplates[Math.floor(Math.random() * logTemplates.length)] ?? '';
         setGrpcLogs((prev) => [...prev.slice(-30), `[${new Date().toLocaleTimeString()}] ${randomLog}`]);
       }
 
@@ -73,8 +73,8 @@ export function EcosystemView() {
           '/api/v1/agent/tasks/task-9382/artifacts',
         ];
         const methods = ['GET', 'POST'];
-        const method = methods[Math.floor(Math.random() * methods.length)]!;
-        const path = paths[Math.floor(Math.random() * paths.length)]!;
+        const method = methods[Math.floor(Math.random() * methods.length)] ?? 'GET';
+        const path = paths[Math.floor(Math.random() * paths.length)] ?? '/';
         const status = Math.random() > 0.05 ? 200 : 404;
 
         setApRequests((prev) => [
@@ -112,14 +112,35 @@ export function EcosystemView() {
         height: '100%',
         padding: '20px',
         overflowY: 'auto',
-        background: 'rgba(15, 23, 42, 0.45)',
+        background: 'var(--bg-secondary)',
         backdropFilter: 'blur(16px)',
-        color: '#f8fafc',
+        color: 'var(--text-primary)',
         fontFamily: 'system-ui, sans-serif',
         gap: '20px',
       }}
       className="custom-scrollbar"
     >
+      {/* Demo Mode Banner */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+          padding: '6px 14px',
+          borderRadius: '8px',
+          background: 'rgba(251, 191, 36, 0.12)',
+          border: '1px solid rgba(251, 191, 36, 0.25)',
+          fontSize: '11px',
+          fontWeight: 600,
+          color: '#fbbf24',
+          letterSpacing: '0.3px',
+        }}
+      >
+        <span style={{ fontSize: '13px' }}>⚠</span>
+        {t('ecosystem.demoMode') || 'Demo Mode — Data is simulated'}
+      </div>
+
       <div>
         <h2
           style={{
@@ -134,7 +155,7 @@ export function EcosystemView() {
         >
           {t('ecosystem.title')}
         </h2>
-        <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>
+        <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)' }}>
           {t('ecosystem.subtitle')}
         </p>
       </div>
@@ -143,15 +164,15 @@ export function EcosystemView() {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
           gap: '20px',
         }}
       >
         {/* Module 1: gRPC sidecar Server */}
         <div
           style={{
-            background: 'rgba(30, 41, 59, 0.4)',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-subtle)',
             borderRadius: '12px',
             padding: '16px',
             display: 'flex',
@@ -161,7 +182,7 @@ export function EcosystemView() {
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: '#c7d2fe', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-accent)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               {t('ecosystem.grpcDaemon')}
             </span>
             <span
@@ -179,13 +200,13 @@ export function EcosystemView() {
             </span>
           </div>
 
-          <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8', lineHeight: '1.4' }}>
+          <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-muted)', lineHeight: '1.4' }}>
             {t('ecosystem.grpcDesc')}
           </p>
 
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-              <label style={{ fontSize: '10px', color: '#94a3b8' }}>{t('ecosystem.serverPort')}</label>
+              <label style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{t('ecosystem.serverPort')}</label>
               <input
                 type="number"
                 value={grpcPort}
@@ -195,9 +216,9 @@ export function EcosystemView() {
                   padding: '8px 10px',
                   fontSize: '12px',
                   borderRadius: '6px',
-                  background: 'rgba(15, 23, 42, 0.6)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  color: '#f8fafc',
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--text-primary)',
                   outline: 'none',
                   opacity: grpcActive ? 0.6 : 1,
                 }}
@@ -231,11 +252,11 @@ export function EcosystemView() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
-            <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 600 }}>{t('ecosystem.daemonConsole')}</span>
+            <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600 }}>{t('ecosystem.daemonConsole')}</span>
             <div
               style={{
-                background: '#090d16',
-                border: '1px solid rgba(255, 255, 255, 0.05)',
+                background: 'var(--bg-primary)',
+                border: '1px solid var(--border-subtle)',
                 borderRadius: '8px',
                 padding: '10px',
                 height: '140px',
@@ -259,8 +280,8 @@ export function EcosystemView() {
         {/* Module 2: Agent Protocol (AP) REST API */}
         <div
           style={{
-            background: 'rgba(30, 41, 59, 0.4)',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-subtle)',
             borderRadius: '12px',
             padding: '16px',
             display: 'flex',
@@ -270,7 +291,7 @@ export function EcosystemView() {
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: '#c7d2fe', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-accent)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               {t('ecosystem.agentProtocol')}
             </span>
             <span
@@ -288,13 +309,13 @@ export function EcosystemView() {
             </span>
           </div>
 
-          <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8', lineHeight: '1.4' }}>
+          <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-muted)', lineHeight: '1.4' }}>
             {t('ecosystem.agentProtocolDesc')}
           </p>
 
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-              <label style={{ fontSize: '10px', color: '#94a3b8' }}>{t('ecosystem.apiPort')}</label>
+              <label style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{t('ecosystem.apiPort')}</label>
               <input
                 type="number"
                 value={apPort}
@@ -304,9 +325,9 @@ export function EcosystemView() {
                   padding: '8px 10px',
                   fontSize: '12px',
                   borderRadius: '6px',
-                  background: 'rgba(15, 23, 42, 0.6)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  color: '#f8fafc',
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--text-primary)',
                   outline: 'none',
                   opacity: apActive ? 0.6 : 1,
                 }}
@@ -334,11 +355,11 @@ export function EcosystemView() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
-            <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 600 }}>{t('ecosystem.requestsMonitor')}</span>
+            <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600 }}>{t('ecosystem.requestsMonitor')}</span>
             <div
               style={{
-                background: '#090d16',
-                border: '1px solid rgba(255, 255, 255, 0.05)',
+                background: 'var(--bg-primary)',
+                border: '1px solid var(--border-subtle)',
                 borderRadius: '8px',
                 padding: '10px',
                 height: '140px',
@@ -350,7 +371,7 @@ export function EcosystemView() {
               className="custom-scrollbar"
             >
               {apRequests.length === 0 ? (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '11px', color: '#64748b' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '11px', color: 'var(--text-muted)' }}>
                   {t('ecosystem.noRequestLogs')}
                 </div>
               ) : (
@@ -375,13 +396,13 @@ export function EcosystemView() {
                       }}>
                         {req.method}
                       </span>
-                      <span style={{ color: '#cbd5e1' }}>{req.path}</span>
+                      <span style={{ color: 'var(--text-secondary)' }}>{req.path}</span>
                     </div>
                     <div style={{ display: 'flex', gap: '10px' }}>
                       <span style={{ color: req.status === 200 || req.status === 201 ? '#34d399' : '#f87171' }}>
                         {req.status}
                       </span>
-                      <span style={{ color: '#64748b' }}>{req.time}</span>
+                      <span style={{ color: 'var(--text-muted)' }}>{req.time}</span>
                     </div>
                   </div>
                 ))
@@ -405,7 +426,7 @@ export function EcosystemView() {
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '13px', fontWeight: 700, color: '#c7d2fe', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-accent)', display: 'flex', alignItems: 'center', gap: '8px' }}>
             {t('ecosystem.dynamicRouter')}
           </span>
           <span style={{ fontSize: '11px', color: '#fbbf24', fontWeight: 600 }}>
@@ -413,7 +434,7 @@ export function EcosystemView() {
           </span>
         </div>
 
-        <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8', lineHeight: '1.4' }}>
+        <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-muted)', lineHeight: '1.4' }}>
           {t('ecosystem.dynamicRouterDesc')}
         </p>
 
@@ -423,14 +444,14 @@ export function EcosystemView() {
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
             gap: '14px',
-            background: 'rgba(15, 23, 42, 0.3)',
+            background: 'var(--bg-surface)',
             padding: '12px',
             borderRadius: '8px',
-            border: '1px solid rgba(255, 255, 255, 0.03)',
+            border: '1px solid var(--border-subtle)',
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <label style={{ fontSize: '10px', color: '#94a3b8' }}>{t('ecosystem.maxCostPerTask')}</label>
+            <label style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{t('ecosystem.maxCostPerTask')}</label>
             <input
               type="number"
               step="0.001"
@@ -442,14 +463,14 @@ export function EcosystemView() {
                 borderRadius: '6px',
                 background: 'rgba(15, 23, 42, 0.6)',
                 border: '1px solid rgba(255, 255, 255, 0.08)',
-                color: '#cbd5e1',
+                color: 'var(--text-secondary)',
                 outline: 'none',
               }}
             />
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <label style={{ fontSize: '10px', color: '#94a3b8' }}>{t('ecosystem.complexityRouting')}</label>
+            <label style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{t('ecosystem.complexityRouting')}</label>
             <select
               value={complexityBoundary}
               onChange={(e) => setComplexityBoundary(e.target.value)}
@@ -459,7 +480,7 @@ export function EcosystemView() {
                 borderRadius: '6px',
                 background: 'rgba(15, 23, 42, 0.6)',
                 border: '1px solid rgba(255, 255, 255, 0.08)',
-                color: '#cbd5e1',
+                color: 'var(--text-secondary)',
                 outline: 'none',
               }}
             >
@@ -481,7 +502,7 @@ export function EcosystemView() {
             }}
           >
             <thead>
-              <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)', color: '#94a3b8' }}>
+              <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)', color: 'var(--text-muted)' }}>
                 <th style={{ padding: '8px' }}>{t('ecosystem.provider')}</th>
                 <th style={{ padding: '8px' }}>{t('ecosystem.modelName')}</th>
                 <th style={{ padding: '8px' }}>{t('ecosystem.mappedComplexity')}</th>
@@ -502,7 +523,7 @@ export function EcosystemView() {
                   onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(99, 102, 241, 0.05)'}
                   onMouseLeave={(e) => e.currentTarget.style.background = index % 2 === 0 ? 'rgba(255, 255, 255, 0.01)' : 'transparent'}
                 >
-                  <td style={{ padding: '10px 8px', fontWeight: 600, color: '#c7d2fe', textTransform: 'uppercase' }}>
+                  <td style={{ padding: '10px 8px', fontWeight: 600, color: 'var(--text-accent)', textTransform: 'uppercase' }}>
                     {route.provider}
                   </td>
                   <td style={{ padding: '10px 8px', fontFamily: 'monospace' }}>{route.model}</td>
@@ -533,7 +554,7 @@ export function EcosystemView() {
                   <td style={{ padding: '10px 8px', textAlign: 'right', fontFamily: 'monospace', color: '#fbbf24' }}>
                     ${route.costPer1kToken.toFixed(6)}
                   </td>
-                  <td style={{ padding: '10px 8px', textAlign: 'right', color: '#cbd5e1' }}>
+                  <td style={{ padding: '10px 8px', textAlign: 'right', color: 'var(--text-secondary)' }}>
                     {route.latencyMs} ms
                   </td>
                   <td style={{ padding: '10px 8px', textAlign: 'center' }}>

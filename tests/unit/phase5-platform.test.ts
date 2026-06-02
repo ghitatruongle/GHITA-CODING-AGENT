@@ -330,7 +330,7 @@ describe('Phase 5 - Advanced & Platform Features', () => {
       const orch = new Orchestrator({
         providers: [{ type: 'openai', apiKey: 'test-key' }],
       });
-      const gateway = new AIGatewayServer(orch);
+      const gateway = new AIGatewayServer(orch, { apiKey: 'test-admin-key' });
       const controller = new DashboardController(gateway);
 
       const stats = controller.getStats();

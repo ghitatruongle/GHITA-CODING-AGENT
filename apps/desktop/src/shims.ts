@@ -39,13 +39,32 @@ export const promises = {
 };
 
 // path exports
-export const dirname = (p: string) => p;
-export const resolve = (...args: string[]) => args.join('/');
-export const join = (...args: string[]) => args.join('/');
-export const extname = () => '';
-export const basename = (p: string) => p;
+export const dirname = (p: string) => {
+  const sep = p.includes('\\') ? '\\' : '/';
+  const parts = p.split(sep).filter(Boolean);
+  if (parts.length <= 1) return sep;
+  parts.pop();
+  return parts.join(sep);
+};
+export const resolve = (...args: string[]) => {
+  const joined = args.filter(Boolean).join('/');
+  return joined.replace(/\/+/g, '/');
+};
+export const join = (...args: string[]) => {
+  return args.filter(Boolean).join('/').replace(/\/+/g, '/');
+};
+export const extname = (p: string) => {
+  const b = basename(p) || '';
+  const dot = b.lastIndexOf('.');
+  return dot > 0 ? b.slice(dot) : '';
+};
+export const basename = (p: string) => {
+  const sep = p.includes('\\') ? '\\' : '/';
+  const parts = p.split(sep).filter(Boolean);
+  return parts.length > 0 ? parts[parts.length - 1] : '';
+};
 export const relative = () => '';
-export const isAbsolute = () => false;
+export const isAbsolute = (p: string) => p.startsWith('/') || /^[a-zA-Z]:[\\/]/.test(p);
 
 // child_process exports
 export const spawn = () => ({
@@ -53,14 +72,14 @@ export const spawn = () => ({
   stderr: { on: () => {} },
   on: () => {},
 });
-export const exec = (_cmd: string, cb: any) => {
+export const exec = (_cmd: string, cb: (err: null, stdout: string, stderr: string) => void) => {
   if (cb) cb(null, '', '');
 };
 export const execSync = () => '';
 
 // util exports
-export const promisify = (fn: any) => (...args: any[]) => Promise.resolve(fn(...args));
-export const inspect = (val: any) => String(val);
+export const promisify = (fn: (...args: unknown[]) => unknown) => (...args: unknown[]) => Promise.resolve(fn(...args));
+export const inspect = (val: unknown) => String(val);
 
 // crypto exports
 export const createHash = () => ({
@@ -68,7 +87,13 @@ export const createHash = () => ({
     digest: () => '',
   }),
 });
-export const randomUUID = () => '';
+export const randomUUID = () =>
+  typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID()
+    : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+      });
 
 // url exports
 export const fileURLToPath = (url: string) => url;

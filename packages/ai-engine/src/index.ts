@@ -328,5 +328,6 @@ export type { GatewayConfig } from './platform/gateway.js';
 export { OCRProcessor, VideoContentAnalyzer } from './platform/ocr-video.js';
 export { DashboardController } from './platform/dashboard-controller.js';
 export type { DashboardStats } from './platform/dashboard-controller.js';
+/** @deprecated Unused export. Reserved for future deployment config generation. */
 export { DeployConfigGenerator } from './platform/prometheus.js';
 

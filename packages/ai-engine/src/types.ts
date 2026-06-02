@@ -9,7 +9,7 @@ export interface PermissionContext {
   filePath?: string;
   command?: string;
   stepIndex?: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // --- Provider Interface ---
@@ -38,16 +38,16 @@ export interface AIProvider {
   embedMany(texts: string[], options?: { model?: string }): Promise<EmbeddingManyResponse>;
 
   /** Sinh ảnh từ văn bản */
-  generateImage?(prompt: string, options?: any): Promise<{ url: string; b64?: string }>;
+  generateImage?(prompt: string, options?: Record<string, unknown>): Promise<{ url: string; b64?: string }>;
 
   /** Chuyển văn bản thành giọng nói */
-  generateSpeech?(text: string, options?: any): Promise<{ audio: Buffer; contentType: string }>;
+  generateSpeech?(text: string, options?: Record<string, unknown>): Promise<{ audio: Buffer; contentType: string }>;
 
   /** Sinh video từ văn bản */
-  generateVideo?(prompt: string, options?: any): Promise<{ url: string }>;
+  generateVideo?(prompt: string, options?: Record<string, unknown>): Promise<{ url: string }>;
 
   /** Chuyển giọng nói/âm thanh thành văn bản */
-  transcribe?(audio: Buffer, options?: any): Promise<{ text: string }>;
+  transcribe?(audio: Buffer, options?: Record<string, unknown>): Promise<{ text: string }>;
 }
 
 // --- Chat Types ---

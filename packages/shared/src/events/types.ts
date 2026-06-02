@@ -14,7 +14,7 @@ export type AgentEventType =
 export interface AgentEvent {
   id: string;
   type: AgentEventType;
-  payload: any;
+  payload: Record<string, unknown>;
   timestamp: number;
   message?: string;
 }

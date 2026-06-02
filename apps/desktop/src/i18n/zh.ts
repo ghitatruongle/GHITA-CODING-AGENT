@@ -33,7 +33,7 @@ export const zh: TranslationKeys = {
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v0.0.2',
+    version: 'v0.0.3-beta1',
     deviceReconnected: '已重新连接设备: {{name}}',
     devicePaired: '成功配对设备: {{name}}',
     commandReceived: '从设备收到命令: {{action}}',
@@ -270,6 +270,7 @@ export const zh: TranslationKeys = {
     stopped: '已停止',
     compliant: '标准合规',
     disabledLabel: '已禁用',
+    demoMode: '演示模式 — 数据为模拟',
   },
   chat: {
     welcomeMessage: '您好！我是 GHITA Assistant。作为您的 AI 开发助手，我可以帮助您编写与重构代码、直接运行系统命令、管理工作区文件并自动化执行复杂流水线。让我们现在开始吧！',
@@ -323,6 +324,12 @@ export const zh: TranslationKeys = {
     runSuccess: '成功',
     runError: '错误',
     messagesCount: '已发送 {{count}} 条消息',
+    compactSuccess: '已压缩上下文：仅保留本会话最近的消息。',
+    noWorkspace: '尚未打开工作目录。请先在资源管理器中打开项目/文件夹，然后再运行 Agent、Review、Feature 或 Ralph。',
+    permissionCustom: '自定义：每条命令和文件编辑都需确认',
+    permissionAuto: '自动：自由模式，仅询问危险命令（安装、下载...）',
+    liveAgentEvents: '智能体实时事件',
+    clear: '清除',
   },
   terminal: {
     title: 'GHITA CODING AGENT 系统终端',

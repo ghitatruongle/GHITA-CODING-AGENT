@@ -5,6 +5,7 @@
 // =============================================================================
 
 import type { SandboxLogEntry, ContainerStats } from './types.js';
+import type Database from 'better-sqlite3';
 
 /**
  * Cấu hình cho SQLite persistence
@@ -23,8 +24,8 @@ export interface SandboxLoggerConfig {
 export class SandboxLogger {
   private logs: SandboxLogEntry[] = [];
   private maxLogs: number;
-  private db: any = null; // better-sqlite3 Database instance
-  private insertStmt: any = null;
+  private db: Database.Database | null = null;
+  private insertStmt: Database.Statement | null = null;
   private dbPath: string | null = null;
 
   constructor(config: SandboxLoggerConfig = {}) {
@@ -77,10 +78,9 @@ export class SandboxLogger {
 
       // Tự động cleanup logs cũ hơn 30 ngày
       this.cleanupOldLogs(30);
-    } catch (err: any) {
-      // Nếu better-sqlite3 chưa install, fallback về in-memory
+  } catch (err: unknown) {
       console.warn(
-        `[DSO] SQLite unavailable (${err.message}), falling back to in-memory logging`
+        `[DSO] SQLite unavailable (${(err as Error).message}), falling back to in-memory logging`
       );
       this.db = null;
       this.insertStmt = null;
@@ -108,15 +108,15 @@ export class SandboxLogger {
           metadata: entry.metadata ? JSON.stringify(entry.metadata) : null,
           timestamp: entry.timestamp.toISOString(),
         });
-      } catch (err: any) {
-        console.warn(`[DSO] SQLite log failed: ${err.message}`);
+  } catch (err: unknown) {
+      console.warn(`[DSO] SQLite log failed: ${(err as Error).message}`);
       }
     }
 
     // 3. Console log cho debug
     const prefix = `[DSO][${entry.event.toUpperCase()}]`;
     const timestamp = entry.timestamp.toISOString();
-    console.log(`${prefix} ${timestamp} ${entry.containerName}: ${entry.message}`);
+    console.info(`${prefix} ${timestamp} ${entry.containerName}: ${entry.message}`);
   }
 
   // =========================================================================
@@ -142,7 +142,7 @@ export class SandboxLogger {
     if (!this.db) return this.getLogs();
 
     let sql = 'SELECT * FROM sandbox_logs WHERE 1=1';
-    const params: any = {};
+    const params: Record<string, string | number> = {};
 
     if (options.containerId) {
       sql += ' AND container_id = @containerId';
@@ -165,7 +165,7 @@ export class SandboxLogger {
     }
 
     const rows = this.db.prepare(sql).all(params);
-    return rows.map(this.rowToLogEntry);
+	return rows.map(this.rowToLogEntry) as SandboxLogEntry[];
   }
 
   /**
@@ -194,8 +194,8 @@ export class SandboxLogger {
    */
   getDbLogCount(): number {
     if (!this.db) return 0;
-    const result = this.db.prepare('SELECT COUNT(*) as count FROM sandbox_logs').get();
-    return result?.count ?? 0;
+	const result = this.db.prepare('SELECT COUNT(*) as count FROM sandbox_logs').get() as Record<string, unknown>;
+	return (result?.count as number) ?? 0;
   }
 
   // =========================================================================
@@ -338,14 +338,15 @@ export class SandboxLogger {
   // Private Helpers
   // =========================================================================
 
-  private rowToLogEntry(row: any): SandboxLogEntry {
-    return {
-      containerId: row.container_id,
-      containerName: row.container_name,
-      event: row.event,
-      message: row.message,
-      metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
-      timestamp: new Date(row.timestamp),
-    };
+	private rowToLogEntry(row: unknown): SandboxLogEntry {
+		const r = row as Record<string, unknown>;
+		return {
+			containerId: r.container_id as string,
+			containerName: r.container_name as string,
+			event: r.event as SandboxLogEntry['event'],
+			message: r.message as string,
+			metadata: r.metadata ? JSON.parse(r.metadata as string) : undefined,
+			timestamp: new Date(r.timestamp as string),
+		};
   }
 }

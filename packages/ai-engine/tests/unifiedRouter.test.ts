@@ -9,6 +9,7 @@ import crypto from 'crypto';
 import { UnifiedRouter } from '../src/router/unifiedRouter.js';
 import { ProviderRegistry } from '../src/registry.js';
 import { CryptoHelper } from '../src/utils/crypto.js';
+import { SecureKeyLoader } from '../src/utils/secure-key-loader.js';
 import type { AIProvider, ChatResponse } from '../src/types.js';
 
 // Mock Provider for testing
@@ -89,18 +90,19 @@ describe('UnifiedRouter Gateway', () => {
   it('should parse simple models.yaml configuration correctly', () => {
     const yamlContent = `
 providers:
-  - type: openai
-    apiKey: "sk-proj-test"
-    baseUrl: "https://api.openai.com/v1"
-    defaultModel: "gpt-4o"
-  - type: anthropic
-    apiKey: "sk-ant-test"
-    defaultModel: "claude-3-5-sonnet"
+- type: openai
+  apiKey: "test-proj-key"
+  baseUrl: "https://api.openai.com/v1"
+  defaultModel: "gpt-4o"
+- type: anthropic
+  apiKey: "test-ant-key"
+  defaultModel: "claude-3-5-sonnet"
 `;
     fs.writeFileSync(mockYamlPath, yamlContent, 'utf-8');
 
     const router = new UnifiedRouter({
       modelsConfigPath: mockYamlPath,
+      encryptionKey: secretKey,
     });
 
     const openai = router.resolveProvider({ model: 'openai/gpt-4o' });
@@ -109,7 +111,7 @@ providers:
   });
 
   it('should decrypt AES-encrypted API keys using CryptoHelper', () => {
-    const rawApiKey = 'sk-super-secret-api-key';
+    const rawApiKey = 'test-super-secret-api-key';
     const encryptedKey = CryptoHelper.encrypt(rawApiKey, secretKey);
 
     const yamlContent = `
@@ -133,15 +135,16 @@ providers:
   });
 
   it('should fallback gracefully to environment variables if models.yaml is missing', () => {
-    process.env.OPENAI_API_KEY = 'sk-env-openai';
+    process.env.OPENAI_API_KEY = 'test-env-openai';
 
     const router = new UnifiedRouter({
       modelsConfigPath: path.resolve(tempDir, 'missing.yaml'),
+      encryptionKey: secretKey,
     });
 
     const openai = router.resolveProvider({ model: 'openai/gpt-4o' });
     expect(openai).toBeDefined();
-    expect((openai as any).config.apiKey).toBe('sk-env-openai');
+    expect((openai as any).config.apiKey).toBe('test-env-openai');
   });
 
   it('should record response latency metrics correctly', async () => {
@@ -153,6 +156,7 @@ providers:
       registry,
       defaultProvider: 'openai',
       modelsConfigPath: path.resolve(tempDir, 'missing.yaml'),
+      encryptionKey: secretKey,
     });
 
     const response = await router.chat([{ role: 'user', content: 'hello' }]);
@@ -183,6 +187,7 @@ providers:
       registry,
       defaultProvider: 'openai',
       modelsConfigPath: path.resolve(tempDir, 'missing.yaml'),
+      encryptionKey: secretKey,
     });
 
     // Plan role should route to anthropic
@@ -206,6 +211,7 @@ providers:
       registry,
       defaultProvider: 'openai',
       modelsConfigPath: path.resolve(tempDir, 'missing.yaml'),
+      encryptionKey: secretKey,
     });
 
     const chunks: any[] = [];
@@ -228,6 +234,7 @@ providers:
       registry,
       defaultProvider: 'openai',
       modelsConfigPath: path.resolve(tempDir, 'missing.yaml'),
+      encryptionKey: secretKey,
     });
 
     const chunks: any[] = [];
@@ -267,11 +274,12 @@ providers:
       registry.register(new MockGoogle({ apiKey: 'goog' }));
       registry.register(new MockDeepSeek({ apiKey: 'ds' }));
 
-      router = new UnifiedRouter({
-        registry,
-        defaultProvider: 'openai',
-        modelsConfigPath: path.resolve(tempDir, 'missing.yaml'),
-      });
+    router = new UnifiedRouter({
+      registry,
+      defaultProvider: 'openai',
+      modelsConfigPath: path.resolve(tempDir, 'missing.yaml'),
+      encryptionKey: secretKey,
+    });
     });
 
     it('should route gpt model to openai', () => {
@@ -317,6 +325,7 @@ providers:
       registry,
       defaultProvider: 'deepseek',
       modelsConfigPath: path.resolve(tempDir, 'missing.yaml'),
+      encryptionKey: secretKey,
     });
 
     await router.chat([
@@ -341,6 +350,7 @@ providers:
       registry,
       defaultProvider: 'openai',
       modelsConfigPath: path.resolve(tempDir, 'missing.yaml'),
+      encryptionKey: secretKey,
     });
 
     for (let i = 0; i < 105; i++) {
@@ -359,6 +369,8 @@ providers:
     delete process.env.OPENAI_API_KEY;
     delete process.env.ANTHROPIC_API_KEY;
     delete process.env.GEMINI_API_KEY;
+    // Clear SecureKeyLoader cache so previous test loads don't leak
+    SecureKeyLoader.clearCache();
 
     const registry = new ProviderRegistry();
 
@@ -373,6 +385,7 @@ providers:
       defaultProvider: 'openai', // not registered
       fallbackOrder: ['anthropic', 'google'], // anthropic missing, google present
       modelsConfigPath: path.resolve(tempDir, 'missing.yaml'),
+      encryptionKey: secretKey,
     });
 
     const prov = router.resolveProvider();
@@ -395,6 +408,7 @@ providers:
       defaultProvider: 'openai',
       fallbackOrder: [],
       modelsConfigPath: dummyYaml,
+      encryptionKey: secretKey,
     });
 
     // Clear the registry that was populated by loadConfig
@@ -414,6 +428,7 @@ providers:
       registry,
       defaultProvider: 'openai',
       modelsConfigPath: path.resolve(tempDir, 'missing.yaml'),
+      encryptionKey: secretKey,
     });
 
     const result = await router.embed('test text');
@@ -428,6 +443,7 @@ providers:
       registry,
       defaultProvider: 'openai',
       modelsConfigPath: path.resolve(tempDir, 'missing.yaml'),
+      encryptionKey: secretKey,
     });
 
     const result = await router.embedMany(['text1', 'text2']);
@@ -440,10 +456,11 @@ providers:
   // ==========================================
   it('should fallback to env when YAML file is empty', () => {
     fs.writeFileSync(mockYamlPath, '', 'utf-8');
-    process.env.OPENAI_API_KEY = 'sk-fallback';
+    process.env.OPENAI_API_KEY = 'test-fallback';
 
     const router = new UnifiedRouter({
       modelsConfigPath: mockYamlPath,
+      encryptionKey: secretKey,
     });
 
     const prov = router.resolveProvider({ model: 'gpt-4o' });
@@ -461,6 +478,7 @@ providers:
       registry,
       defaultProvider: 'openai',
       modelsConfigPath: path.resolve(tempDir, 'missing.yaml'),
+      encryptionKey: secretKey,
     });
 
     const ready = await router.isReady();
@@ -475,6 +493,7 @@ providers:
       registry,
       defaultProvider: 'openai',
       modelsConfigPath: path.resolve(tempDir, 'missing.yaml'),
+      encryptionKey: secretKey,
     });
 
     const ok = await router.test();
@@ -492,6 +511,7 @@ providers:
       registry,
       defaultProvider: 'openai',
       modelsConfigPath: path.resolve(tempDir, 'missing.yaml'),
+      encryptionKey: secretKey,
     });
 
     expect(router.defaultModel).toBe('gpt-4o');
@@ -507,7 +527,7 @@ describe('CryptoHelper', () => {
   const key = 'test-secret-key-32-chars-long-abc';
 
   it('should round-trip encrypt and decrypt correctly', () => {
-    const original = 'sk-my-super-secret-api-key-12345';
+    const original = 'test-my-super-secret-api-key-12345';
     const encrypted = CryptoHelper.encrypt(original, key);
     const decrypted = CryptoHelper.decrypt(encrypted, key);
     expect(decrypted).toBe(original);

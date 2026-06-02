@@ -1,0 +1,8 @@
+schema_version: 1
+module_path: build_scripts
+title: Build & Asset Automation Scripts
+scope:
+    - scripts/
+source_files: []
+depends_on: []
+related_to: []

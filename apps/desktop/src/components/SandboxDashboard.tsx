@@ -165,8 +165,8 @@ export function SandboxDashboard() {
       if (logData.status === 'fulfilled') setRecentLogs(logData.value);
 
       setError(null);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch sandbox data');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch sandbox data');
     } finally {
       setLoading(false);
     }

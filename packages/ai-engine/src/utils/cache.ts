@@ -5,8 +5,8 @@
 import * as crypto from 'crypto';
 
 export interface BaseCache {
-  get(key: string): Promise<any>;
-  set(key: string, value: any, ttlSeconds?: number): Promise<void>;
+  get(key: string): Promise<unknown>;
+  set(key: string, value: unknown, ttlSeconds?: number): Promise<void>;
   delete(key: string): Promise<void>;
   clear(): Promise<void>;
 }
@@ -15,9 +15,9 @@ export interface BaseCache {
 // 2.1 In-Memory Cache
 // ------------------------------------------------------------------------------
 export class InMemoryCache implements BaseCache {
-  private cache = new Map<string, { value: any; expiresAt: number | null }>();
+  private cache = new Map<string, { value: unknown; expiresAt: number | null }>();
 
-  async get(key: string): Promise<any> {
+  async get(key: string): Promise<unknown> {
     const entry = this.cache.get(key);
     if (!entry) return null;
 
@@ -29,7 +29,7 @@ export class InMemoryCache implements BaseCache {
     return entry.value;
   }
 
-  async set(key: string, value: any, ttlSeconds?: number): Promise<void> {
+  async set(key: string, value: unknown, ttlSeconds?: number): Promise<void> {
     const expiresAt = ttlSeconds ? Date.now() + ttlSeconds * 1000 : null;
     this.cache.set(key, { value, expiresAt });
   }
@@ -47,11 +47,11 @@ export class InMemoryCache implements BaseCache {
 // 2.2 Redis Cache (with dynamic import and graceful fallback)
 // ------------------------------------------------------------------------------
 export class RedisCache implements BaseCache {
-  private client: any = null;
+  private client: { get: (key: string) => Promise<string | null>; set: (...args: unknown[]) => Promise<unknown>; del: (key: string) => Promise<unknown>; flushdb: () => Promise<unknown>; on: (event: string, handler: (...args: unknown[]) => void) => void } | null = null;
   private fallbackCache: InMemoryCache | null = null;
   private isConnected = false;
 
-  constructor(private redisOptions?: { host?: string; port?: number; password?: string; [key: string]: any }) {
+  constructor(private redisOptions?: { host?: string; port?: number; password?: string; [key: string]: unknown }) {
     this.init();
   }
 
@@ -65,7 +65,8 @@ export class RedisCache implements BaseCache {
         maxRetriesPerRequest: 1,
       });
 
-      this.client.on('error', (_err: any) => {
+if (this.client) {
+      this.client.on('error', (_err: unknown) => {
         // Suppress errors and activate fallback
         this.isConnected = false;
         if (!this.fallbackCache) {
@@ -76,13 +77,14 @@ export class RedisCache implements BaseCache {
       this.client.on('connect', () => {
         this.isConnected = true;
       });
+    }
     } catch (err) {
       // ioredis is not installed or import failed
       this.fallbackCache = new InMemoryCache();
     }
   }
 
-  async get(key: string): Promise<any> {
+  async get(key: string): Promise<unknown> {
     if (!this.isConnected || !this.client) {
       if (!this.fallbackCache) this.fallbackCache = new InMemoryCache();
       return this.fallbackCache.get(key);
@@ -98,7 +100,7 @@ export class RedisCache implements BaseCache {
     }
   }
 
-  async set(key: string, value: any, ttlSeconds?: number): Promise<void> {
+  async set(key: string, value: unknown, ttlSeconds?: number): Promise<void> {
     if (!this.isConnected || !this.client) {
       if (!this.fallbackCache) this.fallbackCache = new InMemoryCache();
       await this.fallbackCache.set(key, value, ttlSeconds);
@@ -205,6 +207,7 @@ export class SemanticCache implements BaseCache {
       this.isInitialized = true;
     } catch (err) {
       // Qdrant server offline / connection refused
+      console.warn('[SemanticCache] Failed to initialize:', (err as Error).message);
       this.isInitialized = false;
     }
   }
@@ -221,7 +224,7 @@ export class SemanticCache implements BaseCache {
     ].join('-');
   }
 
-  async get(key: string): Promise<any> {
+  async get(key: string): Promise<unknown> {
     if (!this.isInitialized) {
       return this.fallbackCache ? this.fallbackCache.get(key) : null;
     }
@@ -244,7 +247,7 @@ export class SemanticCache implements BaseCache {
 
       if (!searchRes.ok) throw new Error('Qdrant search failed');
 
-      const data = await searchRes.json() as any;
+      const data = await searchRes.json() as { result?: Array<{ score: number; payload?: { expiresAt: number | null; value: unknown } }> };
       const hit = data.result?.[0];
 
       if (hit && hit.score >= this.threshold) {
@@ -268,7 +271,7 @@ export class SemanticCache implements BaseCache {
     return null;
   }
 
-  async set(key: string, value: any, ttlSeconds?: number): Promise<void> {
+  async set(key: string, value: unknown, ttlSeconds?: number): Promise<void> {
     // Sync to fallback cache first
     if (this.fallbackCache) {
       await this.fallbackCache.set(key, value, ttlSeconds);
@@ -302,10 +305,10 @@ export class SemanticCache implements BaseCache {
         }),
       });
 
-      if (!upsertRes.ok) throw new Error('Qdrant upsert failed');
-    } catch (err) {
-      // Ignore Qdrant errors
-    }
+  if (!upsertRes.ok) throw new Error('Qdrant upsert failed');
+  } catch (err) {
+    console.warn('[SemanticCache] Qdrant upsert error:', err instanceof Error ? err.message : String(err));
+  }
   }
 
   async delete(key: string): Promise<void> {
@@ -317,16 +320,16 @@ export class SemanticCache implements BaseCache {
 
     try {
       const uuid = this.getDeterministicUuid(key);
-      await fetch(`${this.qdrantUrl}/collections/${this.collectionName}/points/delete`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          points: [uuid],
-        }),
-      });
-    } catch (err) {
-      // Ignore Qdrant errors
-    }
+  await fetch(`${this.qdrantUrl}/collections/${this.collectionName}/points/delete`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+  points: [uuid],
+  }),
+  });
+  } catch (err) {
+    console.warn('[SemanticCache] Qdrant delete error:', err instanceof Error ? err.message : String(err));
+  }
   }
 
   async clear(): Promise<void> {
@@ -342,9 +345,9 @@ export class SemanticCache implements BaseCache {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
       });
-      await this.ensureCollection();
-    } catch (err) {
-      // Ignore Qdrant errors
-    }
+  await this.ensureCollection();
+  } catch (err) {
+    console.warn('[SemanticCache] Qdrant clear error:', err instanceof Error ? err.message : String(err));
+  }
   }
 }

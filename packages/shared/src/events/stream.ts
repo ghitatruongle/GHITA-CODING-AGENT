@@ -2,7 +2,7 @@
 // GHITA CODING AGENT - Event Stream Manager
 // ==============================================================================
 
-import { AgentEvent, AgentEventType } from './types.js';
+import type { AgentEvent, AgentEventType } from './types.js';
 import { logger } from '../logger.js';
 
 export type EventSubscriber = (event: AgentEvent) => void | Promise<void>;
@@ -19,7 +19,7 @@ export class EventStream {
   /**
    * Publish a new event to the stream
    */
-  public emit(type: AgentEventType, payload: any, message?: string): AgentEvent {
+  public async emit(type: AgentEventType, payload: Record<string, unknown>, message?: string): Promise<AgentEvent> {
     const event: AgentEvent = {
       id: `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       type,
@@ -34,14 +34,14 @@ export class EventStream {
       this.eventHistory.shift();
     }
 
-    // Notify all subscribers
-    this.subscribers.forEach((subscriber) => {
+    // Notify all subscribers (await async callbacks sequentially)
+    for (const subscriber of this.subscribers) {
       try {
-        subscriber(event);
-      } catch (err: any) {
-        logger.error(`[EventStream] Subscriber callback error: ${err.message}`, err);
+        await subscriber(event);
+ } catch (err: unknown) {
+ logger.error(`[EventStream] Subscriber callback error: ${err instanceof Error ? err.message : String(err)}`, err);
       }
-    });
+    }
 
     return event;
   }

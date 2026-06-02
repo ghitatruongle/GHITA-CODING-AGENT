@@ -17,6 +17,7 @@ interface QuickActionsProps {
 
 const ACTIONS: QuickAction[] = [
   { id: 'screenshot', label: 'Screenshot', icon: '📸', type: 'screenshot' },
+  { id: 'skills', label: 'Skills', icon: '🧩', type: 'skills' },
   { id: 'cancel', label: 'Cancel', icon: '❌', type: 'cancel' },
   { id: 'approve', label: 'Approve', icon: '✅', type: 'approve' },
   { id: 'reject', label: 'Reject', icon: '🚫', type: 'reject' },
@@ -31,6 +32,7 @@ export function QuickActions({ disabled = false, onAction }: QuickActionsProps):
       case 'cancel': return t('remote.actionCancel');
       case 'approve': return t('remote.actionApprove');
       case 'reject': return t('remote.actionReject');
+      case 'skills': return t('remote.actionSkills');
       default: return id;
     }
   };
@@ -65,7 +67,7 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    minWidth: '45%',
+    minWidth: '42%',
     backgroundColor: Colors.primaryMuted,
     borderWidth: 1,
     borderColor: Colors.borderPrimary,
@@ -75,6 +77,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.xs,
+    minHeight: 64,
   },
   actionButtonDisabled: {
     opacity: 0.4,

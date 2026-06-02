@@ -15,7 +15,18 @@ type TFunction = (key: string, params?: Record<string, string | number>) => stri
 const translations: Record<string, Translations> = { vi, en, zh };
 
 const I18nContext = createContext<{ t: TFunction; lang: string }>({
-  t: (key) => key,
+  // BUG FIX #10: the previous default swallowed params entirely, so
+  // `t('codeView.fileSaved', { name: 'a.ts' })` rendered as the raw key
+  // `codeView.fileSaved` instead of interpolating the name. Substitute
+  // `{name}` placeholders from the params object so the fallback output
+  // is at least as informative as the real one.
+  t: (key, params) => {
+    if (!params) return key;
+    return key.replace(/\{\{(\w+)\}\}/g, (match, name: string) => {
+      const value = params[name];
+      return value === undefined || value === null ? match : String(value);
+    });
+  },
   lang: 'vi',
 });
 
@@ -25,13 +36,17 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const value = useMemo(() => {
     const dict = translations[language] || translations.vi;
 
-    const t: TFunction = (key, params) => {
-      const parts = key.split('.');
-      let result: any = dict;
-      for (const part of parts) {
-        result = result?.[part];
+  const t: TFunction = (key, params) => {
+    const parts = key.split('.');
+    let result: unknown = dict as unknown;
+    for (const part of parts) {
+      if (result != null && typeof result === 'object') {
+        result = (result as Record<string, unknown>)[part];
+      } else {
+        return key;
       }
-      if (typeof result !== 'string') return key;
+    }
+    if (typeof result !== 'string') return key;
 
       if (params) {
         return Object.entries(params).reduce(

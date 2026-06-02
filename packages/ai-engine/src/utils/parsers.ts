@@ -2,7 +2,7 @@
 // GHITA CODING AGENT - Output Parsers (STT 2.11)
 // ==============================================================================
 
-import { z } from 'zod';
+import type { z } from 'zod';
 import { AIValidationError } from '../errors/index.js';
 import { extractJsonFromText } from './structured.js';
 
@@ -13,8 +13,8 @@ export interface BaseOutputParser<T> {
 /**
  * Parses conversational text, extracts JSON block, and parses into JS object.
  */
-export class JSONOutputParser implements BaseOutputParser<any> {
-  parse(text: string): any {
+export class JSONOutputParser implements BaseOutputParser<unknown> {
+  parse(text: string): unknown {
     const jsonStr = extractJsonFromText(text);
     if (!jsonStr) {
       throw new Error('No JSON block found in response');
@@ -80,7 +80,7 @@ export class StructuredOutputParser<T> implements BaseOutputParser<T> {
   }
 
   parse(text: string): T {
-    let parsed: any;
+    let parsed: unknown;
     try {
       parsed = this.jsonParser.parse(text);
     } catch (err) {

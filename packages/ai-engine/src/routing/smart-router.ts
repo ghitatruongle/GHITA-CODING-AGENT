@@ -87,9 +87,10 @@ export class SmartRouter {
         break;
     }
 
-    const best = sorted[0]!;
-    return {
-      provider: best.provider,
+  const best = sorted[0];
+  if (!best) return null;
+  return {
+    provider: best.provider,
       model: best.model,
       reason,
       estimatedCost: best.cost,

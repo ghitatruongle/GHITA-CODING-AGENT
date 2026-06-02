@@ -78,8 +78,8 @@ export function DocsGrillerDashboard() {
     try {
       const result = await invoke<GrillSession>('run_grill_session', { docsPath });
       setSession(result);
-    } catch (err: any) {
-      setError(err?.toString() || 'Failed to run grill session');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to run grill session');
     } finally {
       setLoading(false);
     }

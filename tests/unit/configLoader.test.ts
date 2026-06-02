@@ -34,7 +34,6 @@ describe('ConfigLoader (Dynamic Settings Profile Loader)', () => {
         'my-custom-model': {
           type: 'custom',
           base_url: 'https://api.custom.com/v1',
-          api_key: 'sk-custom-key',
           default_model: 'custom-model-1',
         },
       },
@@ -53,7 +52,9 @@ describe('ConfigLoader (Dynamic Settings Profile Loader)', () => {
     const config = loader.load();
 
     expect(fs.readFileSync).toHaveBeenCalled();
-    expect(config.agentModels['my-custom-model']?.api_key).toBe('sk-custom-key');
+    expect(config.agentModels['my-custom-model']?.type).toBe('custom');
+    expect(config.agentModels['my-custom-model']?.base_url).toBe('https://api.custom.com/v1');
+    expect(config.agentModels['my-custom-model']?.default_model).toBe('custom-model-1');
   });
 
   it('nên lưu dữ liệu cấu hình xuống file json', () => {
@@ -62,7 +63,6 @@ describe('ConfigLoader (Dynamic Settings Profile Loader)', () => {
         'my-custom-model': {
           type: 'custom',
           base_url: 'https://api.custom.com/v1',
-          api_key: 'sk-custom-key',
           default_model: 'custom-model-1',
         },
       },
@@ -82,7 +82,7 @@ describe('ConfigLoader (Dynamic Settings Profile Loader)', () => {
     expect(writeSpy).toHaveBeenCalled();
     const args = writeSpy.mock.calls[0];
     expect(args[1]).toContain('my-custom-model');
-    expect(args[1]).toContain('sk-custom-key');
+    expect(args[1]).not.toContain('api_key');
   });
 
   it('nên chuyển đổi cấu hình cục bộ sang cấu hình provider hợp lệ', () => {
@@ -91,7 +91,6 @@ describe('ConfigLoader (Dynamic Settings Profile Loader)', () => {
         'custom-model-1': {
           type: 'openai',
           base_url: 'https://api.custom.com/v1',
-          api_key: 'sk-custom-key-1',
           default_model: 'gpt-custom',
         },
       },
@@ -108,7 +107,6 @@ describe('ConfigLoader (Dynamic Settings Profile Loader)', () => {
 
     expect(providers.length).toBe(1);
     expect(providers[0]?.type).toBe('openai');
-    expect(providers[0]?.apiKey).toBe('sk-custom-key-1');
     expect(providers[0]?.baseUrl).toBe('https://api.custom.com/v1');
     expect(providers[0]?.defaultModel).toBe('gpt-custom');
   });

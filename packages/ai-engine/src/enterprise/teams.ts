@@ -96,7 +96,7 @@ export class TeamManager {
     metadata?: Record<string, unknown>;
   }): User {
     // Check if user exists by email
-    let existingUser = [...this.users.values()].find(
+    const existingUser = [...this.users.values()].find(
       (u) => u.email === options.email
     );
 
@@ -249,11 +249,13 @@ export class TeamManager {
     const team = this.teams.get(teamId);
     if (!team) return null;
 
-    const members = this.members.get(teamId)!;
+    const members = this.members.get(teamId);
+    if (!members) return null;
 
     // Check if already a member
-    if (members.some((m) => m.userId === userId)) {
-      return members.find((m) => m.userId === userId)!;
+    const existing = members.find((m) => m.userId === userId);
+    if (existing) {
+      return existing;
     }
 
     // Check max members

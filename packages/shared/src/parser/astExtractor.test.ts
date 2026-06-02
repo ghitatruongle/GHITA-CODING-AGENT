@@ -306,7 +306,7 @@ class OuterClass {
       // New hash should hit
       const newResult = cache.getCachedSymbols(filePath, hash2);
       expect(newResult).not.toBeNull();
-      expect(newResult!.length).toBe(tags2.length);
+      expect(newResult?.length).toBe(tags2.length);
     }, 30000);
   });
 
@@ -418,9 +418,9 @@ end.
 
         const tags = await extractor.extractSymbolTags(pascalCode, 'pascal');
         expect(Array.isArray(tags)).toBe(true);
-      } catch (err: any) {
+      } catch (err: unknown) {
         // Pascal WASM may not be available in CI — verify error is load-related
-        expect(err.message).toContain('WASM parser');
+        expect(err instanceof Error ? err.message : String(err)).toContain('WASM parser');
       }
     }, 30000);
   });

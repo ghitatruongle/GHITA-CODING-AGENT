@@ -21,7 +21,7 @@ export class FineTuningManager {
     };
   }
 
-  async createJob(trainingFile: string, model: string): Promise<any> {
+  async createJob(trainingFile: string, model: string): Promise<Record<string, unknown>> {
     const response = await fetch(`${this.baseUrl}/fine_tuning/jobs`, {
       method: 'POST',
       headers: this.getHeaders(),
@@ -39,7 +39,7 @@ export class FineTuningManager {
     return await response.json();
   }
 
-  async listJobs(limit?: number): Promise<any> {
+  async listJobs(limit?: number): Promise<Record<string, unknown>> {
     const url = new URL(`${this.baseUrl}/fine_tuning/jobs`);
     if (limit !== undefined) {
       url.searchParams.append('limit', String(limit));
@@ -58,7 +58,7 @@ export class FineTuningManager {
     return await response.json();
   }
 
-  async retrieveJob(jobId: string): Promise<any> {
+  async retrieveJob(jobId: string): Promise<Record<string, unknown>> {
     const response = await fetch(`${this.baseUrl}/fine_tuning/jobs/${jobId}`, {
       method: 'GET',
       headers: this.getHeaders(),
@@ -72,7 +72,7 @@ export class FineTuningManager {
     return await response.json();
   }
 
-  async cancelJob(jobId: string): Promise<any> {
+  async cancelJob(jobId: string): Promise<Record<string, unknown>> {
     const response = await fetch(`${this.baseUrl}/fine_tuning/jobs/${jobId}/cancel`, {
       method: 'POST',
       headers: this.getHeaders(),

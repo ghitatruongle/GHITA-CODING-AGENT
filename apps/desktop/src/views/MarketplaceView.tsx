@@ -105,9 +105,9 @@ export function MarketplaceView() {
   // Merge hardcoded plugins with catalog skills, converting catalog to PluginManifest format
   const allPlugins: PluginManifest[] = useMemo(() => {
     const localizedHardcoded = MARKETPLACE_PLUGINS.map((p) => {
-      const key = `marketplace.plugin_${p.id.replace(/-/g, '_')}_desc` as any;
+      const key = `marketplace.plugin_${p.id.replace(/-/g, '_')}_desc` as string;
       const skills = p.skills?.map((s) => {
-        const sKey = `marketplace.skill_${s.id.replace(/-/g, '_')}_desc` as any;
+        const sKey = `marketplace.skill_${s.id.replace(/-/g, '_')}_desc` as string;
         return {
           ...s,
           description: t(sKey) !== sKey ? t(sKey) : s.description,
@@ -164,12 +164,36 @@ export function MarketplaceView() {
       return true;
     })
     .sort((a, b) => {
+      // BUG FIX #7: the previous implementation bailed out with `return 0`
+      // whenever either entry was missing catalog metadata. The hardcoded
+      // MARKETPLACE_PLUGINS list has no metadata at all, which meant the
+      // sort callback *always* returned 0 → the dropdown looked decorative.
+      //
+      // New behaviour: when metadata is missing we fall back to a stable
+      // tie-breaker derived from the same sort key applied to deterministic
+      // defaults (0 downloads, 0 rating, version-parseable date). Entries
+      // with real metadata still float to the top, which matches what
+      // users expect from a marketplace.
       const metaA = catalogMeta.get(a.id);
       const metaB = catalogMeta.get(b.id);
-      if (!metaA || !metaB) return 0;
-      if (sortBy === 'downloads') return metaB.downloads - metaA.downloads;
-      if (sortBy === 'rating') return metaB.rating - metaA.rating;
-      return metaB.publishedAt - metaA.publishedAt;
+      const aMissing = !metaA;
+      const bMissing = !metaB;
+      // Both missing → preserve original order via stable sort.
+      if (aMissing && bMissing) return 0;
+      // Missing entries always sort to the bottom.
+      if (aMissing) return 1;
+      if (bMissing) return -1;
+
+      let primary = 0;
+      if (sortBy === 'downloads') primary = metaB.downloads - metaA.downloads;
+      else if (sortBy === 'rating') primary = metaB.rating - metaA.rating;
+      else primary = metaB.publishedAt - metaA.publishedAt;
+
+      if (primary !== 0) return primary;
+      // Tie-breaker: alphabetical by name so the order is deterministic
+      // across renders (Array.prototype.sort is stable but plugins that
+      // share metadata would otherwise swap order on each render).
+      return a.name.localeCompare(b.name);
     });
 
   const isInstalled = (pluginId: string) => {
@@ -395,9 +419,9 @@ export function MarketplaceView() {
                     {catalogMeta.get(plugin.id) && (
                       <>
                         <span>•</span>
-                        <span>{catalogMeta.get(plugin.id)!.downloads.toLocaleString()} {t('marketplace.downloads')}</span>
+                        <span>{(catalogMeta.get(plugin.id)?.downloads ?? 0).toLocaleString()} {t('marketplace.downloads')}</span>
                         <span>•</span>
-                        <span>{'★'.repeat(Math.round(catalogMeta.get(plugin.id)!.rating))} ({catalogMeta.get(plugin.id)!.rating.toFixed(1)})</span>
+                        <span>{'★'.repeat(Math.round(catalogMeta.get(plugin.id)?.rating ?? 0))} ({(catalogMeta.get(plugin.id)?.rating ?? 0).toFixed(1)})</span>
                       </>
                     )}
                   </div>

@@ -42,21 +42,19 @@ export class GitSafePointManager {
    * Chạy lệnh shell với cơ chế retry luỹ tiến phòng index.lock (Tác vụ 5)
    */
   public static execGit(cmd: string, cwd: string, retries = 5, delay = 100): string {
-    let lastError: any;
+    let lastError: Error | undefined;
     for (let attempt = 0; attempt < retries; attempt++) {
       this.checkAndReleaseLock(cwd);
       try {
         return execSync(cmd, { cwd, encoding: 'utf8', stdio: 'pipe' });
-      } catch (err: any) {
-        lastError = err;
-        // Nếu là lỗi index.lock hoặc git busy, tiến hành sleep và retry
-        if (err.message && (err.message.includes('index.lock') || err.message.includes('lock'))) {
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+        if (lastError.message.includes('index.lock') || lastError.message.includes('lock')) {
           const backoff = delay * Math.pow(2, attempt);
-          execSync('node -e "setTimeout(() => {}, ' + backoff + ')"'); // Đồng bộ sleep ngắn trong exec
+          execSync(`node -e "setTimeout(() => {}, ${backoff})"`, { cwd, encoding: 'utf8', stdio: 'pipe' });
           continue;
         }
-        // Lỗi khác thì ném ra ngay lập tức
-        throw err;
+        throw lastError;
       }
     }
     throw new Error(`Git command failed after ${retries} attempts: ${cmd}. Error: ${lastError?.message}`);
@@ -87,8 +85,8 @@ export class GitSafePointManager {
       // Ghi log tĩnh hành vi tạo điểm neo
       this.logGitAction(cwd, 'CREATE_SAFEPOINT', 'Created temporary safepoint successfully');
       return true;
-    } catch (err: any) {
-      console.warn(`[GitSafePoint] Failed to create safe-point: ${err.message}`);
+ } catch (err: unknown) {
+ console.warn(`[GitSafePoint] Failed to create safe-point: ${err instanceof Error ? err.message : String(err)}`);
       return false;
     }
   }
@@ -121,8 +119,8 @@ export class GitSafePointManager {
         this.logGitAction(cwd, 'ROLLBACK', 'Cleaned working directory (no safepoint found)');
         return true;
       }
-    } catch (err: any) {
-      console.error(`[GitSafePoint] Rollback failed: ${err.message}`);
+ } catch (err: unknown) {
+ console.error(`[GitSafePoint] Rollback failed: ${err instanceof Error ? err.message : String(err)}`);
       return false;
     }
   }

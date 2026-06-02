@@ -78,7 +78,7 @@ export class WasmParserDownloader {
 
     // Nếu không có, tải về từ CDN unpkg của web-tree-sitter
     const url = 'https://unpkg.com/web-tree-sitter@0.22.4/tree-sitter.wasm';
-    console.log(`Đang tải tree-sitter.wasm từ ${url}...`);
+    console.info(`Đang tải tree-sitter.wasm từ ${url}...`);
     await this.downloadFile(url, targetPath);
     return targetPath;
   }
@@ -100,7 +100,7 @@ export class WasmParserDownloader {
     }
 
     const url = `${CDN_BASE_URL}/${filename}`;
-    console.log(`Đang tải WASM parser cho ${normalized} từ ${url}...`);
+    console.info(`Đang tải WASM parser cho ${normalized} từ ${url}...`);
     try {
       await this.downloadFile(url, targetPath);
     } catch (err) {

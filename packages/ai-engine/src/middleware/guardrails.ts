@@ -3,6 +3,7 @@
 // Phase 3.3: Content filter, PII detector, secret detector, rate limiter, audit logger
 // ==============================================================================
 
+import type { AIProviderType } from '@ghita/shared';
 import type { ChatMiddleware, ChatStreamMiddleware } from '../utils/middleware.js';
 import type { ChatMessage } from '../types.js';
 
@@ -192,7 +193,7 @@ export function createContentFilterMiddleware(config: ContentFilterConfig): Chat
           return {
             content: `[BLOCKED] ${result.reason}`,
             model: 'guardrails',
-            provider: 'guardrails' as any,
+            provider: 'guardrails' as AIProviderType,
             usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
             finishReason: 'stop',
           };
@@ -247,7 +248,7 @@ export function createSecretDetectorMiddleware(config: SecretDetectorConfig): Ch
         return {
           content: `[BLOCKED] Secrets detected in message: ${names.join(', ')}. Remove sensitive data before sending.`,
           model: 'guardrails',
-          provider: 'guardrails' as any,
+          provider: 'guardrails' as AIProviderType,
           usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
           finishReason: 'stop',
         };
@@ -269,7 +270,7 @@ export function createRateLimiterMiddleware(config: RateLimiterConfig): ChatMidd
       return {
         content: `[RATE LIMITED] Too many requests. Retry after ${result.retryAfterMs}ms.`,
         model: 'guardrails',
-        provider: 'guardrails' as any,
+        provider: 'guardrails' as AIProviderType,
         usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
         finishReason: 'stop',
       };

@@ -8,7 +8,6 @@ export interface LocalConfig {
     [key: string]: {
       type: string;
       base_url?: string;
-      api_key?: string;
       default_model?: string;
     };
   };
@@ -25,11 +24,13 @@ export class ConfigLoader {
   private configPath: string;
 
   constructor() {
-    this.configPath = path.resolve(os.homedir(), '.ghita-coding-agent.json');
+    // Use GHITA_DATA_DIR (set by Tauri backend) for secure storage, fallback to home dir
+    const dataDir = process.env.GHITA_DATA_DIR || os.homedir();
+    this.configPath = path.resolve(dataDir, '.ghita-coding-agent.json');
   }
 
   /**
-   * Đọc cấu hình từ file ~/.openclaude.json
+   * Đọc cấu hình từ file agent config
    */
   load(): LocalConfig {
     try {
@@ -46,6 +47,11 @@ export class ConfigLoader {
         return this.initializeDefaultConfig();
       }
 
+      // Strip api_key if present (legacy migration — API keys are stored separately in api-config.json)
+      for (const entry of Object.values(parsed.agentModels)) {
+        delete (entry as Record<string, unknown>).api_key;
+      }
+
       return parsed;
     } catch (error) {
       console.error('Failed to load local settings, loading defaults:', error);
@@ -54,12 +60,16 @@ export class ConfigLoader {
   }
 
   /**
-   * Lưu cấu hình mới xuống file ~/.openclaude.json
+   * Lưu cấu hình mới xuống file agent config
    */
   save(config: LocalConfig): void {
     try {
+      // Ensure api_key is never persisted (security: API keys stored in api-config.json)
+      for (const entry of Object.values(config.agentModels)) {
+        delete (entry as Record<string, unknown>).api_key;
+      }
       fs.writeFileSync(this.configPath, JSON.stringify(config, null, 2), 'utf-8');
-      console.log(`Local configuration saved to ${this.configPath}`);
+      console.info(`Local configuration saved to ${this.configPath}`);
     } catch (error) {
       console.error('Failed to save local settings:', error);
     }
@@ -67,14 +77,15 @@ export class ConfigLoader {
 
   /**
    * Chuyển đổi LocalConfig sang mảng ProviderConfig của AI Engine
+   * Note: apiKey is left empty — actual keys are synced from api-config.json by syncApiConfigToOrchestrator()
    */
   toProviderConfigs(localConfig: LocalConfig): ProviderConfig[] {
     const configs: ProviderConfig[] = [];
     if (!localConfig.agentModels) return configs;
     for (const [name, meta] of Object.entries(localConfig.agentModels)) {
       configs.push({
-        type: meta.type as any,
-        apiKey: meta.api_key,
+        type: meta.type as ProviderConfig['type'],
+        apiKey: '',
         baseUrl: meta.base_url,
         defaultModel: meta.default_model || name,
       });
@@ -88,37 +99,31 @@ export class ConfigLoader {
         'openai-gpt-4o': {
           type: 'openai',
           base_url: 'https://api.openai.com/v1',
-          api_key: '',
           default_model: 'gpt-4o',
         },
         'anthropic-sonnet': {
           type: 'anthropic',
           base_url: 'https://api.anthropic.com/v1',
-          api_key: '',
           default_model: 'claude-3-5-sonnet-latest',
         },
         'ollama-llama3': {
           type: 'ollama',
           base_url: 'http://localhost:11434',
-          api_key: '',
           default_model: 'llama3',
         },
         'opengateway-mimo': {
           type: 'opengateway',
           base_url: 'https://opengateway.gitlawb.com/v1',
-          api_key: '',
           default_model: 'mimo-v2.5-pro',
         },
         'deepseek-chat': {
           type: 'deepseek',
           base_url: 'https://api.deepseek.com/v1',
-          api_key: '',
           default_model: 'deepseek-chat',
         },
         'groq-llama': {
           type: 'groq',
           base_url: 'https://api.groq.com/openai/v1',
-          api_key: '',
           default_model: 'llama-3.1-70b-versatile',
         },
       },

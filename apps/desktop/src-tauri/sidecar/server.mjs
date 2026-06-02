@@ -12,17 +12,66 @@ import { networkInterfaces, hostname, homedir } from 'node:os';
 import fs from 'node:fs';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
-import { GrpcServer, Orchestrator, ConfigLoader, RalphLoopManager, SecurityGuard } from '@ghita/ai-engine';
-import { createNodeSkillRegistry } from '@ghita/skills/node';
-import { createComputerUseSkills, ComputerUseController } from '@ghita/computer-use';
-import { createNutJsAdapter } from '@ghita/computer-use/node';
-import { createBrowserControlSkills, BrowserController } from '@ghita/browser-control';
-import { createPlaywrightAdapter } from '@ghita/browser-control/node';
-import { createReActAgent, AIMessage } from '@ghita/agents';
+import { createRequire as sidecarCreateRequire } from "node:module";
+
+// --- Lazy-loaded heavy modules (loaded on first use, not at startup) ---
+// This reduces startup time by 2-5 seconds by deferring Playwright, agents, etc.
+let _aiEngine = null;
+async function loadAiEngine() {
+  if (!_aiEngine) _aiEngine = await import('@ghita/ai-engine');
+  return _aiEngine;
+}
+
+let _skillsNode = null;
+async function loadSkillsNode() {
+  if (!_skillsNode) _skillsNode = await import('@ghita/skills/node');
+  return _skillsNode;
+}
+
+let _computerUse = null;
+async function loadComputerUse() {
+  if (!_computerUse) _computerUse = await import('@ghita/computer-use');
+  return _computerUse;
+}
+
+let _computerUseNode = null;
+async function loadComputerUseNode() {
+  if (!_computerUseNode) _computerUseNode = await import('@ghita/computer-use/node');
+  return _computerUseNode;
+}
+
+let _browserControl = null;
+async function loadBrowserControl() {
+  if (!_browserControl) _browserControl = await import('@ghita/browser-control');
+  return _browserControl;
+}
+
+let _browserControlNode = null;
+async function loadBrowserControlNode() {
+  if (!_browserControlNode) _browserControlNode = await import('@ghita/browser-control/node');
+  return _browserControlNode;
+}
+
+let _agents = null;
+async function loadAgents() {
+  if (!_agents) _agents = await import('@ghita/agents');
+  return _agents;
+}
+
+// node-pty: lazy load native addon (saves 50-150ms at startup)
+let _pty = null;
+function loadPty() {
+  if (!_pty) {
+    const sidecarRequire = sidecarCreateRequire(import.meta.url);
+    _pty = sidecarRequire('node-pty');
+  }
+  return _pty;
+}
 
 // --- Config ---
 const PORT = parseInt(process.env.GHITA_PORT || '8080', 10);
-const HOST = process.env.GHITA_BIND_HOST || '0.0.0.0';
+const LAN_ENABLED = process.env.GHITA_LAN_ENABLED === '1';
+const HOST = process.env.GHITA_BIND_HOST || (LAN_ENABLED ? '0.0.0.0' : '127.0.0.1');
 const CLOUD_DISCOVERY_ENABLED = process.env.GHITA_CLOUD_DISCOVERY === '1';
 const AUTO_LIBERATE_PORTS = process.env.GHITA_LIBERATE_PORTS === '1';
 const CLOUD_RELAY_ENABLED = false; // Tạm vô hiệu hóa — Render.com relay đã bị xóa
@@ -62,7 +111,10 @@ function isAllowedLocalOrigin(origin) {
   if (!origin) return true;
   try {
     const url = new URL(origin);
-    return ['localhost', '127.0.0.1', 'tauri.localhost'].includes(url.hostname);
+    const h = url.hostname;
+    if (['localhost', '127.0.0.1', 'tauri.localhost', '::1'].includes(h)) return true;
+    if (LAN_ENABLED && /^(10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|192\.168\.\d+\.\d+)$/.test(h)) return true;
+    return false;
   } catch {
     return false;
   }
@@ -73,7 +125,7 @@ function liberatePort(port) {
   try {
     if (process.platform === 'win32') {
       // Find PID of process listening on the specified port
-      const output = execSync(`netstat -aon`).toString();
+      const output = execSync(`netstat -aon`, { timeout: 10000 }).toString();
       const lines = output.split('\n');
       for (const line of lines) {
         if (line.includes('LISTENING') && line.includes(`:${port}`)) {
@@ -81,12 +133,12 @@ function liberatePort(port) {
           const pid = parts[parts.length - 1];
           if (pid && /^\d+$/.test(pid) && pid !== '0' && pid !== process.pid.toString()) {
             log(`Killing old process ${pid} using port ${port}...`);
-            execSync(`taskkill /f /pid ${pid}`);
+                  execSync(`taskkill /f /pid ${pid}`, { timeout: 5000 });
           }
         }
       }
     } else {
-      execSync(`lsof -t -i:${port} | xargs kill -9`, { stdio: 'ignore' });
+      execSync(`lsof -t -i:${port} | xargs kill -9`, { stdio: 'ignore', timeout: 10000 });
     }
     log(`Port ${port} has been liberated successfully.`);
   } catch (e) {
@@ -102,12 +154,23 @@ const pendingApprovals = new Map();
 // Global workspace root initialization
 globalThis.ghitaWorkspaceRoot = globalThis.ghitaWorkspaceRoot || null;
 
+// Approval timeout: auto-reject after 60 seconds
+const APPROVAL_TIMEOUT_MS = 60000;
+
 // Global command approval hook integration
 globalThis.approveCommandHandler = async (command) => {
   return new Promise((resolve) => {
     const approvalId = `approve_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
     pendingApprovals.set(approvalId, resolve);
-    
+
+    // Auto-reject after timeout
+    setTimeout(() => {
+      if (pendingApprovals.has(approvalId)) {
+        pendingApprovals.delete(approvalId);
+        resolve(false);
+      }
+    }, APPROVAL_TIMEOUT_MS);
+
     // Broadcast the command execution approval request to connected clients
     broadcast('require_approval', {
       id: approvalId,
@@ -115,6 +178,32 @@ globalThis.approveCommandHandler = async (command) => {
     });
   });
 };
+
+// Global file write approval hook integration
+globalThis.approveFileWriteHandler = async (operation, filePath) => {
+  return new Promise((resolve) => {
+    const approvalId = `fapprove_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    pendingApprovals.set(approvalId, resolve);
+
+    // Auto-reject after timeout
+    setTimeout(() => {
+      if (pendingApprovals.has(approvalId)) {
+        pendingApprovals.delete(approvalId);
+        resolve(false);
+      }
+    }, APPROVAL_TIMEOUT_MS);
+
+    // Broadcast the file operation approval request to connected clients
+    broadcast('require_file_approval', {
+      id: approvalId,
+      operation, // 'write' or 'modify'
+      filePath,
+    });
+  });
+};
+
+// Global permission mode: 'custom' = confirm all, 'auto' = only dangerous
+globalThis.agentPermissionMode = 'custom';
 
 // Global cost telemetry handler integration
 globalThis.broadcastCostTelemetryHandler = (data) => {
@@ -399,8 +488,14 @@ const httpServer = createServer((req, res) => {
     }
 
     let body = '';
+    const MAX_BODY_SIZE = 1024 * 1024; // 1MB limit
     req.on('data', (chunk) => {
       body += chunk;
+      if (body.length > MAX_BODY_SIZE) {
+        res.writeHead(413, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Request body too large' }));
+        req.destroy();
+      }
     });
 
     req.on('end', () => {
@@ -478,13 +573,42 @@ const io = new Server(httpServer, {
     },
     methods: ['GET', 'POST'],
   },
-  transports: ['websocket', 'polling'],
-  pingInterval: 5000,
-  pingTimeout: 3000,
+  transports: ['websocket'],
+  pingInterval: 25000,
+  pingTimeout: 20000,
 });
 
 // --- Connected devices ---
 const connectedDevices = new Map();
+
+// --- Terminal PTY sessions ---
+const terminalSessions = new Map();
+
+/** Max age (ms) for a PTY session before it is force-killed (15 minutes idle) */
+const PTY_SESSION_MAX_IDLE_MS = 900_000;
+
+/** Periodic cleanup interval reference so we can unref() it */
+let ptyCleanupInterval = null;
+
+function startPtyCleanupInterval() {
+  if (ptyCleanupInterval) return;
+  ptyCleanupInterval = setInterval(() => {
+    const now = Date.now();
+    for (const [id, session] of terminalSessions.entries()) {
+      // Kill sessions that have been idle too long
+      if (session.lastActivity && (now - session.lastActivity) > PTY_SESSION_MAX_IDLE_MS) {
+        try {
+          session.ptyProcess.kill();
+          log(`Force-killed idle PTY session: ${id} (idle ${Math.round((now - session.lastActivity) / 1000)}s)`);
+        } catch (err) {}
+        terminalSessions.delete(id);
+      }
+    }
+  }, 60_000); // check every 60 seconds
+  if (typeof ptyCleanupInterval.unref === 'function') {
+    ptyCleanupInterval.unref();
+  }
+}
 
 // --- Persistent Paired Devices Storage ---
 const DATA_DIR = process.env.GHITA_DATA_DIR || homedir();
@@ -629,24 +753,33 @@ function syncApiConfigToOrchestrator(preferredProvider) {
 
 // --- Host Skill Registry (Node-capable) ---
 let nodeRegistry = null;
+let computerController = null; // Phase 8: expose for mobile remote touch
 
 async function getOrCreateNodeRegistry() {
   if (nodeRegistry) return nodeRegistry;
   log("Initializing host Node-capable Skill Registry...");
+
+  // Lazy-load modules on first use
+  const { createNodeSkillRegistry } = await loadSkillsNode();
+  const { createComputerUseSkills, ComputerUseController } = await loadComputerUse();
+  const { createBrowserControlSkills, BrowserController } = await loadBrowserControl();
+
   const registry = createNodeSkillRegistry();
-  
+
   try {
+    const { createNutJsAdapter } = await loadComputerUseNode();
     const nutAdapter = await createNutJsAdapter();
-    const computerController = new ComputerUseController(nutAdapter);
+    computerController = new ComputerUseController(nutAdapter);
     registry.registerMany(createComputerUseSkills(computerController));
     log("Loaded computer-use host OS automation adapter.");
   } catch (e) {
     log(`Failed to load computer-use node adapter: ${e.message}`);
-    const computerController = new ComputerUseController();
+    computerController = new ComputerUseController();
     registry.registerMany(createComputerUseSkills(computerController));
   }
 
   try {
+    const { createPlaywrightAdapter } = await loadBrowserControlNode();
     const playwrightAdapter = await createPlaywrightAdapter({ headless: false });
     const browserController = new BrowserController(playwrightAdapter);
     registry.registerMany(createBrowserControlSkills(browserController));
@@ -697,6 +830,7 @@ function registerSocketEvents(socket, isCloud = false) {
 
     try {
       if (grpcServerInstance && grpcServerInstance.orchestrator) {
+        const { RalphLoopManager } = await loadAiEngine();
         const ralph = new RalphLoopManager(grpcServerInstance.orchestrator, {
           maxIterations,
           costLimitUsd,
@@ -808,6 +942,41 @@ function registerSocketEvents(socket, isCloud = false) {
     }
   });
 
+  // List available skills (for mobile remote skill browsing)
+  socket.on('list_skills', async (data, callback) => {
+    if (!getAuthorizedClient()) {
+      const errResult = { success: false, error: 'Unauthorized: pair the device before listing skills' };
+      if (typeof callback === 'function') callback(errResult);
+      return;
+    }
+
+    try {
+      const registry = await getOrCreateNodeRegistry();
+      const allSkills = registry.list();
+      const skills = allSkills.map((s) => ({
+        id: s.id,
+        name: s.name,
+        description: s.description || '',
+        category: s.category || 'general',
+        enabled: s.enabled !== false,
+      }));
+      log(`[list_skills] Returning ${skills.length} skills`);
+      if (typeof callback === 'function') {
+        callback({ success: true, skills });
+      } else {
+        socket.emit('list_skills_result', { success: true, skills });
+      }
+    } catch (e) {
+      log(`[list_skills] Error: ${e.message}`);
+      const errResult = { success: false, error: e.message };
+      if (typeof callback === 'function') {
+        callback(errResult);
+      } else {
+        socket.emit('list_skills_result', errResult);
+      }
+    }
+  });
+
   // Set Workspace Root
   socket.on('set_workspace', (data, callback) => {
     if (!getAuthorizedClient()) {
@@ -816,9 +985,23 @@ function registerSocketEvents(socket, isCloud = false) {
     }
 
     const root = data?.path || null;
+    // Validate workspace path
+    if (root) {
+      try {
+        if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) {
+          if (typeof callback === 'function') callback({ success: false, error: 'Path does not exist or is not a directory' });
+          return;
+        }
+      } catch {
+        if (typeof callback === 'function') callback({ success: false, error: 'Invalid path' });
+        return;
+      }
+    }
     globalThis.ghitaWorkspaceRoot = root;
     if (root) {
       process.env.GHITA_WORKSPACE = root;
+    } else {
+      delete process.env.GHITA_WORKSPACE;
     }
     log(`Workspace set to: ${root}`);
     if (typeof callback === 'function') {
@@ -877,6 +1060,10 @@ function registerSocketEvents(socket, isCloud = false) {
     const provider = data?.provider;
     const model = data?.model;
     const apiKey = data?.apiKey;
+    const permissionMode = data?.permissionMode || 'custom';
+
+    // Set global permission mode for tools to check
+    globalThis.agentPermissionMode = permissionMode;
     const baseUrl = data?.baseUrl;
 
     log(`Running Agentic ReAct loop for task: "${task}"`);
@@ -987,6 +1174,7 @@ function registerSocketEvents(socket, isCloud = false) {
           return actions;
         };
 
+        const { createReActAgent, AIMessage } = await loadAgents();
         const agent = createReActAgent({
           config: {
             name: 'GHITA-ReAct-Local',
@@ -1024,10 +1212,15 @@ State your reasoning step by step, then invoke a tool call. Repeat this cycle un
               role: msg.role === 'assistant' ? 'assistant' : msg.role === 'system' ? 'system' : 'user',
               content: msg.getText(),
             }));
-            const res = await grpcServerInstance.orchestrator.chat(chatMessages, {
-              provider,
-              model,
-            });
+            // Timeout 60s cho mỗi LLM call để tránh bị treo vô hạn
+            const LLM_TIMEOUT_MS = 60_000;
+            const timeoutPromise = new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('LLM call timeout after 60s - Opengateway không phản hồi')), LLM_TIMEOUT_MS)
+            );
+            const res = await Promise.race([
+              grpcServerInstance.orchestrator.chat(chatMessages, { provider, model }),
+              timeoutPromise,
+            ]);
             return new AIMessage(res.content, {
               metadata: {
                 usage: res.usage,
@@ -1037,8 +1230,9 @@ State your reasoning step by step, then invoke a tool call. Repeat this cycle un
           parseToolCalls: customParseToolCalls,
         });
 
-        // Run agent and emit socket events for real-time telemetry
-        const result = await agent.run(task, {
+        // Run agent with 3-minute overall timeout to prevent UI hang
+        const AGENT_TIMEOUT_MS = 180_000;
+        const agentPromise = agent.run(task, {
           onStepStart: (step, action) => {
             broadcast('agent_step_start', { step, action });
             broadcast('chat_chunk', { text: `\n🤔 *[Bước ${step + 1}] Suy nghĩ...* Gọi công cụ \`${action.tool}\`...\n` });
@@ -1055,6 +1249,10 @@ State your reasoning step by step, then invoke a tool call. Repeat this cycle un
             broadcast('agent_tool_result', { tool, result });
           },
         });
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Agent timeout after 3 minutes - quá thời gian chờ')), AGENT_TIMEOUT_MS)
+        );
+        const result = await Promise.race([agentPromise, timeoutPromise]);
 
         broadcast('agent_run_done', {
           output: result.output,
@@ -1095,6 +1293,7 @@ ${result.output}`
 
       // Rà quét bảo mật PreToolUse Hook cho các lệnh CLI tự chạy hoặc các từ khóa nhạy cảm
       if (data.text.startsWith('/') || data.text.includes('rm ') || data.text.includes('bash ') || data.text.includes('curl ') || data.text.includes('nc ')) {
+        const { SecurityGuard } = await loadAiEngine();
         const securityResult = SecurityGuard.scanCommand(data.text);
         if (!securityResult.safe) {
           // Kích hoạt ngay popup duyệt tool cảnh báo nguy hại cao độ (Human-in-the-loop)
@@ -1129,28 +1328,10 @@ ${result.output}`
           const persistedProvider = syncApiConfigToOrchestrator(data.provider);
           const selectedProvider = data.provider || persistedProvider?.type;
           const selectedModel = data.model || persistedProvider?.defaultModel;
-
-          // Sync API credentials from frontend (localStorage) into orchestrator registry
-          if (data.provider && (data.apiKey || data.apiKeys || data.baseUrl)) {
-            try {
-              const registry = grpcServerInstance.orchestrator.getRegistry();
-              const apiKeys = Array.isArray(data.apiKeys)
-                ? data.apiKeys.filter((key) => typeof key === 'string' && key.trim())
-                : data.apiKey
-                  ? [data.apiKey]
-                  : [];
-              registry.registerFromConfig({
-                type: data.provider,
-                apiKey: apiKeys[0] || '',
-                apiKeys,
-                baseUrl: data.baseUrl || '',
-                defaultModel: selectedModel || '',
-              });
-              log(`Synced credentials for provider: ${data.provider}`);
-            } catch (e) {
-              log(`Failed to sync provider credentials: ${e.message}`);
-            }
-          }
+          const costTracker = grpcServerInstance.orchestrator.costTracker;
+          const costBefore = typeof costTracker?.getTotalCost === 'function'
+            ? costTracker.getTotalCost()
+            : 0;
 
           const stream = grpcServerInstance.orchestrator.chatStream(messages, {
             provider: selectedProvider || undefined,
@@ -1175,7 +1356,19 @@ ${result.output}`
             totalTokens: Math.ceil(((data.text || '').length + fullResponse.length) / 4),
           };
 
-          broadcast('chat_done', { text: fullResponse, usage });
+          const costAfter = typeof costTracker?.getTotalCost === 'function'
+            ? costTracker.getTotalCost()
+            : costBefore;
+          const incrementalCost = Math.max(0, costAfter - costBefore);
+
+          broadcast('chat_done', {
+            text: fullResponse,
+            usage: {
+              ...usage,
+              costUsd: incrementalCost,
+              totalCostUsd: costAfter,
+            },
+          });
         } else {
           // Fallback response nếu orchestrator chưa sẵn sàng
           const fallbackText = `⚙️ **AI Engine chưa sẵn sàng.**\n\nHệ thống nhận được tin nhắn: "${data.text}"\n\nĐể sử dụng Chat AI, vui lòng:\n1. Mở tab **API Manager** (🔑) trên ứng dụng Desktop\n2. Thêm ít nhất 1 nhà cung cấp AI và nhập API Key\n3. Bật **Active** cho provider đó\n\nSau đó hãy thử lại!`;
@@ -1220,6 +1413,93 @@ ${result.output}`
 
     log(`Computer Use step preview received: ${data?.action || 'unknown action'}`);
     broadcast('computer_use_step', data);
+  });
+
+  // --- Phase 8: Mobile Remote Touch Interaction ---
+  socket.on('mobile_touch', async (data) => {
+    if (!getAuthorizedClient()) return;
+    if (!computerController) {
+      socket.emit('error', { message: 'Computer-use adapter not available.' });
+      return;
+    }
+
+    const { rx, ry, button, action } = data || {};
+    if (typeof rx !== 'number' || typeof ry !== 'number') return;
+
+    try {
+      // Ensure computer-use is initialized
+      await getOrCreateNodeRegistry();
+
+      // Map relative (0-1) coordinates to absolute pixel coordinates
+      const size = await computerController.adapter.getScreenSize();
+      if (!size) {
+        socket.emit('error', { message: 'Cannot get screen size.' });
+        return;
+      }
+
+      const px = Math.round(rx * size.width);
+      const py = Math.round(ry * size.height);
+      const point = { x: px, y: py };
+
+      log(`[Mobile Touch] rx=${rx}, ry=${ry} -> px=${px}, py=${py} (${size.width}x${size.height})`);
+
+      if (action === 'move') {
+        await computerController.moveMouse(point);
+      } else {
+        // Default: click (left/right/middle)
+        const mouseButton = button || 'left';
+        await computerController.click(point, mouseButton);
+      }
+
+      socket.emit('mobile_touch_result', { success: true, px, py, action: action || 'click' });
+    } catch (err) {
+      log(`[Mobile Touch] Error: ${err.message}`);
+      socket.emit('mobile_touch_result', { success: false, error: err.message });
+    }
+  });
+
+  // Mobile remote type text
+  socket.on('mobile_type', async (data) => {
+    if (!getAuthorizedClient()) return;
+    if (!computerController) {
+      socket.emit('error', { message: 'Computer-use adapter not available.' });
+      return;
+    }
+
+    const { text } = data || {};
+    if (!text || typeof text !== 'string') return;
+
+    try {
+      await getOrCreateNodeRegistry();
+      await computerController.typeText(text);
+      log(`[Mobile Type] Typed ${text.length} characters`);
+      socket.emit('mobile_type_result', { success: true, length: text.length });
+    } catch (err) {
+      log(`[Mobile Type] Error: ${err.message}`);
+      socket.emit('mobile_type_result', { success: false, error: err.message });
+    }
+  });
+
+  // Mobile remote press key
+  socket.on('mobile_key', async (data) => {
+    if (!getAuthorizedClient()) return;
+    if (!computerController) {
+      socket.emit('error', { message: 'Computer-use adapter not available.' });
+      return;
+    }
+
+    const { key } = data || {};
+    if (!key || typeof key !== 'string') return;
+
+    try {
+      await getOrCreateNodeRegistry();
+      await computerController.pressKey(key);
+      log(`[Mobile Key] Pressed: ${key}`);
+      socket.emit('mobile_key_result', { success: true, key });
+    } catch (err) {
+      log(`[Mobile Key] Error: ${err.message}`);
+      socket.emit('mobile_key_result', { success: false, error: err.message });
+    }
   });
 
   // Approve/Reject
@@ -1282,6 +1562,146 @@ ${result.output}`
         savePairedDevices();
         sendStatus();
         ipcEmit('unpaired', { deviceId });
+      }
+    }
+  });
+
+  // --- PTY Terminal Handlers ---
+  socket.on('terminal_create', (data) => {
+    const auth = getAuthorizedClient({ allowDevice: false });
+    if (!auth) return;
+
+    const { id, cols, rows, shellType, cwd } = data;
+    if (!id) return;
+
+    // Clean up existing session with the same id if any
+    if (terminalSessions.has(id)) {
+      const existing = terminalSessions.get(id);
+      try {
+        existing.ptyProcess.kill();
+      } catch (err) {}
+      terminalSessions.delete(id);
+    }
+
+    try {
+      const shell = process.platform === 'win32'
+        ? (shellType === 'powershell' ? 'powershell.exe' : 'cmd.exe')
+        : 'bash';
+
+      const ptyModule = loadPty();
+      const safeCols = Math.min(Math.max(Number(cols) || 80, 20), 500);
+      const safeRows = Math.min(Math.max(Number(rows) || 24, 5), 200);
+      const ptyProcess = ptyModule.spawn(shell, [], {
+        name: 'xterm-color',
+        cols: safeCols,
+        rows: safeRows,
+        cwd: cwd || globalThis.ghitaWorkspaceRoot || process.env.USERPROFILE || process.cwd(),
+        env: process.env,
+      });
+
+      ptyProcess.onData((chunk) => {
+        // Update lastActivity so the idle-killer won't touch this session
+        const sess = terminalSessions.get(id);
+        if (sess) sess.lastActivity = Date.now();
+
+        // Only log PTY output in verbose/debug mode to avoid leaking sensitive data
+        if (process.env.GHITA_DEBUG) log(`PTY Output [${id}]: ${JSON.stringify(chunk)}`);
+        socket.emit('terminal_data', { id, data: chunk });
+      });
+
+      ptyProcess.onExit(({ exitCode, signal }) => {
+        socket.emit('terminal_exit', { id, exitCode, signal });
+        terminalSessions.delete(id);
+      });
+
+      terminalSessions.set(id, { ptyProcess, socketId: socket.id, lastActivity: Date.now() });
+      log(`PTY session created: ${id} (${shell})`);
+
+      // Ensure the periodic cleanup interval is running
+      startPtyCleanupInterval();
+    } catch (err) {
+      log(`Failed to spawn PTY: ${err.message}`);
+      socket.emit('terminal_data', { id, data: `\r\nError: Failed to spawn PTY: ${err.message}\r\n` });
+    }
+  });
+
+  socket.on('terminal_data', (data) => {
+    const auth = getAuthorizedClient({ allowDevice: false });
+    if (!auth) return;
+
+    const { id, data: inputData } = data;
+
+    // ── Filter #6: Skip empty / non-string input at server level ──
+    if (!inputData || typeof inputData !== 'string') return;
+
+    log(`PTY Input [${id}]: ${JSON.stringify(inputData)}`);
+    const session = terminalSessions.get(id);
+    if (session && session.socketId === socket.id) {
+      // Track activity to prevent idle-kill of active sessions
+      session.lastActivity = Date.now();
+      session.ptyProcess.write(inputData);
+    }
+  });
+
+  socket.on('terminal_resize', (data) => {
+    const auth = getAuthorizedClient({ allowDevice: false });
+    if (!auth) return;
+
+    const { id, cols, rows } = data;
+    const session = terminalSessions.get(id);
+    if (session && session.socketId === socket.id) {
+      try {
+        session.ptyProcess.resize(cols, rows);
+      } catch (err) {
+        log(`Failed to resize PTY: ${err.message}`);
+      }
+    }
+  });
+
+  socket.on('terminal_close', (data) => {
+    const auth = getAuthorizedClient({ allowDevice: false });
+    if (!auth) return;
+
+    const { id } = data;
+    const session = terminalSessions.get(id);
+    if (session && session.socketId === socket.id) {
+      try {
+        session.ptyProcess.kill();
+      } catch (err) {}
+      terminalSessions.delete(id);
+      log(`PTY session closed: ${id}`);
+    }
+  });
+
+  // --- Phase 6: VS Code Extension file sync ---
+  socket.on('file_change', (data) => {
+    if (!isTrustedDesktopSocket(socket, isCloud)) return;
+
+    const { event, path: filePath, content, language, oldPath, newPath, timestamp } = data || {};
+    if (!event) return;
+
+    log(`[VS Code Sync] ${event}: ${filePath || oldPath || 'N/A'}`);
+
+    // Broadcast to all desktop clients (Tauri app, other VS Code instances)
+    socket.to('desktop').emit('vscode_file_change', {
+      event,
+      path: filePath,
+      content: content ?? null,
+      language: language ?? null,
+      oldPath: oldPath ?? null,
+      newPath: newPath ?? null,
+      timestamp: timestamp ?? Date.now(),
+    });
+  });
+
+  socket.on('disconnect', () => {
+    for (const [id, session] of terminalSessions.entries()) {
+      if (session.socketId === socket.id) {
+        try {
+          session.ptyProcess.kill();
+        } catch (err) {}
+        terminalSessions.delete(id);
+        log(`Cleaned up PTY session ${id} due to socket disconnect`);
       }
     }
   });
@@ -1449,7 +1869,7 @@ function initCloudSocket() {
 
   log(`Initializing Cloud Relay client connection to: ${CLOUD_RELAY_URL}`);
   cloudSocket = ioClient(CLOUD_RELAY_URL, {
-    transports: ['websocket', 'polling'],
+    transports: ['websocket'],
     reconnection: true,
     reconnectionDelay: 2000,
     reconnectionDelayMax: 10000,
@@ -1532,6 +1952,22 @@ let grpcServerInstance = null;
 // --- Graceful shutdown ---
 function shutdown(signal) {
   log(`Shutting down (${signal})...`);
+
+  // Kill all PTY sessions to prevent zombie processes
+  for (const [id, session] of terminalSessions.entries()) {
+    try {
+      session.ptyProcess.kill();
+      log(`Killed PTY session: ${id}`);
+    } catch (err) {}
+  }
+  terminalSessions.clear();
+
+  // Clear the PTY idle-cleanup interval
+  if (ptyCleanupInterval) {
+    clearInterval(ptyCleanupInterval);
+    ptyCleanupInterval = null;
+  }
+
   io.disconnectSockets(true);
   io.close();
 
@@ -1566,18 +2002,30 @@ function shutdown(signal) {
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
 
+// Kill remaining PTY zombies on unexpected exit (synchronous, best-effort)
+process.on('exit', () => {
+  for (const [, session] of terminalSessions) {
+    try { session.ptyProcess.kill(); } catch (_) {}
+  }
+});
+
 // --- Global Exception & Rejection Shield ---
 process.on('uncaughtException', (err) => {
+  // Ignore EPIPE errors — they occur when the Tauri parent process closes
+  // and the stdout pipe breaks. Logging would cause infinite EPIPE spam.
+  if (err?.code === 'EPIPE' || err?.message?.includes('EPIPE')) return;
   log(`CRITICAL SHIELD: Uncaught Exception: ${err.message}`);
   if (err.stack) {
-    console.error(err.stack);
+    try { console.error(err.stack); } catch (_) { /* stdout may be gone */ }
   }
-  ipcEmit('server_error', { type: 'uncaughtException', message: err.message });
+  try { ipcEmit('server_error', { type: 'uncaughtException', message: err.message }); } catch (_) {}
 });
 
 process.on('unhandledRejection', (reason, promise) => {
+  const msg = String(reason);
+  if (msg.includes('EPIPE')) return;
   log(`CRITICAL SHIELD: Unhandled Rejection at: ${promise}, reason: ${reason}`);
-  ipcEmit('server_error', { type: 'unhandledRejection', message: String(reason) });
+  try { ipcEmit('server_error', { type: 'unhandledRejection', message: msg }); } catch (_) {}
 });
 
 // --- Start ---
@@ -1605,8 +2053,9 @@ httpServer.listen(PORT, HOST, async () => {
   publishToCloudDiscovery();
   // initCloudSocket(); // Cloud Relay tạm vô hiệu hóa — Render.com relay đã bị xóa
 
-  // Khởi động gRPC Server
+  // Khởi động gRPC Server (lazy-load ai-engine)
   try {
+    const { ConfigLoader, Orchestrator, GrpcServer } = await loadAiEngine();
     const configLoader = new ConfigLoader();
     const localConfig = configLoader.load();
     const providerConfigs = configLoader.toProviderConfigs(localConfig);

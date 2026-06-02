@@ -7,7 +7,7 @@ import { generateUUID } from '@ghita/shared';
 export interface APTask {
   taskId: string;
   input: string;
-  additionalInput?: Record<string, any>;
+  additionalInput?: Record<string, unknown>;
   artifacts: APArtifact[];
   steps: APStep[];
   createdAt: string;
@@ -43,7 +43,7 @@ export class AgentProtocolServer {
    * POST /ap/v1/agent/tasks
    * Create a new task for the AI Agent
    */
-  public createTask(input: string, additionalInput?: Record<string, any>): APTask {
+  public createTask(input: string, additionalInput?: Record<string, unknown>): APTask {
     const taskId = `task-${generateUUID()}`;
     const newTask: APTask = {
       taskId,

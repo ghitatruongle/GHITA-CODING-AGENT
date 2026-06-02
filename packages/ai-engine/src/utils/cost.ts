@@ -129,11 +129,11 @@ export class BudgetManager {
       for (const threshold of this.alertThresholds) {
         if (percentage >= threshold && !this.triggeredThresholds.has(threshold)) {
           this.triggeredThresholds.add(threshold);
-          try {
-            this.onAlert(newSpent, this.limit, percentage);
-          } catch (err) {
-            // Ignore callback failures
-          }
+      try {
+        this.onAlert(newSpent, this.limit, percentage);
+      } catch (err) {
+        console.warn('[BudgetManager] Alert callback failed:', err instanceof Error ? err.message : String(err));
+      }
         }
       }
     }

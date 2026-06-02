@@ -23,14 +23,21 @@ export class TelepresencePortal {
   private goodFrameCount = 0;
 
   // Command handlers / Callback interfaces
-  public onCommandCallback?: (command: string, args?: any) => void;
+	public onCommandCallback?: (command: string, args?: Record<string, unknown>) => void;
   public onPauseCallback?: () => void;
   public onForceBranchCallback?: (branch: string) => void;
   public onInjectVariablesCallback?: (variables: Record<string, string>) => void;
 
-  constructor(private readonly port: number = 8089, encryptionPassword = 'GHITA_TELEPRESENCE_SECRET_KEY') {
-    // Generate standard 32-byte key from password using scrypt
-    this.secretKey = crypto.scryptSync(encryptionPassword, 'salt', 32);
+  constructor(private readonly port: number = 8089, encryptionPassword?: string) {
+    // Require password from env or parameter - no hardcoded default
+    const password = encryptionPassword || process.env.GHITA_TELEPRESENCE_KEY;
+    if (!password) {
+      throw new Error('[TelepresencePortal] Encryption password required. Set GHITA_TELEPRESENCE_KEY env or pass to constructor.');
+    }
+    // Generate random 16-byte salt per instance for key derivation
+    const salt = crypto.randomBytes(16);
+    // Generate standard 32-byte key from password using scrypt with random salt
+    this.secretKey = crypto.scryptSync(password, salt, 32);
   }
 
   /**
@@ -93,7 +100,7 @@ export class TelepresencePortal {
     return new Promise<void>((resolve, reject) => {
       if (!this.server) return reject(new Error('Server not initialized'));
       this.server.listen(this.port, '0.0.0.0', () => {
-        console.log(`[Telepresence] 🚀 WebSocket server listening on port ${this.port}`);
+	console.info(`[Telepresence] 🚀 WebSocket server listening on port ${this.port}`);
         resolve();
       });
       this.server.on('error', reject);
@@ -110,10 +117,11 @@ export class TelepresencePortal {
     this.clients.clear();
     this.socketBuffers.clear();
 
-    if (this.server) {
+	if (this.server) {
+      const server = this.server;
       await new Promise<void>((resolve) => {
-        this.server!.close(() => {
-          console.log('[Telepresence] Server stopped');
+        server.close(() => {
+          console.info('[Telepresence] Server stopped');
           this.server = null;
           resolve();
         });
@@ -188,28 +196,44 @@ export class TelepresencePortal {
   }
 
   /**
-   * E2E Encrypt payload using AES-256-CBC
+   * E2E Encrypt payload using AES-256-GCM
+   * Returns IV:authTag:ciphertext (all hex-encoded)
    */
   public encrypt(data: Buffer | string): Buffer {
-    const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv('aes-256-cbc', this.secretKey, iv);
+    const iv = crypto.randomBytes(12); // GCM uses 12-byte nonce
+    const cipher = crypto.createCipheriv('aes-256-gcm', this.secretKey, iv);
     const input = Buffer.isBuffer(data) ? data : Buffer.from(data, 'utf8');
     const encrypted = Buffer.concat([cipher.update(input), cipher.final()]);
-    // Prepend the 16-byte random IV
-    return Buffer.concat([iv, encrypted]);
+    const authTag = cipher.getAuthTag();
+    // IV (12 bytes) + authTag (16 bytes) + ciphertext
+    return Buffer.concat([iv, authTag, encrypted]);
   }
 
   /**
-   * E2E Decrypt payload using AES-256-CBC
+   * E2E Decrypt payload using AES-256-GCM
+   * Supports new format (IV:authTag:ciphertext) and legacy format (IV:ciphertext, AES-256-CBC)
    */
   public decrypt(encryptedData: Buffer): Buffer {
-    if (encryptedData.length < 17) {
+    if (encryptedData.length < 29) {
       throw new Error('Invalid encrypted data length');
     }
-    const iv = encryptedData.subarray(0, 16);
-    const ciphertext = encryptedData.subarray(16);
-    const decipher = crypto.createDecipheriv('aes-256-cbc', this.secretKey, iv);
-    return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+    // Legacy format: first 16 bytes IV (AES-256-CBC)
+    // New format: first 12 bytes IV + next 16 bytes authTag (AES-256-GCM)
+    // Heuristic: if data is long enough for 12+16=28 byte header, try GCM first
+    const ivGcm = encryptedData.subarray(0, 12);
+    const authTag = encryptedData.subarray(12, 28);
+    const ciphertextGcm = encryptedData.subarray(28);
+    try {
+      const decipher = crypto.createDecipheriv('aes-256-gcm', this.secretKey, ivGcm);
+      decipher.setAuthTag(authTag);
+      return Buffer.concat([decipher.update(ciphertextGcm), decipher.final()]);
+    } catch {
+      // Fallback: legacy AES-256-CBC format (16-byte IV, no authTag)
+      const iv = encryptedData.subarray(0, 16);
+      const ciphertext = encryptedData.subarray(16);
+      const decipher = crypto.createDecipheriv('aes-256-cbc', this.secretKey, iv);
+      return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+    }
   }
 
   /**
@@ -235,7 +259,7 @@ export class TelepresencePortal {
     let a = 1;
     let b = 0;
     for (let i = 0; i < buf.length; i++) {
-      a = (a + buf[i]!) % 65521;
+		a = (a + (buf[i] ?? 0)) % 65521;
       b = (b + a) % 65521;
     }
     return (b << 16) | a;
@@ -292,8 +316,8 @@ export class TelepresencePortal {
     buf = Buffer.concat([buf, chunk]);
 
     while (buf.length >= 2) {
-      const byte0 = buf[0]!;
-      const byte1 = buf[1]!;
+		const byte0 = buf[0] ?? 0;
+    const byte1 = buf[1] ?? 0;
       const opcode = byte0 & 0x0f;
       const masked = (byte1 & 0x80) !== 0;
       let payloadLen = byte1 & 0x7f;
@@ -326,7 +350,7 @@ export class TelepresencePortal {
       if (masked && maskingKey) {
         const key = maskingKey;
         for (let i = 0; i < payloadLen; i++) {
-          payload[i] = rawPayload[i]! ^ key[i % 4]!;
+		payload[i] = (rawPayload[i] ?? 0) ^ (key[i % 4] ?? 0);
         }
       } else {
         rawPayload.copy(payload);
@@ -396,11 +420,13 @@ export class TelepresencePortal {
   /**
    * Parse mobile commands and trigger associated developer control gates
    */
-  private routeRemoteCommand(socket: Socket, message: any): void {
-    // Handling OTP Authentication Request
-    if (message.type === 'AUTH_OTP') {
-      const code = message.code;
-      if (this.verifyOTP(socket, code)) {
+	private routeRemoteCommand(socket: Socket, message: Record<string, unknown>): void {
+    const messageType = typeof message.type === 'string' ? message.type : '';
+    const messageCommand = typeof message.command === 'string' ? message.command : '';
+    const messageCode = typeof message.code === 'string' ? message.code : '';
+    const messageArgs = (typeof message.args === 'object' && message.args !== null) ? message.args as Record<string, unknown> : {};
+    if (messageType === 'AUTH_OTP') {
+      if (this.verifyOTP(socket, messageCode)) {
         this.sendFrame(socket, 1, Buffer.from(JSON.stringify({ type: 'AUTH_SUCCESS' }), 'utf8'));
       } else {
         this.sendFrame(
@@ -412,7 +438,6 @@ export class TelepresencePortal {
       return;
     }
 
-    // Require authentication for all subsequent command messages
     if (!this.isClientAuthenticated(socket)) {
       this.sendFrame(
         socket,
@@ -422,9 +447,9 @@ export class TelepresencePortal {
       return;
     }
 
-    const command = message.command?.toUpperCase();
+    const command = messageCommand.toUpperCase();
     if (command) {
-      this.onCommandCallback?.(command, message.args);
+      this.onCommandCallback?.(command, messageArgs);
 
       switch (command) {
         case 'PAUSE':
@@ -433,7 +458,7 @@ export class TelepresencePortal {
           break;
         case 'FORCE_BRANCH':
         {
-          const branch = message.args?.branch || 'default';
+          const branch = typeof messageArgs.branch === 'string' ? messageArgs.branch : 'default';
           this.onForceBranchCallback?.(branch);
           this.sendFrame(
             socket,
@@ -444,7 +469,9 @@ export class TelepresencePortal {
         }
         case 'INJECT_VARIABLES':
         {
-          const variables = message.args?.variables || {};
+          const variables = (typeof messageArgs.variables === 'object' && messageArgs.variables !== null)
+            ? messageArgs.variables as Record<string, string>
+            : {} as Record<string, string>;
           this.onInjectVariablesCallback?.(variables);
           this.sendFrame(
             socket,

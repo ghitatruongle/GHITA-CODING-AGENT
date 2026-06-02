@@ -39,7 +39,7 @@ export class ScreenCapture {
       const bytes = imgBuffer instanceof Uint8Array ? imgBuffer : new Uint8Array(imgBuffer as ArrayBuffer);
       let binary = '';
       for (let i = 0; i < bytes.length; i++) {
-        binary += String.fromCharCode(bytes[i]!);
+        binary += String.fromCharCode(bytes[i] as number);
       }
       return btoa(binary);
     } catch (error) {

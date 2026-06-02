@@ -440,24 +440,24 @@ export async function runInSandbox(
   if (!forceLocal) {
     const dockerAvailable = await isDockerAvailable();
     if (dockerAvailable) {
+      const tempDir = createTempDir();
+      let file: SandboxFile | undefined;
       try {
-        const tempDir = createTempDir();
-        const file = await writeTempFile(tempDir, code, language, true);
+        file = await writeTempFile(tempDir, code, language, true);
         const startTime = Date.now();
-
         const result = await runInDocker(code, config, tempDir, file, startTime);
-
-        // Cleanup volume files on host
-        await file.cleanup();
+        return result;
+      } catch (err: unknown) {
+        console.warn(`[Sandbox Warning] Docker container failed: ${(err as Error).message}. Falling back to safe Local Interpreter host stream.`);
+      } finally {
+        // Always cleanup temp files regardless of Docker success/failure
+        await file?.cleanup();
         try {
           const { rmdir } = await import('node:fs/promises');
           await rmdir(tempDir, { recursive: true });
         } catch {
-          // ignore
+          // ignore cleanup errors
         }
-        return result;
-      } catch (err: any) {
-        console.warn(`[Sandbox Warning] Docker container failed: ${err.message}. Falling back to safe Local Interpreter host stream.`);
       }
     } else {
       console.warn('[Sandbox Warning] Docker is not available. Falling back to safe Local Interpreter host stream.');

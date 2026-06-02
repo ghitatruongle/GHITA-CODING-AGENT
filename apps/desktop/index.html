@@ -11,6 +11,17 @@
       /* Prevent flash of unstyled content */
       html { background: #0a0a1a; }
     </style>
+    <script>
+      window.global = window;
+      window.process = {
+        env: { NODE_ENV: 'production' },
+        platform: 'browser',
+        browser: true,
+        cwd: () => '/',
+        argv: [],
+        nextTick: typeof queueMicrotask === 'function' ? queueMicrotask : (cb) => Promise.resolve().then(cb),
+      };
+    </script>
   </head>
   <body>
     <div id="root"></div>

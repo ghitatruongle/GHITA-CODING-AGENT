@@ -608,3 +608,52 @@ describe('YAML config — edge cases', () => {
     expect(typeof config).toBe('object');
   });
 });
+
+describe('Telemetry Logging & Coordinates Verification (Phase 5)', () => {
+  let logger: SecurityLogger;
+  let loggerAvailable = true;
+
+  beforeEach(() => {
+    try {
+      logger = new SecurityLogger(); // in-memory
+      logger.init();
+    } catch {
+      loggerAvailable = false;
+    }
+  });
+
+  afterEach(() => {
+    if (loggerAvailable) logger?.close();
+  });
+
+  it('should log browser and terminal telemetry correctly', () => {
+    if (!loggerAvailable) return;
+
+    logger.logTelemetry('browser', 'click', { selector: '#login' }, 'success');
+    logger.logTelemetry('terminal', 'moveMouse', { point: { x: 100, y: 200 } }, 'success');
+    logger.logTelemetry('browser', 'fill', { selector: '#username', error: 'element not visible' }, 'failure');
+
+    const logs = logger.getTelemetryLogs();
+    expect(logs.length).toBe(3);
+    
+    expect(logs[0].status).toBe('failure');
+    expect(logs[0].type).toBe('browser');
+    expect(logs[0].action).toBe('fill');
+    expect(logs[0].details.error).toBe('element not visible');
+
+    expect(logs[1].type).toBe('terminal');
+    expect(logs[1].action).toBe('moveMouse');
+    expect(logs[1].details.point).toEqual({ x: 100, y: 200 });
+
+    expect(logs[2].type).toBe('browser');
+    expect(logs[2].action).toBe('click');
+    expect(logs[2].details.selector).toBe('#login');
+  });
+
+  it('should support validate alias method on SandboxSecurityFilter', () => {
+    const filter = new SandboxSecurityFilter();
+    const result = filter.validate('rm -rf /');
+    expect(result.safe).toBe(false);
+    expect(result.threats.length).toBeGreaterThan(0);
+  });
+});

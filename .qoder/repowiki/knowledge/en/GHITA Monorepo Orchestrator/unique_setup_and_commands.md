@@ -1,0 +1,1 @@
+Uses `turbo run` for cached, parallel task execution across the workspace, with specialized sidecar build scripts in `apps/desktop/scripts/build-sidecar.mjs` for native binary packaging.

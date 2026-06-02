@@ -1,0 +1,3 @@
+- Use of `vi.stubGlobal` and `vi.useFakeTimers` to control environment state and time-dependent logic in utility tests.
+- Implementation of typed mock classes (e.g., `Server` in Socket.IO mocks) that mirror production interfaces for type-safe testing.
+- Grouping of related test cases into descriptive `describe` blocks with clear 'should' statements for behavior verification.

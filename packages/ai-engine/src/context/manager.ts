@@ -68,8 +68,9 @@ export class ContextManager {
     let tokens = 0;
 
     // Duyệt từ cuối lên đầu
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const msg = messages[i]!;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i];
+    if (!msg) continue;
       const msgTokens = this.estimateTokens([msg]);
       if (tokens + msgTokens > budget && result.length > 0) break;
       result.unshift(msg);

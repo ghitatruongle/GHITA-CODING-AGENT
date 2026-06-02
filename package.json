@@ -9,11 +9,11 @@
   "scripts": {
     "dev": "turbo dev",
     "dev:desktop": "pnpm --filter @ghita/desktop tauri dev",
-    "build:desktop": "pnpm --filter @ghita/desktop tauri build",
     "dev:android": "pnpm --filter @ghita/mobile android",
+    "build": "node scripts/fix-store.mjs && pnpm install && turbo build --filter=./packages/* --filter=./apps/desktop --filter=./apps/vscode-extension && pnpm --filter @ghita/mobile build",
+    "build:desktop": "pnpm --filter @ghita/desktop tauri build",
     "build:android": "pnpm --filter @ghita/mobile build:release",
-    "build": "turbo build",
-    "build:packages": "turbo build --filter='./packages/*'",
+    "build:packages": "turbo build --filter=./packages/*",
     "lint": "turbo lint",
     "lint:fix": "turbo lint -- --fix",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
@@ -21,7 +21,8 @@
     "typecheck": "turbo typecheck",
     "test": "turbo test",
     "clean": "turbo clean",
-    "clean:all": "turbo clean && rm -rf node_modules && rm -rf packages/*/node_modules && rm -rf apps/*/node_modules"
+    "clean:all": "turbo clean && rm -rf node_modules && rm -rf packages/*/node_modules && rm -rf apps/*/node_modules",
+    "rebuild": "rm -rf node_modules packages/*/node_modules apps/*/node_modules && pnpm install && turbo build --filter=./packages/* --filter=./apps/desktop --filter=./apps/vscode-extension --force && pnpm --filter @ghita/mobile build"
   },
   "devDependencies": {
     "@eslint/js": "^9.15.0",
@@ -34,7 +35,7 @@
     "sharp": "^0.34.5",
     "turbo": "^2.3.0",
     "typescript": "^5.6.0",
-    "typescript-eslint": "^8.15.0"
+    "typescript-eslint": "8.59.4"
   },
   "engines": {
     "node": ">=20.0.0"
@@ -43,7 +44,8 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild",
-      "better-sqlite3"
+      "better-sqlite3",
+      "node-pty"
     ]
   },
   "dependencies": {

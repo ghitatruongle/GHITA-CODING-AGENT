@@ -227,16 +227,20 @@ export class ComputerUseController {
         case 'type': {
           const text = inputs.content || inputs.text || '';
           if (startPoint) {
-            await this.click(startPoint);
+            const clickResult = await this.click(startPoint);
+            if (!clickResult.success) {
+              result = clickResult;
+              break;
+            }
             await new Promise((resolve) => setTimeout(resolve, 200));
           }
-          result = await this.typeText(text);
+	result = await this.typeText(String(text));
           break;
         }
         case 'press':
         case 'hotkey': {
           const key = inputs.key || inputs.hotkey || inputs.text || '';
-          result = await this.pressKey(key);
+	result = await this.pressKey(String(key));
           break;
         }
         case 'screenshot': {
@@ -245,7 +249,7 @@ export class ComputerUseController {
         }
         case 'wait': {
           const actionObj: ComputerUseAction = { type: 'screenshot' };
-          const waitTime = inputs.time ? parseInt(inputs.time, 10) * 1000 : 5000;
+	const waitTime = inputs.time ? parseInt(String(inputs.time), 10) * 1000 : 5000;
           await new Promise((resolve) => setTimeout(resolve, waitTime));
           result = success(actionObj, `Waited for ${waitTime}ms.`);
           break;
@@ -280,7 +284,7 @@ export function createComputerUseSkills(controller = new ComputerUseController()
         x: { type: 'number', description: 'X coordinate', required: true },
         y: { type: 'number', description: 'Y coordinate', required: true },
       },
-      run: async ({ input }) => {
+      run: async ({ input }, _context) => {
         const x = readNumber(input, 'x');
         const y = readNumber(input, 'y');
         if (x === undefined || y === undefined) {
@@ -302,7 +306,7 @@ export function createComputerUseSkills(controller = new ComputerUseController()
         x: { type: 'number', description: 'Optional X coordinate', required: false },
         y: { type: 'number', description: 'Optional Y coordinate', required: false },
       },
-      run: async ({ input }) => {
+      run: async ({ input }, _context) => {
         const x = readNumber(input, 'x');
         const y = readNumber(input, 'y');
         const point = x === undefined || y === undefined ? undefined : { x, y };
@@ -321,7 +325,7 @@ export function createComputerUseSkills(controller = new ComputerUseController()
       parameters: {
         text: { type: 'string', description: 'Text to type', required: true },
       },
-      run: async ({ input }) => {
+      run: async ({ input }, _context) => {
         const text = readString(input, 'text');
         if (!text) return { success: false, error: 'Missing required input: text' };
         return toSkillResult(await controller.typeText(text));
@@ -336,7 +340,7 @@ export function createComputerUseSkills(controller = new ComputerUseController()
       version: COMPUTER_USE_VERSION,
       scopes: ['desktop'],
       status: 'disabled',
-      run: async () => toSkillResult(await controller.screenshot()),
+      run: async (_invocation, _context) => toSkillResult(await controller.screenshot()),
     },
   ];
 }

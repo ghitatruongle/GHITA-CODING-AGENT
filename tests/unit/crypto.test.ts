@@ -3,7 +3,7 @@ import { CryptoHelper } from '../../packages/ai-engine/src/utils/crypto.js';
 
 describe('CryptoHelper (AES-256-CBC Cryptography Helper)', () => {
   const SECRET_KEY = 'ghita-super-secret-developer-key';
-  const RAW_API_KEY = 'sk-proj-12345abcde67890fghij';
+  const RAW_API_KEY = 'MOCK_OPENAI_KEY_FOR_TEST_12345';
 
   it('nên mã hóa và giải mã chính xác 100% với cùng khóa bí mật', () => {
     const encrypted = CryptoHelper.encrypt(RAW_API_KEY, SECRET_KEY);

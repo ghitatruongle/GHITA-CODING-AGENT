@@ -83,8 +83,8 @@ const styles = StyleSheet.create({
   sendButton: {
     backgroundColor: Colors.primary,
     borderRadius: Radius.md,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    minWidth: 48,
+    minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },

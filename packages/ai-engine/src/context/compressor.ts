@@ -320,8 +320,10 @@ export class TrajectoryCompressor {
    * Tóm tắt một nhóm messages ít quan trọng thành 1 message.
    */
   private summarizeGroup(group: MessageAnalysis[]): ChatMessage {
-    if (group.length === 1) {
-      const msg = group[0]!.message;
+  if (group.length === 1) {
+    const first = group[0];
+    if (!first) return { role: 'system', content: '[Compressed] Empty group' };
+    const msg = first.message;
       return {
         role: 'system',
         content: `[Compressed] ${msg.role}: ${this.extractSummary(msg.content)}`,

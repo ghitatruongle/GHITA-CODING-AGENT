@@ -253,52 +253,57 @@ export class RateLimiter {
 
     const config = tier.config;
 
+    const globalCounter = this.counters.get('global');
+    const teamCounter = this.counters.get('team');
+    const userCounter = this.counters.get('user');
+    const keyCounter = this.counters.get('key');
+    const modelCounter = this.counters.get('model');
+
     // Check global limit first
-    const globalResult = this.counters.get('global')!.check('global', {
+    if (!globalCounter) {
+      return { allowed: false, remaining: 0, limit: 0, resetAt: 0, reason: 'Global rate limiter not initialized' };
+    }
+    const globalResult = globalCounter.check('global', {
       ...config,
-      requestsPerWindow: config.requestsPerWindow * 10, // Global is 10x per-user
+      requestsPerWindow: config.requestsPerWindow * 10,
     });
     if (!globalResult.allowed) return globalResult;
 
     // Check team limit
-    if (options.teamId) {
-      const teamResult = this.counters
-        .get('team')!
+    if (options.teamId && teamCounter) {
+      const teamResult = teamCounter
         .check(options.teamId, config, options.tokenCount);
       if (!teamResult.allowed) return teamResult;
     }
 
     // Check user limit
-    if (options.userId) {
-      const userResult = this.counters
-        .get('user')!
+    if (options.userId && userCounter) {
+      const userResult = userCounter
         .check(options.userId, config, options.tokenCount);
       if (!userResult.allowed) return userResult;
     }
 
     // Check key limit
-    if (options.keyId) {
-      const keyResult = this.counters
-        .get('key')!
+    if (options.keyId && keyCounter) {
+      const keyResult = keyCounter
         .check(options.keyId, config, options.tokenCount);
       if (!keyResult.allowed) return keyResult;
     }
 
     // Check model limit
-    if (options.model) {
+    if (options.model && modelCounter) {
       const modelConfig = {
         ...config,
         requestsPerWindow: Math.ceil(config.requestsPerWindow / 2),
       };
-      const modelResult = this.counters
-        .get('model')!
+      const modelResult = modelCounter
         .check(`${options.model}`, modelConfig, options.tokenCount);
       if (!modelResult.allowed) return modelResult;
     }
 
     // All passed — return the most restrictive remaining
-    const userState = options.userId
-      ? this.counters.get('user')!.getState(options.userId)
+    const userState = options.userId && userCounter
+      ? userCounter.getState(options.userId)
       : undefined;
 
     return {
@@ -321,11 +326,14 @@ export class RateLimiter {
     // Token usage is already recorded in check() when tokenCount is provided
     // This method is for post-hoc recording when tokens weren't known upfront
     if (options.userId) {
-      this.counters.get('user')!.check(
-        options.userId,
-        { requestsPerWindow: 0, windowSeconds: 60 },
-        options.tokenCount
-      );
+      const userCounter = this.counters.get('user');
+      if (userCounter) {
+        userCounter.check(
+          options.userId,
+          { requestsPerWindow: 0, windowSeconds: 60 },
+          options.tokenCount
+        );
+      }
     }
   }
 

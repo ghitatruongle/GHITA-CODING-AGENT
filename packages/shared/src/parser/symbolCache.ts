@@ -7,7 +7,7 @@ import path from 'path';
 import crypto from 'crypto';
 import * as url from 'url';
 import Database from 'better-sqlite3';
-import { SymbolTag } from './polyglotTags.js';
+import type { SymbolTag } from './polyglotTags.js';
 
 let __dirname = '';
 try {

@@ -160,10 +160,8 @@ export function createSkillsSyncCommand(hub: SkillHub): SlashCommand {
     usage: '/skills-sync',
     execute: async () => {
       try {
-        // @ts-ignore
-        const { exec } = await import('node:child_process');
-        // @ts-ignore
-        const { promisify } = await import('node:util');
+      const { exec } = await import('node:child_process');
+      const { promisify } = await import('node:util');
         const execAsync = promisify(exec);
 
         const skills = hub.loadSkills().filter(s => s.id.startsWith('auto.'));
@@ -172,7 +170,7 @@ export function createSkillsSyncCommand(hub: SkillHub): SlashCommand {
         }
 
         // Lấy hubPath từ hub
-        const hubPath = (hub as any).hubPath as string;
+        const hubPath = (hub as unknown as { hubPath: string }).hubPath;
         
         // Thực thi các lệnh git đồng bộ
         await execAsync(`git add "${hubPath}/*.json"`);
@@ -191,8 +189,8 @@ export function createSkillsSyncCommand(hub: SkillHub): SlashCommand {
         } catch {
           return `[SKILLS-SYNC] Đã commit ${skills.length} skills động vào Local Git repository.\n(Lưu ý: Không thể push lên remote, vui lòng cấu hình "git remote add origin" trước).`;
         }
-      } catch (err: any) {
-        return `[SKILLS-SYNC] Lỗi trong quá trình đồng bộ Git: ${err?.message || String(err)}`;
+    } catch (err: unknown) {
+      return `[SKILLS-SYNC] Lỗi trong quá trình đồng bộ Git: ${(err as Error)?.message || String(err)}`;
       }
     }
   };

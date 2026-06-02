@@ -22,7 +22,7 @@ export class AIGatewayServer {
   // Trackers
   private requestCounts = new Map<string, number[]>();
   private accumulatedCost = 0;
-  private auditLogs: Array<any> = [];
+  private auditLogs: Array<Record<string, unknown>> = [];
 
   // Metrics (Prometheus style counters/gauges)
   private metrics = {
@@ -36,7 +36,7 @@ export class AIGatewayServer {
     this.orchestrator = orchestrator;
     this.config = {
       port: config?.port ?? 3001,
-      apiKey: config?.apiKey ?? 'ghita-admin-secret-key-2026',
+      apiKey: config?.apiKey ?? process.env.GHITA_ADMIN_API_KEY ?? (() => { throw new Error('GHITA_ADMIN_API_KEY environment variable is required'); })(),
       rateLimitLimit: config?.rateLimitLimit ?? 60,
       rateLimitWindowMs: config?.rateLimitWindowMs ?? 60000,
       monthlyBudget: config?.monthlyBudget ?? 100.0,
@@ -152,9 +152,10 @@ export class AIGatewayServer {
             },
           }));
 
-        } catch (e: any) {
-          res.writeHead(500, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: { message: e.message || 'Internal Server Error' } }));
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'Internal Server Error';
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: { message } }));
         }
         return;
       }
@@ -182,7 +183,7 @@ export class AIGatewayServer {
     return this.accumulatedCost;
   }
 
-  getAuditLogs(): any[] {
+  getAuditLogs(): Array<Record<string, unknown>> {
     return this.auditLogs;
   }
 
@@ -208,7 +209,7 @@ export class AIGatewayServer {
     return false;
   }
 
-  private filterPII(messages: any[]): any[] {
+  private filterPII(messages: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
     const piiRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
     return messages.map((m) => {
       if (m.content && typeof m.content === 'string') {
@@ -238,7 +239,7 @@ export class AIGatewayServer {
     return promptCost + completionCost;
   }
 
-  private logAudit(log: any) {
+  private logAudit(log: Record<string, unknown>) {
     this.auditLogs.push(log);
     if (this.auditLogs.length > 1000) this.auditLogs.shift();
   }

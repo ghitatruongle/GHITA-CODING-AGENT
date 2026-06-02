@@ -7,7 +7,7 @@ import type { ChatMessage, ChatRole } from '../types.js';
 /**
  * Universal template renderer supporting both {{variable}} and {variable} patterns.
  */
-export function renderTemplate(template: string, variables: Record<string, any>): string {
+export function renderTemplate(template: string, variables: Record<string, unknown>): string {
   return template.replace(/(?:\{\{([^{}]+)\}\})|(?:\{([^{}]+)\})/g, (match, p1, p2) => {
     const varName = (p1 || p2 || '').trim();
     if (variables[varName] !== undefined) {
@@ -30,7 +30,7 @@ export class PromptTemplate {
     public readonly inputVariables?: string[]
   ) {}
 
-  format(variables: Record<string, any>): string {
+  format(variables: Record<string, unknown>): string {
     return renderTemplate(this.template, variables);
   }
 }
@@ -49,7 +49,7 @@ export class ChatPromptTemplate {
     public readonly inputVariables?: string[]
   ) {}
 
-  formatMessages(variables: Record<string, any>): ChatMessage[] {
+  formatMessages(variables: Record<string, unknown>): ChatMessage[] {
     return this.messages.map((msg) => ({
       role: msg.role,
       content: renderTemplate(msg.template, variables),
@@ -61,7 +61,7 @@ export class ChatPromptTemplate {
  * Few-Shot Prompt Template
  */
 export interface FewShotPromptOptions {
-  examples: Record<string, any>[];
+  examples: Record<string, unknown>[];
   examplePrompt: PromptTemplate;
   prefix: string;
   suffix: string;
@@ -70,7 +70,7 @@ export interface FewShotPromptOptions {
 }
 
 export class FewShotPromptTemplate {
-  private examples: Record<string, any>[];
+  private examples: Record<string, unknown>[];
   private examplePrompt: PromptTemplate;
   private prefix: string;
   private suffix: string;
@@ -84,7 +84,7 @@ export class FewShotPromptTemplate {
     this.exampleSeparator = options.exampleSeparator !== undefined ? options.exampleSeparator : '\n\n';
   }
 
-  format(variables: Record<string, any>): string {
+  format(variables: Record<string, unknown>): string {
     const formattedExamples = this.examples
       .map((ex) => this.examplePrompt.format(ex))
       .join(this.exampleSeparator);
@@ -106,7 +106,7 @@ export class PipelinePromptTemplate {
     }>
   ) {}
 
-  format(variables: Record<string, any>): string {
+  format(variables: Record<string, unknown>): string {
     const resolvedVars = { ...variables };
     for (const sub of this.pipelinePrompts) {
       resolvedVars[sub.parameterName] = sub.prompt.format(variables);
@@ -119,13 +119,14 @@ export class PipelinePromptTemplate {
 // 2.6 Prompt Management (PromptManager)
 // ------------------------------------------------------------------------------
 export class PromptManager {
-  private registry = new Map<string, Map<string, any>>();
+  private registry = new Map<string, Map<string, unknown>>();
 
-  register(name: string, template: any, version = 'latest'): void {
+  register(name: string, template: unknown, version = 'latest'): void {
     if (!this.registry.has(name)) {
-      this.registry.set(name, new Map<string, any>());
+      this.registry.set(name, new Map<string, unknown>());
     }
-    const versions = this.registry.get(name)!;
+    const versions = this.registry.get(name);
+    if (!versions) return;
     versions.set(version, template);
 
     // If registering for the first time or as 'latest', also save as 'default' or update latest
@@ -139,7 +140,7 @@ export class PromptManager {
     }
   }
 
-  get(name: string, version = 'latest'): any {
+  get(name: string, version = 'latest'): unknown {
     const versions = this.registry.get(name);
     if (!versions) {
       throw new Error(`Prompt template "${name}" not found`);

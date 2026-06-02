@@ -53,7 +53,7 @@ export class FallbackManager {
   private fallbackChain: string[] = ['claude-3-7-sonnet', 'deepseek-r1', 'gemini-2.5-pro', 'ollama'];
 
   // Biến lưu tiktoken encoder nếu được load động thành công
-  private tiktokenEncoder: any = null;
+  private tiktokenEncoder: { encode: (text: string) => ArrayLike<number>; free?: () => void } | null = null;
 
   // Model specific timeouts configuration in milliseconds (STT 16 Optimization)
   private modelTimeouts: Record<string, number> = {
@@ -113,8 +113,9 @@ export class FallbackManager {
         CREATE INDEX IF NOT EXISTS idx_cost_logs_session ON cost_logs(session_id);
         CREATE INDEX IF NOT EXISTS idx_cost_logs_timestamp ON cost_logs(timestamp);
       `);
-    } catch (err: any) {
-      console.warn(`[Failover] SQLite failed to initialize: ${err.message}. Running with in-memory SQLite.`);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn(`[Failover] SQLite failed to initialize: ${message}. Running with in-memory SQLite.`);
       this.db = new Database(':memory:');
     }
   }
@@ -148,8 +149,8 @@ export class FallbackManager {
     }
   }
 
-  private parseSimpleYaml(content: string): Record<string, any> {
-    const result: Record<string, any> = {};
+  private parseSimpleYaml(content: string): Record<string, number> {
+    const result: Record<string, number> = {};
     const lines = content.split(/\r?\n/);
     let inBudget = false;
 
@@ -165,7 +166,7 @@ export class FallbackManager {
       if (inBudget) {
         if (trimmed.includes(':')) {
           const [k, ...v] = trimmed.split(':');
-          const key = k!.trim();
+          const key = (k ?? '').trim();
           const val = v.join(':').trim();
           result[key] = Number(val);
         }
@@ -198,13 +199,11 @@ budget:
   private async initTiktoken(): Promise<void> {
     try {
       // Hỗ trợ dynamic import cho tiktoken nếu có
-      // @ts-ignore — optional dependency, may not be installed
       const { get_encoding } = await import('@dqbd/tiktoken' as string);
       this.tiktokenEncoder = get_encoding('cl100k_base');
     } catch {
       try {
-        // @ts-ignore — optional dependency, may not be installed
-        const { encodingForModel } = await import('js-tiktoken' as string);
+      const { encodingForModel } = await import('js-tiktoken' as string);
         this.tiktokenEncoder = encodingForModel('gpt-4o');
       } catch {
         // Fallback về custom character length tokenizer offline bên dưới
@@ -262,7 +261,8 @@ budget:
   public calculateCost(model: string, promptTokens: number, completionTokens: number): number {
     // Lấy pricing theo model name gần nhất (loại bỏ provider prefix)
     const modelKey = model.split('/').pop()?.toLowerCase() || '';
-    const pricing = MODEL_PRICING[modelKey] ?? MODEL_PRICING['ollama']!; // default to free if unknown
+    const pricing = MODEL_PRICING[modelKey] ?? MODEL_PRICING['ollama'];
+  if (!pricing) return 0;
 
     const inputCost = (promptTokens / 1000) * (pricing?.input ?? 0);
     const outputCost = (completionTokens / 1000) * (pricing?.output ?? 0);
@@ -299,8 +299,9 @@ budget:
 
       // Kiểm tra ngưỡng cảnh báo để thông báo
       this.checkBudgetAlerts();
-    } catch (err: any) {
-      console.warn(`[Failover] Failed to write cost log: ${err.message}`);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn(`[Failover] Failed to write cost log: ${message}`);
     }
   }
 
@@ -309,14 +310,15 @@ budget:
   // =========================================================================
   public getSessionTotalCost(): number {
     if (!this.db) return 0;
-    const row = this.db.prepare('SELECT SUM(cost) as total FROM cost_logs WHERE session_id = ? AND success = 1').get(this.sessionId) as any;
+    const row = this.db.prepare('SELECT SUM(cost) as total FROM cost_logs WHERE session_id = ? AND success = 1').get(this.sessionId) as { total: number | null } | undefined;
     return row?.total ?? 0;
   }
 
   public getDayTotalCost(): number {
     if (!this.db) return 0;
-    const todayStr = new Date().toISOString().split('T')[0]!;
-    const row = this.db.prepare("SELECT SUM(cost) as total FROM cost_logs WHERE timestamp LIKE ? AND success = 1").get(`${todayStr}%`) as any;
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (!todayStr) return 0;
+    const row = this.db.prepare("SELECT SUM(cost) as total FROM cost_logs WHERE timestamp LIKE ? AND success = 1").get(`${todayStr}%`) as { total: number | null } | undefined;
     return row?.total ?? 0;
   }
 
@@ -384,11 +386,12 @@ budget:
     const activeChain = healthyChain.length > 0 ? healthyChain : chain;
 
     const promptTokens = this.countMessagesTokens(messages);
-    let _lastError: any = null;
+    let _lastError: Error | null = null;
 
     // 3. Vòng lặp Failover
     for (let idx = 0; idx < activeChain.length; idx++) {
-      const model = activeChain[idx]!;
+      const model = activeChain[idx];
+    if (!model) continue;
       const timeoutMs = this.modelTimeouts[model] || 15000;
       
       let timer: NodeJS.Timeout | null = null;
@@ -430,48 +433,48 @@ budget:
         });
 
         return response;
-      } catch (err: any) {
-        if (timer) clearTimeout(timer);
-        _lastError = err;
-        
-        // Ghi nhận lỗi cho Circuit Breaker
-        const currentFailures = (this.consecutiveModelFailures.get(model) || 0) + 1;
-        this.consecutiveModelFailures.set(model, currentFailures);
-        if (currentFailures >= 3) {
-          // Trip breaker: tạm ngưng 60s
-          this.modelUnhealthyUntil.set(model, Date.now() + 60000);
-          console.warn(`[CircuitBreaker] Model ${model} has failed ${currentFailures} times consecutively. Marking as unhealthy for 60s.`);
-        }
+    } catch (err: unknown) {
+      if (timer) clearTimeout(timer);
+      _lastError = err instanceof Error ? err : new Error(String(err));
 
-        // Log SQLite thất bại
-        this.logCost({
-          sessionId: this.sessionId,
-          provider: options?.agentRole || 'unknown-provider',
-          model,
-          promptTokens,
-          completionTokens: 0,
-          totalTokens: promptTokens,
-          cost: 0,
-          success: 0,
-          errorMessage: err.message
-        });
+      // Ghi nhận lỗi cho Circuit Breaker
+      const currentFailures = (this.consecutiveModelFailures.get(model) || 0) + 1;
+      this.consecutiveModelFailures.set(model, currentFailures);
+      if (currentFailures >= 3) {
+        // Trip breaker: tạm ngưng 60s
+        this.modelUnhealthyUntil.set(model, Date.now() + 60000);
+        console.warn(`[CircuitBreaker] Model ${model} has failed ${currentFailures} times consecutively. Marking as unhealthy for 60s.`);
+      }
 
-        // Dynamic Backoff/Failover delay:
-        // - Rate-limited (429): Chờ lâu hơn để hồi phục (500ms)
-        // - Transient (500/502/503/504) hoặc Timeout: Chuyển đổi nhanh chóng (100ms)
-        const isRateLimit = err.message?.includes('429') || err.message?.includes('rate limit');
-        const delayMs = isRateLimit ? 500 : 100;
+      // Log SQLite thất bại
+      this.logCost({
+        sessionId: this.sessionId,
+        provider: options?.agentRole || 'unknown-provider',
+        model,
+        promptTokens,
+        completionTokens: 0,
+        totalTokens: promptTokens,
+        cost: 0,
+        success: 0,
+        errorMessage: _lastError.message
+      });
 
-        if (idx < activeChain.length - 1) {
-          const warnMsg = `🔴 FAILOVER: Model ${model} failed. Error: ${err.message}. Switching fallback in ${delayMs}ms...`;
-          console.error(warnMsg);
-          this.triggerOltNotification(warnMsg);
-          await new Promise(r => setTimeout(r, delayMs));
-        } else {
-          const warnMsg = `🔴 FAILOVER: Model ${model} failed. Error: ${err.message}. No more models in primary chain.`;
-          console.error(warnMsg);
-          this.triggerOltNotification(warnMsg);
-        }
+      // Dynamic Backoff/Failover delay:
+      // - Rate-limited (429): Chờ lâu hơn để hồi phục (500ms)
+      // - Transient (500/502/503/504) hoặc Timeout: Chuyển đổi nhanh chóng (100ms)
+      const isRateLimit = _lastError.message?.includes('429') || _lastError.message?.includes('rate limit');
+      const delayMs = isRateLimit ? 500 : 100;
+
+      if (idx < activeChain.length - 1) {
+        const warnMsg = `🔴 FAILOVER: Model ${model} failed. Error: ${_lastError.message}. Switching fallback in ${delayMs}ms...`;
+        console.error(warnMsg);
+        this.triggerOltNotification(warnMsg);
+        await new Promise(r => setTimeout(r, delayMs));
+      } else {
+        const warnMsg = `🔴 FAILOVER: Model ${model} failed. Error: ${_lastError.message}. No more models in primary chain.`;
+        console.error(warnMsg);
+        this.triggerOltNotification(warnMsg);
+      }
       }
     }
 
@@ -499,8 +502,9 @@ budget:
       });
 
       return response;
-    } catch (localErr: any) {
-      throw new Error(`All remote providers and local Ollama fallback failed. Last error: ${localErr.message}. Primary chain error: ${_lastError?.message || 'none'}`);
+  } catch (localErr: unknown) {
+    const localMessage = localErr instanceof Error ? localErr.message : String(localErr);
+    throw new Error(`All remote providers and local Ollama fallback failed. Last error: ${localMessage}. Primary chain error: ${_lastError?.message || 'none'}`);
     }
   }
 

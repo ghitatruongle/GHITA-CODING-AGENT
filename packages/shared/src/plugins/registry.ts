@@ -5,7 +5,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { homedir } from 'node:os';
-import { PluginManifest } from './types.js';
+import type { PluginManifest } from './types.js';
 import { logger } from '../logger.js';
 
 export class PluginRegistry {
@@ -25,8 +25,8 @@ export class PluginRegistry {
         fs.mkdirSync(this.pluginsPath, { recursive: true });
         logger.info(`[PluginRegistry] Created plugin directory at ${this.pluginsPath}`);
       }
-    } catch (error: any) {
-      logger.error(`[PluginRegistry] Failed to create plugin directory: ${error.message}`);
+ } catch (error: unknown) {
+ logger.error(`[PluginRegistry] Failed to create plugin directory: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -50,19 +50,19 @@ export class PluginRegistry {
               const content = fs.readFileSync(manifestPath, 'utf8');
               const manifest = JSON.parse(content) as PluginManifest;
               
-              if (this.validateManifest(manifest)) {
+					if (this.validateManifest(manifest as PluginManifest | Record<string, unknown>)) {
                 manifests.push(manifest);
               } else {
                 logger.warn(`[PluginRegistry] Invalid manifest at ${manifestPath}`);
               }
-            } catch (jsonErr: any) {
-              logger.error(`[PluginRegistry] Failed to parse manifest in ${file}: ${jsonErr.message}`);
+ } catch (jsonErr: unknown) {
+ logger.error(`[PluginRegistry] Failed to parse manifest in ${file}: ${jsonErr instanceof Error ? jsonErr.message : String(jsonErr)}`);
             }
           }
         }
       }
-    } catch (error: any) {
-      logger.error(`[PluginRegistry] Error discovering plugins: ${error.message}`);
+ } catch (error: unknown) {
+ logger.error(`[PluginRegistry] Error discovering plugins: ${error instanceof Error ? error.message : String(error)}`);
     }
     return manifests;
   }
@@ -70,7 +70,7 @@ export class PluginRegistry {
   /**
    * Validate manifest structure
    */
-  private validateManifest(manifest: any): manifest is PluginManifest {
+  private validateManifest(manifest: PluginManifest | Record<string, unknown>): manifest is PluginManifest {
     return (
       manifest &&
       typeof manifest.id === 'string' &&
@@ -128,6 +128,12 @@ export class PluginRegistry {
       if (sourceDirOrFiles) {
         for (const [filename, fileContent] of Object.entries(sourceDirOrFiles)) {
           const filePath = path.join(targetDir, filename);
+          // Prevent path traversal: resolved path must stay within targetDir
+          const resolved = path.resolve(filePath);
+          if (!resolved.startsWith(path.resolve(targetDir))) {
+            logger.error(`[PluginRegistry] Blocked path traversal attempt: ${filename}`);
+            continue;
+          }
           const dir = path.dirname(filePath);
           if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true });
@@ -138,8 +144,8 @@ export class PluginRegistry {
 
       logger.info(`[PluginRegistry] Installed plugin ${manifest.name} (${manifest.id})`);
       return true;
-    } catch (error: any) {
-      logger.error(`[PluginRegistry] Failed to install plugin ${manifest.id}: ${error.message}`);
+ } catch (error: unknown) {
+ logger.error(`[PluginRegistry] Failed to install plugin ${manifest.id}: ${error instanceof Error ? error.message : String(error)}`);
       return false;
     }
   }
@@ -157,8 +163,8 @@ export class PluginRegistry {
       }
       logger.warn(`[PluginRegistry] Plugin ${pluginId} not found, cannot uninstall.`);
       return false;
-    } catch (error: any) {
-      logger.error(`[PluginRegistry] Failed to uninstall plugin ${pluginId}: ${error.message}`);
+ } catch (error: unknown) {
+ logger.error(`[PluginRegistry] Failed to uninstall plugin ${pluginId}: ${error instanceof Error ? error.message : String(error)}`);
       return false;
     }
   }

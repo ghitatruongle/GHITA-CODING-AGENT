@@ -3,8 +3,8 @@
 // ==============================================================================
 
 import * as path from 'node:path';
-import { GhitaPlugin, PluginManifest, PluginHooks } from './types.js';
-import { SkillResult } from '../types.js';
+import type { GhitaPlugin, PluginManifest, PluginHooks } from './types.js';
+import type { SkillResult } from '../types.js';
 import { logger } from '../logger.js';
 
 export class PluginRuntime {
@@ -13,19 +13,19 @@ export class PluginRuntime {
   /**
    * Safe execution wrapper to run user plugins without crashing the main thread
    */
-  private async safeExecute<T>(
-    pluginId: string,
-    hookName: keyof PluginHooks,
-    fn: (...args: any[]) => Promise<T> | T,
-    ...args: any[]
-  ): Promise<T | undefined> {
+	private async safeExecute<T, A extends unknown[]>(
+		pluginId: string,
+		hookName: keyof PluginHooks,
+		fn: (...args: A) => Promise<T> | T,
+		...args: A
+	): Promise<T | undefined> {
     try {
       logger.info(`[PluginRuntime] Running hook ${hookName} for plugin ${pluginId}`);
       // Simple dynamic timeout wrapper if it takes too long
       const result = await fn(...args);
       return result;
-    } catch (error: any) {
-      logger.error(`[PluginRuntime] Error executing ${hookName} in plugin ${pluginId}: ${error.message}`, error);
+ } catch (error: unknown) {
+ logger.error(`[PluginRuntime] Error executing ${hookName} in plugin ${pluginId}: ${error instanceof Error ? error.message : String(error)}`, error);
       return undefined;
     }
   }
@@ -48,10 +48,21 @@ export class PluginRuntime {
 
       if (manifest.type === 'code' && manifest.entrypoint) {
         const fullEntrypointPath = path.resolve(pluginDir, manifest.entrypoint);
+        // Validate entrypoint stays within plugin directory (prevent traversal)
+        if (!fullEntrypointPath.startsWith(path.resolve(pluginDir))) {
+          logger.error(`[PluginRuntime] Blocked plugin entrypoint path traversal: ${manifest.entrypoint}`);
+          return false;
+        }
+        // Only allow .js/.mjs/.ts files
+        const ext = path.extname(fullEntrypointPath).toLowerCase();
+        if (!['.js', '.mjs', '.ts'].includes(ext)) {
+          logger.error(`[PluginRuntime] Blocked plugin entrypoint with disallowed extension: ${ext}`);
+          return false;
+        }
         const fileUrl = `file://${fullEntrypointPath.replace(/\\/g, '/')}`;
 
         logger.info(`[PluginRuntime] Dynamically importing code plugin entrypoint: ${fileUrl}`);
-        
+
         // Dynamic import
         const pluginModule = await import(fileUrl);
         
@@ -59,10 +70,10 @@ export class PluginRuntime {
         let hooks: PluginHooks = {};
         if (typeof pluginModule.default === 'function') {
           // Initialize plugin by passing a safe interface/api
-          const sandboxConsole = {
-            log: (...args: any[]) => logger.info(`[Plugin:${manifest.id}]`, ...args),
-            error: (...args: any[]) => logger.error(`[Plugin:${manifest.id}]`, ...args),
-            warn: (...args: any[]) => logger.warn(`[Plugin:${manifest.id}]`, ...args),
+ const sandboxConsole = {
+ log: (...args: unknown[]) => logger.info(`[Plugin:${manifest.id}]`, ...args),
+ error: (...args: unknown[]) => logger.error(`[Plugin:${manifest.id}]`, ...args),
+ warn: (...args: unknown[]) => logger.warn(`[Plugin:${manifest.id}]`, ...args),
           };
           
           hooks = pluginModule.default({
@@ -87,8 +98,8 @@ export class PluginRuntime {
 
       logger.info(`[PluginRuntime] Successfully loaded plugin: ${manifest.name} (${manifest.id})`);
       return true;
-    } catch (error: any) {
-      logger.error(`[PluginRuntime] Failed to load plugin ${manifest.id}: ${error.message}`, error);
+ } catch (error: unknown) {
+ logger.error(`[PluginRuntime] Failed to load plugin ${manifest.id}: ${error instanceof Error ? error.message : String(error)}`, error);
       return false;
     }
   }
@@ -110,8 +121,8 @@ export class PluginRuntime {
       this.plugins.delete(pluginId);
       logger.info(`[PluginRuntime] Unloaded plugin: ${pluginId}`);
       return true;
-    } catch (error: any) {
-      logger.error(`[PluginRuntime] Error unloading plugin ${pluginId}: ${error.message}`);
+ } catch (error: unknown) {
+ logger.error(`[PluginRuntime] Error unloading plugin ${pluginId}: ${error instanceof Error ? error.message : String(error)}`);
       return false;
     }
   }

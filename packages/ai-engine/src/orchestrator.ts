@@ -23,7 +23,7 @@ import { createBuiltInTools, type BuiltInTool } from './tools/index.js';
 import { ContextManager } from './context/manager.js';
 import { PermissionManager } from './security/permissions.js';
 import { SecurityChecker } from './hooks/security-checkers.js';
-import { z } from 'zod';
+import type { z } from 'zod';
 import { generateObject, type GenerateObjectResponse } from './utils/structured.js';
 import { SemanticCache } from './utils/cache.js';
 import { CostTracker, BudgetManager } from './utils/cost.js';
@@ -181,7 +181,7 @@ export class Orchestrator {
     try {
       const cached = await this.semanticCache.get(cacheKey);
       if (cached) {
-        return cached;
+        return cached as ChatResponse;
       }
     } catch {}
 
@@ -202,21 +202,22 @@ export class Orchestrator {
 
     const stepCost = this.costTracker.calculateCost(modelName, promptTokens, completionTokens);
     await this.costTracker.trackCost(modelName, promptTokens, completionTokens);
-    this.budgetManager.recordSpent(stepCost);
+this.budgetManager.recordSpent(stepCost);
 
-    if ((globalThis as any).broadcastCostTelemetryHandler) {
-      try {
-        (globalThis as any).broadcastCostTelemetryHandler({
-          inputTokens: promptTokens,
-          outputTokens: completionTokens,
-          totalTokens: promptTokens + completionTokens,
-          costUsd: this.costTracker.getTotalCost(),
-          limitUsd: this.budgetManager.getLimit(),
-        });
-      } catch {}
-    }
-
+  if ((globalThis as Record<string, unknown>).broadcastCostTelemetryHandler) {
     try {
+      const handler = (globalThis as Record<string, unknown>).broadcastCostTelemetryHandler as (data: Record<string, unknown>) => void;
+      handler({
+      inputTokens: promptTokens,
+      outputTokens: completionTokens,
+      totalTokens: promptTokens + completionTokens,
+      costUsd: this.costTracker.getTotalCost(),
+      limitUsd: this.budgetManager.getLimit(),
+    });
+    } catch {}
+  }
+
+  try {
       await this.semanticCache.set(cacheKey, response);
     } catch {}
 
@@ -233,7 +234,7 @@ export class Orchestrator {
     const cacheKey = serializeMessages(messages);
 
     try {
-      const cached = await this.semanticCache.get(cacheKey);
+      const cached = await this.semanticCache.get(cacheKey) as ChatResponse | null;
       if (cached) {
         yield {
           content: cached.content,
@@ -257,6 +258,7 @@ export class Orchestrator {
     let success = false;
     let lastError: Error | undefined;
 
+    try {
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         accumulatedContent = '';
@@ -314,34 +316,6 @@ export class Orchestrator {
       }
     }
 
-    // Estimate tokens if not returned by API
-    if (finalUsage.totalTokens === 0) {
-      const promptText = serializeMessages(messages);
-      const estPrompt = Math.ceil(promptText.length / 4);
-      const estCompletion = Math.ceil(accumulatedContent.length / 4);
-      finalUsage = {
-        promptTokens: estPrompt,
-        completionTokens: estCompletion,
-        totalTokens: estPrompt + estCompletion,
-      };
-    }
-
-    const stepCost = this.costTracker.calculateCost(resolvedModel, finalUsage.promptTokens, finalUsage.completionTokens);
-    await this.costTracker.trackCost(resolvedModel, finalUsage.promptTokens, finalUsage.completionTokens);
-    this.budgetManager.recordSpent(stepCost);
-
-    if ((globalThis as any).broadcastCostTelemetryHandler) {
-      try {
-        (globalThis as any).broadcastCostTelemetryHandler({
-          inputTokens: finalUsage.promptTokens,
-          outputTokens: finalUsage.completionTokens,
-          totalTokens: finalUsage.totalTokens,
-          costUsd: this.costTracker.getTotalCost(),
-          limitUsd: this.budgetManager.getLimit(),
-        });
-      } catch {}
-    }
-
     // Cache the fully compiled response
     const completeResponse: ChatResponse = {
       content: accumulatedContent,
@@ -354,6 +328,38 @@ export class Orchestrator {
     try {
       await this.semanticCache.set(cacheKey, completeResponse);
     } catch {}
+    } finally {
+      // Cost tracking always runs regardless of consumer behavior (early return/cancel)
+      if (success) {
+        if (finalUsage.totalTokens === 0) {
+          const promptText = serializeMessages(messages);
+          const estPrompt = Math.ceil(promptText.length / 4);
+          const estCompletion = Math.ceil(accumulatedContent.length / 4);
+          finalUsage = {
+            promptTokens: estPrompt,
+            completionTokens: estCompletion,
+            totalTokens: estPrompt + estCompletion,
+          };
+        }
+
+        const stepCost = this.costTracker.calculateCost(resolvedModel, finalUsage.promptTokens, finalUsage.completionTokens);
+        await this.costTracker.trackCost(resolvedModel, finalUsage.promptTokens, finalUsage.completionTokens);
+        this.budgetManager.recordSpent(stepCost);
+
+        if ((globalThis as Record<string, unknown>).broadcastCostTelemetryHandler) {
+          try {
+            const handler = (globalThis as Record<string, unknown>).broadcastCostTelemetryHandler as (data: Record<string, unknown>) => void;
+            handler({
+              inputTokens: finalUsage.promptTokens,
+              outputTokens: finalUsage.completionTokens,
+              totalTokens: finalUsage.totalTokens,
+              costUsd: this.costTracker.getTotalCost(),
+              limitUsd: this.budgetManager.getLimit(),
+            });
+          } catch {}
+        }
+      }
+    }
   }
 
   /** Tạo cấu trúc đầu ra (structured output) theo schema của Zod */
@@ -398,8 +404,8 @@ export class Orchestrator {
   /** Sinh ảnh từ văn bản */
   async generateImage(
     prompt: string,
-    options?: any & { provider?: AIProviderType }
-  ): Promise<{ url: string; b64?: string }> {
+  options?: Record<string, unknown> & { provider?: AIProviderType }
+): Promise<{ url: string; b64?: string }> {
     const provider = this.resolveProvider(options?.provider);
     const maxAttempts = this.config.retryAttempts ?? 2;
 
@@ -418,8 +424,8 @@ export class Orchestrator {
   /** Chuyển văn bản thành giọng nói */
   async generateSpeech(
     text: string,
-    options?: any & { provider?: AIProviderType }
-  ): Promise<{ audio: Buffer; contentType: string }> {
+  options?: Record<string, unknown> & { provider?: AIProviderType }
+): Promise<{ audio: Buffer; contentType: string }> {
     const provider = this.resolveProvider(options?.provider);
     const maxAttempts = this.config.retryAttempts ?? 2;
 
@@ -438,8 +444,8 @@ export class Orchestrator {
   /** Sinh video từ văn bản */
   async generateVideo(
     prompt: string,
-    options?: any & { provider?: AIProviderType }
-  ): Promise<{ url: string }> {
+  options?: Record<string, unknown> & { provider?: AIProviderType }
+): Promise<{ url: string }> {
     const provider = this.resolveProvider(options?.provider);
     const maxAttempts = this.config.retryAttempts ?? 2;
 
@@ -458,8 +464,8 @@ export class Orchestrator {
   /** Chuyển giọng nói thành văn bản */
   async transcribe(
     audio: Buffer,
-    options?: any & { provider?: AIProviderType }
-  ): Promise<{ text: string }> {
+  options?: Record<string, unknown> & { provider?: AIProviderType }
+): Promise<{ text: string }> {
     const provider = this.resolveProvider(options?.provider);
     const maxAttempts = this.config.retryAttempts ?? 2;
 
@@ -640,9 +646,12 @@ export class Orchestrator {
       }
     }
 
-    // Lấy bất kỳ provider nào
-    const all = this.registry.getAll();
-    if (all.length > 0) return all[0]!;
+  // Lấy bất kỳ provider nào
+  const all = this.registry.getAll();
+  if (all.length > 0) {
+    const first = all[0];
+    if (first) return first;
+  }
 
     throw new Error('No AI providers registered');
   }

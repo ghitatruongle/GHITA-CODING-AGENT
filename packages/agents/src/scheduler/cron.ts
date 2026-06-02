@@ -7,7 +7,7 @@ import type { ScheduledTask, ScheduledTaskConfig } from './types.js';
 
 export class CronScheduler {
   private readonly tasks = new Map<string, ScheduledTask>();
-  private masterTimer?: any;
+  private masterTimer?: ReturnType<typeof setInterval>;
 
   constructor(private readonly agentManager: AgentManager) {}
 
@@ -43,7 +43,7 @@ export class CronScheduler {
     }
 
     const intervalMs = this.parseNaturalLanguageToMs(config.expression);
-    let intervalId: any;
+    let intervalId: ReturnType<typeof setInterval> | undefined;
 
     if (intervalMs) {
       // For simple interval-based NL expressions (e.g. "every 10 seconds", "every 5 minutes")
@@ -187,6 +187,7 @@ export class CronScheduler {
         const [left, right] = part.split('/');
         const start = left === '*' ? 0 : parseInt(left || '0');
         const step = parseInt(right || '1');
+        if (step <= 0) return false;
         return (value - start) % step === 0;
       }
       if (part.includes('-')) {

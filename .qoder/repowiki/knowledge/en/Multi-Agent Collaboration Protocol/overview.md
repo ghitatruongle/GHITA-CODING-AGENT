@@ -1,0 +1,1 @@
+A file-based communication system for coordinating hierarchical multi-agent workflows using timestamped text logs and shell scripts.

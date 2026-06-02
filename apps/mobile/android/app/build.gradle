@@ -53,15 +53,38 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            // Read from environment variables or gradle.properties
+            def releaseKeystorePath = System.getenv("GHITA_RELEASE_KEYSTORE_PATH") ?: project.findProperty("GHITA_RELEASE_KEYSTORE_PATH") ?: ""
+            def releaseKeystorePassword = System.getenv("GHITA_RELEASE_KEYSTORE_PASSWORD") ?: project.findProperty("GHITA_RELEASE_KEYSTORE_PASSWORD") ?: ""
+            def releaseKeyAlias = System.getenv("GHITA_RELEASE_KEY_ALIAS") ?: project.findProperty("GHITA_RELEASE_KEY_ALIAS") ?: ""
+            def releaseKeyPassword = System.getenv("GHITA_RELEASE_KEY_PASSWORD") ?: project.findProperty("GHITA_RELEASE_KEY_PASSWORD") ?: ""
+
+            if (releaseKeystorePath && releaseKeystorePassword && releaseKeyAlias && releaseKeyPassword) {
+                storeFile file(releaseKeystorePath)
+                storePassword releaseKeystorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            } else {
+                // Fail the build instead of silently using debug keystore
+                throw new GradleException(
+                    "Release signing credentials not configured!\n" +
+                    "Set these environment variables or gradle.properties:\n" +
+                    "  GHITA_RELEASE_KEYSTORE_PATH\n" +
+                    "  GHITA_RELEASE_KEYSTORE_PASSWORD\n" +
+                    "  GHITA_RELEASE_KEY_ALIAS\n" +
+                    "  GHITA_RELEASE_KEY_PASSWORD\n" +
+                    "For local dev, use: ./gradlew assembleDebug"
+                )
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }

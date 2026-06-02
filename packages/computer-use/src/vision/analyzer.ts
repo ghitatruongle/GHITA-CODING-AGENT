@@ -163,7 +163,7 @@ Only output the Action. Do not write any HTML tags, explainers or other text.`;
         throw new Error(`OpenAI Vision API Error (${response.status}): ${errorText}`);
       }
 
-      const res = await response.json() as any;
+      const res = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
       return res.choices?.[0]?.message?.content || '';
     } else if (config.type === 'anthropic') {
       const response = await fetch(url + 'messages', {
@@ -201,7 +201,7 @@ Only output the Action. Do not write any HTML tags, explainers or other text.`;
         throw new Error(`Anthropic Vision API Error (${response.status}): ${errorText}`);
       }
 
-      const res = await response.json() as any;
+      const res = await response.json() as { content?: Array<{ text?: string }> };
       return res.content?.[0]?.text || '';
     } else {
       throw new Error(`Multimodal provider type not supported: ${config.type}`);

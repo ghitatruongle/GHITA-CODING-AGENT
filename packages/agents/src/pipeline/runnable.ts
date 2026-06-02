@@ -197,7 +197,7 @@ export function runnable<I, O>(fn: TransformFn<I, O>, name?: string): Runnable<I
 }
 
 /** Sequence: runs runnables in order, passing output as input to next */
-export function sequence<I, O>(...runnables: Runnable<any, any>[]): Runnable<I, O> {
+export function sequence<I, O>(...runnables: Runnable<unknown, unknown>[]): Runnable<I, O> {
   if (runnables.length === 0) throw new Error('Sequence requires at least one runnable');
   return runnables.reduce((a, b) => a.pipe(b)) as Runnable<I, O>;
 }

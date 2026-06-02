@@ -17,5 +17,5 @@ export interface ScheduledTask {
   nextRun?: number;
   runCount: number;
   status: 'active' | 'paused' | 'completed';
-  intervalId?: any;
+  intervalId?: ReturnType<typeof setInterval>;
 }

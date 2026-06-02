@@ -24,7 +24,7 @@ export class FilesManager {
     return headers;
   }
 
-  async uploadFile(file: Buffer, purpose: string, filename = 'file.jsonl'): Promise<any> {
+  async uploadFile(file: Buffer, purpose: string, filename = 'file.jsonl'): Promise<Record<string, unknown>> {
     const formData = new FormData();
     const blob = new Blob([new Uint8Array(file)], { type: 'application/octet-stream' });
     formData.append('file', blob, filename);
@@ -44,7 +44,7 @@ export class FilesManager {
     return await response.json();
   }
 
-  async listFiles(): Promise<any> {
+  async listFiles(): Promise<Record<string, unknown>> {
     const response = await fetch(`${this.baseUrl}/files`, {
       method: 'GET',
       headers: this.getHeaders(),
@@ -58,7 +58,7 @@ export class FilesManager {
     return await response.json();
   }
 
-  async deleteFile(fileId: string): Promise<any> {
+  async deleteFile(fileId: string): Promise<Record<string, unknown>> {
     const response = await fetch(`${this.baseUrl}/files/${fileId}`, {
       method: 'DELETE',
       headers: this.getHeaders(),
@@ -92,7 +92,7 @@ export class BatchesManager {
     };
   }
 
-  async createBatch(fileId: string, endpoint: string): Promise<any> {
+  async createBatch(fileId: string, endpoint: string): Promise<Record<string, unknown>> {
     const response = await fetch(`${this.baseUrl}/batches`, {
       method: 'POST',
       headers: this.getHeaders(),
@@ -111,7 +111,7 @@ export class BatchesManager {
     return await response.json();
   }
 
-  async retrieveBatch(batchId: string): Promise<any> {
+  async retrieveBatch(batchId: string): Promise<Record<string, unknown>> {
     const response = await fetch(`${this.baseUrl}/batches/${batchId}`, {
       method: 'GET',
       headers: this.getHeaders(),
@@ -125,7 +125,7 @@ export class BatchesManager {
     return await response.json();
   }
 
-  async cancelBatch(batchId: string): Promise<any> {
+  async cancelBatch(batchId: string): Promise<Record<string, unknown>> {
     const response = await fetch(`${this.baseUrl}/batches/${batchId}/cancel`, {
       method: 'POST',
       headers: this.getHeaders(),

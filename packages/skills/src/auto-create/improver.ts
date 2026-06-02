@@ -56,11 +56,13 @@ export class SkillImprover {
     const paramSuggestions: string[] = [];
     
     // Giả lập phân tích tĩnh
-    const firstRun = successfulRuns[0]!;
-    const otherRuns = successfulRuns.slice(1);
+  const firstRun = successfulRuns[0];
+  if (!firstRun) return null;
+  const otherRuns = successfulRuns.slice(1);
 
-    for (let stepIndex = 0; stepIndex < skill.steps.length; stepIndex++) {
-      const step = skill.steps[stepIndex]!;
+  for (let stepIndex = 0; stepIndex < skill.steps.length; stepIndex++) {
+    const step = skill.steps[stepIndex];
+    if (!step) continue;
       const actualInputFirst = firstRun.steps[stepIndex]?.input;
       
       if (!actualInputFirst) continue;

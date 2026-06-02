@@ -7,6 +7,8 @@
 // Tham chiếu: SWE-agent (trajectories)
 // ==============================================================================
 
+import type BetterSqlite3 from 'better-sqlite3';
+type BetterSqlite3Database = InstanceType<typeof BetterSqlite3>;
 import type { ChatMessage } from '../types.js';
 import type { ChatMiddleware, ChatStreamMiddleware } from '../utils/middleware.js';
 
@@ -72,10 +74,14 @@ export interface SCTITrajectory {
   timestamp: string;
 }
 
+interface Runnable {
+  run(params: Record<string, unknown>): unknown;
+}
+
 export class SCTIEngine {
   private dbPath: string | null = null;
-  private db: any = null;
-  private insertStmt: any = null;
+  private db: BetterSqlite3Database | null = null;
+  private insertStmt: Runnable | null = null;
   private dbInitialized = false;
 
   // Cache bộ nhớ trong phòng trường hợp SQLite lỗi
@@ -95,7 +101,7 @@ export class SCTIEngine {
 
     try {
       const Database = (await import('better-sqlite3')).default;
-      this.db = new Database(this.dbPath);
+      this.db = new Database(this.dbPath) as InstanceType<typeof Database>;
 
       this.db.exec(`
         CREATE TABLE IF NOT EXISTS scti_corrections (
@@ -106,16 +112,21 @@ export class SCTIEngine {
           timestamp TEXT NOT NULL
         );
         CREATE INDEX IF NOT EXISTS idx_scti_error_code
-          ON scti_corrections(error_code);
+        ON scti_corrections(error_code);
       `);
 
       this.insertStmt = this.db.prepare(`
         INSERT INTO scti_corrections (error_code, error_snippet, solution_diff, timestamp)
         VALUES (@errorCode, @errorSnippet, @solutionDiff, @timestamp)
-      `);
+      `) as Runnable;
 
-      // Load dữ liệu cũ vào cache
-      const rows = this.db.prepare('SELECT * FROM scti_corrections').all();
+      const rows = this.db.prepare('SELECT * FROM scti_corrections').all() as Array<{
+        id: number;
+        error_code: string;
+        error_snippet: string;
+        solution_diff: string;
+        timestamp: string;
+      }>;
       for (const row of rows) {
         this.inMemoryCache.push({
           id: row.id,
@@ -125,8 +136,9 @@ export class SCTIEngine {
           timestamp: row.timestamp,
         });
       }
-    } catch (err: any) {
-      console.warn(`[SCTIEngine] SQLite unavailable (${err.message}), fallback to in-memory`);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn(`[SCTIEngine] SQLite unavailable (${message}), fallback to in-memory`);
       this.db = null;
       this.insertStmt = null;
     }
@@ -165,8 +177,9 @@ export class SCTIEngine {
           solutionDiff: compressed,
           timestamp,
         });
-      } catch (err: any) {
-        console.warn(`[SCTIEngine] SQLite insert failed: ${err.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`[SCTIEngine] SQLite insert failed: ${message}`);
       }
     }
   }
@@ -216,10 +229,11 @@ export class SCTIEngine {
     if (this.db) {
       try {
         const timeLimit = new Date(thirtyDaysAgo).toISOString();
-        const res = this.db.prepare('DELETE FROM scti_corrections WHERE timestamp < ?').run(timeLimit);
+        const res = this.db.prepare('DELETE FROM scti_corrections WHERE timestamp < ?').run(timeLimit) as { changes: number };
         return res.changes;
-      } catch (err: any) {
-        console.warn(`[SCTIEngine] Clean failed: ${err.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`[SCTIEngine] Clean failed: ${message}`);
       }
     }
     return 0;

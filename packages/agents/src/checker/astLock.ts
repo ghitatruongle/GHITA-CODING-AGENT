@@ -8,7 +8,8 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { PolyglotTagParser, SymbolTag } from '@ghita/shared/node';
+import type { SymbolTag } from '@ghita/shared/node';
+import { PolyglotTagParser } from '@ghita/shared/node';
 import type { AgentMiddleware, MiddlewareContext } from '../middleware/types.js';
 
 export interface HierarchicalSymbol extends SymbolTag {
@@ -46,12 +47,14 @@ export function buildHierarchy(tags: SymbolTag[]): HierarchicalSymbol[] {
 
   // Gán mỗi child cho immediate parent (parent nhỏ nhất chứa child)
   for (let j = 0; j < definitions.length; j++) {
-    const child = definitions[j]!;
-    let bestParent: HierarchicalSymbol | null = null;
-    let bestSize = Infinity;
-    for (let i = 0; i < definitions.length; i++) {
-      if (i === j) continue;
-      const candidate = definitions[i]!;
+ const child = definitions[j];
+ if (!child) continue;
+ let bestParent: HierarchicalSymbol | null = null;
+ let bestSize = Infinity;
+ for (let i = 0; i < definitions.length; i++) {
+ if (i === j) continue;
+ const candidate = definitions[i];
+ if (!candidate) continue;
       const candidateSize = candidate.endLine - candidate.startLine;
       if (
         child.startLine >= candidate.startLine &&
@@ -188,10 +191,15 @@ export function loadASTLockConfig(configPath = '.ghita/rules.yaml'): ASTLockConf
 // ASTLockLogger — Ghi vết ranh giới bị phá vỡ (Tác vụ 7)
 // ==============================================================================
 
+import type BetterSqlite3 from 'better-sqlite3';
+
+type BetterSqlite3Database = InstanceType<typeof BetterSqlite3>;
+type BetterSqlite3Statement = BetterSqlite3Database extends { prepare(...args: unknown[]): infer R } ? R : never;
+
 export class ASTLockLogger {
   private dbPath: string | null = null;
-  private db: any = null;
-  private insertStmt: any = null;
+  private db: BetterSqlite3Database | null = null;
+  private insertStmt: BetterSqlite3Statement | null = null;
   private isInitialized = false;
 
   constructor(customDbPath?: string) {
@@ -222,7 +230,8 @@ export class ASTLockLogger {
         INSERT INTO ast_lock_violations (timestamp, file_path, symbol_name, expected_hash, actual_hash, agent_id)
         VALUES (@timestamp, @filePath, @symbolName, @expectedHash, @actualHash, @agentId)
       `);
-    } catch {
+    } catch (error) {
+      console.warn('[ASTLock] SQLite init failed, using in-memory fallback:', (error as Error).message);
       this.db = null;
       this.insertStmt = null;
     }
@@ -321,10 +330,11 @@ export class ASTLockEngine {
         newDefMap.set(def.scope, def);
       }
 
-      for (const key of lockedKeys) {
-        const scope = key.slice(prefix.length);
-        const expectedHash = this.lockedHashes.get(key)!;
-        const newDef = newDefMap.get(scope);
+ for (const key of lockedKeys) {
+ const scope = key.slice(prefix.length);
+ const expectedHash = this.lockedHashes.get(key);
+ if (!expectedHash) continue;
+ const newDef = newDefMap.get(scope);
 
         if (!newDef) {
           // Symbol bị xóa hoàn toàn -> Vi phạm nghiêm trọng

@@ -4,7 +4,7 @@
 // Reference: LiteLLM integrations/SlackAlerting/
 // ==============================================================================
 
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 
 // --- Types ---
 
@@ -201,7 +201,7 @@ async function sendEmailAlert(alert: Alert, config: EmailConfig): Promise<boolea
     }
 
     // SMTP would require a library like nodemailer — log only for now
-    console.log('[Alerting] SMTP email alert (requires nodemailer):', alert.ruleName);
+    console.info('[Alerting] SMTP email alert (requires nodemailer):', alert.ruleName);
     return false;
   } catch {
     return false;
@@ -261,10 +261,9 @@ async function sendWebhookAlert(alert: Alert, config: WebhookConfig): Promise<bo
     };
 
     // HMAC signing if secret provided
-    if (config.secret) {
-      const { createHash } = require('node:crypto');
-      const body = JSON.stringify(payload);
-      const signature = createHash('sha256')
+  if (config.secret) {
+    const body = JSON.stringify(payload);
+    const signature = createHash('sha256')
         .update(body + config.secret)
         .digest('hex');
       headers['X-GHITA-Signature'] = signature;
@@ -434,7 +433,7 @@ export class AlertingManager {
                 ? console.error
                 : alert.severity === 'warning'
                   ? console.warn
-                  : console.log;
+                  : console.info;
 
             logFn(
               `[ALERT] ${alert.severity.toUpperCase()} [${alert.category}] ${alert.ruleName}: ${alert.message}`

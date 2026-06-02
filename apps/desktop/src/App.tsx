@@ -60,7 +60,7 @@ function AppContent() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ language }),
         });
-        console.log('[AppContent] Language synced to server:', language);
+        if (import.meta.env.DEV) console.info('[AppContent] Language synced to server:', language);
       } catch (err) {
         console.warn('[AppContent] Failed to sync language to server:', err);
       }
@@ -74,10 +74,10 @@ function AppContent() {
       try {
         const result = await invoke<{ status?: string }>('get_server_status');
         if (result?.status !== 'ok') {
-          console.log('[AppContent] Server is offline on startup, invoking start_server...');
+          if (import.meta.env.DEV) console.info('[AppContent] Server is offline on startup, invoking start_server...');
           await invoke('start_server');
         } else {
-          console.log('[AppContent] Server is already running.');
+          if (import.meta.env.DEV) console.info('[AppContent] Server is already running.');
         }
       } catch (err) {
         console.warn('[AppContent] Failed to check or start server on startup:', err);
@@ -97,35 +97,43 @@ function AppContent() {
     const setupListener = async () => {
       try {
         const { listen } = await import('@tauri-apps/api/event');
-        unlisten = await listen<{ event: string; data: any }>('sidecar-event', (eventPayload) => {
+      unlisten = await listen<{ event: string; data: Record<string, unknown> }>('sidecar-event', (eventPayload) => {
           const { event, data } = eventPayload.payload;
 
           const tr = tRef.current;
           switch (event) {
-            case 'sync_language':
-              if (data.language) {
-                console.log('[AppContent] Sync language received from sidecar:', data.language);
-                lastSyncedLangRef.current = data.language;
-                useAppStore.getState().setLanguage(data.language);
-              }
-              break;
-            case 'pair_confirm':
-              if (data.resumed) {
-                toast.success(tr('app.deviceReconnected', { name: data.name || 'Mobile' }));
-              } else {
-                toast.success(tr('app.devicePaired', { name: data.name || 'Mobile' }));
-              }
-              break;
-            case 'command':
-              toast(tr('app.commandReceived', { action: data.action || 'Unknown' }), {
-                icon: '⚡',
-              });
-              break;
-            case 'chat':
-              toast(tr('app.messageFromMobile', { text: data.text || '' }), {
-                icon: '💬',
-              });
-              break;
+      case 'sync_language': {
+        const lang = data.language;
+        if (lang && typeof lang === 'string') {
+          if (import.meta.env.DEV) console.info('[AppContent] Sync language received from sidecar:', lang);
+          lastSyncedLangRef.current = lang;
+          useAppStore.getState().setLanguage(lang);
+        }
+        break;
+      }
+      case 'pair_confirm': {
+        const name = String(data.name ?? 'Mobile');
+        if (data.resumed) {
+          toast.success(tr('app.deviceReconnected', { name }));
+        } else {
+          toast.success(tr('app.devicePaired', { name }));
+        }
+        break;
+      }
+      case 'command': {
+        const action = String(data.action ?? 'Unknown');
+        toast(tr('app.commandReceived', { action }), {
+          icon: '⚡',
+        });
+        break;
+      }
+      case 'chat': {
+        const text = String(data.text ?? '');
+        toast(tr('app.messageFromMobile', { text }), {
+          icon: '💬',
+        });
+        break;
+      }
             case 'approve':
               toast.success(tr('app.deviceApproved'), {
                 duration: 4000,
@@ -136,11 +144,13 @@ function AppContent() {
                 duration: 4000,
               });
               break;
-            case 'disconnect':
-              toast.error(tr('app.deviceDisconnected', { name: data.name || 'Mobile' }));
-              break;
+    case 'disconnect': {
+      const dname = String(data.name ?? 'Mobile');
+      toast.error(tr('app.deviceDisconnected', { name: dname }));
+      break;
+    }
             default:
-              console.log('[Sidecar IPC] Unhandled event:', event, data);
+              if (import.meta.env.DEV) console.info('[Sidecar IPC] Unhandled event:', event, data);
           }
         });
       } catch (err) {

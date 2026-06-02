@@ -188,7 +188,9 @@ function cosineSimilarity(a: Map<string, number>, b: Map<string, number>): numbe
 function extractExcerpt(content: string, keyword: string, contextLines = 2): string {
   const lines = content.split('\n');
   for (let i = 0; i < lines.length; i++) {
-    if (lines[i]!.toLowerCase().includes(keyword.toLowerCase())) {
+    const line = lines[i];
+    if (!line) continue;
+    if (line.toLowerCase().includes(keyword.toLowerCase())) {
       const start = Math.max(0, i - contextLines);
       const end = Math.min(lines.length, i + contextLines + 1);
       return lines.slice(start, end).join('\n').trim();
@@ -210,7 +212,7 @@ function parseMarkdownStructure(content: string): DocSection[] {
   let currentCodeBlock: CodeBlock | null = null;
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]!;
+    const line = lines[i] ?? '';
 
     // Detect code block boundaries
     const codeBlockMatch = line.match(/^```(\w*)/);
@@ -245,8 +247,8 @@ function parseMarkdownStructure(content: string): DocSection[] {
         sections.push(currentSection);
       }
       currentSection = {
-        heading: headingMatch[2]!.trim(),
-        level: headingMatch[1]!.length,
+        heading: headingMatch[2]?.trim() ?? '',
+        level: headingMatch[1]?.length ?? 1,
         lineStart: i + 1,
         content: '',
         codeBlocks: [],
@@ -285,18 +287,18 @@ function parseMarkdownStructure(content: string): DocSection[] {
       // Extract function/method signatures
       const sigMatch = line.match(/(?:function|const|let|var|async)\s+(\w+)\s*\([^)]*\)/);
       if (sigMatch) {
-        const sig = sigMatch[0]!.trim();
-        if (!currentSection.signatures.includes(sig)) {
+        const sig = sigMatch[0]?.trim();
+        if (sig && !currentSection.signatures.includes(sig)) {
           currentSection.signatures.push(sig);
         }
       }
 
       // TypeScript/JS class method signatures
       const methodMatch = line.match(/(?:public|private|protected|async)?\s*(\w+)\s*\([^)]*\)\s*(?::\s*\w+)?/);
-      if (methodMatch && methodMatch[0]!.includes('(') && !currentSection.signatures.includes(methodMatch[0]!.trim())) {
-        // Avoid duplicates and trivial matches
-        if (methodMatch[0]!.length > 10) {
-          currentSection.signatures.push(methodMatch[0]!.trim());
+      const methodMatchStr = methodMatch?.[0];
+      if (methodMatchStr && methodMatchStr.includes('(') && !currentSection.signatures.includes(methodMatchStr.trim())) {
+        if (methodMatchStr.length > 10) {
+          currentSection.signatures.push(methodMatchStr.trim());
         }
       }
     }
@@ -333,8 +335,8 @@ function extractSourceSymbols(content: string, filePath: string): SourceCodeRef 
   for (const pattern of exportPatterns) {
     let match;
     while ((match = pattern.exec(content)) !== null) {
-      const symbol = match[1]!;
-      if (!exportedSymbols.includes(symbol)) {
+      const symbol = match[1];
+      if (symbol && !exportedSymbols.includes(symbol)) {
         exportedSymbols.push(symbol);
       }
     }
@@ -349,8 +351,8 @@ function extractSourceSymbols(content: string, filePath: string): SourceCodeRef 
   for (const pattern of routePatterns) {
     let match;
     while ((match = pattern.exec(content)) !== null) {
-      const route = match[1]!;
-      if (!apiRoutes.includes(route)) {
+      const route = match[1];
+      if (route && !apiRoutes.includes(route)) {
         apiRoutes.push(route);
       }
     }
@@ -759,8 +761,12 @@ export class DocsGriller {
       const topKeywords = sorted.slice(0, 15).map(([k]) => k);
 
       for (const kw of topKeywords) {
-        if (!topicDocs.has(kw)) topicDocs.set(kw, []);
-        topicDocs.get(kw)!.push(doc.filePath);
+      const existing = topicDocs.get(kw);
+      if (existing) {
+        existing.push(doc.filePath);
+      } else {
+        topicDocs.set(kw, [doc.filePath]);
+      }
       }
     }
 
@@ -858,9 +864,12 @@ export class DocsGriller {
       const comparison = this.compareAnswer(answer);
       const significant = comparison.matches.filter((m) => m.similarity >= 0.4);
       if (significant.length > 0) {
+      const topMatch = significant[0];
+      if (topMatch) {
         session.designDecisions.push(
-          `Q${questionIdx + 1}: Answer aligns with ${significant.map((m) => m.doc).join(', ')} (sim: ${significant[0]!.similarity})`,
+          `Q${questionIdx + 1}: Answer aligns with ${significant.map((m) => m.doc).join(', ')} (sim: ${topMatch.similarity})`,
         );
+      }
       }
       if (comparison.contradictions.length > 0) {
         session.designDecisions.push(
@@ -922,7 +931,8 @@ export class DocsGriller {
     // Questions with source citations
     lines.push(`## Socratic Questions (${session.questions.length})`);
     for (let i = 0; i < session.questions.length; i++) {
-      const q = session.questions[i]!;
+      const q = session.questions[i];
+    if (!q) continue;
       const icon = q.severity === 'contradiction' ? '!!' : q.severity === 'warning' ? '!' : '?';
       lines.push(`${i + 1}. [${icon}] ${q.question}`);
       lines.push(`   Docs: ${q.sourceDocs.join(', ')}`);

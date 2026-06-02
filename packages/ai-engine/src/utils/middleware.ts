@@ -53,7 +53,9 @@ export function wrapLanguageModel(
         currentOptions?: ChatOptions
       ): Promise<ChatResponse> => {
         if (index < middlewares.chat.length) {
-          const mw = middlewares.chat[index++]!;
+          const mw = middlewares.chat[index];
+      if (!mw) return provider.chat(currentMessages, currentOptions);
+      index++;
           return mw(
             { messages: currentMessages, options: currentOptions, provider },
             (nextMessages, nextOptions) =>
@@ -73,8 +75,10 @@ export function wrapLanguageModel(
         currentMessages: ChatMessage[],
         currentOptions?: ChatOptions
       ): Promise<AsyncGenerator<AIStreamChunk>> => {
-        if (index < middlewares.chatStream.length) {
-          const mw = middlewares.chatStream[index++]!;
+  if (index < middlewares.chatStream.length) {
+    const mw = middlewares.chatStream[index];
+    if (!mw) return provider.chatStream(currentMessages, currentOptions);
+    index++;
           return mw(
             { messages: currentMessages, options: currentOptions, provider },
             (nextMessages, nextOptions) =>
@@ -100,16 +104,18 @@ export function wrapLanguageModel(
  * Helper to dynamically compose arrays of middlewares into a single execution function.
  */
 export function composeMiddlewares<T>(
-  middlewares: Array<(params: any, next: (params?: any) => Promise<T>) => Promise<T>>,
-  baseCall: (params: any) => Promise<T>
-): (params: any) => Promise<T> {
-  return (params: any) => {
+  middlewares: Array<(params: Record<string, unknown>, next: (params?: Record<string, unknown>) => Promise<T>) => Promise<T>>,
+  baseCall: (params: Record<string, unknown>) => Promise<T>
+): (params: Record<string, unknown>) => Promise<T> {
+  return (params: Record<string, unknown>) => {
     let index = 0;
-    
-    const next = async (currentParams: any = params): Promise<T> => {
+
+    const next = async (currentParams: Record<string, unknown> = params): Promise<T> => {
       if (index < middlewares.length) {
-        const mw = middlewares[index++]!;
-        return mw(currentParams, (nextParams) => next(nextParams ?? currentParams));
+        const mw = middlewares[index];
+if (!mw) return baseCall(currentParams);
+      index++;
+      return mw(currentParams, (nextParams) => next(nextParams ?? currentParams));
       }
       return baseCall(currentParams);
     };
@@ -133,9 +139,9 @@ export type EmbeddingManyMiddleware = (
 ) => Promise<EmbeddingManyResponse>;
 
 export type ImageMiddleware = (
-  params: { prompt: string; options?: any; provider: any },
-  next: (prompt?: string, options?: any) => Promise<any>
-) => Promise<any>;
+  params: { prompt: string; options?: Record<string, unknown>; provider: Record<string, unknown> },
+  next: (prompt?: string, options?: Record<string, unknown>) => Promise<Record<string, unknown>>
+) => Promise<Record<string, unknown>>;
 
 /**
  * Wraps embedding models (embed, embedMany) of a provider with middleware chains.
@@ -155,8 +161,10 @@ export function wrapEmbeddingModel(
       let index = 0;
 
       const executeNext = async (currentText: string, currentOptions?: { model?: string }): Promise<EmbeddingResponse> => {
-        if (index < embedMws.length) {
-          const mw = embedMws[index++]!;
+  if (index < embedMws.length) {
+    const mw = embedMws[index];
+    if (!mw) return provider.embed(currentText, currentOptions);
+    index++;
           return mw(
             { text: currentText, options: currentOptions, provider },
             (nextText, nextOptions) => executeNext(nextText ?? currentText, nextOptions ?? currentOptions)
@@ -173,8 +181,10 @@ export function wrapEmbeddingModel(
       let index = 0;
 
       const executeNext = async (currentTexts: string[], currentOptions?: { model?: string }): Promise<EmbeddingManyResponse> => {
-        if (index < embedManyMws.length) {
-          const mw = embedManyMws[index++]!;
+  if (index < embedManyMws.length) {
+    const mw = embedManyMws[index];
+    if (!mw) return provider.embedMany(currentTexts, currentOptions);
+    index++;
           return mw(
             { texts: currentTexts, options: currentOptions, provider },
             (nextTexts, nextOptions) => executeNext(nextTexts ?? currentTexts, nextOptions ?? currentOptions)
@@ -192,18 +202,20 @@ export function wrapEmbeddingModel(
  * Wraps an image model (generateImage) with image middleware chains.
  */
 export function wrapImageModel(
-  imageModel: { generateImage: (prompt: string, options?: any) => Promise<any>; [key: string]: any },
+  imageModel: { generateImage: (prompt: string, options?: Record<string, unknown>) => Promise<Record<string, unknown>>; [key: string]: unknown },
   middlewares: ImageMiddleware[]
-): any {
+): Record<string, unknown> {
   return {
     ...imageModel,
 
-    generateImage: async (prompt: string, options?: any): Promise<any> => {
+    generateImage: async (prompt: string, options?: Record<string, unknown>): Promise<Record<string, unknown>> => {
       let index = 0;
 
-      const executeNext = async (currentPrompt: string, currentOptions?: any): Promise<any> => {
-        if (index < middlewares.length) {
-          const mw = middlewares[index++]!;
+      const executeNext = async (currentPrompt: string, currentOptions?: Record<string, unknown>): Promise<Record<string, unknown>> => {
+  if (index < middlewares.length) {
+    const mw = middlewares[index];
+    if (!mw) return imageModel.generateImage(currentPrompt, currentOptions);
+    index++;
           return mw(
             { prompt: currentPrompt, options: currentOptions, provider: imageModel },
             (nextPrompt, nextOptions) => executeNext(nextPrompt ?? currentPrompt, nextOptions ?? currentOptions)
@@ -248,10 +260,12 @@ export function wrapProvider(
     embedMany: middlewares.embedMany || []
   });
 
-  // Future proof: if the provider has a generateImage method, wrap it
-  if (typeof (provider as any).generateImage === 'function') {
-    const wrappedImage = wrapImageModel(provider as any, middlewares.image || []);
-    (wrapped as any).generateImage = wrappedImage.generateImage;
+// Future proof: if the provider has a generateImage method, wrap it
+const providerRecord = provider as unknown as Record<string, unknown>;
+if (typeof providerRecord.generateImage === 'function') {
+  const imageModel = provider as unknown as Parameters<typeof wrapImageModel>[0];
+  const wrappedImage = wrapImageModel(imageModel, middlewares.image || []);
+  (wrapped as unknown as Record<string, unknown>).generateImage = wrappedImage.generateImage;
   }
 
   return wrapped;

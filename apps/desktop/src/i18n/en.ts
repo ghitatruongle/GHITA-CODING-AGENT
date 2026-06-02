@@ -33,7 +33,7 @@ export const en: TranslationKeys = {
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v0.0.2',
+    version: 'v0.0.3-beta1',
     deviceReconnected: 'Reconnected to device: {{name}}',
     devicePaired: 'Successfully paired device: {{name}}',
     commandReceived: 'Command received from device: {{action}}',
@@ -270,6 +270,7 @@ export const en: TranslationKeys = {
     stopped: 'STOPPED',
     compliant: 'COMPLIANT',
     disabledLabel: 'DISABLED',
+    demoMode: 'Demo Mode — Data is simulated',
   },
   chat: {
     welcomeMessage: 'Welcome to GHITA Coding Agent. I am GHITA Assistant, your AI partner. I can write code, run terminal commands, manage files, and automate complex tasks. Let\'s get started!',
@@ -323,6 +324,12 @@ export const en: TranslationKeys = {
     runSuccess: 'Success',
     runError: 'Error',
     messagesCount: '{{count}} message(s)',
+    compactSuccess: 'Context compacted: only recent messages kept for this session.',
+    noWorkspace: 'No workspace directory opened. Please open a project/folder in Explorer first before running Agent, Review, Feature or Ralph.',
+    permissionCustom: 'Custom: Confirm every command & file edit',
+    permissionAuto: 'Auto: Free mode, only ask for dangerous commands (install, download...)',
+    liveAgentEvents: 'LIVE AGENT EVENTS',
+    clear: 'Clear',
   },
   terminal: {
     title: 'GHITA CODING AGENT Command Terminal',

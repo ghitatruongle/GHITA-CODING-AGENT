@@ -115,9 +115,9 @@ class Logger {
     const msgStyle = `color: ${color};`;
 
     if (entry.data !== undefined) {
-      console.log(`%c${prefix}%c ${entry.message}`, style, msgStyle, entry.data);
+      console.info(`%c${prefix}%c ${entry.message}`, style, msgStyle, entry.data);
     } else {
-      console.log(`%c${prefix}%c ${entry.message}`, style, msgStyle);
+      console.info(`%c${prefix}%c ${entry.message}`, style, msgStyle);
     }
   }
 }

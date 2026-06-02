@@ -1,6 +1,6 @@
 {
   "name": "@ghita/desktop",
-  "version": "0.0.2",
+  "version": "0.0.3-beta1",
   "private": true,
   "description": "GHITA CODING AGENT — Desktop App (Tauri + React)",
   "type": "module",
@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src/"
+    "lint": "eslint src/",
+    "test": "vitest run"
   },
   "dependencies": {
     "@ghita/agents": "workspace:*",
@@ -26,26 +27,34 @@
     "@tauri-apps/plugin-dialog": "^2.7.1",
     "@tauri-apps/plugin-fs": "^2.2.0",
     "@tauri-apps/plugin-shell": "^2.2.0",
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/xterm": "^5.5.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-error-boundary": "^4.1.2",
     "react-hot-toast": "^2.5.2",
-    "screenshot-desktop": "^1.15.4",
+    "react-markdown": "^10.1.0",
+    "rehype-sanitize": "^6.0.0",
+    "remark-gfm": "^4.0.1",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
-    "zustand": "^5.0.5"
+    "zustand": "^5.0.5",
+    "@monaco-editor/react": "^4.7.0"
   },
   "devDependencies": {
-    "@monaco-editor/react": "^4.7.0",
     "@tauri-apps/cli": "^2.5.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
-    "@vitejs/plugin-react": "^4.3.4",
-    "@xterm/addon-fit": "^0.10.0",
-    "@xterm/addon-web-links": "^0.11.0",
-    "@xterm/xterm": "^5.5.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "happy-dom": "^20.9.0",
+    "node-pty": "^1.1.0",
+    "screenshot-desktop": "^1.15.4",
     "sharp": "^0.34.5",
     "typescript": "^5.6.0",
-    "vite": "^6.3.5"
+    "vite": "^6.3.5",
+    "vitest": "^3.2.4"
   }
 }

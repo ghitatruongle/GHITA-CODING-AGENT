@@ -47,7 +47,7 @@ export interface ActionInputs {
   key?: string;
   direction?: 'up' | 'down' | 'left' | 'right';
   scroll_amount?: number;
-  [key: string]: any;
+  [key: string]: string | number | boolean | [number, number] | undefined;
 }
 
 export interface PredictionParsed {

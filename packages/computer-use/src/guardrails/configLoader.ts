@@ -87,7 +87,7 @@ export function parseSecurityYaml(content: string): Partial<SecurityBlacklistCon
         patterns.push({
           name: nameMatch[1]?.trim() || '',
           pattern: patternMatch[1]?.trim() || '',
-          severity: (severityMatch?.[1] as any) || 'medium',
+          severity: (severityMatch?.[1] as 'low' | 'medium' | 'high' | 'critical') || 'medium',
           description: descMatch?.[1]?.trim() || '',
         });
       }

@@ -2,7 +2,7 @@
 // GHITA CODING AGENT - PageRank Symbol Ranker
 // ==============================================================================
 
-import { SymbolTag } from './polyglotTags.js';
+import type { SymbolTag } from './polyglotTags.js';
 
 export interface FileTags {
   filePath: string;
@@ -33,10 +33,11 @@ export class PageRankRanker {
           const key = `${file.filePath}#${tag.name}`;
           definedSymbols.set(key, { file: file.filePath, tag });
 
-          if (!symbolMapByName.has(tag.name)) {
-            symbolMapByName.set(tag.name, []);
-          }
-          symbolMapByName.get(tag.name)!.push(key);
+ if (!symbolMapByName.has(tag.name)) {
+ symbolMapByName.set(tag.name, []);
+ }
+ const nameEntries = symbolMapByName.get(tag.name);
+ if (nameEntries) nameEntries.push(key);
         }
       }
     }
@@ -70,9 +71,9 @@ export class PageRankRanker {
             // Chọn definition nhỏ nhất chứa reference (nếu có nested)
             if (!sourceKey) {
               sourceKey = `${file.filePath}#${def.name}`;
-            } else {
-              const currentDef = definedSymbols.get(sourceKey)!.tag;
-              if (def.endLine - def.startLine < currentDef.endLine - currentDef.startLine) {
+ } else {
+ const currentDefEntry = definedSymbols.get(sourceKey);
+ if (currentDefEntry && (def.endLine - def.startLine < currentDefEntry.tag.endLine - currentDefEntry.tag.startLine)) {
                 sourceKey = `${file.filePath}#${def.name}`;
               }
             }
@@ -86,8 +87,10 @@ export class PageRankRanker {
           // Tránh tự liên kết với chính mình
           if (sourceKey === targetKey) continue;
 
-          outEdges.get(sourceKey)!.add(targetKey);
-          inEdges.get(targetKey)!.add(sourceKey);
+ const outNeighbors = outEdges.get(sourceKey);
+ const inNeighbors = inEdges.get(targetKey);
+ if (outNeighbors) outNeighbors.add(targetKey);
+ if (inNeighbors) inNeighbors.add(sourceKey);
         }
       }
     }
@@ -107,7 +110,8 @@ export class PageRankRanker {
 
       // Tính đóng góp từ các Sinks (node không có out-edges)
       for (const node of nodes) {
-        if (outEdges.get(node)!.size === 0) {
+        const outEdgesForNode = outEdges.get(node);
+ if (outEdgesForNode && outEdgesForNode.size === 0) {
           sinkContribution += scores[node] || 0;
         }
       }
@@ -116,12 +120,14 @@ export class PageRankRanker {
       // Tính điểm mới cho từng node
       let diff = 0;
       for (const node of nodes) {
-        let rankSum = 0;
-        const parents = inEdges.get(node)!;
+ let rankSum = 0;
+ const parents = inEdges.get(node);
+ if (!parents) continue;
 
-        for (const parent of parents) {
-          const outDegree = outEdges.get(parent)!.size;
-          rankSum += (scores[parent] || 0) / outDegree;
+ for (const parent of parents) {
+ const parentOutEdges = outEdges.get(parent);
+ const outDegree = parentOutEdges?.size ?? 1;
+ rankSum += (scores[parent] || 0) / outDegree;
         }
 
         nextScores[node] = baseConstant + damping * rankSum + sinkShare;

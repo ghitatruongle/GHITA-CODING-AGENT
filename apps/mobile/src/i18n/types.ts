@@ -12,6 +12,7 @@ export interface TranslationKeys {
     retry: string;
     ok: string;
     loading: string;
+    back: string;
   };
   pairing: {
     title: string;
@@ -63,6 +64,7 @@ export interface TranslationKeys {
     chatTimeoutTitle: string;
     chatTimeoutDesc: string;
     screenTitle: string;
+    screenPreviewTitle: string;
     screenPreviewPlaceholder: string;
     screenPreviewConnecting: string;
     screenPreviewLoading: string;
@@ -79,6 +81,7 @@ export interface TranslationKeys {
     chatInputPlaceholder: string;
     quickActionsTitle: string;
     actionScreenshot: string;
+    actionSkills: string;
     actionCancel: string;
     actionApprove: string;
     actionReject: string;

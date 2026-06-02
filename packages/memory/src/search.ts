@@ -87,7 +87,9 @@ export class CrossSessionSearch {
     const removed = this.sessions.delete(sessionId);
     if (!removed) return false;
 
-    // Clean up inverted index
+    // PERFORMANCE NOTE: This iterates the entire inverted index (O(tokens)) to clean up.
+    // For large indexes, consider maintaining a reverse map (sessionId -> tokens) for O(1) cleanup.
+    // TODO: Refactor to use a reverse index map for O(1) session removal.
     for (const [token, set] of this.index.entries()) {
       set.delete(sessionId);
       if (set.size === 0) {
@@ -124,7 +126,8 @@ export class CrossSessionSearch {
     const results: CrossSessionResult[] = [];
 
     for (const sessionId of candidateSessionIds) {
-      const session = this.sessions.get(sessionId)!;
+      const session = this.sessions.get(sessionId);
+      if (!session) continue;
       
       // Lọc theo metadata type nếu được cung cấp
       if (options.sessionType && session.metadata?.type !== options.sessionType) {

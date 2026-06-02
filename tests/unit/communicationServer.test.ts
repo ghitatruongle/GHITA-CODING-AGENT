@@ -39,6 +39,9 @@ vi.mock('node:http', () => ({
         mockIoErrorCallback = handler;
       }
     }),
+    listeners: vi.fn(() => []),
+    removeAllListeners: vi.fn(),
+    emit: vi.fn(),
     listen: mockHttpServerListen,
     close: mockHttpServerClose,
   })),
@@ -92,6 +95,22 @@ beforeEach(() => {
   mockIoListenCallback = null;
   mockIoErrorCallback = null;
   mockSocketOnHandlers.clear();
+
+  // Re-apply mock implementations after clearAllMocks
+  mockSocketOn.mockImplementation((event: string, handler: (...args: unknown[]) => void) => {
+    mockSocketOnHandlers.set(event, handler);
+    return mockSocket;
+  });
+  mockSocket.on = mockSocketOn;
+  mockSocket.emit = mockSocketEmit;
+  mockIoOn.mockImplementation((event: string, handler: (socket: typeof mockSocket) => void) => {
+    if (event === 'connection') {
+      handler(mockSocket);
+    }
+  });
+  mockIo.on = mockIoOn;
+  mockIo.emit = mockIoEmit;
+  mockIo.to.mockImplementation(() => ({ emit: mockIoEmit }));
 });
 
 afterEach(async () => {

@@ -232,9 +232,9 @@ describe.skip('DSO Integration: React + Postgres (requires Docker)', () => {
         const body = await resp.json();
         expect(body.status).toBe('ok');
         expect(body.service).toBe('ghita-dso-test');
-      } catch (err: any) {
+      } catch (err: unknown) {
         // Nếu port không accessible (Docker có thể map khác port), skip
-        console.warn(`[DSO Test] HTTP test skipped: ${err.message}`);
+        console.warn(`[DSO Test] HTTP test skipped: ${err instanceof Error ? err.message : String(err)}`);
       }
     });
 
@@ -246,8 +246,8 @@ describe.skip('DSO Integration: React + Postgres (requires Docker)', () => {
         const body = await resp.json();
 
         expect(body.db).toBe('connected');
-      } catch (err: any) {
-        console.warn(`[DSO Test] DB connection test skipped: ${err.message}`);
+      } catch (err: unknown) {
+        console.warn(`[DSO Test] DB connection test skipped: ${err instanceof Error ? err.message : String(err)}`);
       }
     });
   });

@@ -1,0 +1,1 @@
+Automates reference repository cloning, pnpm store recovery, and multi-platform icon generation for the desktop application.
