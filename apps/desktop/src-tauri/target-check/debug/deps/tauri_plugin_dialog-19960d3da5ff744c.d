@@ -1,0 +1,10 @@
+D:\ghita coding agent\apps\desktop\src-tauri\target-check\debug\deps\tauri_plugin_dialog-19960d3da5ff744c.d: C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-plugin-dialog-2.7.1\src\lib.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-plugin-dialog-2.7.1\src\desktop.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-plugin-dialog-2.7.1\src\commands.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-plugin-dialog-2.7.1\src\error.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-plugin-dialog-2.7.1\src\models.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-plugin-dialog-2.7.1\src\init-iife.js
+
+D:\ghita coding agent\apps\desktop\src-tauri\target-check\debug\deps\libtauri_plugin_dialog-19960d3da5ff744c.rmeta: C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-plugin-dialog-2.7.1\src\lib.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-plugin-dialog-2.7.1\src\desktop.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-plugin-dialog-2.7.1\src\commands.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-plugin-dialog-2.7.1\src\error.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-plugin-dialog-2.7.1\src\models.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-plugin-dialog-2.7.1\src\init-iife.js
+
+C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-plugin-dialog-2.7.1\src\lib.rs:
+C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-plugin-dialog-2.7.1\src\desktop.rs:
+C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-plugin-dialog-2.7.1\src\commands.rs:
+C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-plugin-dialog-2.7.1\src\error.rs:
+C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-plugin-dialog-2.7.1\src\models.rs:
+C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-plugin-dialog-2.7.1\src\init-iife.js:

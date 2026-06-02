@@ -68,7 +68,7 @@ export class AgentRouter {
       case 'simple':
         return {
           provider: 'ollama',
-          model: 'llama3:8b',
+          model: 'llama3.3:8b',
           complexity,
           reason: 'Prompt complexity is low (simple query/command). Routed to Local Ollama model to ensure zero API cost.',
           estimatedCostUsd: 0.00000,
@@ -89,7 +89,7 @@ export class AgentRouter {
         if (this.maxCostThreshold < 0.002) {
           return {
             provider: 'google',
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.0-flash',
             complexity: 'high',
             reason: 'High complexity detected but restricted by strict Max Cost budget constraint. Routed to cheap Gemini Flash.',
             estimatedCostUsd: 0.000075,
@@ -98,7 +98,7 @@ export class AgentRouter {
 
         return {
           provider: 'anthropic',
-          model: 'claude-3-5-sonnet',
+          model: 'claude-sonnet-4-20250514',
           complexity,
           reason: 'High complexity detected (architectural question or heavy file parsing). Routed to premium Claude 3.5 Sonnet.',
           estimatedCostUsd: 0.00300,

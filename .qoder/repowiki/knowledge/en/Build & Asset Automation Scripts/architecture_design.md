@@ -1,0 +1,4 @@
+- The module consists of four standalone scripts: one Bash script (`clone-refer.sh`) for bulk Git operations and three ES modules (`.mjs`) for Node.js-based asset and dependency management.
+- `generate-icons.mjs` and `fix-ico.mjs` rely on the `sharp` library for image processing, targeting Tauri-specific icon directories (`apps/desktop/src-tauri/icons`).
+- `fix-store.mjs` directly manipulates the `node_modules/.pnpm` directory structure to resolve package corruption without requiring a full reinstall.
+- Scripts are designed to be executed independently via `bash` or `node`, with no internal cross-script dependencies.

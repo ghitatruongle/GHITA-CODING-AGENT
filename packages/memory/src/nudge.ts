@@ -34,14 +34,14 @@ const DEFAULT_PATTERNS: NudgePattern[] = [
     type: 'preference',
     regex: /\b(?:i prefer|i like|i always use|my preferred|use (?:only|always))\b\s*([^.!?\n]{5,100})/i,
     confidenceBoost: 0.8,
-    extractor: (match) => `User prefers: ${match[1]!.trim()}`,
+    extractor: (match) => `User prefers: ${match?.[1]?.trim() ?? ''}`,
   },
   {
     name: 'preference_vi',
     type: 'preference',
     regex: /(?:tôi thích|tôi muốn|luôn dùng|hãy luôn|hãy chỉ)\s*([^.!?\n]{5,100})/i,
     confidenceBoost: 0.8,
-    extractor: (match) => `Người dùng muốn: ${match[1]!.trim()}`,
+    extractor: (match) => `Người dùng muốn: ${match?.[1]?.trim() ?? ''}`,
   },
   // 2. Facts (Thông tin cố định)
   {
@@ -49,14 +49,14 @@ const DEFAULT_PATTERNS: NudgePattern[] = [
     type: 'fact',
     regex: /\b(?:my name is|i am working on|this project is|i work as a)\b\s*([^.!?\n]{5,100})/i,
     confidenceBoost: 0.75,
-    extractor: (match) => `User profile fact: ${match[0]!.trim()}`,
+    extractor: (match) => `User profile fact: ${match?.[0]?.trim() ?? ''}`,
   },
   {
     name: 'fact_vi',
     type: 'fact',
     regex: /(?:tên tôi là|tôi đang làm|dự án này là|công việc của tôi là)\s*([^.!?\n]{5,100})/i,
     confidenceBoost: 0.75,
-    extractor: (match) => `Thông tin người dùng: ${match[0]!.trim()}`,
+    extractor: (match) => `Thông tin người dùng: ${match?.[0]?.trim() ?? ''}`,
   },
   // 3. Solutions (Cách sửa lỗi thành công)
   {
@@ -64,14 +64,14 @@ const DEFAULT_PATTERNS: NudgePattern[] = [
     type: 'solution',
     regex: /\b(?:i solved it by|the solution (?:was|is)|the fix (?:was|is)|fixed by doing)\b\s*([^.!?\n]{10,150})/i,
     confidenceBoost: 0.85,
-    extractor: (match) => `Solution learned: ${match[0]!.trim()}`,
+    extractor: (match) => `Solution learned: ${match?.[0]?.trim() ?? ''}`,
   },
   {
     name: 'solution_vi',
     type: 'solution',
     regex: /(?:cách sửa là|đã sửa bằng cách|giải quyết bằng|phương án sửa là)\s*([^.!?\n]{10,150})/i,
     confidenceBoost: 0.85,
-    extractor: (match) => `Cách khắc phục đã học: ${match[0]!.trim()}`,
+    extractor: (match) => `Cách khắc phục đã học: ${match?.[0]?.trim() ?? ''}`,
   },
   // 4. Critical Knowledge (Kiến thức lưu ý)
   {
@@ -79,14 +79,14 @@ const DEFAULT_PATTERNS: NudgePattern[] = [
     type: 'knowledge',
     regex: /\b(?:remember that|important note|note that|keep in mind)\b\s*([^.!?\n]{8,120})/i,
     confidenceBoost: 0.7,
-    extractor: (match) => `Important Note: ${match[1]!.trim()}`,
+    extractor: (match) => `Important Note: ${match?.[1]?.trim() ?? ''}`,
   },
   {
     name: 'knowledge_vi',
     type: 'knowledge',
     regex: /(?:hãy nhớ rằng|lưu ý quan trọng|lưu ý là|cần nhớ là)\s*([^.!?\n]{8,120})/i,
     confidenceBoost: 0.7,
-    extractor: (match) => `Chú ý quan trọng: ${match[1]!.trim()}`,
+    extractor: (match) => `Chú ý quan trọng: ${match?.[1]?.trim() ?? ''}`,
   },
 ];
 

@@ -8,14 +8,13 @@ import { createGrillMeCommand } from '../engineering/docsGriller.js';
 import { SkillHub } from '../registry/hub.js';
 import { createSkillsSyncCommand } from '../registry/dynamicGenerator.js';
 import { DebateEngine, AIMessage } from '@ghita/agents';
-import { 
-  UniversalChatModel, 
-  ProviderRegistry, 
-  OpenAIProvider, 
-  AnthropicProvider, 
-  GoogleProvider, 
-  OllamaProvider, 
-  ConfigLoader 
+import {
+  UniversalChatModel,
+  ProviderRegistry,
+  OpenAIProvider,
+  AnthropicProvider,
+  GoogleProvider,
+  OllamaProvider,
 } from '@ghita/ai-engine';
 
 /**
@@ -39,29 +38,12 @@ async function getUniversalModel(): Promise<UniversalChatModel> {
   const registry = new ProviderRegistry();
   
   // Resolve API keys from env or configuration loader
-  let apiKey = process.env.OPENAI_API_KEY;
-  let anthropicKey = process.env.ANTHROPIC_API_KEY;
-  let googleKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY;
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  const googleKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   
-  try {
-    const configLoader = new ConfigLoader();
-    const config = configLoader.load();
-    if (config.agentModels) {
-      for (const modelConfig of Object.values(config.agentModels)) {
-        if (modelConfig.type === 'openai' && modelConfig.api_key) {
-          apiKey = modelConfig.api_key;
-        }
-        if (modelConfig.type === 'anthropic' && modelConfig.api_key) {
-          anthropicKey = modelConfig.api_key;
-        }
-        if ((modelConfig.type === 'google' || modelConfig.type === 'gemini') && modelConfig.api_key) {
-          googleKey = modelConfig.api_key;
-        }
-      }
-    }
-  } catch {
-    // Ignore config loading issues in test environments
-  }
+  // API keys are resolved from environment variables.
+  // Config file (api-config.json) is managed by Tauri backend and synced via syncApiConfigToOrchestrator().
   
   if (apiKey) registry.register(new OpenAIProvider({ type: 'openai', apiKey }));
   if (anthropicKey) registry.register(new AnthropicProvider({ type: 'anthropic', apiKey: anthropicKey }));
@@ -115,13 +97,13 @@ export function createBuiltinSlashCommands(): SlashCommand[] {
           if (!diff) {
             diff = 'No changes found against target. Current status:\n' + execSync('git status -s', { encoding: 'utf8' }).trim();
           }
-        } catch (err: any) {
-          diff = `// Git diff failed: ${err.message}\nShowing mock code diff:\n+ export function profileFunction() {\n- export function wrap() {\n+   console.log("AHPI wrap");\n+ }`;
+      } catch (err: unknown) {
+        diff = `// Git diff failed: ${(err as Error).message}\nShowing mock code diff:\n+ export function profileFunction() {\n- export function wrap() {\n+ console.log("AHPI wrap");\n+ }`;
         }
 
         // Initialize LLM gateway
         const universalModel = await getUniversalModel();
-        const llmCall = async (msgs: any[], options?: any) => {
+        const llmCall = async (msgs: Array<{ constructor: { name: string }; getText: () => string }>, options?: { model?: string }) => {
           const chatMessages = msgs.map(m => {
             let role: 'system' | 'user' | 'assistant' = 'user';
             const className = m.constructor.name;
@@ -134,11 +116,10 @@ export function createBuiltinSlashCommands(): SlashCommand[] {
           try {
             const resp = await universalModel.chat(chatMessages, { model: modelName });
             return new AIMessage(resp.content);
-          } catch (err: any) {
-            // Mock response if API key is missing or calls fail in offline/test environment
-            return new AIMessage(JSON.stringify({
-              consensusScore: 8,
-              spec: `### Mocked Multi-Agent Review Report\n- **Consensus Score**: 8/10\n- **Summary**: Multi-agent review executed in offline/fallback mode.\n- **Security**: Passed.\n- **Performance**: Checked.\n- **Details**: ${err.message}`
+      } catch (err: unknown) {
+        return new AIMessage(JSON.stringify({
+          consensusScore: 8,
+          spec: `### Mocked Multi-Agent Review Report\n- **Consensus Score**: 8/10\n- **Summary**: Multi-agent review executed in offline/fallback mode.\n- **Security**: Passed.\n- **Performance**: Checked.\n- **Details**: ${(err as Error).message}`
             }));
           }
         };
@@ -181,7 +162,7 @@ export function createBuiltinSlashCommands(): SlashCommand[] {
           return '[DEEP-RESEARCH] Vui lòng nhập từ khóa tìm kiếm. Ví dụ: `/deep-research attention mechanisms`';
         }
 
-        let works: any[] = [];
+        let works: Array<{ title?: string; publication_year?: number; cited_by_count?: number; doi?: string; abstract_inverted_index?: Record<string, number[]> }> = [];
         try {
           const response = await fetch(`https://api.openalex.org/works?search=${encodeURIComponent(query)}&per_page=3`);
           if (response.ok) {
@@ -218,7 +199,7 @@ export function createBuiltinSlashCommands(): SlashCommand[] {
           ];
         }
 
-        const reconstructedPapers = works.map((w: any) => {
+        const reconstructedPapers = works.map((w) => {
           const title = w.title || 'Untitled Work';
           const year = w.publication_year || 'Unknown';
           const citations = w.cited_by_count || 0;

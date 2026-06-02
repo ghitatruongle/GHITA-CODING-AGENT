@@ -62,7 +62,7 @@ export class MiddlewarePipeline {
     context: MiddlewareContext,
     stepResult: AgentStepResult,
   ): Promise<{ result: AgentStepResult; retry: boolean; retryReason?: string }> {
-    let currentResult = { ...stepResult };
+    const currentResult = { ...stepResult };
     let retry = false;
     let retryReason: string | undefined;
 

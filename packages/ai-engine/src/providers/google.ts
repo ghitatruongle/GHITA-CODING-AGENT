@@ -140,7 +140,8 @@ export class GoogleProvider extends BaseProvider {
         // Google streams JSON array chunks
         const jsonMatch = buffer.match(/\{"candidates":\[.*?\]\}/);
         if (jsonMatch) {
-          buffer = buffer.slice(jsonMatch.index! + jsonMatch[0].length);
+          const matchIndex = jsonMatch.index ?? 0;
+      buffer = buffer.slice(matchIndex + jsonMatch[0].length);
           try {
             const parsed = JSON.parse(jsonMatch[0]) as {
               candidates: Array<{

@@ -1,0 +1,4 @@
+- Uses `turbo.json` and `pnpm-workspace.yaml` to define a monorepo structure that coordinates builds across TypeScript packages (`apps/desktop`, `packages/*`) and native applications (`apps/mobile`).
+- Enforces cross-module consistency via root-level `eslint.config.js`, `tsconfig.base.json`, and `.prettierrc` configurations.
+- Manages multi-platform release lifecycles through GitHub Actions workflows (`build-android.yml`, `build-desktop.yml`, `release.yml`) that trigger child module build scripts.
+- Integrates hierarchical multi-agent coordination via the `team_collab` module's file-based protocol, while `build_scripts` automate asset generation and dependency recovery for the desktop Tauri sidecar.

@@ -1,1 +1,0 @@
-{"version":3,"file":"prometheus.d.ts","sourceRoot":"","sources":["prometheus.ts"],"names":[],"mappings":"AAIA,eAAO,MAAM,mBAAmB,i9BAqB/B,CAAC;AAEF,eAAO,MAAM,uBAAuB,4PAanC,CAAC;AAEF,eAAO,MAAM,uBAAuB,u1BA2CnC,CAAC;AAEF,eAAO,MAAM,kBAAkB,urBAiC9B,CAAC;AAEF,qBAAa,qBAAqB;IAChC,kBAAkB,IAAI,MAAM;IAI5B,qBAAqB,IAAI,MAAM;IAI/B,WAAW,IAAI,MAAM;IAIrB,iBAAiB,IAAI,MAAM;CAG5B"}

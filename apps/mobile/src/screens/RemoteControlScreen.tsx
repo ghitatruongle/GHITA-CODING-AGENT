@@ -9,11 +9,14 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  FlatList,
   StatusBar,
   Alert,
   TouchableOpacity,
   AppState,
   Vibration,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../theme/colors';
@@ -30,7 +33,16 @@ import { useTranslation } from '../i18n/context';
 
 const MAX_CHAT_MESSAGES = 50;
 const SCREENSHOT_TIMEOUT_MS = 15000;
+// Intentionally module-level to persist across re-renders for unique message ID generation
 let msgCounter = 0;
+
+interface SkillItem {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  enabled: boolean;
+}
 
 export function RemoteControlScreen({
   route,
@@ -64,6 +76,44 @@ export function RemoteControlScreen({
   });
 
   const isConnected = connectionState === 'connected';
+
+  // Skills panel state
+  const [showSkills, setShowSkills] = useState(false);
+  const [skillsList, setSkillsList] = useState<SkillItem[]>([]);
+  const [skillsLoading, setSkillsLoading] = useState(false);
+  const [skillRunning, setSkillRunning] = useState<string | null>(null);
+
+  const loadSkills = useCallback(async () => {
+    setSkillsLoading(true);
+    try {
+      const result = await socketService.listSkills();
+      if (result.success && result.skills) {
+        setSkillsList(result.skills.filter((s) => s.enabled));
+      } else {
+        Alert.alert('Error', result.error || 'Failed to load skills');
+      }
+    } catch {
+      Alert.alert('Error', 'Failed to load skills');
+    } finally {
+      setSkillsLoading(false);
+    }
+  }, []);
+
+  const runSkill = useCallback(async (skillId: string) => {
+    setSkillRunning(skillId);
+    try {
+      const result = await socketService.runSkill(skillId);
+      if (result.success) {
+        Alert.alert('Success', `Skill "${skillId}" completed`);
+      } else {
+        Alert.alert('Error', result.error || 'Skill execution failed');
+      }
+    } catch {
+      Alert.alert('Error', 'Skill execution failed');
+    } finally {
+      setSkillRunning(null);
+    }
+  }, []);
 
   const clearScreenshotTimeout = useCallback(() => {
     if (screenshotTimeoutRef.current) {
@@ -171,7 +221,7 @@ export function RemoteControlScreen({
         if (settings.autoReconnect && !socketService.isConnected) {
           const lastAddress = socketService.getLastUrl();
           if (lastAddress) {
-            console.log('[AutoReconnect] Attempting reconnection to', lastAddress);
+            console.info('[AutoReconnect] Attempting reconnection to', lastAddress);
             socketService.connect(lastAddress);
           }
         }
@@ -203,8 +253,13 @@ export function RemoteControlScreen({
       case 'cancel':
         socketService.sendCommand('cancel');
         break;
+      case 'skills':
+        if (!isConnected) return;
+        setShowSkills(true);
+        loadSkills();
+        break;
     }
-  }, [clearScreenshotTimeout, isConnected, t]);
+  }, [clearScreenshotTimeout, isConnected, t, loadSkills]);
 
   // Handle chat send
   const handleChatSend = useCallback((text: string) => {
@@ -240,6 +295,11 @@ export function RemoteControlScreen({
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
 
       {/* Header */}
       <View style={styles.header}>
@@ -247,10 +307,10 @@ export function RemoteControlScreen({
           <Text style={styles.deviceIcon}>🖥️</Text>
           <View>
             <Text style={styles.deviceName}>{deviceName}</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <View style={styles.connectionRow}>
               <ConnectionStatus state={connectionState} compact />
               {connectionState === 'connected' && (
-                <Text style={{ fontSize: 10, color: Colors.textMuted }}>
+                <Text style={styles.connectionTypeText}>
                   {socketService.connectionType === 'local' ? t('status.lanConnection') : t('status.cloudConnection')}
                 </Text>
               )}
@@ -275,6 +335,7 @@ export function RemoteControlScreen({
         style={styles.content}
         contentContainerStyle={styles.contentInner}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {/* Security Command Approval Request (Phase 8 Human-in-the-loop) */}
         {activeApproval && (
@@ -326,7 +387,7 @@ export function RemoteControlScreen({
                 <Text style={styles.costLabel}>{t('remote.costSpent')}</Text>
                 <Text style={styles.costValue}>${costTelemetry.costUsd.toFixed(4)}</Text>
               </View>
-              <View style={{ alignItems: 'flex-end' }}>
+              <View style={styles.costLimitContainer}>
                 <Text style={styles.costLabel}>{t('remote.costSessionLimit')}</Text>
                 <Text style={styles.costLimit}>${costTelemetry.limitUsd.toFixed(2)}</Text>
               </View>
@@ -363,21 +424,25 @@ export function RemoteControlScreen({
         {chatMessages.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>{t('remote.chatTitle')}</Text>
-            <ScrollView style={styles.messageListScroll} nestedScrollEnabled>
-              <View style={styles.messageList}>
-              {chatMessages.slice(-20).map((msg) => (
+            <FlatList
+              data={chatMessages.slice(-20)}
+              keyExtractor={(item) => item.id}
+              style={styles.messageListScroll}
+              nestedScrollEnabled
+              renderItem={({ item }) => (
                 <View
-                  key={msg.id}
                   style={[
                     styles.messageBubble,
-                    msg.sender === 'user' ? styles.userBubble : styles.aiBubble,
+                    item.sender === 'user' ? styles.userBubble : styles.aiBubble,
                   ]}
                 >
-                  <Text style={styles.messageText}>{msg.text}</Text>
+                  <Text style={styles.messageText}>{item.text}</Text>
+                  <Text style={styles.messageTimestamp}>
+                    {new Date(item.timestamp).toLocaleTimeString()}
+                  </Text>
                 </View>
-              ))}
-              </View>
-            </ScrollView>
+              )}
+            />
           </View>
         )}
 
@@ -392,7 +457,45 @@ export function RemoteControlScreen({
           <Text style={styles.sectionLabel}>{t('remote.quickActionsTitle')}</Text>
           <QuickActions disabled={!isConnected} onAction={handleQuickAction} />
         </View>
+
+        {/* Skills Panel */}
+        {showSkills && (
+          <View style={styles.section}>
+            <View style={styles.skillsHeader}>
+              <Text style={styles.sectionLabel}>Skills</Text>
+              <TouchableOpacity onPress={() => setShowSkills(false)} style={styles.skillsCloseBtn}>
+                <Text style={styles.skillsCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            {skillsLoading ? (
+              <Text style={styles.skillsStatusText}>Loading skills...</Text>
+            ) : skillsList.length === 0 ? (
+              <Text style={styles.skillsStatusText}>No skills available</Text>
+            ) : (
+              skillsList.map((skill) => (
+                <TouchableOpacity
+                  key={skill.id}
+                  style={[styles.skillItem, skillRunning === skill.id && styles.skillItemRunning]}
+                  onPress={() => runSkill(skill.id)}
+                  disabled={skillRunning !== null}
+                >
+                  <View style={styles.skillItemHeader}>
+                    <Text style={styles.skillName}>{skill.name}</Text>
+                    <Text style={styles.skillCategory}>{skill.category}</Text>
+                  </View>
+                  {skill.description ? (
+                    <Text style={styles.skillDesc} numberOfLines={2}>{skill.description}</Text>
+                  ) : null}
+                  {skillRunning === skill.id && (
+                    <Text style={styles.skillRunningText}>Running...</Text>
+                  )}
+                </TouchableOpacity>
+              ))
+            )}
+          </View>
+        )}
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -497,6 +600,12 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     lineHeight: 20,
   },
+  messageTimestamp: {
+    color: Colors.textMuted,
+    fontSize: 10,
+    marginTop: 2,
+    alignSelf: 'flex-end',
+  },
   // Phase 8 Styles
   approvalSection: {
     borderColor: Colors.warning,
@@ -594,5 +703,73 @@ const styles = StyleSheet.create({
   tokenText: {
     color: Colors.textSecondary,
     fontSize: FontSize.xs,
+  },
+  connectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  connectionTypeText: {
+    fontSize: 10,
+    color: Colors.textMuted,
+  },
+  costLimitContainer: {
+    alignItems: 'flex-end',
+  },
+  skillsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  skillsCloseBtn: {
+    padding: Spacing.sm,
+  },
+  skillsCloseText: {
+    color: Colors.textMuted,
+    fontSize: FontSize.lg,
+    fontWeight: '700',
+  },
+  skillsStatusText: {
+    color: Colors.textMuted,
+    fontSize: FontSize.sm,
+    textAlign: 'center',
+    paddingVertical: Spacing.lg,
+  },
+  skillItem: {
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    marginTop: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  skillItemRunning: {
+    borderColor: Colors.primary,
+    opacity: 0.7,
+  },
+  skillItemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  skillName: {
+    color: Colors.textPrimary,
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+  },
+  skillCategory: {
+    color: Colors.textMuted,
+    fontSize: FontSize.xs,
+  },
+  skillDesc: {
+    color: Colors.textSecondary,
+    fontSize: FontSize.xs,
+    marginTop: Spacing.xs,
+  },
+  skillRunningText: {
+    color: Colors.primary,
+    fontSize: FontSize.xs,
+    fontWeight: '600',
+    marginTop: Spacing.xs,
   },
 });

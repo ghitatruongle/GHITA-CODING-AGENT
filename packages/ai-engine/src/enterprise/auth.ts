@@ -109,16 +109,18 @@ function verifyJWT(token: string, secret: string): JWTClaims | null {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
 
-    const [header, payload, signature] = parts;
-    const expectedSig = createHash('sha256')
-      .update(`${header}.${payload}.${secret}`)
-      .digest('base64url');
+  const [header, payload, signature] = parts;
+  if (!header || !payload || !signature) return null;
 
-    if (!timingSafeEqual(Buffer.from(signature!), Buffer.from(expectedSig))) {
-      return null;
-    }
+  const expectedSig = createHash('sha256')
+    .update(`${header}.${payload}.${secret}`)
+    .digest('base64url');
 
-    const claims: JWTClaims = JSON.parse(base64UrlDecode(payload!));
+  if (!timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSig))) {
+    return null;
+  }
+
+  const claims: JWTClaims = JSON.parse(base64UrlDecode(payload));
 
     // Check expiry
     if (claims.exp && claims.exp < Math.floor(Date.now() / 1000)) {
@@ -279,7 +281,8 @@ export class APIKeyManager {
     metadata?: Record<string, unknown>;
   }): string {
     const now = Math.floor(Date.now() / 1000);
-    const expiry = options.expiresIn ?? this.config.tokenExpirySeconds!;
+    const expiry = options.expiresIn ?? this.config.tokenExpirySeconds ?? 0;
+    if (!expiry) return '';
 
     const claims: JWTClaims = {
       sub: options.userId,
@@ -345,9 +348,9 @@ export class APIKeyManager {
 
   /** Check if auth result has required scopes */
   checkScopes(auth: AuthResult, required: AuthScope[]): boolean {
-    if (!auth.authenticated || !auth.scopes) return false;
-    if (auth.scopes.includes('*')) return true;
-    return required.every((s) => auth.scopes!.includes(s));
+  if (!auth.authenticated || !auth.scopes) return false;
+  if (auth.scopes.includes('*')) return true;
+  return required.every((s) => auth.scopes?.includes(s));
   }
 
   /** Get stats */

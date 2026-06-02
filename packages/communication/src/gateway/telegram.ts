@@ -38,7 +38,8 @@ export class TelegramGateway implements CommunicationGateway {
     if (this.isMock) {
       return true;
     }
-    try {
+	try {
+      if (!this.token) return false;
       // In production: HTTP POST to https://api.telegram.org/bot<token>/sendMessage
       const response = await fetch(`https://api.telegram.org/bot${this.token}/sendMessage`, {
         method: 'POST',

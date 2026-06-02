@@ -11,7 +11,7 @@ import { zh } from './zh';
 import type { TranslationKeys } from './types';
 
 type Translations = TranslationKeys;
-type TFunction = (key: string, params?: Record<string, string | number>) => any;
+type TFunction = (key: string, params?: Record<string, string | number>) => string;
 
 const translations: Record<string, Translations> = { vi, en, zh };
 
@@ -35,7 +35,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     const initLang = async () => {
       const settings = await loadSettings();
       // If settings has language (we will add it to types), use it
-      const savedLang = (settings as any).language || 'vi';
+      const savedLang = settings.language || 'vi';
       setLang(savedLang);
     };
     void initLang();
@@ -45,10 +45,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsubscribe = socketService.onLanguageSync(async (syncLang) => {
       if (syncLang && translations[syncLang] && syncLang !== lang) {
-        console.log(`[I18nProvider] Syncing language from socket: ${syncLang}`);
+        console.info(`[I18nProvider] Syncing language from socket: ${syncLang}`);
         setLang(syncLang);
         const settings = await loadSettings();
-        await saveSettings({ ...settings, language: syncLang } as any);
+        await saveSettings({ ...settings, language: syncLang });
       }
     });
     return unsubscribe;
@@ -58,7 +58,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     if (!translations[newLang]) return;
     setLang(newLang);
     const settings = await loadSettings();
-    await saveSettings({ ...settings, language: newLang } as any);
+    await saveSettings({ ...settings, language: newLang });
     
     // Broadcast via socket if connected
     if (socketService.isConnected) {
@@ -69,23 +69,27 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const value = useMemo(() => {
     const dict = translations[lang] || translations.vi;
 
-    const t: TFunction = (key, params) => {
-      const parts = key.split('.');
-      let result: any = dict;
-      for (const part of parts) {
-        result = result?.[part];
+  const t: TFunction = (key, params) => {
+    const parts = key.split('.');
+    let result: unknown = dict as unknown;
+    for (const part of parts) {
+      if (result != null && typeof result === 'object') {
+        result = (result as Record<string, unknown>)[part];
+      } else {
+        return key;
       }
-      if (Array.isArray(result)) return result;
-      if (typeof result !== 'string') return key;
+    }
+    if (Array.isArray(result)) return key;
+    if (typeof result !== 'string') return key;
 
-      if (params) {
-        return Object.entries(params).reduce(
-          (str, [k, v]) => str.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), String(v)),
-          result,
-        );
-      }
-      return result;
-    };
+    if (params) {
+      return Object.entries(params).reduce(
+        (str, [k, v]) => str.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), String(v)),
+        result,
+      );
+    }
+    return result;
+  };
 
     return { t, lang, changeLanguage };
   }, [lang]);

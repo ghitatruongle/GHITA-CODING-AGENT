@@ -115,7 +115,10 @@ export class LangGraphAdapter implements AgentAdapter<LangGraphAgentConfig> {
 
     const edges: Array<{ from: string; to: string }> = [];
     for (let i = 0; i < nodeIds.length - 1; i++) {
-      edges.push({ from: nodeIds[i]!, to: nodeIds[i + 1]! });
+      const from = nodeIds[i];
+ const to = nodeIds[i + 1];
+ if (!from || !to) continue;
+ edges.push({ from, to });
     }
 
     return { nodes, edges };
@@ -125,12 +128,16 @@ export class LangGraphAdapter implements AgentAdapter<LangGraphAgentConfig> {
     toolCalls: unknown[] | undefined,
   ): Array<{ id: string; name: string; arguments: Record<string, unknown> }> | undefined {
     if (!toolCalls || !Array.isArray(toolCalls)) return undefined;
-    return toolCalls.map((tc: any) => ({
-      id: tc.id ?? `tc_${Math.random().toString(36).slice(2, 8)}`,
-      name: tc.function?.name ?? tc.name ?? 'unknown',
-      arguments: typeof tc.function?.arguments === 'string'
-        ? JSON.parse(tc.function.arguments)
-        : (tc.arguments ?? {}),
-    }));
+    return toolCalls.map((tc) => {
+      const call = tc as Record<string, unknown>;
+      const fn = call.function as Record<string, unknown> | undefined;
+      return {
+        id: (call.id as string) ?? `tc_${Math.random().toString(36).slice(2, 8)}`,
+        name: ((fn?.name ?? call.name) as string) ?? 'unknown',
+        arguments: typeof fn?.arguments === 'string'
+          ? JSON.parse(fn.arguments as string) as Record<string, unknown>
+          : (call.arguments as Record<string, unknown>) ?? {},
+      };
+    });
   }
 }

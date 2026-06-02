@@ -1,0 +1,1 @@
+TurboRepo, pnpm, TypeScript, Tauri (Rust/JS), React Native

@@ -73,10 +73,11 @@ export class SkillCatalogClient {
       results = results.filter((s) => s.category === filters.category);
     }
     if (filters?.minRating) {
-      results = results.filter((s) => s.rating >= filters.minRating!);
-    }
-    if (filters?.tags && filters.tags.length > 0) {
-      results = results.filter((s) => filters.tags!.some((t) => s.tags.includes(t)));
+    results = results.filter((s) => s.rating >= (filters.minRating ?? 0));
+  }
+  if (filters?.tags && filters.tags.length > 0) {
+    const filterTags = filters.tags;
+    results = results.filter((s) => filterTags.some((t) => s.tags.includes(t)));
     }
 
     // Sort

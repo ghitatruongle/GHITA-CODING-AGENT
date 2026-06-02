@@ -254,7 +254,7 @@ func main() {
 
       // 'helper' được 'runService' gọi, 'runService' được 'main' gọi
       // Điểm số của 'helper' sẽ cao nhất do nhận dòng PageRank truyền từ 'runService'
-      expect(ranks['utils.ts#helper']!).toBeGreaterThan(ranks['main.ts#main']!);
+      expect(ranks['utils.ts#helper'] ?? 0).toBeGreaterThan(ranks['main.ts#main'] ?? 0);
     });
   });
 
@@ -281,7 +281,7 @@ func main() {
       
       expect(cachedFetch).not.toBeNull();
       expect(cachedFetch?.length).toBe(1);
-      expect(cachedFetch![0]!.name).toBe('UserService');
+      expect(cachedFetch?.[0]?.name).toBe('UserService');
 
       // 3. Thay đổi nội dung tệp (hash thay đổi) để kiểm chứng cache miss
       const newHash = cache.calculateHash(content + '\n// modification');

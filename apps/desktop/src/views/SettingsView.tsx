@@ -84,7 +84,7 @@ function Select({
         padding: '6px 12px',
         background: 'var(--bg-tertiary)',
         color: 'var(--text-primary)',
-        border: '1px solid var(--border-color)',
+        border: '1px solid var(--border-default)',
         borderRadius: 'var(--radius-sm)',
         fontSize: '13px',
         minWidth: '140px',
@@ -214,9 +214,16 @@ export function SettingsView() {
         <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
           {t('settings.mcpServersDesc')}
         </p>
-        {mcpServers.map((server, i) => (
+        {mcpServers.map((server) => {
+          // BUG FIX: the previous implementation used the array index as both
+          // the React key and the deletion target. If the list is reordered
+          // or filtered between renders, clicking "Remove" could remove the
+          // wrong server. Use a stable composite key (name + transport) for
+          // both React reconciliation and the filter predicate.
+          const serverKey = `${server.name}::${server.transport}`;
+          return (
           <SettingRow
-            key={i}
+            key={serverKey}
             label={`${server.name} (${server.transport})`}
             description={server.enabled ? t('common.enabled') : t('common.disabled')}
           >
@@ -236,9 +243,11 @@ export function SettingsView() {
               </span>
               <button
                 onClick={() => {
-                  const updated = [...mcpServers];
-                  updated[i] = { ...updated[i]!, enabled: !updated[i]!.enabled };
-                  setMcpServers(updated);
+                  setMcpServers(mcpServers.map((s) =>
+                    s.name === server.name && s.transport === server.transport
+                      ? { ...s, enabled: !s.enabled }
+                      : s
+                  ));
                 }}
                 style={{
                   padding: '2px 10px',
@@ -253,7 +262,9 @@ export function SettingsView() {
                 {server.enabled ? t('common.disable') : t('common.enable')}
               </button>
               <button
-                onClick={() => setMcpServers(mcpServers.filter((_, idx) => idx !== i))}
+                onClick={() => setMcpServers(
+                  mcpServers.filter((s) => !(s.name === server.name && s.transport === server.transport))
+                )}
                 style={{
                   padding: '2px 10px',
                   borderRadius: '4px',
@@ -268,7 +279,8 @@ export function SettingsView() {
               </button>
             </div>
           </SettingRow>
-        ))}
+          );
+        })}
         <div style={{ display: 'flex', gap: '8px', marginTop: '12px', alignItems: 'center' }}>
           <input type="text" placeholder={t('settings.mcpNamePlaceholder')} value={mcpName} onChange={(e) => setMcpName(e.target.value)}
             style={{ flex: '0 0 100px', padding: '6px 10px', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', color: '#f8fafc', fontSize: '12px', outline: 'none' }} />
@@ -297,7 +309,7 @@ export function SettingsView() {
               <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600, background: hook.enabled ? 'rgba(16,185,129,0.1)' : 'rgba(148,163,184,0.1)', color: hook.enabled ? '#34d399' : '#94a3b8', border: `1px solid ${hook.enabled ? 'rgba(16,185,129,0.3)' : 'rgba(148,163,184,0.2)'}` }}>
                 {hook.enabled ? `● ${t('common.active')}` : `○ ${t('common.disabled')}`}
               </span>
-              <button onClick={() => { const u = [...hooks]; u[i] = { ...u[i]!, enabled: !u[i]!.enabled }; setHooks(u); }}
+              <button onClick={() => { const u = [...hooks]; const h = u[i]; if (h) { u[i] = { ...h, enabled: !h.enabled }; } setHooks(u); }}
                 style={{ padding: '2px 10px', borderRadius: '4px', fontSize: '11px', border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: '#cbd5e1', cursor: 'pointer' }}>
                 {hook.enabled ? t('common.disable') : t('common.enable')}
               </button>

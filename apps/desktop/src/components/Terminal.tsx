@@ -72,19 +72,14 @@ export function Terminal() {
   ]);
   const [input, setInput] = useState('');
   const [isRunning, setIsRunning] = useState(false);
-  const [cwd, setCwd] = useState('C:\\Users');
+  const [cwd, setCwd] = useState('');
   const [shell, setShell] = useState<ShellType>('cmd');
   const setTerminalCwd = useAppStore((s) => s.setTerminalCwd);
   const terminalCwd = useAppStore((s) => s.terminalCwd);
 
   const config = SHELL_CONFIGS[shell];
 
-  // Sync cwd to global store for ChatPanel project context
-  useEffect(() => {
-    setTerminalCwd(cwd);
-  }, [cwd, setTerminalCwd]);
-
-  // Sync global terminalCwd to local cwd
+  // Sync global terminalCwd to local cwd (from FileExplorer, not vice versa)
   useEffect(() => {
     if (terminalCwd && terminalCwd !== cwd) {
       setCwd(terminalCwd);
@@ -110,12 +105,16 @@ export function Terminal() {
       } catch {
         // Non-critical
       }
-      // init complete — home dir resolved;
     })();
   }, [shell]);
 
+  const MAX_HISTORY = 500;
   const addLines = useCallback((lines: TermLine[]) => {
-    setHistory((prev) => [...prev, ...lines]);
+    setHistory((prev) => {
+      const combined = [...prev, ...lines];
+      // Cap history to prevent unbounded memory growth
+      return combined.length > MAX_HISTORY ? combined.slice(-MAX_HISTORY) : combined;
+    });
   }, []);
 
   const switchShell = useCallback(() => {
@@ -149,7 +148,7 @@ export function Terminal() {
 
       // cd with no args in PS goes to $HOME
       if (!target && shell === 'powershell') {
-        target = process.env.USERPROFILE || 'C:\\Users';
+        target = cwd || 'C:\\Users';
       }
 
       if (!target) {
@@ -181,6 +180,7 @@ export function Terminal() {
         const newCwd = verify.stdout.trim();
         if (verify.code === 0 && newCwd && newCwd.length > 2) {
           setCwd(newCwd);
+          setTerminalCwd(newCwd); // Sync to store for ChatPanel/Agent workspace
           addLines([{ text: '', type: 'stdout' }]);
         } else {
           addLines([
@@ -249,7 +249,7 @@ export function Terminal() {
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        background: '#0c0c18',
+        background: 'var(--bg-primary)',
         fontFamily: "'Cascadia Code', 'Fira Code', 'Consolas', monospace",
         fontSize: '13px',
       }}
@@ -262,11 +262,11 @@ export function Terminal() {
           padding: '6px 16px',
           borderBottom: '1px solid var(--border-subtle)',
           gap: '8px',
-          background: '#0a0a14',
+          background: 'var(--bg-tertiary)',
           userSelect: 'none',
         }}
       >
-        <span style={{ color: '#6b7280', fontSize: '11px', fontWeight: 500 }}>
+        <span style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: 500 }}>
           Shell:
         </span>
         <button
@@ -297,7 +297,7 @@ export function Terminal() {
         >
           {config.name}
         </button>
-        {isRunning && <span style={{ color: '#6b7280', fontSize: '11px' }}>⏳ {t('terminal.running')}</span>}
+        {isRunning && <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>⏳ {t('terminal.running')}</span>}
       </div>
 
       {/* Output */}
@@ -352,7 +352,7 @@ export function Terminal() {
             background: 'transparent',
             border: 'none',
             outline: 'none',
-            color: '#e0e0e0',
+            color: 'var(--text-primary)',
             fontFamily: 'inherit',
             fontSize: '13px',
             opacity: isRunning ? 0.5 : 1,

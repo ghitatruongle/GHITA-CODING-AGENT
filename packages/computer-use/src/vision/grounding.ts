@@ -35,8 +35,11 @@ export class GuiGrounder {
       throw new Error(`Failed to ground description "${description}": No actions parsed from prediction: ${rawActionStr}`);
     }
 
-    const action = parsedActions[0]!;
-    const startBoxStr = action.action_inputs.start_box;
+	const action = parsedActions[0];
+	if (!action) {
+		throw new Error(`Failed to ground description "${description}": No action found in parsed results`);
+	}
+	const startBoxStr = action.action_inputs.start_box;
     if (!startBoxStr) {
       throw new Error(`Failed to ground description "${description}": No start_box input found in action: ${JSON.stringify(action)}`);
     }

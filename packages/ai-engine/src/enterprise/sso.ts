@@ -50,7 +50,7 @@ export interface SSOState {
   createdAt: number;
 }
 
-// --- PKCE Helpers ---
+import { createHash } from 'node:crypto';
 
 function generateRandomString(length: number): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
@@ -67,8 +67,6 @@ function generateRandomString(length: number): string {
 }
 
 function generateCodeChallenge(codeVerifier: string): string {
-  // SHA-256 hash, base64url encoded
-  const { createHash } = require('node:crypto');
   return createHash('sha256').update(codeVerifier).digest('base64url');
 }
 
@@ -476,10 +474,13 @@ export class SSOManager {
     const stateStr = generateRandomString(32);
     const codeVerifier = usePKCE ? generateRandomString(64) : undefined;
 
-    const state: SSOState = {
-      state: stateStr,
-      codeVerifier,
-      redirectUri: this.configs.get(provider)!.redirectUri,
+  const ssoConfig = this.configs.get(provider);
+  if (!ssoConfig) throw new Error(`SSO config not found for provider: ${provider}`);
+
+  const state: SSOState = {
+    state: stateStr,
+    codeVerifier,
+    redirectUri: ssoConfig.redirectUri,
       createdAt: Date.now(),
     };
 

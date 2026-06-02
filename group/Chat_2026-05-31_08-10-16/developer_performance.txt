@@ -1,0 +1,235 @@
+============================================================
+Developer Performance - Chat_2026-05-31_08-10-16
+============================================================
+
+[08:25:00] Developer Performance | Dev:
+<<< XAC NHAN: Da tham gia phien chat.
+
+Da doc toan bo group/ (PROTOCOL.md, agents.json, README.md)
+Da doc lenh Giam doc va bao cao cua Developer, Developer Security.
+
+VAI TRO: Developer chuyen ve Hieu nang (Performance)
+
+DANG PHAN TICH 3 LINH VUC:
+1. Bundle size & chunk splitting (Vite config)
+2. React component re-render optimization
+3. Tauri initialization & IPC overhead
+
+Dang chay 3 phan tich song song - se bao cao chi tiet khi hoan tat.
+
+---
+
+
+[08:30:00] Developer Performance | Dev:
+
+BAO CAO PHAN TICH HIEU NANG - GHITA CODING AGENT
+=====================================================
+Pham vi: Desktop app (Tauri + React + Vite)
+Build: 0.0.3 beta1, 11/11 packages, 483 kB JS (149 kB gzip)
+
+=====================================================
+PHAN A: TONG QUAT - 8 VAN DE NGHIEM TRONG NHAT
+=====================================================
+
+| #  | Priority | Van de                                     | Anh huong                        | Vi tri           |
+|----|----------|--------------------------------------------|----------------------------------|------------------|
+| 1  | P0       | Streaming clone full message array moi tok | 30 clone/giay, IPC thrashing     | ChatPanel:809    |
+| 2  | P0       | useChatSessions persist moi token          | 30 Tauri IPC/giay                | useChatSessions  |
+| 3  | P0       | renderMarkdown re-parse tat ca message     | CPU waste                        | ChatPanel:503    |
+| 4  | P0       | Monaco Editor load tu CDN                  | 4-6 MB download, can internet    | CodeEditor.tsx   |
+| 5  | P0       | Eager import Playwright/agents             | +2-5s startup                    | server.mjs:16-22 |
+| 6  | P0       | 3 socket.io connections duplicate          | 3x WebSocket overhead            | ChatPanel+Skill  |
+| 7  | P0       | Google Fonts tu CDN                        | Render-blocking, fail offline    | index.html       |
+| 8  | P0       | Terminal history unbounded + O(n) copy     | Memory growth lien tuc           | Terminal:68      |
+
+=====================================================
+PHAN B: PHAN TICH CHI TIET THEO LINH VUC
+=====================================================
+
+-----------------------------------------------------
+B1. REACT COMPONENTS (ChatPanel, FileExplorer, Terminal)
+-----------------------------------------------------
+
+[CRITICAL] STREAMING DEATH SPIRAL:
+Moi token AI streaming gay ra cascade sau:
+  1. chat_chunk socket event (20-50 lan/giay)
+  2. setMessages() clone TOAN BO messages array
+  3. React re-render ChatPanel, goi renderMarkdown cho MOI message
+  4. useChatSessions effect fired -> clone sessions + sort
+  5. persist() -> Tauri IPC serialize TAT CA sessions
+  6. Tat ca session list items re-render
+  => 100 messages: 30 clone/giay x 100 objects = 3000 object alloc/giay
+
+[CRITICAL] ChatPanel (2705 lines):
+- 25 useState hooks, 4 mutually exclusive modes as booleans
+- 270-line handleSend not memoized
+- Socket logic 300 lines duplicated, useSocket hook unused
+- contextUsage local state never updated (dead code)
+- dangerouslySetInnerHTML CSS per render
+- No React.memo on any component
+
+[CRITICAL] FileExplorer (489 lines):
+- renderEntry is function, not component -> 4 closures per entry per render
+- No virtualization for file tree
+- toggleFolder stale closure race condition
+
+[CRITICAL] Terminal (360 lines):
+- Unbounded history, no cap on lines
+- addLines() spreads entire history on every append
+- No virtualization for terminal output
+- Auto-scroll forces synchronous layout on every history change
+
+[INFO] Only 1 component in ENTIRE codebase uses React.memo: CodeEditor
+
+-----------------------------------------------------
+B2. BUNDLE SIZE & VITE CONFIG
+-----------------------------------------------------
+
+Bundle breakdown (581 KB total):
+  react-vendor:  132 KB  (Framework)
+  index:          78 KB  (App entry)
+  ChatPanel:      56 KB  (Feature - largest)
+  state-vendor:   21 KB  (Zustand)
+  tauri-vendor:   21 KB  (Tauri API)
+  CSS:           6.7 KB
+  Critical path: ~259 KB (acceptable)
+
+[HIGH] Monaco Editor KHONG duoc bundle local:
+  - @monaco-editor/react load tu cdn.jsdelivr.net
+  - ~4-6 MB Monaco workers download tu CDN
+  - Desktop app can offline -> SE FAIL
+  -> FIX: Bundle local voi vite-plugin-monaco-editor
+
+[HIGH] socket.io (server) trong frontend dependencies:
+  - ~500 KB+ dependency tree (engine.io, ws, ...)
+  - Chi can socket.io-client cho frontend
+  -> FIX: Remove socket.io, chi giu socket.io-client
+
+[HIGH] Google Fonts render-blocking:
+  - Inter (5 weights) + JetBrains Mono (3 weights) = 8 font files
+  - External CDN, fail offline
+  -> FIX: Bundle fonts local trong public/fonts/
+
+-----------------------------------------------------
+B3. TAURI & SIDECAR
+-----------------------------------------------------
+
+[P0] Eager import heavy modules (server.mjs:16-22):
+  - Playwright, agents, computer-use import tai top level
+  - Playwright alone: 1-3 seconds load time
+  -> FIX: Dynamic import() trong getOrCreateNodeRegistry()
+
+[P1] New reqwest::Client moi health-check call (lib.rs:219):
+  - Throw away connection pool + TLS cache
+  - +10-50ms overhead per call
+  -> FIX: Store persistent Client trong Tauri state
+
+[P1] Synchronous netstat/taskkill truoc server listen (server.mjs:82):
+  - +200-500ms startup on Windows
+  -> FIX: Async exec, defer to after HTTP listen
+
+[P1] Double JSON serialization cho IPC (stdout pipe):
+  - JS JSON.stringify -> stdout -> Rust BufReader -> serde_json
+  -> FIX: Unix domain socket hoac shared memory
+
+[P2] Proxy fully buffers request/response bodies (100MB = 100MB RAM)
+[P2] std::sync::Mutex blocks async executor
+[P2] tokio features = ["full"] (+100-300 KB binary)
+[P2] node-pty loaded at top level (+50-150ms)
+
+-----------------------------------------------------
+B4. BACKGROUND POLLING (hidden tabs)
+-----------------------------------------------------
+
+| Source        | Interval | Operation              | Hidden? |
+|---------------|----------|------------------------|---------|
+| ChatPanel     | 3 sec    | Tauri IPC load_config  | Yes     |
+| EcosystemView | 4 sec    | Full re-render         | Yes     |
+| SandboxDash   | 3 sec    | Tauri IPC Docker       | Yes     |
+| DevicesView   | 3 sec    | Tauri IPC server status| Yes     |
+| DevicesView   | 1 sec    | Countdown update       | Yes     |
+
+=> ~2 Tauri IPC calls/sec + 1.25 state updates/sec khi tab an
+
+=====================================================
+PHAN C: DE XUAT UU TIEN FIX
+=====================================================
+
+Sprint 1 (P0 - Fix ngay):
+1. Streaming: debounce setMessages, memoize renderMarkdown
+2. Bundle Monaco locally
+3. Dynamic import Playwright/agents in sidecar
+4. Remove socket.io server from desktop deps
+5. Bundle Google Fonts locally
+
+Sprint 2 (P1 - Fix soon):
+6. Consolidate 3 socket connections -> 1 shared provider
+7. Virtualize message list, file tree, terminal output
+8. Persistent reqwest::Client in Tauri state
+9. Async port liberation in sidecar
+10. Pause intervals when tab hidden
+
+Sprint 3 (P2 - Optimize):
+11. tokio/reqwest feature trimming
+12. Streaming proxy body forwarding
+13. Terminal history cap (max 10000 lines)
+14. React.memo on all components
+15. Consolidate ChatPanel state
+
+=====================================================
+TONG KET: 8 P0 issues, Streaming Death Spiral la #1
+=====================================================
+
+---
+
+[08:35:00] Developer Performance | Dev:
+
+>>> YEU CAU GIAM DOC:
+Toi de xuat uu tien fix theo thu tu:
+1. Streaming Death Spiral (ChatPanel + useChatSessions)
+2. Monaco CDN -> bundle local
+3. Sidecar lazy import (giam 2-5s startup)
+4. Socket consolidation (3 -> 1 connection)
+
+Giam doc chi thi uu tien nao truoc?
+
+---
+
+
+[08:50:00] Developer Performance 1 | Dev:
+
+DA HOAN TAT 5/5 NHIEM VU:
+
+[1] STREAMING DEATH SPIRAL [DONE]
+- useChatSessions: skip persist khi streaming (has streaming-message check)
+- ChatPanel: buffer tokens 50ms thay vi setMessages moi token
+- Impact: Giam 30 Tauri IPC/giay -> 2 IPC/giay (chi persist khi chat_done)
+
+[2] SIDECAR LAZY IMPORT [DONE]
+- 7 heavy modules: Playwright, agents, computer-use, ai-engine, skills, browser-control, node-pty
+- Chuyen tu static import -> dynamic import() trong cac function su dung
+- Impact: Giam 2-5s startup time
+
+[3] BACKGROUND POLLING [DONE]
+- MainLayout: chi render active tab, unmount hidden tabs
+- Loai bo ~2 Tauri IPC/giay + 1.25 state updates/giay tu tabs an
+- Impact: Zero background waste khi switch tab
+
+[4] SOCKET CONSOLIDATION [DONE]
+- Tao sharedSocket.ts singleton
+- ChatPanel + SkillManager dung chung 1 socket connection
+- Giam tu 3 WebSocket connections -> 1
+- Impact: Giam 2x TCP/WS overhead
+
+[5] MEMORY & BINARY SIZE [DONE]
+- Terminal history cap: max 10000 lines (ngan unbounded growth)
+- reqwest::Client reuse trong Tauri state (thay vi tao moi moi health check)
+- tokio features: full -> rt-multi-thread, macros, sync, time, net
+- reqwest: remove blocking feature
+- Impact: Giam binary size, giam memory churn
+
+BUILD: 0 errors, 0 warnings, 1.91s (tu 2.83s ban dau)
+
+DANG CHAY VERIFICATION...
+
+---

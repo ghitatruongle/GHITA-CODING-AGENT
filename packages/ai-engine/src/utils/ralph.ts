@@ -35,7 +35,7 @@ export class RalphLoopManager {
       maxIterations: config?.maxIterations ?? 5,
       costLimitUsd: config?.costLimitUsd ?? 0.50, // Mặc định giới hạn $0.50 để an toàn tài chính
       compileCommand: config?.compileCommand,
-      testCommand: config?.compileCommand,
+      testCommand: config?.testCommand,
     };
   }
 

@@ -2,14 +2,16 @@
 // GHITA CODING AGENT — Premium AI Chat Panel (Glassmorphism & Live Streaming)
 // ==============================================================================
 
-import { useState, useEffect, useRef } from 'react';
-import { io, Socket } from 'socket.io-client';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import type { Socket } from 'socket.io-client';
 import { invoke } from '@tauri-apps/api/core';
+import { getSharedSocket } from '../utils/sharedSocket';
 import { generateUUID, type AgentEvent } from '@ghita/shared';
 import { useAppStore } from '../stores/appStore';
 import { useTranslation } from '../i18n';
 import { loadApiConfig } from '../utils/apiConfig';
-import { runCommand } from '../utils/shell';
+import { runCommand, assessShellCommand } from '../utils/shell';
+import { useChatSessions } from '../hooks/useChatSessions';
 
 // --- Types mirroring ApiManager storage schema ---
 type ProviderId =
@@ -145,6 +147,7 @@ interface ToolApprovalRequest {
   name: string;
   arguments: string;
   warningMessage?: string;
+  approvalKind?: 'tool' | 'command';
 }
 
 interface ComputerUsePreviewProps {
@@ -158,18 +161,30 @@ interface ComputerUsePreviewProps {
 function ComputerUsePreviewComponent({ preview }: ComputerUsePreviewProps) {
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const rafRef = useRef<number>(0);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
-    setHoverPos({ x, y });
+    if (rafRef.current) return; // Throttle: skip if frame pending
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = 0;
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+      setHoverPos({ x, y });
+    });
   };
 
   const handleMouseLeave = () => {
     setHoverPos(null);
   };
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
 
   const imgSrc = preview.screenshot.startsWith('data:')
     ? preview.screenshot
@@ -417,6 +432,8 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
   const [output, setOutput] = useState<string>('');
   const [isRunning, setIsRunning] = useState(false);
   const { t } = useTranslation();
+  const terminalCwd = useAppStore((s) => s.terminalCwd);
+  const permissionMode = useAppStore((s) => s.permissionMode);
 
   // Determine if this code block is a runnable command
   const isShellCommand = !lang || lang === 'cmd' || lang === 'powershell' || lang === 'shell' || lang === 'bash' || lang === 'sh';
@@ -425,11 +442,23 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
 
   const handleRun = async () => {
     const command = code.trim();
-    if (!window.confirm(`Run this command?\n\n${command}`)) return;
+    // Security scan before execution
+    const scan = assessShellCommand(command);
+    if (scan.threatLevel === 'CRITICAL') {
+      setOutput(`BLOCKED: Command flagged as CRITICAL threat.\nReason: ${scan.reason || 'Unknown'}`);
+      return;
+    }
+
+    // In auto mode, skip confirmation for safe commands
+    const needsApproval = permissionMode === 'custom' || !scan.safe;
+    if (needsApproval) {
+      if (scan.threatLevel === 'HIGH' && !window.confirm(`WARNING: Potentially dangerous command.\n${scan.reason || 'Unknown'}\n\nRun anyway?\n\n${command}`)) return;
+      else if (!window.confirm(`Run this command?\n\n${command}`)) return;
+    }
 
     setIsRunning(true);
     setOutput(t('chat.runningCmd'));
-    const result = await runCommand(command);
+    const result = await runCommand(command, terminalCwd || undefined);
     if (result.success) {
       setOutput(result.stdout || t('chat.runSuccessNoOutput'));
     } else {
@@ -554,192 +583,48 @@ function renderInline(text: string): React.ReactNode {
   });
 }
 
-interface ChatSession {
-  id: string;
-  title: string;
-  messages: ChatMessage[];
-  timestamp: number;
-}
+/** Memoized markdown content — only re-parses when `content` changes */
+const MemoizedMessageContent = React.memo(function MemoizedMessageContent({ content }: { content: string }) {
+  const rendered = useMemo(() => renderMarkdown(content), [content]);
+  return <>{rendered}</>;
+});
 
 export function ChatPanel() {
   const { t, lang } = useTranslation();
   const tRef = useRef(t);
   tRef.current = t;
 
-  const INITIAL_MESSAGES: ChatMessage[] = [];
-
-  // Sessions and History state
-  const [sessions, setSessions] = useState<ChatSession[]>([]);
-  const [activeSessionId, setActiveSessionId] = useState<string>('');
-  const [currentView, setCurrentView] = useState<'chat' | 'history'>('chat');
-  const isSwitchingSessionRef = useRef(false);
-
-  const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
+  const {
+    sessions,
+    activeSessionId,
+    currentView,
+    setCurrentView,
+    messages,
+    setMessages,
+    selectSession: handleSelectSession,
+    createSession: handleCreateSession,
+    deleteSession: handleDeleteSession,
+  } = useChatSessions();
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
   const [reconnectTrigger, setReconnectTrigger] = useState(0);
   const terminalCwd = useAppStore((s) => s.terminalCwd);
 
-  // Load sessions from localStorage on mount
+  // Sync workspace root to server for agent tools (file read/write/search)
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem('ghita_chat_sessions');
-      if (raw) {
-        const parsed = JSON.parse(raw) as ChatSession[];
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setSessions(parsed);
-          const lastActiveId = localStorage.getItem('ghita_active_session_id');
-          const hasLastActive = parsed.some(s => s.id === lastActiveId);
-          const activeId = hasLastActive ? lastActiveId! : parsed[0]!.id;
-          setActiveSessionId(activeId);
-          const activeSess = parsed.find(s => s.id === activeId);
-          if (activeSess) {
-            setMessages(activeSess.messages);
-          }
-          return;
-        }
-      }
-    } catch (e) {
-      console.error('[ChatPanel] Failed to load chat sessions:', e);
+    if (socketRef.current?.connected) {
+      socketRef.current.emit('set_workspace', { path: terminalCwd || null });
     }
+  }, [terminalCwd]);
 
-    // Default session creation
-    const defaultId = generateUUID();
-    const defaultSession: ChatSession = {
-      id: defaultId,
-      title: t('chat.newChat') || 'Cuộc trò chuyện mới',
-      messages: INITIAL_MESSAGES,
-      timestamp: Date.now(),
-    };
-    setSessions([defaultSession]);
-    setActiveSessionId(defaultId);
-    setMessages(INITIAL_MESSAGES);
-    try {
-      localStorage.setItem('ghita_chat_sessions', JSON.stringify([defaultSession]));
-      localStorage.setItem('ghita_active_session_id', defaultId);
-    } catch (e) {}
-  }, []);
-
-  // Update localStorage and sessions list whenever messages change
-  useEffect(() => {
-    if (!activeSessionId || sessions.length === 0 || isSwitchingSessionRef.current) return;
-
-    setSessions((prevSessions) => {
-      const updated = prevSessions.map((s) => {
-        if (s.id === activeSessionId) {
-          let newTitle = s.title;
-          const defaultTitles = [
-            'Cuộc trò chuyện mới',
-            'New Chat',
-            '新聊天',
-            t('chat.newChat'),
-            'Cuộc trò chuyện mới'.toLowerCase(),
-            'New Chat'.toLowerCase(),
-            '新聊天'.toLowerCase()
-          ];
-          const isDefaultTitle = defaultTitles.some(dt => dt === s.title || dt === s.title.trim());
-
-          if (isDefaultTitle) {
-            const firstUserMsg = messages.find(m => m.role === 'user');
-            if (firstUserMsg && firstUserMsg.content.trim()) {
-              newTitle = firstUserMsg.content.trim().substring(0, 25);
-              if (firstUserMsg.content.trim().length > 25) {
-                newTitle += '...';
-              }
-            }
-          }
-
-          return {
-            ...s,
-            messages,
-            title: newTitle,
-            timestamp: Date.now(),
-          };
-        }
-        return s;
-      });
-
-      const sorted = [...updated].sort((a, b) => b.timestamp - a.timestamp);
-      try {
-        localStorage.setItem('ghita_chat_sessions', JSON.stringify(sorted));
-      } catch (e) {}
-      return sorted;
-    });
-  }, [messages, activeSessionId]);
-
-  const handleSelectSession = (sessionId: string) => {
-    const target = sessions.find(s => s.id === sessionId);
-    if (!target) return;
-
-    isSwitchingSessionRef.current = true;
-    setActiveSessionId(sessionId);
-    setMessages(target.messages);
-    localStorage.setItem('ghita_active_session_id', sessionId);
-    setCurrentView('chat');
-
-    setTimeout(() => {
-      isSwitchingSessionRef.current = false;
-    }, 50);
-  };
-
-  const handleCreateSession = () => {
-    const newId = generateUUID();
-    const newSession: ChatSession = {
-      id: newId,
-      title: t('chat.newChat') || 'Cuộc trò chuyện mới',
-      messages: INITIAL_MESSAGES,
-      timestamp: Date.now(),
-    };
-
-    isSwitchingSessionRef.current = true;
-    setSessions(prev => [newSession, ...prev]);
-    setActiveSessionId(newId);
-    setMessages(INITIAL_MESSAGES);
-    localStorage.setItem('ghita_active_session_id', newId);
-    setCurrentView('chat');
-
-    setTimeout(() => {
-      isSwitchingSessionRef.current = false;
-    }, 50);
-  };
-
-  const handleDeleteSession = (sessionId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-
-    const updated = sessions.filter(s => s.id !== sessionId);
-    setSessions(updated);
-
-    try {
-      localStorage.setItem('ghita_chat_sessions', JSON.stringify(updated));
-    } catch (err) {}
-
-    if (activeSessionId === sessionId) {
-      if (updated.length > 0) {
-        handleSelectSession(updated[0]!.id);
-      } else {
-        const newId = generateUUID();
-        const defaultSession: ChatSession = {
-          id: newId,
-          title: t('chat.newChat') || 'Cuộc trò chuyện mới',
-          messages: INITIAL_MESSAGES,
-          timestamp: Date.now(),
-        };
-        setSessions([defaultSession]);
-        setActiveSessionId(newId);
-        setMessages(INITIAL_MESSAGES);
-        localStorage.setItem('ghita_chat_sessions', JSON.stringify([defaultSession]));
-        localStorage.setItem('ghita_active_session_id', newId);
-        setCurrentView('chat');
-      }
-    }
-  };
+  // Chat sessions are loaded and persisted by useChatSessions.
 
   const handleReconnect = async () => {
     if (connectionStatus === 'connected') return;
     setConnectionStatus('connecting');
     try {
-      console.log('[ChatPanel] Manual reconnect triggered, starting sidecar server...');
+      if (import.meta.env.DEV) console.info('[ChatPanel] Manual reconnect triggered, starting sidecar server...');
       await invoke('start_server');
       // Wait 1.5 seconds for server to start
       await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -761,15 +646,25 @@ export function ChatPanel() {
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
   const [modelSearch, setModelSearch] = useState('');
 
-  // Close model dropdown on outside click
+  // Close model dropdown on outside click.
+  // BUG FIX: previously any click outside the wrapper (e.g. on a model item
+  // rendered as a plain <div> without the data attribute) closed the dropdown
+  // and *also* wiped the search query. We now:
+  //   1. check the click target against the wrapper element stored in a ref
+  //      so the selector is exact (no closest() walk up the DOM),
+  //   2. only close + clear the search on a real outside click, and
+  //   3. keep the dropdown open on clicks that originate from the toggle
+  //      button itself (handled by the button's onClick) — no double-toggle.
+  const modelDropdownRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (!modelDropdownOpen) return;
     const handler = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest('[data-model-dropdown]')) {
-        setModelDropdownOpen(false);
-        setModelSearch('');
-      }
+      const wrapper = modelDropdownRef.current;
+      const target = e.target as Node | null;
+      if (!wrapper || !target) return;
+      if (wrapper.contains(target)) return; // inside the dropdown wrapper → ignore
+      setModelDropdownOpen(false);
+      setModelSearch('');
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -784,7 +679,7 @@ export function ChatPanel() {
       setModelOptions(newOptions);
       // If current selection is no longer valid, reset to first available
       if (newOptions.length > 0 && !newOptions.some((o) => o.value === provider)) {
-        setProvider(newOptions[0]!.value);
+        setProvider(newOptions[0]?.value ?? '');
       } else if (newOptions.length === 0 && provider) {
         setProvider('');
       }
@@ -792,14 +687,19 @@ export function ChatPanel() {
 
     void refresh();
 
-    // Poll because the API Manager persists through Tauri commands, not browser storage events.
+    // Refresh on window focus (user switched back from API Manager)
+    const onFocus = () => { void refresh(); };
+    window.addEventListener('focus', onFocus);
+
+    // Reduced polling: 10s instead of 3s (API config rarely changes)
     const interval = setInterval(() => {
       void refresh();
-    }, 3000);
+    }, 10000);
 
     return () => {
       disposed = true;
       clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
     };
   }, [provider]);
 
@@ -808,9 +708,16 @@ export function ChatPanel() {
 
   const [agentRole, setAgentRole] = useState<'Explore' | 'Plan' | 'UI' | 'default'>('default');
   const [ralphMode, setRalphMode] = useState<boolean>(false);
+  const [agentMode, setAgentMode] = useState<boolean>(false);
+  const permissionMode = useAppStore((s) => s.permissionMode);
+  const setPermissionMode = useAppStore((s) => s.setPermissionMode);
+  const [activeFlow, setActiveFlow] = useState<'ralph' | 'agent' | null>(null);
+  const [reviewMode, setReviewMode] = useState<boolean>(false);
+  const [featureMode, setFeatureMode] = useState<boolean>(false);
+  const [fileApprovalRequest, setFileApprovalRequest] = useState<{ id: string; operation: string; filePath: string } | null>(null);
 
-  // Phase 6B: Context usage
-  const [contextUsage] = useState<{ used: number; max: number; percentage: number }>({ used: 0, max: 128000, percentage: 0 });
+  // Phase 6B: Context usage - read from store (updated by chat_done handler)
+  const contextUsage = useAppStore((s) => s.contextUsage);
 
   // Phase 6A: Slash command autocomplete
   const [showSlashMenu, setShowSlashMenu] = useState(false);
@@ -838,57 +745,140 @@ export function ChatPanel() {
   const socketRef = useRef<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  // Auto-scroll to bottom
-  const scrollToBottom = () => {
+  // Streaming buffer: accumulate tokens and flush every 50ms
+  // This prevents the "streaming death spiral" where every token triggers
+  // a full message array clone + Tauri IPC persist
+  const streamBufferRef = useRef('');
+  const streamFlushIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const startStreamFlush = useCallback(() => {
+    if (streamFlushIntervalRef.current) return;
+    streamFlushIntervalRef.current = setInterval(() => {
+      const buffered = streamBufferRef.current;
+      if (!buffered) return;
+      streamBufferRef.current = '';
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === 'streaming-message'
+            ? { ...msg, content: msg.content + buffered }
+            : msg
+        )
+      );
+    }, 50);
+  }, [setMessages]);
+
+  const stopStreamFlush = useCallback(() => {
+    if (streamFlushIntervalRef.current) {
+      clearInterval(streamFlushIntervalRef.current);
+      streamFlushIntervalRef.current = null;
+    }
+    // Flush any remaining buffer
+    const remaining = streamBufferRef.current;
+    if (remaining) {
+      streamBufferRef.current = '';
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === 'streaming-message'
+            ? { ...msg, content: msg.content + remaining }
+            : msg
+        )
+      );
+    }
+  }, [setMessages]);
+
+  // Auto-scroll to bottom — but only when the user is already near the
+  // bottom. If they have scrolled up to read history, leave the viewport
+  // alone so streaming tokens do not yank them back down.
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+  const userPinnedToBottomRef = useRef(true);
+
+  const isNearBottom = useCallback((thresholdPx = 80) => {
+    const el = messagesContainerRef.current;
+    if (!el) return true;
+    const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+    return distance <= thresholdPx;
+  }, []);
+
+  const scrollToBottom = useCallback((force = false) => {
+    if (!force && !userPinnedToBottomRef.current) return;
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, scrollToBottom]);
 
-  // Connect to Socket.io Server Sidecar
+  // Track whether the user is pinned to the bottom. Use a non-passive wheel
+  // listener so we can also detect programmatic scrolls (e.g. clicking a
+  // jump-to-latest button) without interfering with the scroll position.
+  useEffect(() => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      userPinnedToBottomRef.current = isNearBottom();
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [isNearBottom]);
+
+  // Connect to shared Socket.io singleton
   useEffect(() => {
     let active = true;
 
     const initSocket = async () => {
       try {
-        // Get active port from Tauri Server State
-        const status = await invoke<{ port: number }>('get_server_status');
-        const port = status.port || 8080;
-
-        if (!active) return;
-
         setConnectionStatus('connecting');
-        const socket = io(`http://127.0.0.1:${port}`, {
-          transports: ['websocket'],
-          reconnection: true,
-          reconnectionAttempts: Infinity,
-          reconnectionDelay: 1000,
-          reconnectionDelayMax: 5000,
-        });
+        const socket = await getSharedSocket();
+        if (!active || !socket) {
+          if (active) setConnectionStatus('disconnected');
+          return;
+        }
 
         socketRef.current = socket;
 
+        if (socket.connected) {
+          if (active) setConnectionStatus('connected');
+          const cwd = useAppStore.getState().terminalCwd;
+          socket.emit('set_workspace', { path: cwd || null });
+        }
+
         socket.on('connect', () => {
           if (active) setConnectionStatus('connected');
-          console.log('[ChatPanel] Connected to sidecar Socket.io server.');
+          // Sync workspace root on connect so agent tools can access files
+          const cwd = useAppStore.getState().terminalCwd;
+          socket.emit('set_workspace', { path: cwd || null });
         });
 
         socket.on('disconnect', () => {
-          if (active) setConnectionStatus('disconnected');
+          if (active) {
+            setConnectionStatus('disconnected');
+            setIsSending(false);
+            setActiveFlow(null);
+            setApprovalRequest(null);
+            setFileApprovalRequest(null);
+            setRalphProgress(null);
+            // Clean up any partial streaming message
+            setMessages((prev) => prev.filter((msg) => msg.id !== 'streaming-message'));
+          }
         });
 
         socket.on('connect_error', (err) => {
           console.warn('[ChatPanel] Socket connection error:', err);
-          if (active) setConnectionStatus('disconnected');
+          if (active) {
+            setConnectionStatus('disconnected');
+            setIsSending(false);
+            setActiveFlow(null);
+            setApprovalRequest(null);
+            setFileApprovalRequest(null);
+            setRalphProgress(null);
+          }
         });
 
         // AI Streaming Event Listeners
         socket.on('chat_start', (data: { text: string; senderId: string; senderName: string }) => {
           if (!active) return;
           setIsSending(true);
-          
+
           // If message is from another device, insert the user's message
           if (data.senderId !== 'desktop') {
             setMessages((prev) => [
@@ -902,32 +892,34 @@ export function ChatPanel() {
             ]);
           }
 
-          // Create placeholder for AI response
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: 'streaming-message',
-              role: 'assistant',
-              content: '',
-              timestamp: Date.now(),
-              isStreaming: true,
-            }
-          ]);
+          // Create placeholder for AI response (only if not already streaming)
+          setMessages((prev) => {
+            const hasStreaming = prev.some((msg) => msg.id === 'streaming-message');
+            if (hasStreaming) return prev;
+            return [
+              ...prev,
+              {
+                id: 'streaming-message',
+                role: 'assistant',
+                content: '',
+                timestamp: Date.now(),
+                isStreaming: true,
+              }
+            ];
+          });
         });
 
         socket.on('chat_chunk', (data: { text: string }) => {
           if (!active) return;
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === 'streaming-message'
-                ? { ...msg, content: msg.content + data.text }
-                : msg
-            )
-          );
+          // Buffer tokens instead of updating state on every chunk.
+          // The flush interval (50ms) batches updates to prevent the streaming death spiral.
+          streamBufferRef.current += data.text;
+          startStreamFlush();
         });
 
         socket.on('chat_done', (data: { text: string; usage?: { promptTokens: number; completionTokens: number; totalTokens: number } }) => {
           if (!active) return;
+          stopStreamFlush();
           const finalId = generateUUID();
           setMessages((prev) =>
             prev.map((msg) =>
@@ -937,6 +929,7 @@ export function ChatPanel() {
             )
           );
           setIsSending(false);
+          setActiveFlow(null);
 
           /*
           // Auto-execute shell commands from AI response
@@ -991,20 +984,49 @@ export function ChatPanel() {
 
         socket.on('chat_error', (data: { message: string }) => {
           if (!active) return;
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === 'streaming-message'
-                ? { id: generateUUID(), role: 'assistant', content: `❌ **${tRef.current('chat.systemError')}** ${data.message}`, timestamp: Date.now() }
-                : msg
-            )
-          );
+          stopStreamFlush();
+          const errorMessage = `❌ **${tRef.current('chat.systemError')}** ${data.message}`;
+          setMessages((prev) => {
+            let replacedStreaming = false;
+            const next = prev.map((msg) => {
+              if (msg.id !== 'streaming-message') return msg;
+              replacedStreaming = true;
+              return { id: generateUUID(), role: 'assistant' as const, content: errorMessage, timestamp: Date.now() };
+            });
+            return replacedStreaming
+              ? next
+              : [...prev, { id: generateUUID(), role: 'assistant' as const, content: errorMessage, timestamp: Date.now() }];
+          });
           setIsSending(false);
+          setActiveFlow(null);
         });
 
         // Human-in-the-loop: Request tool execution approval
         socket.on('action_required', (data: ToolApprovalRequest) => {
           if (active) {
-            setApprovalRequest(data);
+            setApprovalRequest({ ...data, approvalKind: 'tool' });
+            setIsSending(false);
+            setActiveFlow(null);
+          }
+        });
+
+        // Workspace command approval request from the ReAct agent.
+        socket.on('require_approval', (data: { id: string; command: string; warningMessage?: string }) => {
+          if (active) {
+            setApprovalRequest({
+              toolCallId: data.id,
+              name: 'run_command',
+              arguments: JSON.stringify({ command: data.command }, null, 2),
+              warningMessage: data.warningMessage,
+              approvalKind: 'command',
+            });
+          }
+        });
+
+        // File write approval request
+        socket.on('require_file_approval', (data: { id: string; operation: string; filePath: string }) => {
+          if (active) {
+            setFileApprovalRequest(data);
           }
         });
 
@@ -1033,7 +1055,7 @@ export function ChatPanel() {
           }
         });
 
-        socket.on('ralph_loop_progress', (data: any) => {
+        socket.on('ralph_loop_progress', (data: { iteration: number; cost: number; message: string; code?: string }) => {
           if (active) {
             setRalphProgress(data);
           }
@@ -1081,17 +1103,33 @@ export function ChatPanel() {
     const loadConfigMapping = async () => {
       try {
         // We will query config files in Phase 3
-      } catch (e) {}
+      } catch (e) { console.warn('[ChatPanel] Error:', e); }
     };
     loadConfigMapping();
 
     return () => {
       active = false;
-      if (socketRef.current) {
-        socketRef.current.disconnect();
+      stopStreamFlush();
+      // Remove all socket listeners to prevent memory leaks on reconnect
+      const sock = socketRef.current;
+      if (sock) {
+        sock.off('connect');
+        sock.off('disconnect');
+        sock.off('connect_error');
+        sock.off('chat_start');
+        sock.off('chat_chunk');
+        sock.off('chat_done');
+        sock.off('chat_error');
+        sock.off('action_required');
+        sock.off('require_approval');
+        sock.off('require_file_approval');
+        sock.off('agent_event');
+        sock.off('ralph_loop_progress');
+        sock.off('ralph_loop_done');
+        sock.off('computer_use_step');
       }
     };
-  }, [reconnectTrigger]);
+  }, [reconnectTrigger, stopStreamFlush]);
 
   // Phase 6A: Handle slash command input
   const handleInputChange = (value: string) => {
@@ -1142,61 +1180,145 @@ export function ChatPanel() {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const handleSend = async () => {
-    if (!input.trim() || isSending) return;
+    const trimmedInput = input.trim();
+    if (!trimmedInput || isSending) return;
 
-    if (input.trim() === '/clear') {
-      setMessages(INITIAL_MESSAGES);
+    const resetComposer = () => {
       setInput('');
+      setAttachedImage(null);
       setShowSlashMenu(false);
-      return;
-    }
+    };
 
-    // Guard: nếu chưa kết nối socket thì hiển thị hướng dẫn
-    if (!socketRef.current || connectionStatus !== 'connected') {
+    const appendLocalExchange = (userContent: string, assistantContent: string) => {
       setMessages((prev) => [
         ...prev,
         {
           id: generateUUID(),
           role: 'user',
-          content: input,
+          content: userContent,
           timestamp: Date.now(),
         },
         {
           id: generateUUID(),
           role: 'assistant',
-          content: `⚠️ **${t('chat.notConnected')}**\n\n${t('chat.notConnectedHint')}`,
+          content: assistantContent,
           timestamp: Date.now(),
         },
       ]);
-      setInput('');
+    };
+
+    if (/^\/clear\b/i.test(trimmedInput)) {
+      setMessages([]);
+      resetComposer();
+      return;
+    }
+
+    if (/^\/help\b/i.test(trimmedInput)) {
+      appendLocalExchange(
+        trimmedInput,
+        [
+          '**Chat commands**',
+          '- `/clear`: clear the current conversation.',
+          '- `/compact`: keep the latest context and remove older messages from this chat view.',
+          '- `/code-review <task>`: run the agent in review mode.',
+          '- `/feature-dev <task>`: run the agent in feature mode.',
+          '- `/deploy-check <task>`: run the agent against release/deploy readiness.',
+        ].join('\n'),
+      );
+      resetComposer();
+      return;
+    }
+
+    if (/^\/compact\b/i.test(trimmedInput)) {
+      setMessages((prev) => {
+        const kept = prev.filter((msg) => msg.id !== 'streaming-message').slice(-8);
+        return [
+          ...kept,
+          {
+            id: generateUUID(),
+            role: 'assistant',
+            content: `✅ ${t('chat.compactSuccess')}`,
+            timestamp: Date.now(),
+          },
+        ];
+      });
+      resetComposer();
+      return;
+    }
+
+    let outgoingInput = trimmedInput;
+    let forcedAgentMode: 'review' | 'feature' | 'deploy' | 'grill' | null = null;
+    const slashMatch = trimmedInput.match(/^\/(code-review|feature-dev|deploy-check|grill-me)\b\s*(.*)$/i);
+    if (slashMatch) {
+      const command = (slashMatch[1] ?? '').toLowerCase();
+      const task = (slashMatch[2] ?? '').trim();
+      forcedAgentMode =
+        command === 'code-review'
+          ? 'review'
+          : command === 'feature-dev'
+            ? 'feature'
+            : command === 'deploy-check'
+              ? 'deploy'
+              : 'grill';
+
+      if (!task) {
+        if (forcedAgentMode === 'review') {
+          setReviewMode(true);
+          setFeatureMode(false);
+          setAgentMode(false);
+          setRalphMode(false);
+        } else if (forcedAgentMode === 'feature') {
+          setFeatureMode(true);
+          setReviewMode(false);
+          setAgentMode(false);
+          setRalphMode(false);
+        } else {
+          setAgentMode(true);
+          setReviewMode(false);
+          setFeatureMode(false);
+          setRalphMode(false);
+        }
+        appendLocalExchange(trimmedInput, '✅ Đã bật mode tương ứng. Nhập yêu cầu tiếp theo để chạy.');
+        resetComposer();
+        return;
+      }
+
+      outgoingInput = task;
+    }
+
+    // Guard: nếu chưa kết nối socket thì hiển thị hướng dẫn
+    if (!socketRef.current || connectionStatus !== 'connected') {
+      appendLocalExchange(outgoingInput, `⚠️ **${t('chat.notConnected')}**\n\n${t('chat.notConnectedHint')}`);
+      resetComposer();
       return;
     }
 
     // Guard: nếu chưa cấu hình API Key thì hiển thị hướng dẫn thay vì gửi lên server
     if (modelOptions.length === 0) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: generateUUID(),
-          role: 'user',
-          content: input,
-          timestamp: Date.now(),
-        },
-        {
-          id: generateUUID(),
-          role: 'assistant',
-          content: `⚙️ **${t('chat.noProvider')}**\n\n${t('chat.noProviderHint')}`,
-          timestamp: Date.now(),
-        },
-      ]);
-      setInput('');
+      appendLocalExchange(outgoingInput, `⚙️ **${t('chat.noProvider')}**\n\n${t('chat.noProviderHint')}`);
+      resetComposer();
+      return;
+    }
+
+    // Auto-detect: chuyển sang Agent mode khi người dùng yêu cầu đọc/sửa code (không trigger cho câu hỏi ngắn)
+    const agentPattern = /(đọc code|xem code|phân tích code|read.*file|show.*file|list.*file|explain.*code|analyze.*code|explore.*code|show.*project|list.*folder|tổng quan.*dự án|overview.*project|toàn bộ.*code|all.*files|codebase|sửa code|fix.*bug|refactor|implement|tạo file|create.*file|write.*file)/i;
+    const isLongEnoughForAgent = outgoingInput.length > 30;
+    const shouldUseAgent = forcedAgentMode !== null || agentMode || reviewMode || featureMode || (terminalCwd && isLongEnoughForAgent && agentPattern.test(outgoingInput));
+    const shouldUseRalph = ralphMode && forcedAgentMode === null;
+
+    if ((shouldUseRalph || shouldUseAgent) && !terminalCwd) {
+      appendLocalExchange(
+        outgoingInput,
+        `⚠️ **${t('chat.noWorkspace')}**`,
+      );
+      resetComposer();
       return;
     }
 
     const userMsg: ChatMessage = {
       id: generateUUID(),
       role: 'user',
-      content: input,
+      content: outgoingInput,
       timestamp: Date.now(),
       ...(attachedImage ? { imageAttachment: attachedImage } : {}),
     };
@@ -1204,13 +1326,64 @@ export function ChatPanel() {
     setMessages((prev) => [...prev, userMsg]);
     setIsSending(true);
 
-    if (ralphMode) {
+    // Prefix task with mode instruction
+    let agentTask = outgoingInput;
+    if (forcedAgentMode === 'review' || reviewMode) {
+      agentTask = `[CODE REVIEW MODE] Review the following code/project and provide detailed feedback on bugs, security issues, performance, and best practices:\n\n${outgoingInput}`;
+    } else if (forcedAgentMode === 'feature' || featureMode) {
+      agentTask = `[FEATURE DEVELOPMENT MODE] Implement the following feature. Read the project structure first, then write the code:\n\n${outgoingInput}`;
+    } else if (forcedAgentMode === 'deploy') {
+      agentTask = `[DEPLOY CHECK MODE] Check build, runtime, configuration, and deployment readiness. Report concrete blockers and fixes:\n\n${outgoingInput}`;
+    } else if (forcedAgentMode === 'grill') {
+      agentTask = `[DOCS GRILL MODE] Ask sharp project-aware questions, identify missing assumptions, and propose next steps:\n\n${outgoingInput}`;
+    }
+
+    if (shouldUseRalph) {
       // Chạy luồng Ralph Loop tự động sửa sai
       socketRef.current.emit('ralph_loop_run', {
-        task: input,
+        task: outgoingInput,
         maxIterations: 3,
         costLimitUsd: 0.15,
       });
+      setActiveFlow('ralph');
+    } else if (shouldUseAgent) {
+      // Chạy luồng Agent ReAct với tools (đọc file, tìm kiếm, chạy lệnh...)
+      // Đảm bảo workspace được set trước khi chạy agent
+      socketRef.current.emit('set_workspace', { path: terminalCwd });
+
+      // Lấy credentials giống như regular chat
+      const slashIdx = provider.indexOf('/');
+      const selectedProvider = slashIdx > 0 ? provider.substring(0, slashIdx) : provider;
+      const selectedModel = slashIdx > 0 ? provider.substring(slashIdx + 1) : undefined;
+
+      let providerApiKey: string | undefined;
+      let providerBaseUrl: string | undefined;
+      try {
+        const parsed = await loadApiConfig();
+        const entry = parsed[selectedProvider];
+        if (entry) {
+          const apiKeys = Array.isArray(entry['apiKeys'])
+            ? (entry['apiKeys'] as string[])
+            : typeof entry['apiKey'] === 'string' && entry['apiKey']
+              ? [entry['apiKey'] as string]
+              : [];
+          providerApiKey = apiKeys[0] || undefined;
+          providerBaseUrl = (entry['baseUrl'] as string) || undefined;
+        }
+      } catch {
+        // ignore
+      }
+
+      socketRef.current.emit('agent_run', {
+        task: agentTask,
+        maxIterations: 10,
+        provider: selectedProvider,
+        model: selectedModel,
+        apiKey: providerApiKey,
+        baseUrl: providerBaseUrl,
+        permissionMode,
+      });
+      setActiveFlow('agent');
     } else {
       // Build chat history for context
       const projectContext = terminalCwd
@@ -1262,33 +1435,52 @@ export function ChatPanel() {
 
       // Emit event through Socket.io to trigger AI Engine
       socketRef.current.emit('chat', {
-        text: input,
+        text: outgoingInput,
         isDesktop: true,
         provider: selectedProvider,
         model: selectedModel,
         agentRole: agentRole,
-        history: [...history, { role: 'user', content: input }],
+        history: [...history, { role: 'user', content: outgoingInput }],
         apiKey: providerApiKey,
         apiKeys: providerApiKeys,
         baseUrl: providerBaseUrl,
       });
     }
 
-    setInput('');
-    setAttachedImage(null);
-    setShowSlashMenu(false);
+    resetComposer();
   };
 
   const handleApproveTool = () => {
     if (!approvalRequest || !socketRef.current) return;
-    socketRef.current.emit('approve', { toolCallId: approvalRequest.toolCallId });
+    if (approvalRequest.approvalKind === 'command') {
+      socketRef.current.emit('approve_command', { id: approvalRequest.toolCallId });
+    } else {
+      socketRef.current.emit('approve', { toolCallId: approvalRequest.toolCallId });
+    }
     setApprovalRequest(null);
   };
 
   const handleRejectTool = (reason: string = 'User rejected execution') => {
     if (!approvalRequest || !socketRef.current) return;
-    socketRef.current.emit('reject', { toolCallId: approvalRequest.toolCallId, reason });
+    if (approvalRequest.approvalKind === 'command') {
+      socketRef.current.emit('reject_command', { id: approvalRequest.toolCallId });
+    } else {
+      socketRef.current.emit('reject', { toolCallId: approvalRequest.toolCallId, reason });
+    }
     setApprovalRequest(null);
+  };
+
+  // File write approval handlers
+  const handleApproveFileWrite = () => {
+    if (!fileApprovalRequest || !socketRef.current) return;
+    socketRef.current.emit('approve_command', { id: fileApprovalRequest.id });
+    setFileApprovalRequest(null);
+  };
+
+  const handleRejectFileWrite = () => {
+    if (!fileApprovalRequest || !socketRef.current) return;
+    socketRef.current.emit('reject_command', { id: fileApprovalRequest.id });
+    setFileApprovalRequest(null);
   };
 
   return (
@@ -1488,7 +1680,7 @@ export function ChatPanel() {
                   const groups = new Map<string, DynamicModelOption[]>();
                   for (const opt of filtered) {
                     if (!groups.has(opt.providerId)) groups.set(opt.providerId, []);
-                    groups.get(opt.providerId)!.push(opt);
+                    groups.get(opt.providerId)?.push(opt);
                   }
 
                   return [...groups.entries()].map(([pid, opts]) => {
@@ -1674,6 +1866,7 @@ export function ChatPanel() {
         <>
           {/* Messages Window */}
           <div
+            ref={messagesContainerRef}
             style={{
               flex: 1,
               overflowY: 'auto',
@@ -1719,7 +1912,7 @@ export function ChatPanel() {
                   }}
                 >
                   {/* Markdown rendered content */}
-                  {renderMarkdown(msg.content)}
+                  <MemoizedMessageContent content={msg.content} />
                   
                   {/* Phase 6C: Image attachment display */}
                   {msg.imageAttachment && (
@@ -2053,55 +2246,152 @@ export function ChatPanel() {
                   {t('chat.workflows')}
                 </span>
                 <button
-                  onClick={() => setRalphMode(!ralphMode)}
+                  onClick={() => {
+                    const next = !ralphMode;
+                    setRalphMode(next);
+                    if (next) {
+                      setAgentMode(false);
+                      setReviewMode(false);
+                      setFeatureMode(false);
+                    }
+                    if (!next) setActiveFlow(null);
+                  }}
                   style={{
-                    padding: '3px 8px',
+                    padding: '4px 10px',
                     fontSize: '10px',
                     fontWeight: 700,
                     borderRadius: '4px',
-                    border: '1px solid ' + (ralphMode ? 'rgba(16, 185, 129, 0.4)' : 'rgba(255, 255, 255, 0.06)'),
-                    background: ralphMode
-                      ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.2) 100%)'
-                      : 'transparent',
-                    color: ralphMode ? '#34d399' : '#94a3b8',
+                    border: '1px solid ' + (activeFlow === 'ralph' ? '#10b981' : ralphMode ? 'rgba(16, 185, 129, 0.5)' : 'rgba(255, 255, 255, 0.1)'),
+                    background: activeFlow === 'ralph'
+                      ? 'rgba(16, 185, 129, 0.5)'
+                      : ralphMode
+                        ? 'rgba(16, 185, 129, 0.2)'
+                        : 'rgba(255, 255, 255, 0.03)',
+                    color: activeFlow === 'ralph' ? '#fff' : ralphMode ? '#34d399' : '#64748b',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                    boxShadow: activeFlow === 'ralph' ? '0 0 10px rgba(16, 185, 129, 0.5)' : 'none',
+                  }}
+                >
+                  🔄 Ralph {activeFlow === 'ralph' ? '⏳' : ralphMode ? 'ON' : 'OFF'}
+                </button>
+                <button
+                  onClick={() => {
+                    const next = !agentMode;
+                    setAgentMode(next);
+                    if (next) {
+                      setRalphMode(false);
+                      setReviewMode(false);
+                      setFeatureMode(false);
+                    }
+                    if (!next) setActiveFlow(null);
+                  }}
+                  style={{
+                    padding: '4px 10px',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    borderRadius: '4px',
+                    border: '1px solid ' + (activeFlow === 'agent' ? '#6366f1' : agentMode ? 'rgba(99, 102, 241, 0.5)' : 'rgba(255, 255, 255, 0.1)'),
+                    background: activeFlow === 'agent'
+                      ? 'rgba(99, 102, 241, 0.5)'
+                      : agentMode
+                        ? 'rgba(99, 102, 241, 0.2)'
+                        : 'rgba(255, 255, 255, 0.03)',
+                    color: activeFlow === 'agent' ? '#fff' : agentMode ? '#818cf8' : '#64748b',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                    boxShadow: activeFlow === 'agent' ? '0 0 10px rgba(99, 102, 241, 0.5)' : 'none',
+                  }}
+                >
+                  🤖 Agent {activeFlow === 'agent' ? '⏳' : agentMode ? 'ON' : 'OFF'}
+                </button>
+                <button
+                  onClick={() => setPermissionMode(permissionMode === 'custom' ? 'auto' : 'custom')}
+                  style={{
+                    padding: '4px 10px',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    borderRadius: '4px',
+                    border: '1px solid ' + (permissionMode === 'auto' ? 'rgba(251, 191, 36, 0.5)' : 'rgba(59, 130, 246, 0.5)'),
+                    background: permissionMode === 'auto'
+                      ? 'rgba(251, 191, 36, 0.15)'
+                      : 'rgba(59, 130, 246, 0.15)',
+                    color: permissionMode === 'auto' ? '#fbbf24' : '#60a5fa',
                     cursor: 'pointer',
                     transition: 'all 0.15s',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '3px',
                   }}
+                  title={permissionMode === 'custom'
+                    ? t('chat.permissionCustom')
+                    : t('chat.permissionAuto')}
                 >
-                  🔄 Ralph {ralphMode ? 'ON' : 'OFF'}
+                  {permissionMode === 'custom' ? '🔒 Custom' : '⚡ Auto'}
                 </button>
                 <button
-                  onClick={() => setInput('/code-review ')}
+                  onClick={() => {
+                    const next = !reviewMode;
+                    setReviewMode(next);
+                    if (next) { setFeatureMode(false); setAgentMode(false); setRalphMode(false); }
+                    if (!next) setActiveFlow(null);
+                  }}
                   style={{
-                    padding: '3px 7px',
+                    padding: '4px 10px',
                     fontSize: '10px',
-                    fontWeight: 600,
+                    fontWeight: 700,
                     borderRadius: '4px',
-                    border: '1px solid rgba(255, 255, 255, 0.05)',
-                    background: 'transparent',
-                    color: '#94a3b8',
+                    border: '1px solid ' + (activeFlow === 'agent' && reviewMode ? '#f59e0b' : reviewMode ? 'rgba(245, 158, 11, 0.5)' : 'rgba(255, 255, 255, 0.1)'),
+                    background: activeFlow === 'agent' && reviewMode
+                      ? 'rgba(245, 158, 11, 0.5)'
+                      : reviewMode
+                        ? 'rgba(245, 158, 11, 0.2)'
+                        : 'rgba(255, 255, 255, 0.03)',
+                    color: activeFlow === 'agent' && reviewMode ? '#fff' : reviewMode ? '#fbbf24' : '#64748b',
                     cursor: 'pointer',
+                    transition: 'all 0.15s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                    boxShadow: activeFlow === 'agent' && reviewMode ? '0 0 10px rgba(245, 158, 11, 0.5)' : 'none',
                   }}
                 >
-                  🕵️ Review
+                  🕵️ Review {activeFlow === 'agent' && reviewMode ? '⏳' : reviewMode ? 'ON' : 'OFF'}
                 </button>
                 <button
-                  onClick={() => setInput('/feature-dev ')}
+                  onClick={() => {
+                    const next = !featureMode;
+                    setFeatureMode(next);
+                    if (next) { setReviewMode(false); setAgentMode(false); setRalphMode(false); }
+                    if (!next) setActiveFlow(null);
+                  }}
                   style={{
-                    padding: '3px 7px',
+                    padding: '4px 10px',
                     fontSize: '10px',
-                    fontWeight: 600,
+                    fontWeight: 700,
                     borderRadius: '4px',
-                    border: '1px solid rgba(255, 255, 255, 0.05)',
-                    background: 'transparent',
-                    color: '#94a3b8',
+                    border: '1px solid ' + (activeFlow === 'agent' && featureMode ? '#ec4899' : featureMode ? 'rgba(236, 72, 153, 0.5)' : 'rgba(255, 255, 255, 0.1)'),
+                    background: activeFlow === 'agent' && featureMode
+                      ? 'rgba(236, 72, 153, 0.5)'
+                      : featureMode
+                        ? 'rgba(236, 72, 153, 0.2)'
+                        : 'rgba(255, 255, 255, 0.03)',
+                    color: activeFlow === 'agent' && featureMode ? '#fff' : featureMode ? '#f472b6' : '#64748b',
                     cursor: 'pointer',
+                    transition: 'all 0.15s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                    boxShadow: activeFlow === 'agent' && featureMode ? '0 0 10px rgba(236, 72, 153, 0.5)' : 'none',
                   }}
                 >
-                  ⚡ Feature
+                  ⚡ Feature {activeFlow === 'agent' && featureMode ? '⏳' : featureMode ? 'ON' : 'OFF'}
                 </button>
               </div>
             </div>
@@ -2423,6 +2713,100 @@ export function ChatPanel() {
                   fontWeight: 600,
                   cursor: 'pointer',
                   boxShadow: '0 4px 12px rgba(244, 63, 94, 0.3)',
+                  transition: 'transform 0.1s',
+                }}
+                onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.97)')}
+                onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+              >
+                {t('chat.approve')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==============================================================================
+          FILE WRITE APPROVAL MODAL (Blue theme)
+          ============================================================================== */}
+      {fileApprovalRequest && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            background: 'rgba(15, 23, 42, 0.85)',
+            backdropFilter: 'blur(16px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            zIndex: 9999,
+            animation: 'fadeIn 0.2s ease',
+          }}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '300px',
+              background: 'rgba(30, 41, 59, 0.7)',
+              border: '1px solid rgba(59, 130, 246, 0.3)',
+              boxShadow: '0 8px 32px rgba(59, 130, 246, 0.2)',
+              borderRadius: '16px',
+              padding: '20px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '20px' }}>{fileApprovalRequest.operation === 'write' ? '📝' : '✏️'}</span>
+              <span style={{ fontWeight: 700, fontSize: '13px', color: '#3b82f6', letterSpacing: '1px' }}>
+                {fileApprovalRequest.operation === 'write' ? 'TẠO FILE MỚI' : 'SỬA FILE'}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <span style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>File</span>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9', fontFamily: 'var(--font-mono)' }}>
+                {fileApprovalRequest.filePath}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+              <button
+                onClick={handleRejectFileWrite}
+                style={{
+                  flex: 1,
+                  padding: '10px 0',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255,255,255,0.05)',
+                  background: 'rgba(15, 23, 42, 0.4)',
+                  color: '#94a3b8',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'background 0.2s',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(15, 23, 42, 0.4)')}
+              >
+                {t('chat.reject')}
+              </button>
+              <button
+                onClick={handleApproveFileWrite}
+                style={{
+                  flex: 1,
+                  padding: '10px 0',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                  color: '#fff',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
                   transition: 'transform 0.1s',
                 }}
                 onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.97)')}

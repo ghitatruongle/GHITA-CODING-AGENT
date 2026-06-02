@@ -1,0 +1,48 @@
+{
+  "version": "1.0",
+  "created": "2026-05-31",
+  "roles": {
+    "giam_doc": {
+      "name": "Giám đốc",
+      "file": "giam_doc.txt",
+      "level": 1,
+      "permissions": ["command", "assign", "decide", "approve"],
+      "description": "Người đứng đầu, ra lệnh và quyết định"
+    },
+    "architect": {
+      "name": "Architect",
+      "file": "architect.txt",
+      "level": 2,
+      "permissions": ["design", "advise", "review"],
+      "description": "Thiết kế kiến trúc, tư vấn kỹ thuật"
+    },
+    "developer": {
+      "name": "Developer",
+      "file": "developer.txt",
+      "level": 2,
+      "permissions": ["code", "implement", "report"],
+      "description": "Viết code, triển khai, báo cáo tiến độ"
+    },
+    "reviewer": {
+      "name": "Reviewer",
+      "file": "reviewer.txt",
+      "level": 2,
+      "permissions": ["review", "test", "report_bug"],
+      "description": "Review code, test, tìm và báo lỗi"
+    },
+    "pm": {
+      "name": "PM",
+      "file": "pm.txt",
+      "level": 2,
+      "permissions": ["track", "assign", "report"],
+      "description": "Quản lý task, theo dõi tiến độ"
+    }
+  },
+  "rules": {
+    "hierarchy": "Giám đốc có quyền tuyệt đối",
+    "communication": "Ghi file mình, đọc file người khác",
+    "timestamp": "Bắt buộc HH:MM:SS",
+    "command_format": ">>> LENH: [Agent]",
+    "confirm_format": "<<< XAC NHAN:"
+  }
+}

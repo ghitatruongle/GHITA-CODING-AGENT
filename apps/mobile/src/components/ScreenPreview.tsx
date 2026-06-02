@@ -65,7 +65,7 @@ export function ScreenPreview({
     <View style={[styles.container, styles.placeholder]}>
       <Text style={styles.placeholderIcon}>📸</Text>
       <Text style={styles.placeholderText}>
-        {connected ? t('remote.screenPreviewPlaceholder') : 'Screen Preview'}
+        {connected ? t('remote.screenPreviewPlaceholder') : t('remote.screenPreviewTitle')}
       </Text>
       {!connected && (
         <Text style={styles.placeholderSubtext}>{t('remote.screenPreviewConnecting')}</Text>

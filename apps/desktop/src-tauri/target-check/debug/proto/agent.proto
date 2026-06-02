@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+package ghita.v1;
+
+service AgentService {
+  rpc Chat(stream ClientMessage) returns (stream ServerMessage);
+}
+
+message ClientMessage {
+  string session_id = 1;
+  oneof payload {
+    ChatRequest request = 2;
+    UserInput response = 3;
+    CancelSignal cancel = 4;
+  }
+}
+
+message ChatRequest {
+  string prompt = 1;
+  repeated ChatMessageHistory history = 2;
+  string provider = 3;
+  string agent_routing_role = 4;
+}
+
+message ChatMessageHistory {
+  string role = 1;
+  string content = 2;
+}
+
+message UserInput {
+  string tool_call_id = 1;
+  bool approved = 2;
+  string reason = 3;
+}
+
+message CancelSignal {
+  string reason = 1;
+}
+
+message ServerMessage {
+  string session_id = 1;
+  oneof event {
+    TextChunk text_chunk = 2;
+    ToolCallStart tool_start = 3;
+    ToolCallResult tool_result = 4;
+    ActionRequired action_required = 5;
+    FinalResponse done = 6;
+    ErrorResponse error = 7;
+  }
+}
+
+message TextChunk {
+  string text = 1;
+}
+
+message ToolCallStart {
+  string tool_call_id = 1;
+  string name = 2;
+  string arguments = 3;
+}
+
+message ToolCallResult {
+  string tool_call_id = 1;
+  string result = 2;
+  bool is_error = 3;
+}
+
+message ActionRequired {
+  string tool_call_id = 1;
+  string name = 2;
+  string arguments = 3;
+  string warning_message = 4;
+}
+
+message FinalResponse {
+  string summary = 1;
+  TokenUsage usage = 2;
+}
+
+message TokenUsage {
+  int32 prompt_tokens = 1;
+  int32 completion_tokens = 2;
+  double estimated_cost_usd = 3;
+}
+
+message ErrorResponse {
+  string code = 1;
+  string message = 2;
+}

@@ -7,7 +7,6 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Colors } from '../theme/colors';
 import { FontSize, Spacing, Radius } from '../theme/styles';
-import { useTranslation } from '../i18n/context';
 
 interface ErrorFallbackProps {
   error: Error;
@@ -15,17 +14,19 @@ interface ErrorFallbackProps {
 }
 
 export function ErrorFallback({ error, resetError }: ErrorFallbackProps): React.JSX.Element {
-  const { t } = useTranslation();
+  // Do NOT use useTranslation() here — if I18nProvider caused the error,
+  // calling useTranslation() would throw again, creating an infinite loop.
+  // Use hardcoded English fallback text instead.
 
   return (
     <View style={styles.container}>
       <Text style={styles.icon}>⚠️</Text>
-      <Text style={styles.title}>{t('errorFallback.title')}</Text>
+      <Text style={styles.title}>Something went wrong</Text>
       <Text style={styles.message} numberOfLines={5}>
         {error.message}
       </Text>
       <TouchableOpacity style={styles.retryButton} onPress={resetError} activeOpacity={0.7}>
-        <Text style={styles.retryText}>{t('errorFallback.subtitle')}</Text>
+        <Text style={styles.retryText}>Try Again</Text>
       </TouchableOpacity>
     </View>
   );

@@ -13,12 +13,12 @@
     }
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -b",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "clean": "rm -rf dist"
+    "clean": "node -e \"const fs=require('fs'); fs.rmSync('dist',{recursive:true,force:true}); fs.readdirSync('.').filter(f=>f.endsWith('.tsbuildinfo')).forEach(f=>fs.rmSync(f,{force:true}))\""
   },
   "dependencies": {
     "@ghita/shared": "workspace:*",

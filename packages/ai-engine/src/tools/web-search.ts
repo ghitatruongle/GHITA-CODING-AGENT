@@ -39,26 +39,27 @@ export class WebSearchTool {
       throw new Error(`DuckDuckGo returned ${response.status}`);
     }
 
-    const data = (await response.json()) as any;
+    const data = (await response.json()) as Record<string, unknown>;
     const results: SearchResult[] = [];
 
     // Abstract (direct answer)
     if (data.AbstractText) {
       results.push({
-        title: data.Heading || query,
-        url: data.AbstractURL || '',
-        snippet: data.AbstractText,
+        title: (data.Heading as string) || query,
+        url: (data.AbstractURL as string) || '',
+        snippet: data.AbstractText as string,
       });
     }
 
     // Related topics
-    if (data.RelatedTopics) {
-      for (const topic of data.RelatedTopics.slice(0, maxResults)) {
+    const relatedTopics = (data.RelatedTopics as Array<Record<string, unknown>>) ?? [];
+    if (relatedTopics) {
+      for (const topic of relatedTopics.slice(0, maxResults)) {
         if (topic.Text && topic.FirstURL) {
           results.push({
-            title: topic.Text.split(' - ')[0]?.substring(0, 80) || '',
-            url: topic.FirstURL,
-            snippet: topic.Text,
+            title: ((topic.Text as string).split(' - ')[0]?.substring(0, 80)) || '',
+            url: topic.FirstURL as string,
+            snippet: topic.Text as string,
           });
         }
       }

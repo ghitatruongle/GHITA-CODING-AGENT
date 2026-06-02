@@ -116,7 +116,7 @@ export class SlashCommandRegistry {
     } else {
       newIndex = currentIndex >= this.history.length - 1 ? 0 : currentIndex + 1;
     }
-    return { entry: this.history[newIndex]!, index: newIndex };
+    return { entry: this.history[newIndex] ?? '', index: newIndex };
   }
 
   /** Parse arguments với flags */
@@ -138,46 +138,50 @@ export class SlashCommandRegistry {
     const tokens = this.tokenize(input);
     let i = 0;
 
-    while (i < tokens.length) {
-      const token = tokens[i]!;
+while (i < tokens.length) {
+  const token = tokens[i];
+  if (!token) { i++; continue; }
 
-      if (token.startsWith('--')) {
-        // Long flag
-        const eqIdx = token.indexOf('=');
-        if (eqIdx > 0) {
-          // --flag=value
-          const name = token.substring(2, eqIdx);
-          result.flags[name] = token.substring(eqIdx + 1);
-        } else {
-          const name = token.substring(2);
-          const flagDef = flags?.find((f) => f.name === `--${name}`);
-          if (flagDef?.type === 'boolean') {
-            result.flags[name] = true;
-          } else if (i + 1 < tokens.length && !tokens[i + 1]!.startsWith('-')) {
-            result.flags[name] = tokens[i + 1]!;
-            i++;
-          } else {
-            result.flags[name] = true;
-          }
-        }
-      } else if (token.startsWith('-') && token.length === 2) {
-        // Short flag
-        const short = token[1]!;
-        const flagDef = flags?.find((f) => f.short === `-${short}`);
-        const name = flagDef?.name?.substring(2) ?? short;
-        if (flagDef?.type === 'boolean') {
-          result.flags[name] = true;
-        } else if (i + 1 < tokens.length && !tokens[i + 1]!.startsWith('-')) {
-          result.flags[name] = tokens[i + 1]!;
-          i++;
-        } else {
-          result.flags[name] = true;
-        }
+  if (token.startsWith('--')) {
+    // Long flag
+    const eqIdx = token.indexOf('=');
+    if (eqIdx > 0) {
+      // --flag=value
+      const name = token.substring(2, eqIdx);
+      result.flags[name] = token.substring(eqIdx + 1);
+    } else {
+      const name = token.substring(2);
+      const flagDef = flags?.find((f) => f.name === `--${name}`);
+      if (flagDef?.type === 'boolean') {
+        result.flags[name] = true;
+      } else if (i + 1 < tokens.length && !tokens[i + 1]?.startsWith('-')) {
+        const nextToken = tokens[i + 1];
+        if (nextToken) result.flags[name] = nextToken;
+        i++;
       } else {
-        result.positional.push(token);
+        result.flags[name] = true;
       }
-      i++;
     }
+  } else if (token.startsWith('-') && token.length === 2) {
+    // Short flag
+    const short = token[1];
+    if (!short) { i++; continue; }
+    const flagDef = flags?.find((f) => f.short === `-${short}`);
+    const name = flagDef?.name?.substring(2) ?? short;
+    if (flagDef?.type === 'boolean') {
+      result.flags[name] = true;
+    } else if (i + 1 < tokens.length && !tokens[i + 1]?.startsWith('-')) {
+      const nextToken = tokens[i + 1];
+      if (nextToken) result.flags[name] = nextToken;
+      i++;
+    } else {
+      result.flags[name] = true;
+    }
+  } else {
+    result.positional.push(token);
+  }
+  i++;
+}
 
     return result;
   }
@@ -189,7 +193,8 @@ export class SlashCommandRegistry {
     let quoteChar = '';
 
     for (let i = 0; i < input.length; i++) {
-      const ch = input[i]!;
+      const ch = input[i];
+    if (!ch) continue;
 
       if (inQuote) {
         if (ch === quoteChar) {

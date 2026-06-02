@@ -3,7 +3,7 @@
 // App preferences, paired devices management, data clearing
 // ==============================================================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -33,11 +33,15 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): React.JSX.E
   const { t, lang, changeLanguage } = useTranslation();
   const [settings, setSettings] = useState<MobileSettings>(DEFAULT_MOBILE_SETTINGS);
   const [pairedDevices, setPairedDevices] = useState<PairedDevice[]>([]);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     loadAllSettings();
-    loadAllDevices();
   }, [lang]);
+
+  useEffect(() => {
+    loadAllDevices();
+  }, []);
 
   const loadAllSettings = async () => {
     const saved = await loadSettings();
@@ -49,10 +53,15 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): React.JSX.E
     setPairedDevices(devices);
   };
 
-  const handleSaveSettings = async (updated: MobileSettings) => {
+  const handleSaveSettings = useCallback((updated: MobileSettings) => {
     setSettings(updated);
-    await saveSettingsToStorage(updated);
-  };
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+    }
+    saveTimerRef.current = setTimeout(() => {
+      void saveSettingsToStorage(updated);
+    }, 500);
+  }, []);
 
   const handleRemoveDevice = async (deviceId: string) => {
     Alert.alert(t('settings.removeDeviceConfirmTitle'), t('settings.removeDeviceConfirmDesc'), [
@@ -87,7 +96,7 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): React.JSX.E
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} accessibilityLabel={t('common.back')}>
           <Text style={styles.backBtnText}>{'<'}</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('settings.title')}</Text>
@@ -110,6 +119,9 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): React.JSX.E
               onChangeText={(v) => handleSaveSettings({ ...settings, deviceName: v })}
               placeholder={t('settings.deviceNamePlaceholder')}
               placeholderTextColor={Colors.textDark}
+              clearButtonMode="while-editing"
+              autoCapitalize="words"
+              autoCorrect={false}
             />
           </View>
         </View>
@@ -173,7 +185,7 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): React.JSX.E
                   <Text style={styles.deviceName}>{device.name || 'Unknown'}</Text>
                   <Text style={styles.deviceId}>{device.address}</Text>
                 </View>
-                <TouchableOpacity onPress={() => handleRemoveDevice(device.id)}>
+                <TouchableOpacity onPress={() => handleRemoveDevice(device.id)} accessibilityLabel={t('common.remove')}>
                   <Text style={styles.removeBtn}>{t('common.remove')}</Text>
                 </TouchableOpacity>
               </View>
@@ -189,7 +201,7 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): React.JSX.E
         </View>
 
         {/* Version */}
-        <Text style={styles.version}>GHITA Agent Remote v0.0.2</Text>
+        <Text style={styles.version}>GHITA Agent Remote v0.1.0</Text>
       </ScrollView>
     </SafeAreaView>
   );

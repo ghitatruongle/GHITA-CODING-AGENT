@@ -47,12 +47,13 @@ export class MCPClient {
       entry.error = undefined;
 
       // Discover tools via JSON-RPC
-      const response = await entry.transport.send({
-        method: 'tools/list',
-        params: {},
-      });
+    const response = await entry.transport.send({
+      method: 'tools/list',
+      params: {},
+    }) as Record<string, unknown>;
 
-      const tools = ((response as any).result?.tools ?? []) as MCPTool[];
+    const result = (response.result ?? {}) as Record<string, unknown>;
+    const tools = (result.tools ?? []) as MCPTool[];
       entry.tools = tools.map((t) => ({ ...t, serverName: name }));
       return entry.tools;
     } catch (error) {
@@ -81,12 +82,13 @@ export class MCPClient {
     const response = await entry.transport.send({
       method: 'tools/call',
       params: { name: toolName, arguments: args },
-    });
+    }) as Record<string, unknown>;
 
-    const result = (response as any).result;
+    const result = (response.result ?? {}) as Record<string, unknown>;
+    const content = (result.content ?? [{ type: 'text', text: JSON.stringify(result) }]) as Array<{ type: string; text: string }>;
     return {
-      content: result?.content ?? [{ type: 'text', text: JSON.stringify(result) }],
-      isError: result?.isError ?? false,
+      content,
+      isError: (result.isError as boolean) ?? false,
     };
   }
 

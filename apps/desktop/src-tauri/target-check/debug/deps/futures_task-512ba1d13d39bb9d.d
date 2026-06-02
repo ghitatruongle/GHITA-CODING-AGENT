@@ -1,0 +1,11 @@
+D:\ghita coding agent\apps\desktop\src-tauri\target-check\debug\deps\futures_task-512ba1d13d39bb9d.d: C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-task-0.3.32\src\lib.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-task-0.3.32\src\spawn.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-task-0.3.32\src\arc_wake.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-task-0.3.32\src\waker.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-task-0.3.32\src\waker_ref.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-task-0.3.32\src\future_obj.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-task-0.3.32\src\noop_waker.rs
+
+D:\ghita coding agent\apps\desktop\src-tauri\target-check\debug\deps\libfutures_task-512ba1d13d39bb9d.rmeta: C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-task-0.3.32\src\lib.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-task-0.3.32\src\spawn.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-task-0.3.32\src\arc_wake.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-task-0.3.32\src\waker.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-task-0.3.32\src\waker_ref.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-task-0.3.32\src\future_obj.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-task-0.3.32\src\noop_waker.rs
+
+C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-task-0.3.32\src\lib.rs:
+C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-task-0.3.32\src\spawn.rs:
+C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-task-0.3.32\src\arc_wake.rs:
+C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-task-0.3.32\src\waker.rs:
+C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-task-0.3.32\src\waker_ref.rs:
+C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-task-0.3.32\src\future_obj.rs:
+C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\futures-task-0.3.32\src\noop_waker.rs:

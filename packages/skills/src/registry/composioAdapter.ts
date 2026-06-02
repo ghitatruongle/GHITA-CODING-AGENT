@@ -131,22 +131,27 @@ export class ComposioSkillAdapter {
   private readonly rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
   private readonly webhookHandlers = new Map<string, WebhookHandler[]>();
 
-  constructor(options: { apiKey?: string; credentials?: SaaSConnection[] } = {}) {
-    try {
-      // @ts-ignore
-      const { Composio } = require('@composio/core');
-      if (Composio) {
-        this.sdk = new Composio({ apiKey: options.apiKey });
-      }
-    } catch {
-      // Keep sdk = null to trigger simulation fallback
-    }
-
+  private constructor(options: { apiKey?: string; credentials?: SaaSConnection[] } = {}) {
     if (options.credentials) {
       for (const conn of options.credentials) {
         this.setCredential(conn);
       }
     }
+  }
+
+  public static async create(options: { apiKey?: string; credentials?: SaaSConnection[] } = {}): Promise<ComposioSkillAdapter> {
+    const instance = new ComposioSkillAdapter(options);
+    try {
+      const dynamicImport = new Function('module', 'return import(module)') as (m: string) => Promise<Record<string, unknown>>;
+      const composioModule = await dynamicImport('@composio/core').catch(() => null);
+      if (composioModule) {
+        const Composio = composioModule['Composio'] as new (opts: { apiKey?: string }) => unknown;
+        instance.sdk = new Composio({ apiKey: options.apiKey });
+      }
+    } catch {
+      // Keep sdk = null to trigger simulation fallback
+    }
+    return instance;
   }
 
   // --- Credential Management (Multi-Account) ---

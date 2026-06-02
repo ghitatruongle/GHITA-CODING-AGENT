@@ -148,7 +148,7 @@ export class AuditLogger {
           ? console.error
           : fullEvent.severity === 'warning'
             ? console.warn
-            : console.log;
+            : console.info;
 
       logFn(
         `[AUDIT] ${fullEvent.severity.toUpperCase()} ${fullEvent.action}`,
@@ -308,12 +308,10 @@ export class AuditLogger {
     if (query.outcome) {
       results = results.filter((e) => e.outcome === query.outcome);
     }
-    if (query.startTime) {
-      results = results.filter((e) => e.timestamp >= query.startTime!);
-    }
-    if (query.endTime) {
-      results = results.filter((e) => e.timestamp <= query.endTime!);
-    }
+    const startTime = query.startTime ?? 0;
+    const endTime = query.endTime ?? new Date(Date.now());
+    results = results.filter((e) => e.timestamp >= startTime);
+    results = results.filter((e) => e.timestamp <= endTime);
 
     // Sort newest first
     results.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());

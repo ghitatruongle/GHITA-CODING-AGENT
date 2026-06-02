@@ -74,7 +74,7 @@ const BUILTIN_PATTERNS: Record<ContentCategory, RegExp[]> = {
     /\b(end\s+my\s+life|kill\s+myself)/i,
   ],
   harassment: [
-    /\b(you\s+are|you\'re)\s+(stupid|idiot|dumb|worthless|trash)/i,
+    /\b(you\s+are|you're)\s+(stupid|idiot|dumb|worthless|trash)/i,
   ],
   spam: [
     /\b(buy\s+now|limited\s+offer|act\s+fast|free\s+money|click\s+here)\b/i,

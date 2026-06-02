@@ -37,7 +37,7 @@ export abstract class BaseMessage {
     if (typeof this.content === 'string') return this.content;
     return this.content
       .filter((p) => p.type === 'text' && p.text)
-      .map((p) => p.text!)
+      .map((p) => p.text ?? '')
       .join('\n');
   }
 
@@ -152,6 +152,11 @@ export class ToolMessage extends BaseMessage {
   }
 }
 
+/**
+ * @deprecated The 'function' role is deprecated in the OpenAI API. Use ToolMessage instead.
+ * Kept for backward compatibility with legacy function-calling responses.
+ * WARNING: This class may be removed in a future major version.
+ */
 export class FunctionMessage extends BaseMessage {
   readonly role = 'function' as const;
   readonly functionName: string;
@@ -200,5 +205,7 @@ export function messageFromData(data: MessageData): BaseMessage {
         data.functionName,
         data,
       );
+    default:
+      throw new Error(`Unknown message role: ${(data as { role: string }).role}`);
   }
 }

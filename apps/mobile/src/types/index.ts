@@ -21,7 +21,7 @@ export interface QuickAction {
   id: string;
   label: string;
   icon: string;
-  type: 'screenshot' | 'cancel' | 'approve' | 'reject';
+  type: 'screenshot' | 'cancel' | 'approve' | 'reject' | 'skills';
   disabled?: boolean;
 }
 

@@ -49,6 +49,20 @@ if (file) {
   } else {
     console.log('[postinstall] react-native-bluetooth-classic already patched');
   }
+
+  // Patch RNBluetoothClassicModule.java to remove @Override from hasConstants() for RN 0.76+
+  const packageDir = path.dirname(path.dirname(file));
+  const javaFile = path.join(packageDir, 'android', 'src', 'main', 'java', 'kjd', 'reactnative', 'bluetooth', 'RNBluetoothClassicModule.java');
+  if (fs.existsSync(javaFile)) {
+    let javaContent = fs.readFileSync(javaFile, 'utf8');
+    if (javaContent.includes('@Override\r\n    public boolean hasConstants()') || javaContent.includes('@Override\n    public boolean hasConstants()')) {
+      javaContent = javaContent.replace(/@Override\r?\n(\s*)public boolean hasConstants\(\)/, '$1public boolean hasConstants()');
+      fs.writeFileSync(javaFile, javaContent);
+      console.log('[postinstall] Patched RNBluetoothClassicModule.java: removed @Override from hasConstants()');
+    } else {
+      console.log('[postinstall] RNBluetoothClassicModule.java hasConstants() already patched or not found');
+    }
+  }
 } else {
   console.log('[postinstall] react-native-bluetooth-classic not found, skipping patch');
 }

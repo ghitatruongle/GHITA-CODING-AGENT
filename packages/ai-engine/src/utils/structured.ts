@@ -11,11 +11,11 @@ import type { AIProviderType } from '@ghita/shared';
 /**
  * Converts a Zod schema to a clean JSON Schema.
  */
-export function zodToJsonSchema(schema: z.ZodTypeAny): any {
+export function zodToJsonSchema(schema: z.ZodTypeAny): Record<string, unknown> {
   const def = schema._def;
 
   if (schema instanceof z.ZodObject) {
-    const properties: any = {};
+    const properties: Record<string, unknown> = {};
     const required: string[] = [];
     const shape = schema.shape;
     for (const key in shape) {
@@ -68,7 +68,7 @@ export function zodToJsonSchema(schema: z.ZodTypeAny): any {
 
   if (schema instanceof z.ZodUnion) {
     return {
-      anyOf: def.options.map((opt: any) => zodToJsonSchema(opt)),
+      anyOf: def.options.map((opt: z.ZodTypeAny) => zodToJsonSchema(opt)),
     };
   }
 
@@ -142,7 +142,7 @@ ${schemaStr}
   if (systemMessageIdx !== -1) {
     modifiedMessages[systemMessageIdx] = {
       role: 'system',
-      content: modifiedMessages[systemMessageIdx]!.content + '\n' + systemInstruction,
+      content: modifiedMessages[systemMessageIdx]?.content + '\n' + systemInstruction,
     };
   } else {
     modifiedMessages.unshift({

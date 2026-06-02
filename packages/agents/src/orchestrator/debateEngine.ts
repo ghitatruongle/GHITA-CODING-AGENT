@@ -20,7 +20,7 @@ export interface DebateCallbacks {
 
 export interface DebateEngineOptions {
   /** Hàm gọi LLM để lấy phản hồi từ tin nhắn */
-  llmCall: (messages: BaseMessage[], options?: any) => Promise<BaseMessage>;
+  llmCall: (messages: BaseMessage[], options?: Record<string, unknown>) => Promise<BaseMessage>;
   model?: string;
 }
 

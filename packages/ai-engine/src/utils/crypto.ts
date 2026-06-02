@@ -4,8 +4,8 @@
 
 import crypto from 'crypto';
 
-const ALGORITHM = 'aes-256-cbc';
-const IV_LENGTH = 16; // Đối với AES-256-CBC, IV luôn có độ dài 16 bytes
+const ALGORITHM = 'aes-256-gcm';
+const IV_LENGTH = 12; // Đối với AES-256-GCM, IV (nonce) có độ dài 12 bytes
 
 export class CryptoHelper {
   /**
@@ -22,9 +22,10 @@ export class CryptoHelper {
     const prefixedText = `GHITA_V1:${text}`;
     let encrypted = cipher.update(prefixedText, 'utf8', 'hex');
     encrypted += cipher.final('hex');
-    
-    // Trả về IV dạng hex ghép với văn bản đã mã hóa
-    return `${iv.toString('hex')}:${encrypted}`;
+    const authTag = cipher.getAuthTag().toString('hex');
+
+    // Trả về IV:authTag:ciphertext
+    return `${iv.toString('hex')}:${authTag}:${encrypted}`;
   }
 
   /**
@@ -34,21 +35,49 @@ export class CryptoHelper {
    */
   static decrypt(encryptedData: string, secretKey: string): string {
     const parts = encryptedData.split(':');
-    if (parts.length !== 2) {
-      throw new Error('Dữ liệu mã hóa không hợp lệ. Phải chứa IV và văn bản mã hóa phân tách bởi dấu hai chấm.');
+    if (parts.length === 2) {
+      // Legacy format: IV:ciphertext (AES-256-CBC) — migrate on decrypt
+      const ivPart = parts[0];
+      const cipherPart = parts[1];
+      if (!ivPart || !cipherPart) throw new Error('Invalid legacy encrypted data format.');
+      const iv = Buffer.from(ivPart, 'hex');
+      const encryptedText = Buffer.from(cipherPart, 'hex');
+      const key = this.normalizeKey(secretKey);
+      let decryptedText = '';
+      try {
+        const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+        let decrypted = decipher.update(encryptedText);
+        decrypted = Buffer.concat([decrypted, decipher.final()]);
+        decryptedText = decrypted.toString('utf8');
+      } catch {
+        throw new Error('Khóa giải mã không chính xác hoặc dữ liệu bị hỏng.');
+      }
+      if (!decryptedText.startsWith('GHITA_V1:')) {
+        throw new Error('Khóa giải mã không chính xác hoặc dữ liệu bị hỏng.');
+      }
+      return decryptedText.slice(9);
+    }
+    if (parts.length !== 3) {
+      throw new Error('Dữ liệu mã hóa không hợp lệ. Phải chứa IV:authTag:ciphertext.');
     }
 
-    const iv = Buffer.from(parts[0]!, 'hex');
-    const encryptedText = Buffer.from(parts[1]!, 'hex');
+  const ivPart = parts[0];
+  const authTagPart = parts[1];
+  const encryptedPart = parts[2];
+  if (!ivPart || !authTagPart || !encryptedPart) throw new Error('Invalid encrypted data format.');
+  const iv = Buffer.from(ivPart, 'hex');
+  const authTag = Buffer.from(authTagPart, 'hex');
+  const encryptedText = Buffer.from(encryptedPart, 'hex');
     const key = this.normalizeKey(secretKey);
-    
+
     let decryptedText = '';
     try {
       const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+      decipher.setAuthTag(authTag);
       let decrypted = decipher.update(encryptedText);
       decrypted = Buffer.concat([decrypted, decipher.final()]);
       decryptedText = decrypted.toString('utf8');
-    } catch (e) {
+    } catch {
       throw new Error('Khóa giải mã không chính xác hoặc dữ liệu bị hỏng.');
     }
 

@@ -3,7 +3,8 @@
 // Desktop ↔ Mobile real-time communication
 // ==============================================================================
 
-import { io, Socket } from 'socket.io-client';
+import type { Socket } from 'socket.io-client';
+import { io } from 'socket.io-client';
 import { SOCKET_EVENTS } from '@ghita/shared';
 import type { ConnectionState, ChatMessage } from '../types';
 import { clearAuthToken, getAuthToken, saveAuthToken } from './storageService';
@@ -20,6 +21,7 @@ export interface SocketCallbacks {
   onCostTelemetry?: (data: { inputTokens: number; outputTokens: number; totalTokens: number; costUsd: number; limitUsd: number }) => void;
 }
 
+// Intentionally module-level to persist across re-renders for unique AI message ID generation
 let aiMsgCounter = 0;
 
 // --- Socket Service ---
@@ -30,13 +32,14 @@ export class SocketService {
   private callbacks: SocketCallbacks = {};
   private _connectionState: ConnectionState = 'disconnected';
   private reconnectAttempts = 0;
-  private readonly maxReconnectAttempts = Infinity;
+  private readonly maxReconnectAttempts = 20;
   private deviceId: string | null = null;
   private authToken: string | null = null;
   private lastUrl: string | null = null;
   private lastLocalAddress: string | null = null;
+  /** Reserved for future cloud failover re-enablement (currently disabled) */
   private cloudAddress: string = 'https://ghita-relay-server.onrender.com';
-  private healthCheckInterval: any = null;
+  private healthCheckInterval: ReturnType<typeof setInterval> | null = null;
   private languageListeners: ((lang: string) => void)[] = [];
 
 
@@ -79,7 +82,7 @@ export class SocketService {
     this.lastUrl = serverAddress;
 
     // Auto-detect connectionType
-    if (serverAddress.includes('onrender.com') || serverAddress.includes('3002') || serverAddress.includes('cloud')) {
+    if (serverAddress.includes('onrender.com') || serverAddress.includes('render.com') || serverAddress.includes('cloud')) {
       this.connectionType = 'cloud';
     } else {
       this.connectionType = 'local';
@@ -206,6 +209,44 @@ export class SocketService {
   }
 
   /**
+   * List available skills from desktop
+   */
+  listSkills(): Promise<{ success: boolean; skills?: Array<{ id: string; name: string; description: string; category: string; enabled: boolean }>; error?: string }> {
+    return new Promise((resolve) => {
+      if (!this.socket || !this.isConnected) {
+        resolve({ success: false, error: 'Not connected' });
+        return;
+      }
+      this.socket.timeout(10000).emit('list_skills', {}, (err: unknown, response: { success: boolean; skills?: Array<{ id: string; name: string; description: string; category: string; enabled: boolean }>; error?: string }) => {
+        if (err) {
+          resolve({ success: false, error: 'Request timed out' });
+        } else {
+          resolve(response);
+        }
+      });
+    });
+  }
+
+  /**
+   * Run a skill on desktop
+   */
+  runSkill(skillId: string, input: Record<string, unknown> = {}): Promise<{ success: boolean; result?: unknown; error?: string }> {
+    return new Promise((resolve) => {
+      if (!this.socket || !this.isConnected) {
+        resolve({ success: false, error: 'Not connected' });
+        return;
+      }
+      this.socket.timeout(30000).emit('run_skill', { id: skillId, input }, (err: unknown, response: { success: boolean; result?: unknown; error?: string }) => {
+        if (err) {
+          resolve({ success: false, error: 'Request timed out' });
+        } else {
+          resolve(response);
+        }
+      });
+    });
+  }
+
+  /**
    * Register listener for language synchronization
    */
   onLanguageSync(callback: (lang: string) => void): () => void {
@@ -266,16 +307,16 @@ export class SocketService {
       try {
         const response = await fetch(`${this.lastLocalAddress}/health`);
         if (response.ok) {
-          console.log('[SocketService] Local LAN server is back online! Recovering connection...');
+          console.info('[SocketService] Local LAN server is back online! Recovering connection...');
           this.stopLocalHealthCheck();
           if (this.connectionType === 'cloud') {
             this.callbacks.onError?.('Local LAN back online. Recovering direct connection...');
             this.connect(this.lastLocalAddress);
           }
         }
-      } catch (err) {
-        // Local server still offline
-      }
+} catch (err) {
+      console.warn('[SocketService] Local health check failed:', err);
+    }
     }, 10000);
   }
 
@@ -295,7 +336,14 @@ export class SocketService {
       if (this.connectionType === 'cloud') {
         if (this.lastPairingCode) {
           this.setConnectionState('pairing');
-          this.socket?.emit('pair_mobile', { pairingCode: this.lastPairingCode });
+          void getAuthToken().then((authToken) => {
+            this.authToken = authToken;
+            this.socket?.emit('pair_mobile', {
+              pairingCode: this.lastPairingCode,
+              deviceId: this.deviceId,
+              authToken: authToken,
+            });
+          });
         } else {
           this.setConnectionState('disconnected');
         }

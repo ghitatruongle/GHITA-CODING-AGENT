@@ -55,7 +55,7 @@ export function getPlatform(): Platform {
 
 export function isDesktop(): boolean {
   const p = getPlatform();
-  return p === 'windows' || p === 'linux';
+  return p === 'windows' || p === 'linux' || p === 'macos';
 }
 
 export function isMobile(): boolean {

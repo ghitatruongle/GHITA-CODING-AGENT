@@ -14,6 +14,7 @@ export const vi: TranslationKeys = {
     retry: 'Thử lại',
     ok: 'OK',
     loading: 'Đang tải...',
+    back: 'Quay lại',
   },
   pairing: {
     title: 'GHITA',
@@ -75,6 +76,7 @@ export const vi: TranslationKeys = {
     chatTimeoutTitle: 'Thời gian chờ chụp màn hình quá hạn',
     chatTimeoutDesc: 'Không nhận được hình ảnh chụp màn hình từ desktop sau 15 giây.',
     screenTitle: '🖥️ Màn hình Desktop',
+    screenPreviewTitle: 'Xem trước màn hình',
     screenPreviewPlaceholder: 'Nhấp vào nút Chụp màn hình để xem',
     screenPreviewConnecting: 'Thiết lập kết nối để theo dõi màn hình máy tính',
     screenPreviewLoading: 'Đang tải hình ảnh chụp màn hình...',
@@ -91,6 +93,7 @@ export const vi: TranslationKeys = {
     chatInputPlaceholder: 'Nhập câu lệnh thực thi...',
     quickActionsTitle: '⚡ Thao tác nhanh',
     actionScreenshot: 'Chụp màn hình',
+    actionSkills: 'Kỹ năng',
     actionCancel: 'Hủy lệnh',
     actionApprove: 'Phê duyệt',
     actionReject: 'Từ chối',

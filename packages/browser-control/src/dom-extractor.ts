@@ -25,7 +25,9 @@ export interface InteractiveElement {
  * Extracts visible, interactive elements from a Playwright Page context.
  * Can be run in Node.js where playwright is installed.
  */
-export async function extractInteractiveElements(page: any): Promise<InteractiveElement[]> {
+import type { Page } from 'playwright';
+
+export async function extractInteractiveElements(page: Page): Promise<InteractiveElement[]> {
   return await page.evaluate(() => {
     const elements: InteractiveElement[] = [];
     

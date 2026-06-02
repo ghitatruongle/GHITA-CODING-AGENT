@@ -1,0 +1,1 @@
+Uses `sharp` and `png-to-ico` for high-performance image processing in ES modules.

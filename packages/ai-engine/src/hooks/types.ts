@@ -18,7 +18,7 @@ export interface HookConfig {
   command: string;
   timeoutMs?: number;
   enabled: boolean;
-  handler?: (toolName: string, args: Record<string, any>, toolResult?: string) => Promise<HookResult>;
+  handler?: (toolName: string, args: Record<string, unknown>, toolResult?: string) => Promise<HookResult>;
 }
 
 /** Kết quả chạy hook */

@@ -39,9 +39,9 @@ function cosineSimilarity(a: number[], b: number[]): number {
   let normA = 0;
   let normB = 0;
   for (let i = 0; i < a.length; i++) {
-    dot += a[i]! * b[i]!;
-    normA += a[i]! * a[i]!;
-    normB += b[i]! * b[i]!;
+    dot += (a[i] ?? 0) * (b[i] ?? 0);
+    normA += (a[i] ?? 0) * (a[i] ?? 0);
+    normB += (b[i] ?? 0) * (b[i] ?? 0);
   }
   const denom = Math.sqrt(normA) * Math.sqrt(normB);
   return denom === 0 ? 0 : dot / denom;
@@ -128,10 +128,10 @@ export class KnowledgeEngine {
       const chunk: KnowledgeChunk = {
         id: generateId('chk'),
         documentId: docId,
-        content: rawChunks[i]!.text,
-        index: i,
-        startOffset: rawChunks[i]!.start,
-        endOffset: rawChunks[i]!.end,
+content: rawChunks[i]?.text ?? '',
+      index: i,
+      startOffset: rawChunks[i]?.start ?? 0,
+      endOffset: rawChunks[i]?.end ?? 0,
         metadata: options.metadata,
       };
 
@@ -249,6 +249,9 @@ export class KnowledgeEngine {
     overlap: number,
   ): Array<{ text: string; start: number; end: number }> {
     const chunks: Array<{ text: string; start: number; end: number }> = [];
+    if (overlap >= chunkSize) {
+      throw new Error('overlap must be less than chunkSize');
+    }
     let start = 0;
 
     while (start < text.length) {
@@ -298,7 +301,7 @@ export class KnowledgeEngine {
     minScore: number,
     options: SearchOptions,
   ): Promise<KnowledgeSearchResult[]> {
-    const queryEmbedding = await this.embeddingFn!(query);
+    const queryEmbedding = await (this.embeddingFn as EmbeddingFunction)(query);
     const results: KnowledgeSearchResult[] = [];
 
     for (const chunk of this.chunks.values()) {

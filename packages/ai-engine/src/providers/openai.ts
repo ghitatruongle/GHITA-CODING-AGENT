@@ -262,7 +262,7 @@ export class OpenAIProvider extends BaseProvider {
     };
   }
 
-  async generateImage(prompt: string, options?: any): Promise<{ url: string; b64?: string }> {
+  async generateImage(prompt: string, options?: Record<string, unknown>): Promise<{ url: string; b64?: string }> {
     const apiKey = this.getApiKey();
     const model = options?.model ?? 'dall-e-3';
     const baseUrl = this.getBaseUrl() || 'https://api.openai.com/v1';
@@ -300,7 +300,7 @@ export class OpenAIProvider extends BaseProvider {
     };
   }
 
-  async generateSpeech(text: string, options?: any): Promise<{ audio: Buffer; contentType: string }> {
+  async generateSpeech(text: string, options?: Record<string, unknown>): Promise<{ audio: Buffer; contentType: string }> {
     const apiKey = this.getApiKey();
     const model = options?.model ?? 'tts-1';
     const baseUrl = this.getBaseUrl() || 'https://api.openai.com/v1';
@@ -332,19 +332,19 @@ export class OpenAIProvider extends BaseProvider {
     return { audio, contentType };
   }
 
-  async transcribe(audio: Buffer, options?: any): Promise<{ text: string }> {
+  async transcribe(audio: Buffer, options?: Record<string, unknown>): Promise<{ text: string }> {
     const apiKey = this.getApiKey();
     const model = options?.model ?? 'whisper-1';
     const baseUrl = this.getBaseUrl() || 'https://api.openai.com/v1';
 
     const formData = new FormData();
-    const blob = new Blob([new Uint8Array(audio)], { type: options?.contentType || 'audio/mpeg' });
-    formData.append('file', blob, options?.filename || 'audio.mp3');
-    formData.append('model', model);
+const blob = new Blob([new Uint8Array(audio)], { type: String(options?.contentType || 'audio/mpeg') });
+formData.append('file', blob, String(options?.filename || 'audio.mp3'));
+formData.append('model', String(model));
 
-    if (options?.language) formData.append('language', options.language);
-    if (options?.prompt) formData.append('prompt', options.prompt);
-    if (options?.responseFormat) formData.append('response_format', options.responseFormat);
+if (options?.language) formData.append('language', String(options.language));
+if (options?.prompt) formData.append('prompt', String(options.prompt));
+if (options?.responseFormat) formData.append('response_format', String(options.responseFormat));
     if (options?.temperature !== undefined) formData.append('temperature', String(options.temperature));
 
     const response = await fetch(`${baseUrl}/audio/transcriptions`, {

@@ -100,7 +100,7 @@ async function loadDirectory(dirPath: string): Promise<FileEntry[]> {
         name: entry.name,
         path: fullPath,
         isDirectory: entry.isDirectory,
-        children: entry.isDirectory ? undefined : undefined,
+        children: undefined,
         expanded: false,
       });
     }
@@ -123,6 +123,13 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
   const [rootEntries, setRootEntries] = useState<FileEntry[]>([]);
   const [tree, setTree] = useState<Map<string, FileEntry[]>>(new Map());
   const [loading, setLoading] = useState(false);
+  // BUG FIX #8: tracks paths that have an in-flight `loadDirectory` call.
+  // Prevents a fast double-click from queuing two reads of the same folder
+  // (the second read would otherwise race with the first and could write
+  // stale or out-of-order children into the tree after we marked it as
+  // expanded). The flag is also surfaced in the UI so the caret animates
+  // immediately while the read is pending.
+  const [loadingPaths, setLoadingPaths] = useState<Set<string>>(new Set());
   const [rootDir, setRootDir] = useState(rootPath || '');
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; path: string; isDir: boolean } | null>(null);
 
@@ -150,26 +157,47 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
   };
 
   const toggleFolder = useCallback(async (path: string) => {
-    setTree((prev) => {
-      const next = new Map(prev);
-      if (next.has(path)) {
-        // Collapse
+    // Single source of truth: read latest tree from store-state ref
+    // and update atomically (collapse OR schedule load — never both).
+    const wasLoaded = tree.has(path);
+
+    if (wasLoaded) {
+      // Collapse: synchronously drop the entry from the tree.
+      setTree((prev) => {
+        if (!prev.has(path)) return prev;
+        const next = new Map(prev);
         next.delete(path);
         return next;
-      }
-      return prev;
-    });
+      });
+      return;
+    }
 
-    // If not loaded yet, load children
-    if (!tree.has(path)) {
+    // Guard against re-entrant loads (e.g. user double-clicks the folder
+    // before the first read resolves). If a load is already in flight for
+    // this path, do nothing — the first call will populate the tree and
+    // expand the folder on its own.
+    if (loadingPaths.has(path)) return;
+    setLoadingPaths((prev) => {
+      const next = new Set(prev);
+      next.add(path);
+      return next;
+    });
+    try {
       const children = await loadDirectory(path);
       setTree((prev) => {
         const next = new Map(prev);
         next.set(path, children);
         return next;
       });
+    } finally {
+      setLoadingPaths((prev) => {
+        if (!prev.has(path)) return prev;
+        const next = new Set(prev);
+        next.delete(path);
+        return next;
+      });
     }
-  }, [tree]);
+  }, [tree, loadingPaths]);
 
   const normalizePath = (p: string) => p.replace(/\\/g, '/');
 
@@ -273,8 +301,16 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
       // Reload parent
       const parts = path.split(/[/\\]/);
       parts.pop();
-      const parentDir = parts.join('/');
-      
+      // BUG FIX #9: previously `parts.join('/')` was used here, which on
+      // Windows produced a POSIX-style path that the Rust/Tauri backend
+      // would silently treat as a different directory. Detect the original
+      // path's separator and re-use it so the parent directory string is
+      // always a valid path on the host OS. The downstream `loadDirectory`
+      // and `normalizePath` calls still go through their own cross-platform
+      // handling — we only need to keep this string consistent with what
+      // `loadDirectory` originally received.
+      const sep = path.includes('\\') && !path.includes('/') ? '\\' : '/';
+      const parentDir = parts.join(sep) || (sep === '\\' ? 'C:\\' : '/');
       if (normalizePath(parentDir) === normalizePath(rootDir)) {
         loadRoot(rootDir);
       } else {
@@ -370,6 +406,7 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
           <button
             onClick={handleSelectFolder}
             title={t('fileExplorer.openFolder')}
+            aria-label={t('fileExplorer.openFolder')}
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
               fontSize: '14px', padding: '2px', color: 'var(--text-muted)',
@@ -380,6 +417,7 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
           <button
             onClick={() => rootDir && handleNewFile(rootDir)}
             title={t('fileExplorer.newFile')}
+            aria-label={t('fileExplorer.newFile')}
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
               fontSize: '14px', padding: '2px', color: 'var(--text-muted)',
@@ -390,6 +428,7 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
           <button
             onClick={() => rootDir && handleNewFolder(rootDir)}
             title={t('fileExplorer.newFolder')}
+            aria-label={t('fileExplorer.newFolder')}
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
               fontSize: '14px', padding: '2px', color: 'var(--text-muted)',

@@ -1,0 +1,93 @@
+============================================================
+Dev Functionality 2 - Chat_2026-05-31_08-10-16
+============================================================
+
+[09:10:00] Dev Functionality 2 | Dev:
+<<< XAC NHAN: Đã nhận lệnh từ Giám đốc
+Bắt đầu kiểm tra chức năng mobile.
+
+---
+
+[09:15:00] Dev Functionality 2 | Dev:
+BÁO CÁO CHỨC NĂNG MOBILE - HOÀN THÀNH
+
+============================================================
+1. BLUETOOTH DISCOVERY - MỘT PHẦN
+============================================================
+
+File: apps/mobile/src/services/bluetoothService.ts
+
+✅ Hoạt động:
+- Dynamic require react-native-bluetooth-classic (fallback graceful)
+- Permission handling Android 12+ (BLUETOOTH_SCAN, BLUETOOTH_CONNECT, ACCESS_FINE_LOCATION)
+- RFCOMM discovery protocol (GHITA_DISCOVER → GHITA_SERVER|ip:port)
+
+⚠️ Vấn đề:
+- Native module có thể chưa cài → fallback mock devices (PairingScreen:290-298)
+- Mock devices hiện tên tiếng Việt gây hiểu lầm
+- onDataReceived listener không unsubscribe khi timeout (line 201)
+- stopDiscovery không remove onDeviceDiscovered listener (line 157-165)
+- isDiscovering flag không reset khi connectToDevice fail (line 219)
+- Không có BLE support
+- Không có iOS support
+
+============================================================
+2. CLOUD DISCOVERY - HOẠT ĐỘNG
+============================================================
+
+Files: socketService.ts, config.ts, PairingScreen.tsx
+
+✅ Hoạt động:
+- API key từ process.env.GHITA_CLOUD_API_KEY
+- Cloud registry fetch + parse ip1_ip2_port format
+- Socket.io auto-reconnect 20 attempts, backoff 1-30s
+- LAN health check recovery (tự switch về LAN khi available)
+
+⚠️ Vấn đề:
+- API key empty string khi env không set (config.ts:6)
+- Silent failure: cloud error bị nuốt, hiện "LAN ping fail" thay vì "Cloud API key missing" (PairingScreen:156-159)
+- Cloud relay code tồn tại nhưng bị disable (socketService:341-347)
+- Không có HTTPS cert pinning
+
+============================================================
+3. LAN DIRECT - HOẠT ĐỘNG TỐT
+============================================================
+
+✅ Hoạt động:
+- Manual IP entry + normalize (http:// + :8080)
+- Health check validation (/health → status 200)
+- First-success-wins concurrent ping
+- 10s timeout với contextual error message
+- Auto-reconnect on app foreground
+
+⚠️ Vấn đề nhỏ:
+- Variable shadowing `t` trong PairingScreen:535
+- Polling 200ms có thể gửi duplicate pairing code (line 217-227)
+- Không có mDNS/Zeroconf auto-discovery
+
+============================================================
+4. SKILL MANAGER - KHÔNG TỒN TẠI
+============================================================
+
+🔴 KHÔNG CÓ trên mobile:
+- Grep "skill" = 0 matches trong apps/mobile/src/
+- Navigation chỉ có 3 screens: Pairing, RemoteControl, Settings
+- QuickActions chỉ: Screenshot, Cancel, Approve, Reject
+- Không có skill browsing, install, config, execute
+- Desktop có SkillManager + MarketplaceView nhưng KHÔNG port sang mobile
+
+ĐÁNH GIÁ: Mobile là remote control thuần túy, không có skill management.
+
+============================================================
+TÓM TẮT
+============================================================
+
+| Feature              | Status           | Issues    |
+|----------------------|------------------|-----------|
+| Bluetooth Discovery  | Partial          | 5 bugs    |
+| Cloud Discovery      | Functional       | 3 bugs    |
+| LAN Direct           | Working well     | 2 minor   |
+| Skill Manager        | NOT EXISTS       | Missing   |
+
+---
+

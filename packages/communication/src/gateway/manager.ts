@@ -2,13 +2,13 @@
 // GHITA CODING AGENT - Gateway Manager
 // ==============================================================================
 
-import type { GatewayConfig, GatewayMessage, GatewayType } from './types.js';
+import type { CommunicationGateway, GatewayConfig, GatewayMessage, GatewayType } from './types.js';
 import { TelegramGateway } from './telegram.js';
 import { DiscordGateway } from './discord.js';
 import { SlackGateway } from './slack.js';
 
 export class GatewayManager {
-  private readonly gateways = new Map<GatewayType, any>();
+	private readonly gateways = new Map<GatewayType, CommunicationGateway>();
   private messageHandler?: (message: GatewayMessage) => void | Promise<void>;
 
   constructor(config: GatewayConfig = {}) {
@@ -32,7 +32,7 @@ export class GatewayManager {
     for (const [type, gateway] of this.gateways.entries()) {
       const success = await gateway.initialize();
       if (success) {
-        console.log(`[Gateway Manager] Initialized gateway: ${type} (Mock: ${gateway.isMock})`);
+		console.info(`[Gateway Manager] Initialized gateway: ${type} (Mock: ${gateway.isMock})`);
         gateway.onMessage((msg: GatewayMessage) => this.handleIncomingMessage(msg));
       } else {
         console.warn(`[Gateway Manager] Failed to initialize gateway: ${type}`);
@@ -53,7 +53,7 @@ export class GatewayManager {
     return gateway.sendMessage(channelId, text);
   }
 
-  getGateway<T = any>(type: GatewayType): T | undefined {
+	getGateway<T extends CommunicationGateway = CommunicationGateway>(type: GatewayType): T | undefined {
     return this.gateways.get(type) as T | undefined;
   }
 

@@ -1,6 +1,11 @@
 // ==============================================================================
 // GHITA CODING AGENT — WAN Socket.io Relay Server
 // Transparent bridge forwarding all events between paired desktop & mobile
+//
+// SECURITY NOTE: TLS is NOT handled by this server. In production, terminate
+// TLS at a reverse proxy (e.g. nginx, Cloudflare, Caddy) in front of this
+// service. Use WSS between clients and the proxy, and WS between proxy and
+// this server.
 // ==============================================================================
 
 import express from 'express';
@@ -12,7 +17,9 @@ const PORT = parseInt(process.env.PORT || '3002', 10);
 const HOST = '0.0.0.0';
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: false, // Disable CORS for HTTP endpoints — only Socket.IO needs CORS
+}));
 
 // Health check endpoint
 app.get('/health', (_req, res) => {
@@ -27,7 +34,7 @@ app.get('/health', (_req, res) => {
 export const httpServer = createServer(app);
 export const io = new Server(httpServer, {
   cors: {
-    origin: '*',
+    origin: ['tauri.localhost', 'http://localhost:1420', 'http://localhost:3000'],
     methods: ['GET', 'POST'],
   },
   transports: ['websocket', 'polling'],
@@ -37,7 +44,7 @@ export const io = new Server(httpServer, {
 
 // Map of pairing codes to paired sockets
 // pairingCode -> { desktopSocketId?, mobileSocketId? }
-export const pairings = new Map<string, { desktopSocketId?: string; mobileSocketId?: string }>();
+export const pairings = new Map<string, { desktopSocketId?: string; mobileSocketId?: string; createdAt: number }>();
 
 // Map of socket ID to their metadata
 export const socketMeta = new Map<string, { role: 'desktop' | 'mobile'; pairingCode: string }>();
@@ -76,7 +83,7 @@ function getPeerSocket(socket: Socket): Socket | null {
 
 io.on('connection', (socket: Socket) => {
   const clientIp = socket.handshake.address;
-  console.log(`[Relay] New connection: ${socket.id} from ${clientIp}`);
+  console.info(`[Relay] New connection: ${socket.id} from ${clientIp}`);
 
   // Register desktop client
   socket.on('register_desktop', (data: { pairingCode: string }) => {
@@ -90,7 +97,7 @@ io.on('connection', (socket: Socket) => {
     // Clean up previous registration for this socket if any
     const existingMeta = socketMeta.get(socket.id);
     if (existingMeta) {
-      console.log(`[Relay] Removing prior registration for desktop socket ${socket.id}`);
+      console.info(`[Relay] Removing prior registration for desktop socket ${socket.id}`);
       const prevPair = pairings.get(existingMeta.pairingCode);
       if (prevPair && prevPair.desktopSocketId === socket.id) {
         delete prevPair.desktopSocketId;
@@ -98,13 +105,13 @@ io.on('connection', (socket: Socket) => {
     }
 
     // Register desktop
-    const pair = pairings.get(code) || {};
+    const pair = pairings.get(code) || { createdAt: Date.now() };
     
     // If another desktop was registered on this code, notify or replace
     if (pair.desktopSocketId && pair.desktopSocketId !== socket.id) {
       const oldSocket = io.sockets.sockets.get(pair.desktopSocketId);
       if (oldSocket) {
-        console.log(`[Relay] Displacing old desktop socket ${pair.desktopSocketId} on code ${code}`);
+        console.info(`[Relay] Displacing old desktop socket ${pair.desktopSocketId} on code ${code}`);
         oldSocket.emit('error', { message: 'Displaced by another desktop session' });
         oldSocket.disconnect(true);
       }
@@ -114,11 +121,11 @@ io.on('connection', (socket: Socket) => {
     pairings.set(code, pair);
     socketMeta.set(socket.id, { role: 'desktop', pairingCode: code });
 
-    console.log(`[Relay] Desktop registered on code ${code}. Socket: ${socket.id}`);
+    console.info(`[Relay] Desktop registered on code ${code}. Socket: ${socket.id}`);
 
     // If mobile is already waiting, bridge them
     if (pair.mobileSocketId) {
-      console.log(`[Relay] Pairing desktop & mobile immediately on code ${code}`);
+      console.info(`[Relay] Pairing desktop & mobile immediately on code ${code}`);
       const mobileSocket = io.sockets.sockets.get(pair.mobileSocketId);
       if (mobileSocket) {
         socket.emit('pair_confirm', { status: 'paired_via_relay', peerId: pair.mobileSocketId });
@@ -139,7 +146,7 @@ io.on('connection', (socket: Socket) => {
     // Clean up previous registration for this socket if any
     const existingMeta = socketMeta.get(socket.id);
     if (existingMeta) {
-      console.log(`[Relay] Removing prior registration for mobile socket ${socket.id}`);
+      console.info(`[Relay] Removing prior registration for mobile socket ${socket.id}`);
       const prevPair = pairings.get(existingMeta.pairingCode);
       if (prevPair && prevPair.mobileSocketId === socket.id) {
         delete prevPair.mobileSocketId;
@@ -147,13 +154,13 @@ io.on('connection', (socket: Socket) => {
     }
 
     // Register mobile
-    const pair = pairings.get(code) || {};
+    const pair = pairings.get(code) || { createdAt: Date.now() };
     
     // If another mobile was registered on this code, replace
     if (pair.mobileSocketId && pair.mobileSocketId !== socket.id) {
       const oldSocket = io.sockets.sockets.get(pair.mobileSocketId);
       if (oldSocket) {
-        console.log(`[Relay] Displacing old mobile socket ${pair.mobileSocketId} on code ${code}`);
+        console.info(`[Relay] Displacing old mobile socket ${pair.mobileSocketId} on code ${code}`);
         oldSocket.emit('error', { message: 'Displaced by another mobile session' });
         oldSocket.disconnect(true);
       }
@@ -163,18 +170,18 @@ io.on('connection', (socket: Socket) => {
     pairings.set(code, pair);
     socketMeta.set(socket.id, { role: 'mobile', pairingCode: code });
 
-    console.log(`[Relay] Mobile registered on code ${code}. Socket: ${socket.id}`);
+    console.info(`[Relay] Mobile registered on code ${code}. Socket: ${socket.id}`);
 
     // If desktop is already waiting, bridge them
     if (pair.desktopSocketId) {
-      console.log(`[Relay] Pairing mobile & desktop immediately on code ${code}`);
+      console.info(`[Relay] Pairing mobile & desktop immediately on code ${code}`);
       const desktopSocket = io.sockets.sockets.get(pair.desktopSocketId);
       if (desktopSocket) {
         socket.emit('pair_confirm', { status: 'paired_via_relay', peerId: pair.desktopSocketId });
         desktopSocket.emit('pair_confirm', { status: 'paired_via_relay', peerId: socket.id });
       }
     } else {
-      console.log(`[Relay] Mobile is waiting for desktop to register code ${code}`);
+      console.info(`[Relay] Mobile is waiting for desktop to register code ${code}`);
       socket.emit('waiting_for_desktop');
     }
   });
@@ -196,7 +203,7 @@ io.on('connection', (socket: Socket) => {
     // 3. Forward to peer socket if paired
     const peer = getPeerSocket(socket);
     if (peer) {
-      // console.log(`[Relay] Forwarding event '${event}' from ${socket.id} to peer ${peer.id}`);
+      // console.info(`[Relay] Forwarding event '${event}' from ${socket.id} to peer ${peer.id}`);
       peer.emit(event, ...args);
     } else {
       // If we don't have a peer, let mobile know
@@ -209,7 +216,7 @@ io.on('connection', (socket: Socket) => {
 
   // Disconnection cleanup
   socket.on('disconnect', (reason: string) => {
-    console.log(`[Relay] Socket disconnected: ${socket.id}. Reason: ${reason}`);
+    console.info(`[Relay] Socket disconnected: ${socket.id}. Reason: ${reason}`);
     eventCounts.delete(socket.id);
 
     const meta = socketMeta.get(socket.id);
@@ -217,7 +224,7 @@ io.on('connection', (socket: Socket) => {
       const pair = pairings.get(meta.pairingCode);
       if (pair) {
         if (meta.role === 'desktop') {
-          console.log(`[Relay] Cleaning up desktop registration on code ${meta.pairingCode}`);
+          console.info(`[Relay] Cleaning up desktop registration on code ${meta.pairingCode}`);
           delete pair.desktopSocketId;
           // Notify mobile peer of disconnection
           if (pair.mobileSocketId) {
@@ -227,7 +234,7 @@ io.on('connection', (socket: Socket) => {
             }
           }
         } else {
-          console.log(`[Relay] Cleaning up mobile registration on code ${meta.pairingCode}`);
+          console.info(`[Relay] Cleaning up mobile registration on code ${meta.pairingCode}`);
           delete pair.mobileSocketId;
           // Notify desktop peer of disconnection
           if (pair.desktopSocketId) {
@@ -250,7 +257,19 @@ io.on('connection', (socket: Socket) => {
 
 if (process.env.NODE_ENV !== 'test') {
   httpServer.listen(PORT, HOST, () => {
-    console.log(`[Relay] Server listening on http://${HOST}:${PORT}`);
-    console.log(`[Relay] Health endpoint: http://${HOST}:${PORT}/health`);
+    console.info(`[Relay] Server listening on http://${HOST}:${PORT}`);
+    console.info(`[Relay] Health endpoint: http://${HOST}:${PORT}/health`);
   });
+
+  // Periodic eviction of stale pairings older than 30 minutes with no active connections
+  const PAIRING_TTL_MS = 30 * 60 * 1000;
+  setInterval(() => {
+    const now = Date.now();
+    for (const [code, pair] of pairings) {
+      if (!pair.desktopSocketId && !pair.mobileSocketId && (now - pair.createdAt) > PAIRING_TTL_MS) {
+        pairings.delete(code);
+        console.info(`[Relay] Evicted stale pairing code ${code} (age: ${Math.round((now - pair.createdAt) / 60000)}min)`);
+      }
+    }
+  }, 60_000); // Sweep every 60 seconds
 }

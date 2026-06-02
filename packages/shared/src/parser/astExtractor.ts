@@ -10,7 +10,7 @@ import path from 'path';
 import * as url from 'url';
 import Parser from 'web-tree-sitter';
 import { WasmParserDownloader } from './wasmDownloader.js';
-import { SymbolTag } from './polyglotTags.js';
+import type { SymbolTag } from './polyglotTags.js';
 
 let __dirname = '';
 try {
@@ -312,12 +312,14 @@ export class ASTExtractor {
 
     // Gán mỗi child cho immediate parent (parent nhỏ nhất chứa child)
     for (let j = 0; j < definitions.length; j++) {
-      const child = definitions[j]!;
+      const child = definitions[j];
+      if (!child) continue;
       let bestParent: ASTNode | null = null;
       let bestSize = Infinity;
       for (let i = 0; i < definitions.length; i++) {
         if (i === j) continue;
-        const candidate = definitions[i]!;
+        const candidate = definitions[i];
+        if (!candidate) continue;
         const candidateSize = candidate.endLine - candidate.startLine;
         if (
           child.startLine >= candidate.startLine &&

@@ -79,9 +79,13 @@ export class ChunkDetector {
     const averageChunkSize = totalChars / this.totalChunks;
 
     let totalInterval = 0;
-    for (let i = 1; i < this.arrivalTimes.length; i++) {
-      totalInterval += (this.arrivalTimes[i]! - this.arrivalTimes[i - 1]!);
+  for (let i = 1; i < this.arrivalTimes.length; i++) {
+    const current = this.arrivalTimes[i];
+    const previous = this.arrivalTimes[i - 1];
+    if (current !== undefined && previous !== undefined) {
+      totalInterval += (current - previous);
     }
+  }
     const averageIntervalMs = this.arrivalTimes.length > 1 ? totalInterval / (this.arrivalTimes.length - 1) : 0;
 
     return {

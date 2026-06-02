@@ -1,0 +1,116 @@
+============================================================
+PHIÊN CHAT: Chat_2026-05-31_08-10-16
+============================================================
+GIÁM ĐỐC PHÂN CÔNG NHIỆM VỤ - HOÀN THÀNH ✅
+============================================================
+
+[08:10:16] Giam Doc | Director:
+
+TẤT CẢ AGENT ĐỌC KỸ VÀ TUÂN THEO BẢN PHÂN CÔNG NÀY.
+KHÔNG ĐƯỢC DỪNG KHI CHƯA HOÀN THÀNH KẾ HOẠCH CỦA GIÁM ĐỐC.
+CÁC AGENT PHẢI TRAO ĐỔI VỚI NHAU ĐỂ ĐẠT KẾT QUẢ TỐT NHẤT.
+
+============================================================
+PHÂN CÔNG CHI TIẾT
+============================================================
+
+--- NHÓM 1: UI (GIAO DIỆN) ---
+
+>>> LENH: Dev UI 1
+NHIỆM VỤ: Kiểm tra và sửa toàn bộ lỗi UI trong apps/desktop/src/
+- Các component bị lỗi hiển thị, layout sai, CSS broken
+- Theme/dark mode không hoạt động đúng
+- Responsive trên các kích thước màn hình
+- Icon, font, spacing không đồng bộ
+PHỐI HỢP VỚI: Dev Performance 1 (để đảm bảo UI không ảnh hưởng hiệu năng)
+BÁO CÁO: Ghi kết quả vào dev_ui1.txt
+
+>>> LENH: Dev UI 2
+NHIỆM VỤ: Kiểm tra và sửa toàn bộ lỗi UI trong apps/mobile/
+- Giao diện mobile bị lỗi, layout vỡ
+- Touch/swipe không mượt
+- Navigation giữa các màn hình
+- Keyboard che nội dung input
+PHỐI HỢP VỚI: Dev Performance 2 (để đảm bảo mobile không lag)
+BÁO CÁO: Ghi kết quả vào dev_ui2.txt
+
+--- NHÓM 2: HIỆU NĂNG (PERFORMANCE) ---
+
+>>> LENH: Dev Performance 1
+NHIỆM VỤ: Khắc phục vấn đề hiệu năng desktop
+- App khởi động chậm, load time cao
+- Memory leak, CPU usage bất thường
+- Render chậm khi có nhiều component
+- Socket.IO reconnect loop
+- Bundle size quá lớn (hiện tại 483kB)
+PHỐI HỢP VỚI: Dev UI 1 (để tối ưu render cycle)
+PHỐI HỢP VỚI: Dev Security (để không mở lỗ hổng khi tối ưu)
+BÁO CÁO: Ghi kết quả vào dev_perf1.txt
+
+>>> LENH: Dev Performance 2
+NHIỆM VỤ: Khắc phục vấn đề hiệu năng mobile
+- App crash trên thiết bị yếu
+- Animation giật lag
+- Slow navigation transition
+- Android build quá nặng
+PHỐI HỢP VỚI: Dev UI 2 (để tối ưu mobile render)
+PHỐI HỢP VỚI: Dev Security (bảo mật không ảnh hưởng perf)
+BÁO CÁO: Ghi kết quả vào dev_perf2.txt
+
+--- NHÓM 3: CHỨC NĂNG (FUNCTIONALITY) ---
+
+>>> LENH: Dev Functionality 1
+NHIỆM VỤ: Kiểm tra các chức năng không hoạt động đúng
+- ChatPanel 5 modes: Chat, Agent, Ralph, Review, Feature
+- AI provider connection (13 providers)
+- Terminal execution (@tauri-apps/plugin-shell)
+- FileExplorer sync với project path
+PHỐI HỢP VỚI: Dev UI 1 (để UI hiển thị đúng trạng thái)
+PHỐI HỢP VỚI: Dev Security (để API key không bị leak)
+BÁO CÁO: Ghi kết quả vào dev_func1.txt
+
+>>> LENH: Dev Functionality 2
+NHIỆM VỤ: Kiểm tra các chức năng mobile không hoạt động đúng
+- Bluetooth discovery (mobile only)
+- Cloud Discovery connection
+- LAN Direct connection
+- Skill manager trên mobile
+PHỐI HỢP VỚI: Dev UI 2 (mobile UI đúng)
+PHỐI HỢP VỚI: Dev Security (secure connection)
+BÁO CÁO: Ghi kết quả vào dev_func2.txt
+
+--- NHÓM 4: BẢO MẬT (SECURITY) ---
+
+>>> LENH: Dev Security
+NHIỆM VỤ: Đảm bảo ứng dụng không có lỗi bảo mật
+- API key không bị expose trong frontend code
+- localStorage không chứa dữ liệu nhạy cảm
+- Socket.IO connection sécurisée
+- Không có XSS, injection vulnerabilities
+- Scope permissions Tauri đúng hạn chế
+- Config file ~/.ghita-coding-agent.json bảo mật
+PHỐI HỢP VỚI: Tất cả dev khác (review code trước khi commit)
+BÁO CÁO: Ghi kết quả vào dev_security.txt
+
+============================================================
+QUY TẮC PHỐI HỢP
+============================================================
+
+1. ĐỌC FILE CỦA NHAU trước khi bắt đầu work
+2. KHI GẶP VẤN ĐỀ liên quan agent khác → GHI vào file của mình + NOTIFY agent đó
+3. FORMAT PHẢN HỒI:
+   [HH:MM:SS] Tên Agent | Vai trò:
+   <<< XAC NHAN: Đã nhận lệnh
+   Trạng thái: [Đang làm / Hoàn thành / Cần hỗ trợ]
+   Chi tiết: ...
+
+4. BÁO CÁO TIẾN ĐỘ mỗi 30 phút vào file của mình
+5. KHÔNG ĐƯỢC DỰNG cho đến khi TẤT CẢ task hoàn thành
+
+============================================================
+THỜI HẠN: Hoàn thành trong phiên làm việc này
+TỔNG: 6 agent | 6 nhóm nhiệm vụ | Phối hợp chéo bắt buộc
+============================================================
+
+---
+

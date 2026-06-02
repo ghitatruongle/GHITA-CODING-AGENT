@@ -32,10 +32,29 @@ export async function loadApiConfig(): Promise<ApiConfigSnapshot> {
 }
 
 export async function saveApiConfig(config: ApiConfigSnapshot): Promise<void> {
+  // Persist to localStorage first so we have a recoverable copy even if the
+  // backend invoke fails partway through. Only clear the local copy once the
+  // backend has acknowledged the write.
+  const serialized = JSON.stringify(config);
+  try {
+    localStorage.setItem(API_CONFIG_STORAGE_KEY, serialized);
+  } catch {
+    // localStorage may be full or disabled (private mode). Continue anyway
+    // and rely on the backend as the source of truth.
+  }
+
   try {
     await invoke('save_api_config', { config });
+    // Backend confirmed — drop the local mirror.
     localStorage.removeItem(API_CONFIG_STORAGE_KEY);
   } catch {
-    localStorage.setItem(API_CONFIG_STORAGE_KEY, JSON.stringify(config));
+    // Backend write failed. Keep the local copy so the next loadApiConfig
+    // call can recover via the legacy fallback path.
+    try {
+      localStorage.setItem(API_CONFIG_STORAGE_KEY, serialized);
+    } catch {
+      // Nothing more we can do; the in-memory `config` argument is still
+      // valid for the current call site.
+    }
   }
 }

@@ -103,7 +103,7 @@ export class UniversalChatModel implements AIProvider {
     if (options?.model) {
       const parts = options.model.split('/');
       if (parts.length > 1) {
-        const potentialType = this.mapModelKeyToProviderType(parts[0]!);
+        const potentialType = this.mapModelKeyToProviderType(parts[0] ?? '');
         if (potentialType && this.registry.has(potentialType)) {
           resolvedType = potentialType;
         }
@@ -117,7 +117,7 @@ export class UniversalChatModel implements AIProvider {
 
     // 2. Resolve from options.agentRole and routing map
     if (!resolvedType && options?.agentRole && this.routing[options.agentRole]) {
-      resolvedType = this.routing[options.agentRole]!;
+      resolvedType = this.routing[options.agentRole] ?? null;
     }
 
     // 3. Fallback to defaultProvider
@@ -136,13 +136,14 @@ export class UniversalChatModel implements AIProvider {
     }
 
     // 5. Take first registered provider
-    if (!resolvedType) {
-      const all = this.registry.getAll();
-      if (all.length > 0) {
-        return all[0]!;
-      }
-      throw new Error('UniversalChatModel has no providers registered');
+if (!resolvedType) {
+    const all = this.registry.getAll();
+    const first = all[0];
+    if (first) {
+      return first;
     }
+    throw new Error('UniversalChatModel has no providers registered');
+  }
 
     const provider = this.registry.get(resolvedType);
     if (!provider) {

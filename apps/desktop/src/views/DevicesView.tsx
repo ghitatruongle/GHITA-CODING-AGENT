@@ -98,7 +98,7 @@ export function DevicesView() {
     if (serverStatus !== 'listening' || !health?.codeExpiresAt) return;
     
     const updateCountdown = () => {
-      const remaining = Math.max(0, Math.round((health.codeExpiresAt! - Date.now()) / 1000));
+      const remaining = Math.max(0, Math.round(((health.codeExpiresAt ?? 0) - Date.now()) / 1000));
       setCodeCountdown(remaining);
     };
 
@@ -198,7 +198,7 @@ export function DevicesView() {
 
         {/* IP + Port info */}
         {serverStatus === 'listening' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr 1.2fr', gap: '12px', padding: '16px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', marginBottom: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', padding: '16px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', marginBottom: '12px' }}>
             <div>
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>{t('devices.ipAddress')}</div>
               <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--accent-primary)', fontFamily: 'var(--font-mono)' }}>

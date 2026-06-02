@@ -290,7 +290,7 @@ export class HeadlessSearchScanner {
    */
   public removeCommentsAndHeaders(code: string): string {
     // 1. Loại bỏ các comment đa dòng /* ... */
-    let cleaned = code.replace(/\/\*[\s\S]*?\*\//g, '');
+    const cleaned = code.replace(/\/\*[\s\S]*?\*\//g, '');
 
     // 2. Loại bỏ comment đơn dòng // ... nhưng giữ lại URL (http://, https://, file://)
     const lines = cleaned.split(/\r?\n/);

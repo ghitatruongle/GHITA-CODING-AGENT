@@ -57,8 +57,8 @@ export class MarkdownRulesChecker {
           this.rules.push(rule);
         }
       }
-    } catch (err: any) {
-      console.warn(`[MarkdownRulesChecker] Failed to load rules: ${err.message}`);
+ } catch (err: unknown) {
+ console.warn(`[MarkdownRulesChecker] Failed to load rules: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
@@ -185,8 +185,8 @@ export class MarkdownRulesChecker {
               message: rule.description
             });
           }
-        } catch (err: any) {
-          console.warn(`[MarkdownRulesChecker] Pattern regex error: ${err.message}`);
+ } catch (err: unknown) {
+ console.warn(`[MarkdownRulesChecker] Pattern regex error: ${err instanceof Error ? err.message : String(err)}`);
         }
       }
     }
@@ -274,8 +274,8 @@ export class MarkdownChecksMiddleware implements AgentMiddleware {
     const writeTools = ['writeFile', 'write_to_file', 'replace_file_content', 'multi_replace_file_content'];
     if (!writeTools.includes(toolName)) return;
 
-    let targetPath = (args.TargetFile || args.targetFile || args.filePath || args.targetPath) as string;
-    let newContent = (args.CodeContent || args.codeContent || args.ReplacementContent || args.replacementContent || args.content) as string;
+    const targetPath = (args.TargetFile || args.targetFile || args.filePath || args.targetPath) as string;
+    const newContent = (args.CodeContent || args.codeContent || args.ReplacementContent || args.replacementContent || args.content) as string;
 
     if (!targetPath || !newContent) return;
 

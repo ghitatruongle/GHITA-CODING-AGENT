@@ -8,10 +8,10 @@ import { ComposioSkillAdapter } from '../src/registry/composioAdapter.js';
 describe('ComposioSkillAdapter', () => {
   let adapter: ComposioSkillAdapter;
 
-  beforeEach(() => {
-    adapter = new ComposioSkillAdapter();
-    vi.clearAllMocks();
-  });
+  beforeEach(async () => {
+  adapter = await ComposioSkillAdapter.create();
+  vi.clearAllMocks();
+});
 
   // ==============================================================================
   // 1. Credentials Management & Centralized Syncing

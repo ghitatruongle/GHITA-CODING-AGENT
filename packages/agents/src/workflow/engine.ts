@@ -5,24 +5,24 @@
 export interface WorkflowStep {
   id: string;
   name: string;
-  execute: (state: any) => Promise<any>;
+  execute: (state: Record<string, unknown>) => Promise<unknown>;
   dependsOn?: string[];
 }
 
 export interface WorkflowCallbacks {
-  onStart?: (workflowName: string, initialState: any) => void | Promise<void>;
+  onStart?: (workflowName: string, initialState: Record<string, unknown>) => void | Promise<void>;
   onStepStart?: (stepId: string, stepName: string) => void | Promise<void>;
-  onStepFinish?: (stepId: string, stepName: string, result: any, durationMs: number) => void | Promise<void>;
-  onFinish?: (state: any, durationMs: number) => void | Promise<void>;
+  onStepFinish?: (stepId: string, stepName: string, result: unknown, durationMs: number) => void | Promise<void>;
+  onFinish?: (state: Record<string, unknown>, durationMs: number) => void | Promise<void>;
   onError?: (stepId: string | null, error: Error) => void | Promise<void>;
 }
 
 export class WorkflowAgent {
   readonly name: string;
   private steps: WorkflowStep[] = [];
-  private state: Record<string, any> = {};
+  private state: Record<string, unknown> = {};
 
-  constructor(name: string, initialConfig?: { steps?: WorkflowStep[]; state?: any }) {
+  constructor(name: string, initialConfig?: { steps?: WorkflowStep[]; state?: Record<string, unknown> }) {
     this.name = name;
     if (initialConfig?.steps) this.steps = initialConfig.steps;
     if (initialConfig?.state) this.state = { ...initialConfig.state };
@@ -33,15 +33,15 @@ export class WorkflowAgent {
     return this;
   }
 
-  getState(): Record<string, any> {
+  getState(): Record<string, unknown> {
     return this.state;
   }
 
-  setState(state: Record<string, any>): void {
+  setState(state: Record<string, unknown>): void {
     this.state = { ...state };
   }
 
-  async run(callbacks: WorkflowCallbacks = {}): Promise<Record<string, any>> {
+  async run(callbacks: WorkflowCallbacks = {}): Promise<Record<string, unknown>> {
     const startTime = Date.now();
     try {
       if (callbacks.onStart) {
@@ -79,7 +79,7 @@ export class WorkflowAgent {
           if (callbacks.onStepFinish) {
             await Promise.resolve(callbacks.onStepFinish(step.id, step.name, result, duration));
           }
-        } catch (error: any) {
+ } catch (error: unknown) {
           const err = error instanceof Error ? error : new Error(String(error));
           if (callbacks.onError) {
             await Promise.resolve(callbacks.onError(step.id, err));
@@ -100,13 +100,13 @@ export class WorkflowAgent {
         await Promise.resolve(callbacks.onFinish(this.state, totalDuration));
       }
 
-    } catch (error: any) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      if (callbacks.onError) {
-        await Promise.resolve(callbacks.onError(null, err));
-      }
-      throw err;
-    }
+ } catch (error: unknown) {
+ const err = error instanceof Error ? error : new Error(String(error));
+ if (callbacks.onError) {
+ await Promise.resolve(callbacks.onError(null, err));
+ }
+ throw err;
+ }
 
     return this.state;
   }

@@ -62,10 +62,10 @@ export class GHITAProfilerRegistry {
 }
 
 // Global registry attachment to share profiler state across module boundaries
-if (!(globalThis as any).__ghita_profiler) {
-  (globalThis as any).__ghita_profiler = new GHITAProfilerRegistry();
+if (!(globalThis as Record<string, unknown>).__ghita_profiler) {
+ (globalThis as Record<string, unknown>).__ghita_profiler = new GHITAProfilerRegistry();
 }
-export const ghitaProfiler: GHITAProfilerRegistry = (globalThis as any).__ghita_profiler;
+export const ghitaProfiler: GHITAProfilerRegistry = (globalThis as Record<string, unknown>).__ghita_profiler as GHITAProfilerRegistry;
 
 /**
  * Categorizes the performance of a function into heatmap colors.
@@ -95,7 +95,7 @@ export function instrumentCode(code: string, fileName = 'file.js'): string {
 
   while ((match = funcRegex.exec(code)) !== null) {
     const isStandardFunc = match[2] !== undefined;
-    const funcName = isStandardFunc ? match[2]! : match[6]!;
+      const funcName = isStandardFunc ? (match[2] as string) : (match[6] as string);
 
     if (reservedKeywords.has(funcName)) {
       continue;
@@ -108,7 +108,8 @@ export function instrumentCode(code: string, fileName = 'file.js'): string {
   // Process matches from last to first (right-to-left) to keep index positions constant
   let instrumentedCode = code;
   for (let i = matches.length - 1; i >= 0; i--) {
-    const m = matches[i]!;
+    const m = matches[i];
+      if (!m) continue;
     const closeBraceIndex = findClosingBrace(instrumentedCode, m.openBraceIndex);
     if (closeBraceIndex !== -1) {
       const originalBody = instrumentedCode.substring(m.openBraceIndex + 1, closeBraceIndex);
@@ -194,11 +195,11 @@ function findClosingBrace(code: string, startIndex: number): number {
 /**
  * Programmatically wraps a function for profiling (ideal for arrow functions or runtime hooks).
  */
-export function profileFunction<T extends (...args: any[]) => any>(
+export function profileFunction<T extends (...args: unknown[]) => unknown>(
   name: string,
   fn: T
 ): T {
-  return function (this: any, ...args: any[]) {
+  return function (this: unknown, ...args: unknown[]) {
     const id = ghitaProfiler.enter(name);
     try {
       const result = fn.apply(this, args);
@@ -212,7 +213,7 @@ export function profileFunction<T extends (...args: any[]) => any>(
             ghitaProfiler.exit(id);
             throw err;
           }
-        ) as any;
+        ) as unknown;
       }
       ghitaProfiler.exit(id);
       return result;

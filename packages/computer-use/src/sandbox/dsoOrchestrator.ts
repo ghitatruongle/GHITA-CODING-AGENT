@@ -87,9 +87,9 @@ export class DSOOrchestrator {
       });
 
       return networkId;
-    } catch (err: any) {
-      // Nếu network đã tồn tại (do lần trước crash), tìm và tái sử dụng
-      if (err.statusCode === 409) {
+  } catch (err: unknown) {
+    const error = err as Error;
+	if ((error as unknown as Record<string, unknown>).statusCode === 409) {
         const networks = await this.docker.listNetworks({
           filters: { name: [networkName] },
         });
@@ -99,7 +99,7 @@ export class DSOOrchestrator {
           return networkId;
         }
       }
-      throw new Error(`Failed to create network "${name}": ${err.message}`);
+      throw new Error(`Failed to create network "${name}": ${error.message}`);
     }
   }
 
@@ -295,13 +295,12 @@ export class DSOOrchestrator {
             })`,
             timestamp: new Date(),
           });
-        } catch (err: any) {
-          // Ignore errors for individual containers
-          this.logger.log({
-            containerId: containerInfo.Id,
-            containerName: containerInfo.Names?.[0] || 'unknown',
-            event: 'error',
-            message: `Failed to cleanup orphan: ${err.message}`,
+  } catch (err: unknown) {
+    this.logger.log({
+      containerId: containerInfo.Id,
+      containerName: containerInfo.Names?.[0] || 'unknown',
+      event: 'error',
+      message: `Failed to cleanup orphan: ${(err as Error).message}`,
             timestamp: new Date(),
           });
         }
@@ -311,12 +310,12 @@ export class DSOOrchestrator {
       await this.cleanupOrphanNetworks();
 
       return cleaned;
-    } catch (err: any) {
-      this.logger.log({
-        containerId: 'system',
-        containerName: 'dso-orchestrator',
-        event: 'error',
-        message: `Orphan cleanup failed: ${err.message}`,
+  } catch (err: unknown) {
+    this.logger.log({
+      containerId: 'system',
+      containerName: 'dso-orchestrator',
+      event: 'error',
+      message: `Orphan cleanup failed: ${(err as Error).message}`,
         timestamp: new Date(),
       });
       return 0;
@@ -385,7 +384,9 @@ export class DSOOrchestrator {
       stats.cpu_stats.system_cpu_usage -
       stats.precpu_stats.system_cpu_usage;
     const cpuCount = stats.cpu_stats.online_cpus || 1;
-    const cpuPercent = (cpuDelta / systemDelta) * cpuCount * 100;
+    const cpuPercent = systemDelta > 0
+      ? (cpuDelta / systemDelta) * cpuCount * 100
+      : 0;
 
     return {
       containerId,
@@ -399,21 +400,21 @@ export class DSOOrchestrator {
           ((stats.memory_stats.limit || 0) / (1024 * 1024)) * 100
         ) / 100,
       networkRxBytes: Object.values(stats.networks || {}).reduce(
-        (sum: number, net: any) => sum + (net.rx_bytes || 0),
+        (sum: number, net: Record<string, unknown>) => sum + ((net.rx_bytes as number) || 0),
         0
       ),
       networkTxBytes: Object.values(stats.networks || {}).reduce(
-        (sum: number, net: any) => sum + (net.tx_bytes || 0),
+        (sum: number, net: Record<string, unknown>) => sum + ((net.tx_bytes as number) || 0),
         0
       ),
       blockReadBytes:
-        stats.blkio_stats?.io_service_bytes_recursive?.find(
-          (b: any) => b.op === 'Read'
-        )?.value || 0,
-      blockWriteBytes:
-        stats.blkio_stats?.io_service_bytes_recursive?.find(
-          (b: any) => b.op === 'Write'
-        )?.value || 0,
+		stats.blkio_stats?.io_service_bytes_recursive?.find(
+			(b: unknown) => (b as Record<string, unknown>).op === 'Read'
+		)?.value as number || 0,
+		blockWriteBytes:
+		stats.blkio_stats?.io_service_bytes_recursive?.find(
+			(b: unknown) => (b as Record<string, unknown>).op === 'Write'
+		)?.value as number || 0,
       timestamp: new Date(),
     };
   }
@@ -450,7 +451,7 @@ export class DSOOrchestrator {
   /**
    * Liệt kê tất cả containers (bao gồm cả container đã dừng)
    */
-  async listContainers(): Promise<any[]> {
+  async listContainers(): Promise<unknown[]> {
     try {
       const containers = await this.docker.listContainers({
         all: true,
@@ -515,12 +516,12 @@ export class DSOOrchestrator {
         message: `Container "${info.name}" destroyed`,
         timestamp: new Date(),
       });
-    } catch (err: any) {
-      this.logger.log({
-        containerId,
-        containerName: info.name,
-        event: 'error',
-        message: `Failed to destroy container: ${err.message}`,
+  } catch (err: unknown) {
+    this.logger.log({
+      containerId,
+      containerName: info.name,
+      event: 'error',
+      message: `Failed to destroy container: ${(err as Error).message}`,
         timestamp: new Date(),
       });
     }
@@ -578,15 +579,15 @@ export class DSOOrchestrator {
       // Pull image
       const stream = await this.docker.pull(image);
       await new Promise<void>((resolve, reject) => {
-        this.docker.modem.followProgress(stream, (err: any) => {
+        this.docker.modem.followProgress(stream, (err: Error | null) => {
           if (err) reject(err);
           else resolve();
         });
       });
-    } catch (err: any) {
-      // Nếu image đã có local, bỏ qua lỗi pull
-      if (!err.message?.includes('No such image')) {
-        throw new Error(`Failed to pull image "${image}": ${err.message}`);
+  } catch (err: unknown) {
+    const error = err as Error;
+    if (!error.message?.includes('No such image')) {
+      throw new Error(`Failed to pull image "${image}": ${error.message}`);
       }
     }
   }
@@ -595,7 +596,8 @@ export class DSOOrchestrator {
     containerId: string,
     config: SandboxServiceConfig
   ): Promise<void> {
-    const hc = config.healthCheck!;
+    const hc = config.healthCheck;
+    if (!hc) throw new Error('Health check config is required');
     const interval = hc.intervalMs || DEFAULT_HEALTH_CHECK_INTERVAL_MS;
     const maxRetries = hc.retries || DEFAULT_HEALTH_CHECK_RETRIES;
 

@@ -1,7 +1,6 @@
 // ==============================================================================
 // GHITA CODING AGENT — Mobile App Root
 // Navigation + SafeArea + ErrorBoundary
-// Cache invalidation test.
 // ==============================================================================
 
 import React, { Component } from 'react';

@@ -32,7 +32,7 @@ function isLoopbackAddress(address = ''): boolean {
 }
 
 function isAllowedLocalOrigin(origin?: string): boolean {
-  if (!origin) return true;
+  if (!origin) return false;
   try {
     const url = new URL(origin);
     return ['localhost', '127.0.0.1', 'tauri.localhost'].includes(url.hostname);
@@ -79,12 +79,13 @@ export class CommunicationServer {
               });
             }
           }
-          console.log(`[CommServer] Loaded ${list.length} paired devices from persistent storage.`);
+		console.info(`[CommServer] Loaded ${list.length} paired devices from persistent storage.`);
         }
       }
-    } catch (e: any) {
-      console.error(`[CommServer] Failed to load persistent paired devices: ${e.message}`);
-    }
+} catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(`[CommServer] Failed to load persistent paired devices: ${message}`);
+  }
   }
 
   private savePairedDevices(): void {
@@ -100,9 +101,10 @@ export class CommunicationServer {
           secret: d.secret,
         }));
       fs.writeFileSync(this.pairedDevicesFile, JSON.stringify(list, null, 2), 'utf8');
-    } catch (e: any) {
-      console.error(`[CommServer] Failed to save paired devices: ${e.message}`);
-    }
+} catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(`[CommServer] Failed to save paired devices: ${message}`);
+  }
   }
 
   readonly pairing: PairingManager;
@@ -176,7 +178,7 @@ export class CommunicationServer {
       for (const [, addrs] of entries) {
         if (!addrs) continue;
         for (const addr of addrs) {
-          const family = addr.family as any;
+		const family = addr.family as string | number;
           const isIPv4 = family === 'IPv4' || family === 4;
           if (isIPv4 && !addr.internal) {
             return addr.address;
@@ -263,7 +265,7 @@ export class CommunicationServer {
 
     // Start pairing auto-refresh
     this.pairing.startAutoRefresh((newCode) => {
-      console.log(`[CommServer] Pairing code refreshed: ${newCode}`);
+	console.info(`[CommServer] Pairing code refreshed: ${newCode}`);
     });
 
     return new Promise<void>((resolve, reject) => {
@@ -276,10 +278,10 @@ export class CommunicationServer {
       });
 
       this.httpServer.listen(this.config.port, this.config.host, () => {
-        console.log(
-          `[CommServer] 🚀 Socket.io server listening on ${this.config.host}:${this.config.port}`,
-        );
-        console.log(`[CommServer] 🔑 Pairing code: ${this.pairing.getCode()}`);
+	console.info(
+			`[CommServer] 🚀 Socket.io server listening on ${this.config.host}:${this.config.port}`,
+		);
+		console.info(`[CommServer] 🔑 Pairing code: ${this.pairing.getCode()}`);
         resolve();
       });
     });
@@ -306,10 +308,11 @@ export class CommunicationServer {
       this.io = null;
     }
 
-    if (this.httpServer) {
+	if (this.httpServer) {
+      const server = this.httpServer;
       await new Promise<void>((resolve) => {
-        this.httpServer!.close(() => {
-          console.log('[CommServer] Server stopped');
+        server.close(() => {
+          console.info('[CommServer] Server stopped');
           this.httpServer = null;
           resolve();
         });
@@ -323,7 +326,7 @@ export class CommunicationServer {
    * Enable global terminal command approval handler linked to remote devices
    */
   enableGlobalCommandApproval(): void {
-    (globalThis as any).approveCommandHandler = async (command: string): Promise<boolean> => {
+	(globalThis as Record<string, unknown>).approveCommandHandler = async (command: string): Promise<boolean> => {
       return new Promise<boolean>((resolve) => {
         const id = `approve_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
         this.pendingApprovals.set(id, resolve);
@@ -358,7 +361,7 @@ export class CommunicationServer {
    * Disable the global terminal command approval handler
    */
   disableGlobalCommandApproval(): void {
-    (globalThis as any).approveCommandHandler = null;
+	(globalThis as Record<string, unknown>).approveCommandHandler = null;
     this.pendingApprovals.clear();
   }
 
@@ -447,7 +450,7 @@ export class CommunicationServer {
   /**
    * Send generic broadcast to all connected devices
    */
-  broadcast(event: string, data: any): void {
+  broadcast(event: string, data: unknown): void {
     if (!this.io) return;
     this.io.to('paired-devices').emit(event, data);
   }
@@ -486,7 +489,7 @@ export class CommunicationServer {
     if (!this.io) return;
 
     this.io.on('connection', (socket: Socket) => {
-      console.log(`[CommServer] New connection: ${socket.id}`);
+	console.info(`[CommServer] New connection: ${socket.id}`);
 
       // --- Pairing ---
       socket.on(SOCKET_EVENTS.PAIR, (data: { code?: string; deviceId?: string; authToken?: string; timestamp?: number }) => {
@@ -570,7 +573,7 @@ export class CommunicationServer {
           return;
         }
         device.lastSeen = Date.now();
-        console.log(`[CommServer] MCP tool call: ${data.toolName} on ${data.serverName}`);
+	console.info(`[CommServer] MCP tool call: ${data.toolName} on ${data.serverName}`);
         // Forward to event handler — orchestrator will handle actual MCP call
         this.events.onChat?.(device.id, JSON.stringify({ type: 'mcp_tool_call', ...data }));
       });
@@ -583,7 +586,7 @@ export class CommunicationServer {
           return;
         }
         device.lastSeen = Date.now();
-        console.log(`[CommServer] Web search: ${data.query}`);
+	console.info(`[CommServer] Web search: ${data.query}`);
         this.events.onChat?.(device.id, JSON.stringify({ type: 'web_search', ...data }));
       });
 
@@ -595,13 +598,13 @@ export class CommunicationServer {
           return;
         }
         device.lastSeen = Date.now();
-        console.log(`[CommServer] Image input received`);
+	console.info(`[CommServer] Image input received`);
         this.events.onChat?.(device.id, JSON.stringify({ type: 'image_input', ...data }));
       });
 
       // --- Sync Language ---
       socket.on(SOCKET_EVENTS.SYNC_LANGUAGE, (data: { language: string }) => {
-        console.log(`[CommServer] Sync language received: ${data.language}`);
+	console.info(`[CommServer] Sync language received: ${data.language}`);
         socket.broadcast.emit(SOCKET_EVENTS.SYNC_LANGUAGE, data);
       });
 
@@ -609,7 +612,7 @@ export class CommunicationServer {
       socket.on(SOCKET_EVENTS.DISCONNECT, (reason: string) => {
         const device = this.findDeviceBySocket(socket.id);
         if (device) {
-          console.log(`[CommServer] Device disconnected: ${device.name} (${reason})`);
+	console.info(`[CommServer] Device disconnected: ${device.name} (${reason})`);
           device.connected = false;
           this.events.onDeviceDisconnected?.(device.id);
         }
@@ -652,7 +655,7 @@ export class CommunicationServer {
 
       // Generate new pairing code after successful pair (security)
       this.pairing.regenerate();
-      console.log(`[CommServer] ✅ Device paired: ${device.name} (${device.id})`);
+	console.info(`[CommServer] ✅ Device paired: ${device.name} (${device.id})`);
     } else if (deviceId) {
       // Session Resumption / Reconnection
       device = this.connectedDevices.get(deviceId);
@@ -661,7 +664,7 @@ export class CommunicationServer {
         device.socketId = socket.id;
         device.connected = true;
         device.lastSeen = Date.now();
-        console.log(`[CommServer] 🔄 Session resumed for device: ${device.name} (${device.id})`);
+	console.info(`[CommServer] 🔄 Session resumed for device: ${device.name} (${device.id})`);
       } else {
         socket.emit(SOCKET_EVENTS.ERROR, { message: 'Session expired. Please re-pair.' });
         return;

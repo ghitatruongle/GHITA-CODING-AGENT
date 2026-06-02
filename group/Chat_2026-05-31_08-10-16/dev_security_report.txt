@@ -1,0 +1,80 @@
+============================================================
+Dev Security - Chat_2026-05-31_08-10-16
+============================================================
+
+[09:10:00] Dev Security | Dev:
+BÁO CÁO BẢO MẬT HOÀN CHỈNH - ĐÃ XÁC MINH
+
+============================================================
+1. TAURI PERMISSIONS - CRITICAL
+============================================================
+
+File: apps/desktop/src-tauri/capabilities/default.json
+
+Shell permissions (lines 9-24):
+- cmd shell với args: true → CHẠY BẤT KỲ LỆNH NÀO
+- powershell shell với args: true → CHẠY BẤT KỲ LỆNH NÀO
+- shell:allow-spawn + shell:allow-stdin-write
+
+Filesystem permissions (lines 28-47):
+- $HOME/** → Toàn bộ user directory
+- $DESKTOP/**, $DOCUMENT/**, $DOWNLOAD/**
+- $APPDATA/**, $LOCALAPPDATA/**
+
+ĐÁNH GIÁ: CRITICAL - kết hợp shell + fs = gần như toàn quyền host machine
+
+============================================================
+2. TAR-FS VULNERABILITY - KHÔNG ÁP DỤNG
+============================================================
+
+File: packages/computer-use/package.json
+tar-fs KHÔNG CÓ trong dependencies. Không có lỗ hổng.
+
+Dependencies thực tế: dockerode, better-sqlite3, @ghita/skills, @ghita/shared
+
+============================================================
+3. WS VULNERABILITY - LOW
+============================================================
+
+File: packages/ai-engine/package.json
+- ws: ^8.18.0 (đã fix CVE-2024-37890 ở 8.17.1)
+- KHÔNG CÓ lỗ hổng
+
+============================================================
+4. CONFIG FILE - MEDIUM
+============================================================
+
+File: packages/ai-engine/src/utils/configLoader.ts
+- Line 28: Path ~/.ghita-coding-agent.json
+- Line 61: writeFileSync không set file permissions
+- API keys lưu plaintext, không encrypt
+- Không có schema validation
+
+============================================================
+5. dangerouslySetInnerHTML - LOW
+============================================================
+
+5 instances, TẤT CẢ dùng hardcoded CSS (không có user input):
+1. WorkflowView.tsx:279 - CSS canvas
+2. ChatPanel.tsx:399 - keyframes animation
+3. ChatPanel.tsx:1955 - pulse animation
+4. ChatOverlays.tsx:168 - pulse animation
+5. ChatMessageContent.tsx:392 - COMPUTER_USE_KEYFRAMES
+
+KHÔNG CÓ XSS risk hiện tại.
+
+============================================================
+TÓM TẮT
+============================================================
+
+| Issue                        | Severity | Fix needed |
+|------------------------------|----------|------------|
+| Tauri shell permissions      | CRITICAL | Có         |
+| Tauri filesystem scope       | CRITICAL | Có         |
+| tar-fs                       | N/A      | Không      |
+| ws                           | LOW      | Không      |
+| Config file plaintext        | MEDIUM   | Có         |
+| dangerouslySetInnerHTML      | LOW      | Không      |
+
+---
+

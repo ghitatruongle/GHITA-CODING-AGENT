@@ -80,12 +80,12 @@ export async function cleanOrphanedSandboxFiles(
             result.deletedCount++;
             result.spaceReclaimedBytes += size;
           }
-        } catch (itemErr: any) {
-          result.errors.push(`Lỗi khi dọn dẹp tệp "${fullPath}": ${itemErr.message}`);
+    } catch (itemErr: unknown) {
+      result.errors.push(`Lỗi khi dọn dẹp tệp "${fullPath}": ${itemErr instanceof Error ? itemErr.message : String(itemErr)}`);
         }
       }
-    } catch (dirErr: any) {
-      result.errors.push(`Lỗi khi truy cập thư mục "${baseDir}": ${dirErr.message}`);
+  } catch (dirErr: unknown) {
+    result.errors.push(`Lỗi khi truy cập thư mục "${baseDir}": ${dirErr instanceof Error ? dirErr.message : String(dirErr)}`);
     }
   }
 

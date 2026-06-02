@@ -4,16 +4,47 @@
 
 import * as path from 'node:path';
 import * as fs from 'node:fs';
-import { exec } from 'node:child_process';
+import { spawn } from 'node:child_process';
 
 // Declaring global workspace root for typescript awareness
 declare global {
   var ghitaWorkspaceRoot: string | undefined;
   var approveCommandHandler: ((command: string) => Promise<boolean>) | null;
+  var approveFileWriteHandler: ((operation: string, filePath: string) => Promise<boolean>) | null;
+  var agentPermissionMode: 'custom' | 'auto';
 }
 
 // Global approval hook for terminal commands
 globalThis.approveCommandHandler = globalThis.approveCommandHandler || null;
+// Global approval hook for file write operations
+globalThis.approveFileWriteHandler = globalThis.approveFileWriteHandler || null;
+// Global permission mode: 'custom' = confirm everything, 'auto' = only dangerous ops
+globalThis.agentPermissionMode = globalThis.agentPermissionMode || 'custom';
+
+/**
+ * Check if a command is considered dangerous (needs approval even in auto mode)
+ */
+function isDangerousCommand(command: string): boolean {
+  const dangerousPatterns = [
+    /npm\s+(install|uninstall|update|publish)/i,
+    /pnpm\s+(add|install|remove|update|publish)/i,
+    /yarn\s+(add|install|remove|publish)/i,
+    /pip\s+(install|uninstall)/i,
+    /cargo\s+(install|publish)/i,
+    /curl\s+/i,
+    /wget\s+/i,
+    /git\s+(push|force|reset\s+--hard|clean|checkout\s+\.)/i,
+    /rm\s+-rf/i,
+    /chmod\s+777/i,
+    /sudo\s+/i,
+    /docker\s+(run|pull|push)/i,
+    /ssh\s+/i,
+    /scp\s+/i,
+    /format\s+/i,
+    /del\s+\/[sfq]/i,
+  ];
+  return dangerousPatterns.some(p => p.test(command));
+}
 
 /**
  * Validates that the targeted path lies inside the workspace sandbox
@@ -106,14 +137,23 @@ export async function readFile(args: { filePath: string; startLine?: number; end
  */
 export async function writeFile(args: { filePath: string; content: string }): Promise<string> {
   const fullPath = ensureInSandbox(args.filePath);
+  const relPath = path.relative(ensureInSandbox('.'), fullPath);
+
+  // In custom mode, ask for approval before writing
+  if (globalThis.agentPermissionMode === 'custom' && globalThis.approveFileWriteHandler) {
+    const approved = await globalThis.approveFileWriteHandler('write', relPath);
+    if (!approved) {
+      throw new Error(`Permission Denied: User rejected writing to "${relPath}".`);
+    }
+  }
+
   const parentDir = path.dirname(fullPath);
-  
   if (!fs.existsSync(parentDir)) {
     fs.mkdirSync(parentDir, { recursive: true });
   }
-  
+
   fs.writeFileSync(fullPath, args.content, 'utf8');
-  return `File written successfully to ${path.relative(ensureInSandbox('.'), fullPath)}`;
+  return `File written successfully to ${relPath}`;
 }
 
 /**
@@ -121,26 +161,36 @@ export async function writeFile(args: { filePath: string; content: string }): Pr
  */
 export async function replaceFileContent(args: { filePath: string; targetContent: string; replacementContent: string }): Promise<string> {
   const fullPath = ensureInSandbox(args.filePath);
+  const relPath = path.relative(ensureInSandbox('.'), fullPath);
+
   if (!fs.existsSync(fullPath)) {
     throw new Error(`File not found: ${args.filePath}`);
   }
-  
+
+  // In custom mode, ask for approval before modifying
+  if (globalThis.agentPermissionMode === 'custom' && globalThis.approveFileWriteHandler) {
+    const approved = await globalThis.approveFileWriteHandler('modify', relPath);
+    if (!approved) {
+      throw new Error(`Permission Denied: User rejected modifying "${relPath}".`);
+    }
+  }
+
   const content = fs.readFileSync(fullPath, 'utf8');
   if (!content.includes(args.targetContent)) {
     throw new Error('Target content not found in file. Please specify target content matching lines in the file exactly.');
   }
-  
+
   // Verify target is unique to avoid wrong replacement
   const firstIndex = content.indexOf(args.targetContent);
   const lastIndex = content.lastIndexOf(args.targetContent);
   if (firstIndex !== lastIndex) {
     throw new Error('Multiple occurrences of target content found. Please provide a more unique target block (include surrounding lines).');
   }
-  
+
   const newContent = content.substring(0, firstIndex) + args.replacementContent + content.substring(firstIndex + args.targetContent.length);
   fs.writeFileSync(fullPath, newContent, 'utf8');
-  
-  return `Successfully replaced content in ${path.relative(ensureInSandbox('.'), fullPath)}`;
+
+  return `Successfully replaced content in ${relPath}`;
 }
 
 /**
@@ -208,30 +258,43 @@ export async function runCommand(args: { command: string; timeoutMs?: number }):
   }
   
   // Check for command approval hook
+  // In custom mode: always ask. In auto mode: only ask for dangerous commands.
   if (globalThis.approveCommandHandler) {
-    const approved = await globalThis.approveCommandHandler(command);
-    if (!approved) {
-      throw new Error(`Permission Denied: User rejected the execution of command "${command}".`);
+    const needsApproval = globalThis.agentPermissionMode === 'custom' || isDangerousCommand(command);
+    if (needsApproval) {
+      const approved = await globalThis.approveCommandHandler(command);
+      if (!approved) {
+        throw new Error(`Permission Denied: User rejected the execution of command "${command}".`);
+      }
     }
   }
   
   return new Promise((resolve) => {
-    exec(command, { cwd: sandbox, timeout }, (error, stdout, stderr) => {
+    const isWindows = process.platform === 'win32';
+    const parts = command.trim().split(/\s+/).filter(Boolean);
+    const program = parts[0] as string;
+    const args = parts.slice(1);
+    const spawnCmd = isWindows ? 'cmd.exe' : program;
+    const spawnArgs = isWindows ? ['/c', command] : args;
+    const child = spawn(spawnCmd, spawnArgs, { cwd: sandbox, timeout, stdio: ['ignore', 'pipe', 'pipe'] });
+    let stdout = '';
+    let stderr = '';
+    const proc = child as unknown as NodeJS.EventEmitter & { stdout: NodeJS.ReadableStream | null; stderr: NodeJS.ReadableStream | null };
+    proc.stdout?.on('data', (d: Buffer) => { stdout += d.toString(); });
+    proc.stderr?.on('data', (d: Buffer) => { stderr += d.toString(); });
+    proc.on('error', (error: Error) => {
       let output = '';
-      if (stdout) {
-        output += `STDOUT:\n${stdout}\n`;
+      if (stdout) output += `STDOUT:\n${stdout}\n`;
+      if (stderr) output += `STDERR:\n${stderr}\n`;
+      return resolve(`${output}ERROR: Command failed: ${error.message}`);
+    });
+    proc.on('close', (code: number | null) => {
+      let output = '';
+      if (stdout) output += `STDOUT:\n${stdout}\n`;
+      if (stderr) output += `STDERR:\n${stderr}\n`;
+      if (code !== 0) {
+        return resolve(`${output}ERROR: Command failed with code ${code}`);
       }
-      if (stderr) {
-        output += `STDERR:\n${stderr}\n`;
-      }
-      
-      if (error) {
-        if ((error as any).killed) {
-          return resolve(`${output}ERROR: Command execution timed out after ${timeout}ms.`);
-        }
-        return resolve(`${output}ERROR: Command failed with code ${error.code}: ${error.message}`);
-      }
-      
       resolve(output || 'Command executed successfully with empty output.');
     });
   });

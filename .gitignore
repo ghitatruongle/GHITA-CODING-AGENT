@@ -63,8 +63,9 @@ coverage/
 # Refer projects (cloned repos - too large for main repo, local only)
 refer_project/
 
-# Local scripts
-scripts/
+# Local scripts (temp files only, NOT the directory itself)
+scripts/*.tmp
+scripts/*.log
 
 # OS
 .DS_Store
@@ -79,4 +80,19 @@ Plan/
 
 # Root launch image
 android-ghita-launch.png
+
+# Compiled output in source dirs (should only exist in dist/)
+packages/*/src/**/*.js
+packages/*/src/**/*.d.ts
+packages/*/src/**/*.js.map
+packages/*/src/**/*.d.ts.map
+
+# Build logs
+build_output.txt
+
+# Windows null device artifact
+nul
+
+# Debug keystores
+apps/mobile/android/app/debug.keystore
 

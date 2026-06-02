@@ -1,0 +1,4 @@
+- **Core Mechanism**: Uses a shared directory structure where each agent writes to a dedicated text file (e.g., `giam_doc.txt`, `developer.txt`) within a session-specific folder (`Chat_YYYY-MM-DD_HH-MM-SS`).
+- **Hierarchy & Control**: Enforces a strict command hierarchy via `agents.json` and `PROTOCOL.md`, where the 'Director' agent initiates sessions and issues commands using specific markers (`>>> LENH:`), while subordinate agents acknowledge with `<<< XAC NHAN:`.
+- **Session Management**: Relies on Bash scripts (`create-chat.sh`, `join-chat.sh`) to initialize session directories with standardized headers and allow agents to dynamically join the latest active session.
+- **Data Flow**: Asynchronous, file-system based message passing where agents must read peer files to maintain context before appending their own responses, ensuring a persistent and auditable collaboration log.

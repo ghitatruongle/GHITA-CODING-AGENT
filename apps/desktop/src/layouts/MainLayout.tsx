@@ -2,7 +2,7 @@
 // GHITA CODING AGENT — Main Layout
 // ==============================================================================
 
-import { useState, useCallback, useRef, useEffect, Component, lazy, Suspense } from 'react';
+import { useCallback, useRef, useEffect, Component, lazy, Suspense } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { useAppStore, type TabId } from '../stores/appStore';
 import { useTranslation } from '../i18n';
@@ -48,23 +48,14 @@ function LoadingPanel() {
 }
 
 // --- Per-view Error Boundary ---
-function ViewErrorBoundaryInner({ children, t }: { children: ReactNode; t: (key: string) => string }) {
-  const [state, setState] = useState<{ hasError: boolean; error: Error | null }>({
-    hasError: false,
-    error: null,
-  });
-
-  const handleReset = useCallback(() => {
-    setState({ hasError: false, error: null });
-  }, []);
-
-  if (state.hasError && state.error) {
+function ViewErrorBoundaryInner({ children, t, hasError, error, onReset }: { children: ReactNode; t: (key: string) => string; hasError: boolean; error: Error | null; onReset: () => void }) {
+  if (hasError && error) {
     return (
       <div style={{ padding: 24, color: 'var(--error)' }}>
         <h3>⚠️ {t('mainLayout.viewError')}</h3>
-        <p style={{ fontSize: '13px', opacity: 0.8 }}>{state.error.message}</p>
+        <p style={{ fontSize: '13px', opacity: 0.8 }}>{error.message}</p>
         <button
-          onClick={handleReset}
+          onClick={onReset}
           style={{
             marginTop: 12,
             padding: '6px 16px',
@@ -100,9 +91,18 @@ class ViewErrorBoundary extends Component<
     console.error('[ViewErrorBoundary]', error, errorInfo);
   }
 
+  handleReset = () => {
+    this.setState({ hasError: false, error: null });
+  };
+
   render(): ReactNode {
     return (
-      <ViewErrorBoundaryInner t={this.props.t}>
+      <ViewErrorBoundaryInner
+        t={this.props.t}
+        hasError={this.state.hasError}
+        error={this.state.error}
+        onReset={this.handleReset}
+      >
         {this.props.children}
       </ViewErrorBoundaryInner>
     );
@@ -112,51 +112,29 @@ class ViewErrorBoundary extends Component<
 function ActiveView() {
   const activeTab = useAppStore((s) => s.activeTab);
   const { t } = useTranslation();
-  
-  // Track visited tabs to keep them alive lazy-mounted
-  const [visited, setVisited] = useState<Record<TabId, boolean>>({
-    [activeTab]: true
-  } as Record<TabId, boolean>);
 
-  useEffect(() => {
-    setVisited((prev) => {
-      if (prev[activeTab]) return prev;
-      return { ...prev, [activeTab]: true };
-    });
-  }, [activeTab]);
-
-  const TABS: Array<{ id: TabId; component: ReactNode }> = [
-    { id: 'code',      component: <CodeView /> },
-    { id: 'api',       component: <ApiView /> },
-    { id: 'skills',    component: <SkillsView /> },
-    { id: 'agents',    component: <AgentsView /> },
-    { id: 'devices',   component: <DevicesView /> },
-    { id: 'dashboard', component: <DashboardView /> },
-    { id: 'marketplace', component: <MarketplaceView /> },
-    { id: 'workflow',  component: <WorkflowView /> },
-    { id: 'ecosystem', component: <EcosystemView /> },
-    { id: 'settings',  component: <SettingsView /> },
-  ];
+  // Only render the active tab to eliminate background polling waste.
+  // Hidden tabs are unmounted, stopping their intervals and socket connections.
+  const TABS: Record<TabId, ReactNode> = {
+    code: <CodeView />,
+    api: <ApiView />,
+    skills: <SkillsView />,
+    agents: <AgentsView />,
+    devices: <DevicesView />,
+    dashboard: <DashboardView />,
+    marketplace: <MarketplaceView />,
+    workflow: <WorkflowView />,
+    ecosystem: <EcosystemView />,
+    settings: <SettingsView />,
+  };
 
   return (
     <Suspense fallback={<LoadingPanel />}>
-      {TABS.map((tab) => {
-        if (!visited[tab.id]) return null;
-        return (
-          <div
-            key={tab.id}
-            style={{
-              display: activeTab === tab.id ? 'block' : 'none',
-              height: '100%',
-              width: '100%',
-            }}
-          >
-            <ViewErrorBoundary t={t}>
-              {tab.component}
-            </ViewErrorBoundary>
-          </div>
-        );
-      })}
+      <div style={{ height: '100%', width: '100%' }}>
+        <ViewErrorBoundary t={t}>
+          {TABS[activeTab]}
+        </ViewErrorBoundary>
+      </div>
     </Suspense>
   );
 }
@@ -319,7 +297,7 @@ export function MainLayout() {
         {isChatOpen && (
           <div
             style={{
-              width: '340px',
+              width: 'min(340px, 40vw)',
               borderLeft: '1px solid var(--border-subtle)',
               flexShrink: 0,
               animation: 'fadeIn 200ms ease forwards',

@@ -1,0 +1,14 @@
+D:\ghita coding agent\apps\desktop\src-tauri\target-check\debug\deps\thiserror-17b773e16dfbf912.d: C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\lib.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\aserror.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\display.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\var.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\private.rs D:\ghita\ coding\ agent\apps\desktop\src-tauri\target-check\debug\build\thiserror-3c4c74f89f7ba513\out/private.rs
+
+D:\ghita coding agent\apps\desktop\src-tauri\target-check\debug\deps\libthiserror-17b773e16dfbf912.rlib: C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\lib.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\aserror.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\display.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\var.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\private.rs D:\ghita\ coding\ agent\apps\desktop\src-tauri\target-check\debug\build\thiserror-3c4c74f89f7ba513\out/private.rs
+
+D:\ghita coding agent\apps\desktop\src-tauri\target-check\debug\deps\libthiserror-17b773e16dfbf912.rmeta: C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\lib.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\aserror.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\display.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\var.rs C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\private.rs D:\ghita\ coding\ agent\apps\desktop\src-tauri\target-check\debug\build\thiserror-3c4c74f89f7ba513\out/private.rs
+
+C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\lib.rs:
+C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\aserror.rs:
+C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\display.rs:
+C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\var.rs:
+C:\Users\Acer\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\private.rs:
+D:\ghita\ coding\ agent\apps\desktop\src-tauri\target-check\debug\build\thiserror-3c4c74f89f7ba513\out/private.rs:
+
+# env-dep:OUT_DIR=D:\\ghita coding agent\\apps\\desktop\\src-tauri\\target-check\\debug\\build\\thiserror-3c4c74f89f7ba513\\out

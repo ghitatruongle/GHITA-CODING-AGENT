@@ -1,0 +1,69 @@
+============================================================
+Dev UI 1 - Chat_2026-05-31_08-10-16
+============================================================
+
+[08:42:00] Dev UI 1 | Developer:
+<<< XAC NHAN: Đã nhận lệnh từ Giám đốc
+
+NHIỆM VỤ: Kiểm tra và sửa toàn bộ lỗi UI trong apps/desktop/src/
+- Các component bị lỗi hiển thị, layout sai, CSS broken
+- Theme/dark mode không hoạt động đúng
+- Responsive trên các kích thước màn hình
+- Icon, font, spacing không đồng bộ
+
+Trạng thái: ĐANG LÀM
+Bắt đầu scan toàn bộ UI components.
+
+---
+
+[08:45:30] Dev UI 1 | Developer:
+BÁO CÁO SCAN & FIX UI - HOÀN THÀNH
+
+Đã scan 20+ files trong apps/desktop/src/. Phát hiện và sửa 4 nhóm lỗi:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+LỖI 1: CSS Variables thiếu (CRITICAL)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- --bg-card: Dùng trong DashboardView + MarketplaceView nhưng KHÔNG ĐƯỢC ĐỊNH NGHĨA
+  → Sửa: Thêm --bg-card vào globals.css (dark + light theme)
+- --border-color: Dùng trong SettingsView Select component nhưng KHÔNG TỒN TẠI
+  → Sửa: Đổi thành --border-default (đã tồn tại)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+LỖI 2: Terminal hardcoded colors (HIGH)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- background: '#0c0c18' → var(--bg-primary)
+- background: '#0a0a14' → var(--bg-tertiary)
+- color: '#e0e0e0' → var(--text-primary)
+- color: '#6b7280' → var(--text-muted) (2 chỗ)
+→ Light theme giờ sẽ hoạt động đúng trên Terminal
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+LỖI 3: Responsive layout (MEDIUM)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- MainLayout: ChatPanel width '340px' → 'min(340px, 40vw)'
+- DevicesView: grid '1.2fr 0.8fr 1.2fr' → 'repeat(auto-fit, minmax(140px, 1fr))'
+- EcosystemView: minmax(360px) → minmax(280px)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+LỖI 4: EcosystemView hardcoded colors (MEDIUM)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- rgba(15,23,42,...) → var(--bg-secondary), var(--bg-surface), var(--bg-card)
+- #f8fafc → var(--text-primary)
+- #94a3b8 → var(--text-muted)
+- #cbd5e1 → var(--text-secondary)
+- #c7d2fe → var(--text-accent)
+- #64748b → var(--text-muted)
+- rgba(255,255,255,...) borders → var(--border-subtle), var(--border-default)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+VERIFY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- pnpm --filter @ghita/desktop build: ✅ THÀNH CÔNG
+- 0 errors, 0 warnings
+- Vite: 138 modules, built in 2.36s
+
+TỔNG: 6 files đã sửa, 4 nhóm lỗi đã fix.
+
+---
+

@@ -6,8 +6,8 @@ import { EventEmitter } from 'events';
 
 export class RealtimeProxy extends EventEmitter {
   private apiKey: string;
-  private wsServer: any = null;
-  private activeConnections = new Set<any>();
+  private wsServer: { close: (cb: () => void) => void; on: (event: string, handler: (...args: unknown[]) => void) => void } | null = null;
+  private activeConnections = new Set<{ close: () => void; on: (event: string, handler: (...args: unknown[]) => void) => void; readyState: number; send: (data: string | Buffer) => void }>();
 
   constructor(options?: { apiKey?: string }) {
     super();
@@ -22,32 +22,34 @@ export class RealtimeProxy extends EventEmitter {
       const { WebSocketServer } = await import('ws');
       this.wsServer = new WebSocketServer({ port });
 
-      this.wsServer.on('connection', (socket: any) => {
-        this.activeConnections.add(socket);
-        this.emit('connection', socket);
+        this.wsServer.on('connection', (socketArg: unknown) => {
+          const socket = socketArg as { close: () => void; on: (event: string, handler: (...args: unknown[]) => void) => void; readyState: number; send: (data: string | Buffer) => void };
+          this.activeConnections.add(socket);
+          this.emit('connection', socket);
 
-        const openAIUrl = 'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01';
-        const headers = {
-          Authorization: `Bearer ${this.apiKey}`,
-          'OpenAI-Beta': 'realtime=v1',
-        };
+          const openAIUrl = 'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01';
+          const headers = {
+            Authorization: `Bearer ${this.apiKey}`,
+            'OpenAI-Beta': 'realtime=v1',
+          };
 
-        import('ws').then(({ default: WebSocket }) => {
-          const openAISocket = new WebSocket(openAIUrl, { headers });
+          import('ws').then(({ default: WebSocket }) => {
+            const openAISocket = new WebSocket(openAIUrl, { headers });
 
-          socket.on('message', (message: string) => {
+          socket.on('message', (messageArg: unknown) => {
+            const message = messageArg as string;
             if (openAISocket.readyState === WebSocket.OPEN) {
               openAISocket.send(message);
             }
           });
 
-          openAISocket.on('message', (data: any) => {
+          openAISocket.on('message', (data: Buffer) => {
             if (socket.readyState === 1) { // OPEN
               socket.send(data.toString());
             }
           });
 
-          openAISocket.on('error', (err: any) => {
+          openAISocket.on('error', (err: Error) => {
             this.emit('error', err);
             socket.close();
           });
@@ -68,7 +70,8 @@ export class RealtimeProxy extends EventEmitter {
 
     } catch (e) {
       this.wsServer = {
-        close: (cb: any) => cb && cb(),
+        close: (cb: () => void) => cb && cb(),
+        on: (_event: string, _handler: (...args: unknown[]) => void) => {},
       };
       this.emit('listening', port);
     }
@@ -80,9 +83,10 @@ export class RealtimeProxy extends EventEmitter {
     }
     this.activeConnections.clear();
 
-    if (this.wsServer) {
-      await new Promise<void>((resolve) => {
-        this.wsServer.close(() => {
+  if (this.wsServer != null) {
+    const server = this.wsServer;
+    await new Promise<void>((resolve) => {
+      server.close(() => {
           resolve();
         });
       });

@@ -95,9 +95,9 @@ export class PermissionManager {
 
   /** Trả về danh sách các tool khả dụng cho stepIndex hiện tại */
   filterActiveTools(stepIndex: number): string[] {
-    if (this.stepFilters.has(stepIndex)) {
-      return this.stepFilters.get(stepIndex)!;
-    }
+  if (this.stepFilters.has(stepIndex)) {
+    return this.stepFilters.get(stepIndex) ?? [];
+  }
     return Array.from(this.permissions.keys());
   }
 

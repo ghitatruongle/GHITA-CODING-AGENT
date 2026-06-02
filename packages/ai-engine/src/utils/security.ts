@@ -14,7 +14,7 @@ const MALICIOUS_PATTERNS: Array<{
   threatLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 }> = [
   {
-    regex: /rm\s+-rf?\s+([\/\*~]|\.\.?)/i,
+    regex: /rm\s+-rf?\s+([/*~]|\.\.?)/i,
     reason: 'Phát hiện lệnh rm -rf trên thư mục nhạy cảm (root, wildcard, home hoặc parent). Có thể gây mất mát toàn bộ dữ liệu.',
     threatLevel: 'CRITICAL',
   },
@@ -96,7 +96,7 @@ export class SecurityGuard {
   /**
    * Rà soát tham số của một Tool sử dụng
    */
-  static scanToolUse(toolName: string, args: any): SecurityScanResult {
+  static scanToolUse(toolName: string, args: Record<string, unknown>): SecurityScanResult {
     // Nếu là tool chạy lệnh hệ thống (ví dụ: execute_command, run_bash, v.v.)
     if (['execute_command', 'run_command', 'run_bash', 'terminal_run'].includes(toolName)) {
       const command = args?.command || args?.CommandLine || args?.cmd || '';
@@ -121,7 +121,7 @@ export class SecurityGuard {
     return { safe: true };
   }
 
-  private static extractStringValues(obj: any): string[] {
+  private static extractStringValues(obj: unknown): string[] {
     const strings: string[] = [];
     if (!obj) return strings;
 
@@ -131,9 +131,10 @@ export class SecurityGuard {
       for (const item of obj) {
         strings.push(...this.extractStringValues(item));
       }
-    } else if (typeof obj === 'object') {
-      for (const key of Object.keys(obj)) {
-        strings.push(...this.extractStringValues(obj[key]));
+} else if (typeof obj === 'object') {
+    const record = obj as Record<string, unknown>;
+    for (const key of Object.keys(record)) {
+      strings.push(...this.extractStringValues(record[key]));
       }
     }
 

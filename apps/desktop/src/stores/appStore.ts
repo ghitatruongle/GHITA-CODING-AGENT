@@ -59,6 +59,10 @@ interface AppState {
   contextUsage: { used: number; max: number; percentage: number };
   setContextUsage: (usage: { used: number; max: number; percentage: number }) => void;
 
+  // Permission Mode
+  permissionMode: 'custom' | 'auto';
+  setPermissionMode: (mode: 'custom' | 'auto') => void;
+
   // Phase 7: Dashboard stats
   dashboardStats: { totalTokens: number; totalCost: number; activeAgents: number; mcpConnections: number };
   setDashboardStats: (stats: { totalTokens: number; totalCost: number; activeAgents: number; mcpConnections: number }) => void;
@@ -125,6 +129,10 @@ export const useAppStore = create<AppState>()(
       contextUsage: { used: 0, max: 128000, percentage: 0 },
       setContextUsage: (usage) => set({ contextUsage: usage }),
 
+      // Permission Mode
+      permissionMode: 'custom' as 'custom' | 'auto',
+      setPermissionMode: (mode) => set({ permissionMode: mode }),
+
       // Phase 7: Dashboard stats
       dashboardStats: { totalTokens: 0, totalCost: 0, activeAgents: 0, mcpConnections: 0 },
       setDashboardStats: (stats) => set({ dashboardStats: stats }),
@@ -153,6 +161,7 @@ export const useAppStore = create<AppState>()(
         activeTab: state.activeTab,
         isTerminalOpen: state.isTerminalOpen,
         plugins: state.plugins,
+        permissionMode: state.permissionMode,
       }),
     },
   ),

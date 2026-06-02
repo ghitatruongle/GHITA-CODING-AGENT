@@ -268,6 +268,7 @@ export interface TranslationKeys {
     stopped: string;
     compliant: string;
     disabledLabel: string;
+    demoMode: string;
   };
   chat: {
     welcomeMessage: string;
@@ -321,6 +322,12 @@ export interface TranslationKeys {
     runSuccess: string;
     runError: string;
     messagesCount: string;
+    compactSuccess: string;
+    noWorkspace: string;
+    permissionCustom: string;
+    permissionAuto: string;
+    liveAgentEvents: string;
+    clear: string;
   };
   terminal: {
     title: string;

@@ -5,7 +5,7 @@
 import * as vscode from 'vscode';
 import { generateUUID } from '@ghita/shared';
 
-let statusBarItem: vscode.window.StatusBarItem | undefined;
+let statusBarItem: vscode.StatusBarItem | undefined;
 let isConnected = false;
 
 /**
@@ -25,7 +25,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Register command: Connect Sidecar
   const connectCommand = vscode.commands.registerCommand('ghita-sidecar.connect', async () => {
     const config = vscode.workspace.getConfiguration('ghita');
-    const port = config.get<number>('ghita.corePort', 50051);
+    const port = config.get<number>('ghita.corePort', 8080);
 
     if (isConnected) {
       vscode.window.showInformationMessage(`GHITA Sidecar is already connected on gRPC port :${port}.`);
@@ -33,12 +33,16 @@ export function activate(context: vscode.ExtensionContext) {
     }
 
     // Mock establishing JSON-RPC over WebSocket or gRPC transport with GHITA Core daemon
-    statusBarItem!.text = '$(sync~spin) GHITA: Connecting...';
-    
-    setTimeout(() => {
-      isConnected = true;
-      statusBarItem!.text = `$(check-all) GHITA: Connected (:${port})`;
-      statusBarItem!.tooltip = `Connected to GHITA Core Daemon on gRPC :${port}. Sync active.`;
+if (statusBarItem) {
+    statusBarItem.text = '$(sync~spin) GHITA: Connecting...';
+  }
+
+  setTimeout(() => {
+    isConnected = true;
+    if (statusBarItem) {
+      statusBarItem.text = `$(check-all) GHITA: Connected (:${port})`;
+      statusBarItem.tooltip = `Connected to GHITA Core Daemon on gRPC :${port}. Sync active.`;
+    }
       vscode.window.showInformationMessage(`Successfully connected sidecar to GHITA Core daemon on port ${port}! Syncing active workspace...`);
     }, 1200);
   });

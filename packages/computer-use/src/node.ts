@@ -20,15 +20,6 @@ interface NutScreenCapture {
   height?: number;
 }
 
-function resolveMouseButton(button: MouseButton | undefined, buttons: NutButtonMap): unknown {
-  const normalized = button ?? 'left';
-  return buttons[normalized] ?? buttons[normalized.toUpperCase()] ?? buttons.LEFT;
-}
-
-function resolveKey(key: string, keys: NutKeyMap): unknown {
-  return keys[key] ?? keys[key.toUpperCase()] ?? key;
-}
-
 function encodeCapture(capture: unknown): ScreenCapture {
   const typed = capture as NutScreenCapture;
   const raw = typed.data;
@@ -57,6 +48,19 @@ function encodeCapture(capture: unknown): ScreenCapture {
 
 export async function createNutJsAdapter(): Promise<ComputerUseAdapter> {
   const nut = await import('@nut-tree/nut-js');
+  type NutMouseButton = Parameters<typeof nut.mouse.click>[0];
+  type NutKeyboardKey = Parameters<typeof nut.keyboard.pressKey>[number];
+  const buttons = nut.Button as NutButtonMap;
+  const keys = nut.Key as NutKeyMap;
+
+  const resolveMouseButton = (button?: MouseButton): NutMouseButton => {
+    const normalized = button ?? 'left';
+    return (buttons[normalized] ?? buttons[normalized.toUpperCase()] ?? buttons.LEFT) as NutMouseButton;
+  };
+
+  const resolveKey = (key: string): NutKeyboardKey => {
+    return (keys[key] ?? keys[key.toUpperCase()] ?? key) as NutKeyboardKey;
+  };
 
   return {
     getScreenSize: async () => ({
@@ -70,10 +74,14 @@ export async function createNutJsAdapter(): Promise<ComputerUseAdapter> {
       if (point) {
         await nut.mouse.setPosition(new nut.Point(point.x, point.y));
       }
-      await nut.mouse.click(resolveMouseButton(button, nut.Button));
+      await nut.mouse.click(resolveMouseButton(button));
     },
-    typeText: (text) => nut.keyboard.type(text),
-    pressKey: (key) => nut.keyboard.pressKey(resolveKey(key, nut.Key)),
-    screenshot: async () => encodeCapture(await nut.screen.capture()),
+    typeText: async (text) => {
+      await nut.keyboard.type(text);
+    },
+    pressKey: async (key) => {
+      await nut.keyboard.pressKey(resolveKey(key));
+    },
+    screenshot: async () => encodeCapture(await nut.screen.grab()),
   };
 }

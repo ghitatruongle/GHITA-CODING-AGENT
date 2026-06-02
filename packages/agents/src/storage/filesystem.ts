@@ -41,7 +41,8 @@ export class FileSystemStorage<T = unknown> implements StorageBackend<T> {
       const fs = await import('node:fs/promises');
       const raw = await fs.readFile(this.filePath(key), 'utf-8');
       return JSON.parse(raw) as SerializedEntry<T>;
-    } catch {
+    } catch (error) {
+      console.warn('[FileSystemStorage] Failed to read entry:', (error as Error).message);
       return undefined;
     }
   }

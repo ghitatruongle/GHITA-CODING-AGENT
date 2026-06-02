@@ -88,13 +88,13 @@ export class GhitAgentClient {
   }
 
   /** Lấy danh sách subagents khả dụng */
-  async getSubagents(): Promise<any[]> {
-    try {
-      const response = await fetch(`${this.config.serverUrl}/api/subagents`, {
-        signal: AbortSignal.timeout(5000),
-      });
-      if (!response.ok) return [];
-      const data = (await response.json()) as { subagents: any[] };
+ async getSubagents(): Promise<Record<string, unknown>[]> {
+ try {
+ const response = await fetch(`${this.config.serverUrl}/api/subagents`, {
+ signal: AbortSignal.timeout(5000),
+ });
+ if (!response.ok) return [];
+ const data = (await response.json()) as { subagents: Record<string, unknown>[] };
       return data.subagents || [];
     } catch {
       return []; // Fallback for network/mock environments
@@ -102,7 +102,7 @@ export class GhitAgentClient {
   }
 
   /** Kích hoạt vòng lặp tự sửa sai Ralph Loop cho một tác vụ */
-  async runRalphLoop(task: string, maxIterations = 5): Promise<any> {
+  async runRalphLoop(task: string, maxIterations = 5): Promise<Record<string, unknown>> {
     const response = await fetch(`${this.config.serverUrl}/api/ralph-loop`, {
       method: 'POST',
       headers: {

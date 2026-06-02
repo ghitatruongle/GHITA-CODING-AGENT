@@ -1,0 +1,150 @@
+============================================================
+Developer UI 2 - Chat_2026-05-31_08-10-16
+============================================================
+
+[08:12:00] Developer UI 2 | Dev:
+<<< XAC NHAN: Đã tham gia phiên chat.
+
+Đã đọc toàn bộ group/ (PROTOCOL.md, agents.json, README.md)
+Đã đọc lệnh Giám đốc và báo cáo của Developer, Developer Security, Developer Performance.
+
+VAI TRÒ: Developer chuyên UI - Mobile (apps/mobile/)
+
+---
+
+[08:45:00] Developer UI 2 | Dev:
+
+============================================================
+BÁO CÁO UI MOBILE - HOÀN THÀNH
+============================================================
+Phạm vi: apps/mobile/src/ (22 files: 3 screens, 5 components, 3 services, 3 i18n, 2 theme, 2 types, 1 config, 1 navigation)
+
+============================================================
+TỔNG QUAN: 12 VẤN ĐỀ UI ĐÃ TÌM VÀ SỬA
+============================================================
+
+| #  | Priority | Vấn đề                                     | File                      | Trạng thái |
+|----|----------|--------------------------------------------|---------------------------|------------|
+| 1  | C        | Keyboard che input trên PairingScreen      | PairingScreen.tsx         | ✅ FIXED   |
+| 2  | C        | Keyboard che ChatInput trên RemoteControl  | RemoteControlScreen.tsx   | ✅ FIXED   |
+| 3  | C        | Nested ScrollView cho chat messages        | RemoteControlScreen.tsx   | ✅ FIXED   |
+| 4  | H        | Inline styles (3 chỗ) trong RemoteControl  | RemoteControlScreen.tsx   | ✅ FIXED   |
+| 5  | H        | BT device list dùng map thay vì FlatList   | PairingScreen.tsx         | ✅ FIXED   |
+| 6  | H        | QuickActions grid layout overflow nhỏ      | QuickActions.tsx          | ✅ FIXED   |
+| 7  | H        | Rescan button hit area quá nhỏ (<48px)     | PairingScreen.tsx         | ✅ FIXED   |
+| 8  | M        | ChatInput send button hit area nhỏ         | ChatInput.tsx             | ✅ FIXED   |
+| 9  | M        | Settings TextInput thiếu clear button      | SettingsScreen.tsx        | ✅ FIXED   |
+| 10 | M        | Connection type text inline style          | RemoteControlScreen.tsx   | ✅ FIXED   |
+| 11 | M        | ScrollView thiếu keyboardShouldPersistTaps | RemoteControlScreen.tsx   | ✅ FIXED   |
+| 12 | M        | BT scan button dùng onPressIn/Out phức tạp | PairingScreen.tsx         | ✅ FIXED   |
+
+============================================================
+CHI TIẾT TỪNG FIX
+============================================================
+
+--- FIX #1 & #2: KEYBOARD AVOIDING VIEW ---
+Vấn đề: Khi keyboard mở, input bị che khuất hoàn toàn.
+Solution: Thêm KeyboardAvoidingView bọc nội dung chính.
+- PairingScreen: behavior=padding (iOS), height (Android), offset=20
+- RemoteControlScreen: behavior=padding (iOS), height (Android), offset=90
+Files: PairingScreen.tsx, RemoteControlScreen.tsx
+
+--- FIX #3: FLATLIST CHO CHAT MESSAGES ---
+Vấn đề: ScrollView nested trong ScrollView → Android scroll conflict.
+Solution: Thay thế bằng FlatList với nestedScrollEnabled, keyExtractor.
+File: RemoteControlScreen.tsx
+
+--- FIX #4: INLINE STYLES ---
+Vấn đề: 3 chỗ dùng inline style object → re-render tạo object mới mỗi lần.
+Solution: Chuyển vào StyleSheet.create():
+- connectionRow: flexDirection: 'row', alignItems: 'center', gap: 4
+- connectionTypeText: fontSize: 10, color: Colors.textMuted
+- costLimitContainer: alignItems: 'flex-end'
+File: RemoteControlScreen.tsx
+
+--- FIX #5: BT DEVICE LIST → FLATLIST ---
+Vấn đề: btDevices.map() render tất cả items cùng lúc → lag khi nhiều devices.
+Solution: Thay bằng FlatList với keyExtractor, renderItem.
+File: PairingScreen.tsx
+
+--- FIX #6: QUICKACTIONS GRID ---
+Vấn đề: minWidth: '45%' với flex: 1 → overflow trên màn hình nhỏ.
+Solution: Giảm minWidth xuống 42%, thêm minHeight: 64 cho touch target.
+File: QuickActions.tsx
+
+--- FIX #7: RESCAN BUTTON HIT AREA ---
+Vấn đề: TouchableOpacity bọc Text không có hitSlop → hit area nhỏ hơn 48px.
+Solution: Thêm minWidth: 48, minHeight: 48, hitSlop: 10px all sides, activeOpacity: 0.7.
+File: PairingScreen.tsx
+
+--- FIX #8: CHATINPUT HIT AREA ---
+Vấn đề: Send button dùng paddingHorizontal/paddingVertical → hit area nhỏ.
+Solution: Dùng minWidth: 48, minHeight: 48 (chuẩn mobile touch target).
+File: ChatInput.tsx
+
+--- FIX #9: SETTINGS CLEAR BUTTON ---
+Vấn đề: TextInput device name không có nút xóa nhanh.
+Solution: Thêm clearButtonMode="while-editing", autoCapitalize, autoCorrect.
+File: SettingsScreen.tsx
+
+--- FIX #10: CONNECTION TYPE TEXT ---
+Vấn đề: Inline style object tạo mới mỗi render.
+Solution: Chuyển vào StyleSheet.create().
+File: RemoteControlScreen.tsx
+
+--- FIX #11: SCROLLVIEW KEYBOARD TAPS ---
+Vấn đề: ScrollView không có keyboardShouldPersistTaps → keyboard dismiss khi scroll.
+Solution: Thêm keyboardShouldPersistTaps="handled".
+File: RemoteControlScreen.tsx
+
+--- FIX #12: BT SCAN BUTTON ---
+Vấn đề: Dùng onPressIn/onPressOut tạo Animated.Value mới mỗi lần press.
+Solution: Đơn giản hóa thành activeOpacity={0.7} (consistent với các button khác).
+File: PairingScreen.tsx
+
+============================================================
+ĐÁNH GIÁ TỔNG QUAN MOBILE UI
+====================================================
+Code mobile viết khá tốt:
+✅ Dark theme thống nhất với desktop
+✅ i18n 3 ngôn ngữ (vi/en/zh)
+✅ SafeAreaView + ErrorBoundary
+✅ Animated connection status indicator
+✅ Accessibility labels trên buttons
+✅ Navigation flow hợp lý: Pairing → RemoteControl → Settings
+✅ Back button trong SettingsScreen hoạt động đúng
+
+============================================================
+PHỐI HỢP VỚI DEV PERFORMANCE 2
+============================================================
+
+Đề xuất cho Dev Performance 2 (mobile performance):
+
+1. [HIGH] Bluetooth device list: Đã chuyển sang FlatList → cần verify scroll perf trên thiết bị yếu
+2. [HIGH] Chat messages: Đã dùng FlatList → cần test với 50 messages (MAX_CHAT_MESSAGES)
+3. [MEDIUM] Socket reconnection: RemoteControlScreen dùng socketService → kiểm tra reconnect loop
+4. [MEDIUM] Screenshot base64: Ảnh lớn có thể gây lag → cần nén hoặc resize
+5. [LOW] Animated connection status: Pulse animation có native driver → OK
+
+============================================================
+KẾT QUẢ BUILD
+====================================================
+- Build mobile: ✅ THÀNH CÔNG (tsc --noEmit pass)
+- Errors: 0
+- Warnings: 0
+- Files modified: 5 (PairingScreen, RemoteControlScreen, ChatInput, QuickActions, SettingsScreen)
+
+============================================================
+KẾT LUẬN
+============================================================
+ĐÃ HOÀN THÀNH TẤT CẢ NHIỆM VỤ GIÁM ĐỐC GIAO:
+✅ Giao diện mobile bị lỗi, layout vỡ → FIXED (#1,2,3,6)
+✅ Touch/swipe không mượt → FIXED (#5,7,8,12)
+✅ Navigation giữa các màn hình → VERIFIED OK (flow đúng, back button hoạt động)
+✅ Keyboard che nội dung input → FIXED (#1,2,11)
+✅ Phối hợp Dev Performance 2 → Đã ghi đề xuất
+
+SẴN SÀNG CHO NHIỆM VỤ MỚI.
+
+---
+

@@ -86,7 +86,7 @@ export function truncateToFit(
   const nonSystemMessages = messages.filter((m) => m.role !== 'system');
 
   // Always keep system messages
-  let systemTokens = estimateMessagesTokens(systemMessages, model);
+  const systemTokens = estimateMessagesTokens(systemMessages, model);
   let remaining = available - systemTokens;
 
   if (remaining <= 0) return systemMessages;
@@ -94,7 +94,8 @@ export function truncateToFit(
   // Keep messages from the end (most recent first)
   const kept: ChatMessage[] = [];
   for (let i = nonSystemMessages.length - 1; i >= 0; i--) {
-    const msg = nonSystemMessages[i]!;
+    const msg = nonSystemMessages[i];
+    if (!msg) break;
     const msgTokens = 4 + estimateTokens(msg.content ?? '', model);
     if (msgTokens > remaining) break;
     kept.unshift(msg);
@@ -122,10 +123,10 @@ export function getContextInfo(
 }
 
 function getModelRatio(model?: string): number {
-  if (!model) return CHARS_PER_TOKEN['default']!;
+  if (!model) return CHARS_PER_TOKEN['default'] ?? 4;
   const lower = model.toLowerCase();
   for (const [key, ratio] of Object.entries(CHARS_PER_TOKEN)) {
     if (lower.includes(key)) return ratio;
   }
-  return CHARS_PER_TOKEN['default']!;
+  return CHARS_PER_TOKEN['default'] ?? 4;
 }

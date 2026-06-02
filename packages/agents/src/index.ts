@@ -6,7 +6,7 @@ import type { Agent, AgentGroup, AgentRole, AgentTask } from '@ghita/shared';
 import type { AgentMemory } from '@ghita/memory';
 
 export interface SkillRegistry {
-  [key: string]: any;
+ [key: string]: Record<string, unknown>;
 }
 
 // --- Phase 4: Multi-Agent & Pipeline exports ---

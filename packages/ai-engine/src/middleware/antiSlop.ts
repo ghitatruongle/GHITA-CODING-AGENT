@@ -6,6 +6,8 @@
 // Tham chiếu: Continue (anti-slop)
 // ==============================================================================
 
+import type BetterSqlite3 from 'better-sqlite3';
+type BetterSqlite3Database = InstanceType<typeof BetterSqlite3>;
 import type { ChatMiddleware, ChatStreamMiddleware } from '../utils/middleware.js';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -35,6 +37,10 @@ interface TokenSavingsLog {
   tokensSaved: number;
   patternsMatched: string[];
   totalInputTokens: number;
+}
+
+interface Runnable {
+  run(params: Record<string, unknown>): unknown;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -81,25 +87,29 @@ class AhoCorasick {
     // Step 1: Build goto function
     let newState = 0;
     for (let i = 0; i < this.patterns.length; i++) {
-      const pattern = this.patterns[i]!.toLowerCase();
+      const patternText = this.patterns[i]?.toLowerCase();
+      if (!patternText) continue;
       let currentState = 0;
 
-      for (const char of pattern) {
+      for (const char of patternText) {
         if (!gotoFn[currentState]) gotoFn[currentState] = new Map();
-        const next = gotoFn[currentState]!.get(char);
+        const currentGoto = gotoFn[currentState];
+        if (!currentGoto) continue;
+        const next = currentGoto.get(char);
         if (next !== undefined) {
           currentState = next;
         } else {
           newState++;
           if (!gotoFn[currentState]) gotoFn[currentState] = new Map();
-          gotoFn[currentState]!.set(char, newState);
+          const stateGoto = gotoFn[currentState];
+          if (stateGoto) stateGoto.set(char, newState);
           gotoFn[newState] = new Map();
           outputFn[newState] = [];
           currentState = newState;
         }
       }
       if (!outputFn[currentState]) outputFn[currentState] = [];
-      outputFn[currentState]!.push(i);
+      outputFn[currentState]?.push(i);
     }
 
     // Fill missing goto for root
@@ -110,14 +120,15 @@ class AhoCorasick {
     const failFn: number[] = new Array(newState + 1).fill(0);
 
     // Set fail for depth-1 states to 0
-    for (const [_char, state] of gotoFn[0]!) {
+    for (const [_char, state] of gotoFn[0] ?? new Map()) {
       failFn[state] = 0;
       queue.push(state);
     }
 
     while (queue.length > 0) {
-      const current = queue.shift()!;
-      const currentGoto = gotoFn[current] || new Map();
+    const current = queue.shift();
+    if (current === undefined) break;
+    const currentGoto = gotoFn[current] || new Map();
 
       for (const [char, nextState] of currentGoto) {
         queue.push(nextState);
@@ -129,7 +140,7 @@ class AhoCorasick {
         failFn[nextState] = (failTarget !== undefined && failTarget !== nextState) ? failTarget : 0;
 
         // Merge output
-        outputFn[nextState] = [...(outputFn[nextState] ?? []), ...(outputFn[failFn[nextState]!] ?? [])];
+        outputFn[nextState] = [...(outputFn[nextState] ?? []), ...(outputFn[failFn[nextState] ?? 0] ?? [])];
       }
     }
 
@@ -148,7 +159,8 @@ class AhoCorasick {
     const lower = text.toLowerCase();
 
     for (let i = 0; i < lower.length; i++) {
-      const char = lower[i]!;
+      const char = lower[i];
+    if (char === undefined) continue;
       while (!(this.gotoFn[currentState] || new Map()).has(char) && currentState !== 0) {
         currentState = this.failFn[currentState] ?? 0;
       }
@@ -192,8 +204,9 @@ function isInsideCodeBlock(state: CodeBlockState, line: string): boolean {
 
   if (backtickMatch || tildeMatch) {
     const match = backtickMatch || tildeMatch;
-    const fence = (match![1]![0] as '`' | '~');
-    const count = match![1]!.length;
+    if (!match || !match[1]) return state.inCodeBlock;
+    const fence = (match[1][0] as '`' | '~');
+    const count = match[1].length;
 
     if (!state.inCodeBlock) {
       // Opening fence
@@ -230,9 +243,9 @@ function loadSlopConfig(configPath: string): string[] {
       if (!trimmed || trimmed.startsWith('#')) continue;
 
       // Format: - pattern: "regex here"
-      const match = trimmed.match(/^-\s*(?:pattern:\s*)?["'](.+)["']/);
-      if (match) {
-        patterns.push(match[1]!);
+    const match = trimmed.match(/^-\s*(?:pattern:\s*)?["'](.+)["']/);
+    if (match && match[1]) {
+      patterns.push(match[1]);
       } else if (trimmed.startsWith('- ')) {
         // Simple list format: - Certainly!
         patterns.push(trimmed.slice(2).replace(/["']/g, ''));
@@ -253,8 +266,8 @@ class TokenSavingsTracker {
   private logs: TokenSavingsLog[] = [];
   private totalSaved = 0;
   private dbPath: string | null = null;
-  private db: any = null;
-  private insertStmt: any = null;
+  private db: BetterSqlite3Database | null = null;
+  private insertStmt: Runnable | null = null;
   private dbInitialized = false;
 
   constructor(dbPath?: string) {
@@ -268,7 +281,7 @@ class TokenSavingsTracker {
 
     try {
       const Database = (await import('better-sqlite3')).default;
-      this.db = new Database(this.dbPath);
+      this.db = new Database(this.dbPath) as InstanceType<typeof Database>;
 
       this.db.exec(`
         CREATE TABLE IF NOT EXISTS anti_slop_savings (
@@ -279,15 +292,16 @@ class TokenSavingsTracker {
           total_input_tokens INTEGER NOT NULL
         );
         CREATE INDEX IF NOT EXISTS idx_savings_timestamp
-          ON anti_slop_savings(timestamp);
+        ON anti_slop_savings(timestamp);
       `);
 
       this.insertStmt = this.db.prepare(`
         INSERT INTO anti_slop_savings (timestamp, tokens_saved, patterns_matched, total_input_tokens)
         VALUES (@timestamp, @tokensSaved, @patternsMatched, @totalInputTokens)
-      `);
-    } catch (err: any) {
-      console.warn(`[AntiSlop] SQLite unavailable (${err.message}), using in-memory only`);
+      `) as Runnable;
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn(`[AntiSlop] SQLite unavailable (${message}), using in-memory only`);
       this.db = null;
       this.insertStmt = null;
     }
@@ -305,8 +319,9 @@ class TokenSavingsTracker {
           patternsMatched: JSON.stringify(entry.patternsMatched),
           totalInputTokens: entry.totalInputTokens,
         });
-      } catch (err: any) {
-        console.warn(`[AntiSlop] SQLite insert failed: ${err.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`[AntiSlop] SQLite insert failed: ${message}`);
       }
     }
   }

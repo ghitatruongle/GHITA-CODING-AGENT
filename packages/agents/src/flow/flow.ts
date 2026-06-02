@@ -161,7 +161,8 @@ export class Flow {
       // Find steps whose dependencies are all satisfied
       const ready: FlowStep[] = [];
       for (const id of remaining) {
-        const step = stepMap.get(id)!;
+        const step = stepMap.get(id);
+ if (!step) continue;
         const deps = step.dependsOn ?? [];
         const allDepsMet = deps.every((d) => completed.has(d));
         if (allDepsMet) ready.push(step);

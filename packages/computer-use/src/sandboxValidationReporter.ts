@@ -106,8 +106,8 @@ export class SandboxValidationReporter {
       const stats = await this.dso.getSandboxStats();
       if (stats) testsPassed++;
       else warnings.push('DSO: getSandboxStats returned empty');
-    } catch (err: any) {
-      errors.push(`DSO Validation Error: ${err.message}`);
+  } catch (err: unknown) {
+    errors.push(`DSO Validation Error: ${(err as Error).message}`);
     }
 
     recommendations.push(
@@ -246,8 +246,8 @@ export class SandboxValidationReporter {
       const networkCreated = !!dsoNetwork;
       if (networkCreated) testsPassed++;
       else errors.push('Integration: Failed to create DSO network');
-    } catch (err: any) {
-      errors.push(`Integration: DSO network creation failed - ${err.message}`);
+  } catch (err: unknown) {
+    errors.push(`Integration: DSO network creation failed - ${(err as Error).message}`);
     }
 
     testsRun++;
@@ -256,16 +256,16 @@ export class SandboxValidationReporter {
       const securityBlocked = !this.securityFilter.validateCommand(dangerousCmd).safe;
       if (securityBlocked) testsPassed++;
       else errors.push('Integration: Security filter not blocking dangerous commands in sandbox');
-    } catch (err: any) {
-      errors.push(`Integration: Security filter error - ${err.message}`);
+  } catch (err: unknown) {
+    errors.push(`Integration: Security filter error - ${(err as Error).message}`);
     }
 
     testsRun++;
     try {
       await this.dso.cleanupOrphans();
       testsPassed++;
-    } catch (err: any) {
-      warnings.push(`Integration: Cleanup reported warnings - ${err.message}`);
+  } catch (err: unknown) {
+    warnings.push(`Integration: Cleanup reported warnings - ${(err as Error).message}`);
       testsPassed++;
     }
 
@@ -438,5 +438,46 @@ export class SandboxValidationReporter {
     }
 
     return md;
+  }
+
+  generateHtmlReport(report: SandboxValidationReport): string {
+    let html = '<!DOCTYPE html>\n';
+    html += '<html lang="en"><head><meta charset="UTF-8">\n';
+    html += '<title>Sandbox Validation Report</title>\n';
+    html += '<style>\n';
+    html += 'body { font-family: system-ui, sans-serif; margin: 2rem; }\n';
+    html += '.status-PASS { color: #28a745; } .status-FAIL { color: #dc3545; } .status-WARNING { color: #ffc107; }\n';
+    html += 'table { border-collapse: collapse; width: 100%; }\n';
+    html += 'th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }\n';
+    html += 'th { background: #f4f4f4; }\n';
+    html += '.chart-container { margin: 20px 0; padding: 16px; border: 1px solid #eee; }\n';
+    html += '</style></head><body>\n';
+
+    html += '<h1>Sandbox Validation Report</h1>\n';
+    html += `<p><strong>Generated:</strong> ${report.generatedAt}</p>\n`;
+    html += `<p><strong>Sandbox ID:</strong> <code>${report.sandboxId}</code></p>\n`;
+    html += `<p><strong>Overall Status:</strong> `;
+    html += `<span class="status-${report.overallStatus}">${report.overallStatus}</span></p>\n`;
+
+    html += '<h2>Summary</h2>\n';
+    html += '<table><tr><th>Metric</th><th>Value</th></tr>\n';
+    html += `<tr><td>Total Tests</td><td>${report.summary.totalTests}</td></tr>\n`;
+    html += `<tr><td>Passed</td><td>${report.summary.totalPassed}</td></tr>\n`;
+    html += `<tr><td>Failed</td><td>${report.summary.totalFailed}</td></tr>\n`;
+    html += `<tr><td>Warnings</td><td>${report.summary.totalWarnings}</td></tr>\n`;
+    html += `<tr><td>Avg Duration</td><td>${report.summary.averageDuration.toFixed(2)}ms</td></tr>\n`;
+    html += '</table>\n';
+
+    html += '<h2>Module Analysis</h2>\n';
+    html += '<div class="chart-container">\n';
+    html += '<table><tr><th>Module</th><th>Passed</th><th>Failed</th><th>Status</th></tr>\n';
+    for (const r of report.results) {
+      html += `<tr><td>${r.module}</td><td>${r.testsPassed}/${r.testsRun}</td>`;
+      html += `<td>${r.testsFailed}</td><td>${r.passed ? 'PASS' : 'FAIL'}</td></tr>\n`;
+    }
+    html += '</table></div>\n';
+
+    html += '</body></html>';
+    return html;
   }
 }
