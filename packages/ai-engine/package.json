@@ -25,7 +25,7 @@
     "@ghita/shared": "workspace:*",
     "@grpc/grpc-js": "^1.14.3",
     "@grpc/proto-loader": "^0.8.1",
-    "better-sqlite3": "^11.7.0",
+    "better-sqlite3": "^12.10.0",
     "ws": "^8.18.0",
     "zod": "^3.23.8"
   },

@@ -168,7 +168,10 @@ function createLLMJudgeRule(config: LLMJudgeConfig): GuardrailRule {
     description: 'Uses LLM to evaluate content against criteria',
     priority: 200,
     enabled: true,
-    check: async (content: string, _context?: GuardrailContext): Promise<GuardrailResult | null> => {
+    check: async (
+      content: string,
+      _context?: GuardrailContext,
+    ): Promise<GuardrailResult | null> => {
       const criteriaList = config.criteria.map((c) => `- ${c}`).join('\n');
       const prompt = `Evaluate the following content against these criteria:
 ${criteriaList}

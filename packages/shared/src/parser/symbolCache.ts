@@ -25,7 +25,7 @@ export class SymbolCache {
 
   constructor(customDbPath?: string) {
     const dbPath = customDbPath || DEFAULT_DB_PATH;
-    
+
     // Đảm bảo thư mục cha của dbPath tồn tại
     const dir = path.dirname(dbPath);
     if (!fs.existsSync(dir)) {

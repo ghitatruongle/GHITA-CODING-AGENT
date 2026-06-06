@@ -146,7 +146,10 @@ export interface DocsGrillerConfig {
 function tokenize(text: string): string[] {
   return text
     .toLowerCase()
-    .replace(/[^a-z0-9àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ_\s-]/g, ' ')
+    .replace(
+      /[^a-z0-9àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ_\s-]/g,
+      ' ',
+    )
     .split(/\s+/)
     .filter((w) => w.length > 2);
 }
@@ -294,9 +297,15 @@ function parseMarkdownStructure(content: string): DocSection[] {
       }
 
       // TypeScript/JS class method signatures
-      const methodMatch = line.match(/(?:public|private|protected|async)?\s*(\w+)\s*\([^)]*\)\s*(?::\s*\w+)?/);
+      const methodMatch = line.match(
+        /(?:public|private|protected|async)?\s*(\w+)\s*\([^)]*\)\s*(?::\s*\w+)?/,
+      );
       const methodMatchStr = methodMatch?.[0];
-      if (methodMatchStr && methodMatchStr.includes('(') && !currentSection.signatures.includes(methodMatchStr.trim())) {
+      if (
+        methodMatchStr &&
+        methodMatchStr.includes('(') &&
+        !currentSection.signatures.includes(methodMatchStr.trim())
+      ) {
         if (methodMatchStr.length > 10) {
           currentSection.signatures.push(methodMatchStr.trim());
         }
@@ -454,7 +463,11 @@ export class DocsGriller {
 
       // Skip test files, node_modules, dist, build
       const relPath = path.relative(resolvedDir, filePath);
-      if (relPath.includes('node_modules') || relPath.includes('dist/') || relPath.includes('.test.')) {
+      if (
+        relPath.includes('node_modules') ||
+        relPath.includes('dist/') ||
+        relPath.includes('.test.')
+      ) {
         continue;
       }
 
@@ -483,7 +496,10 @@ export class DocsGriller {
 
       for (const src of this.sourceFiles) {
         // Check if doc mentions source file path
-        if (doc.content.includes(src.filePath) || doc.content.includes(path.basename(src.filePath, path.extname(src.filePath)))) {
+        if (
+          doc.content.includes(src.filePath) ||
+          doc.content.includes(path.basename(src.filePath, path.extname(src.filePath)))
+        ) {
           linkedFiles.push(src.filePath);
           continue;
         }
@@ -593,7 +609,11 @@ export class DocsGriller {
           for (const endpoint of section.apiEndpoints) {
             // Doc mentions an API endpoint that doesn't exist in any source file
             const existsInCode = this.sourceFiles.some((s) =>
-              s.apiRoutes.some((r) => endpoint.includes(r) || r.includes(endpoint.replace(/\s*(GET|POST|PUT|DELETE|PATCH)\s+/i, '')))
+              s.apiRoutes.some(
+                (r) =>
+                  endpoint.includes(r) ||
+                  r.includes(endpoint.replace(/\s*(GET|POST|PUT|DELETE|PATCH)\s+/i, '')),
+              ),
             );
             if (!existsInCode) {
               contradictions.push({
@@ -623,7 +643,6 @@ export class DocsGriller {
             }
           }
         }
-
       }
     }
 
@@ -700,15 +719,18 @@ export class DocsGriller {
     if (this.docs.length > 0 && questions.length < limit) {
       const genericQuestions: Array<{ question: string; severity: GrillQuestion['severity'] }> = [
         {
-          question: 'What is the single source of truth for the system architecture? Are there any undocumented assumptions?',
+          question:
+            'What is the single source of truth for the system architecture? Are there any undocumented assumptions?',
           severity: 'info',
         },
         {
-          question: 'Are there any deprecated APIs or modules still referenced in the docs that should be cleaned up?',
+          question:
+            'Are there any deprecated APIs or modules still referenced in the docs that should be cleaned up?',
           severity: 'info',
         },
         {
-          question: 'Does the current error handling strategy cover all edge cases documented in the design specs?',
+          question:
+            'Does the current error handling strategy cover all edge cases documented in the design specs?',
           severity: 'warning',
         },
       ];
@@ -717,19 +739,23 @@ export class DocsGriller {
       if ((mode ?? this.config.mode) === 'adversarial') {
         genericQuestions.push(
           {
-            question: 'If the lead architect left today, could a new developer understand the system solely from these docs?',
+            question:
+              'If the lead architect left today, could a new developer understand the system solely from these docs?',
             severity: 'warning',
           },
           {
-            question: 'Are there any circular dependencies or implicit coupling between modules that the docs fail to capture?',
+            question:
+              'Are there any circular dependencies or implicit coupling between modules that the docs fail to capture?',
             severity: 'warning',
           },
           {
-            question: 'What happens if the primary database goes down? Is the failover strategy documented and tested?',
+            question:
+              'What happens if the primary database goes down? Is the failover strategy documented and tested?',
             severity: 'warning',
           },
           {
-            question: 'Are there any security assumptions in the docs that are not enforced in the actual code?',
+            question:
+              'Are there any security assumptions in the docs that are not enforced in the actual code?',
             severity: 'contradiction',
           },
         );
@@ -761,12 +787,12 @@ export class DocsGriller {
       const topKeywords = sorted.slice(0, 15).map(([k]) => k);
 
       for (const kw of topKeywords) {
-      const existing = topicDocs.get(kw);
-      if (existing) {
-        existing.push(doc.filePath);
-      } else {
-        topicDocs.set(kw, [doc.filePath]);
-      }
+        const existing = topicDocs.get(kw);
+        if (existing) {
+          existing.push(doc.filePath);
+        } else {
+          topicDocs.set(kw, [doc.filePath]);
+        }
       }
     }
 
@@ -864,12 +890,12 @@ export class DocsGriller {
       const comparison = this.compareAnswer(answer);
       const significant = comparison.matches.filter((m) => m.similarity >= 0.4);
       if (significant.length > 0) {
-      const topMatch = significant[0];
-      if (topMatch) {
-        session.designDecisions.push(
-          `Q${questionIdx + 1}: Answer aligns with ${significant.map((m) => m.doc).join(', ')} (sim: ${topMatch.similarity})`,
-        );
-      }
+        const topMatch = significant[0];
+        if (topMatch) {
+          session.designDecisions.push(
+            `Q${questionIdx + 1}: Answer aligns with ${significant.map((m) => m.doc).join(', ')} (sim: ${topMatch.similarity})`,
+          );
+        }
       }
       if (comparison.contradictions.length > 0) {
         session.designDecisions.push(
@@ -895,7 +921,9 @@ export class DocsGriller {
     ];
 
     if (session.docsScanned === 0) {
-      lines.push('> No documents found in docs/ directory. Add .md or .txt design files to enable Socratic grilling.');
+      lines.push(
+        '> No documents found in docs/ directory. Add .md or .txt design files to enable Socratic grilling.',
+      );
       return lines.join('\n');
     }
 
@@ -932,7 +960,7 @@ export class DocsGriller {
     lines.push(`## Socratic Questions (${session.questions.length})`);
     for (let i = 0; i < session.questions.length; i++) {
       const q = session.questions[i];
-    if (!q) continue;
+      if (!q) continue;
       const icon = q.severity === 'contradiction' ? '!!' : q.severity === 'warning' ? '!' : '?';
       lines.push(`${i + 1}. [${icon}] ${q.question}`);
       lines.push(`   Docs: ${q.sourceDocs.join(', ')}`);
@@ -1016,10 +1044,11 @@ export class DocsGriller {
 
   private getGitCommitTime(filePath: string): number | null {
     try {
-      const timestamp = execSync(
-        `git log -1 --format=%ct "${filePath}"`,
-        { encoding: 'utf-8', timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] },
-      ).trim();
+      const timestamp = execSync(`git log -1 --format=%ct "${filePath}"`, {
+        encoding: 'utf-8',
+        timeout: 5000,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }).trim();
       const epoch = parseInt(timestamp, 10);
       return isNaN(epoch) ? null : epoch * 1000;
     } catch {
@@ -1043,7 +1072,8 @@ export function createGrillMeCommand(griller?: DocsGriller): {
 
   return {
     name: 'Grill Me',
-    description: 'Socratic docs-aware design interview: scan docs/, detect contradictions, probe design assumptions',
+    description:
+      'Socratic docs-aware design interview: scan docs/, detect contradictions, probe design assumptions',
     trigger: '/grill-me',
     usage: '/grill-me [docs-path] [quick|deep|adversarial]',
     execute: async (args: string) => {

@@ -106,13 +106,13 @@ export class SandboxValidationReporter {
       const stats = await this.dso.getSandboxStats();
       if (stats) testsPassed++;
       else warnings.push('DSO: getSandboxStats returned empty');
-  } catch (err: unknown) {
-    errors.push(`DSO Validation Error: ${(err as Error).message}`);
+    } catch (err: unknown) {
+      errors.push(`DSO Validation Error: ${(err as Error).message}`);
     }
 
     recommendations.push(
       'DSO: Cân nhắc thêm health check tự động cho các container',
-      'DSO: Theo dõi memory usage của Docker daemon định kỳ'
+      'DSO: Theo dõi memory usage của Docker daemon định kỳ',
     );
 
     return {
@@ -142,12 +142,7 @@ export class SandboxValidationReporter {
       'dd if=/dev/zero of=/dev/sda',
     ];
 
-    const safeCommands = [
-      'ls -la',
-      'git status',
-      'node --version',
-      'pnpm install',
-    ];
+    const safeCommands = ['ls -la', 'git status', 'node --version', 'pnpm install'];
 
     for (const cmd of dangerousCommands) {
       testsRun++;
@@ -170,7 +165,7 @@ export class SandboxValidationReporter {
 
     recommendations.push(
       'Security: Cập nhật blacklist với các pattern mới từ production',
-      'Security: Theo dõi false positive rate định kỳ'
+      'Security: Theo dõi false positive rate định kỳ',
     );
 
     return {
@@ -217,7 +212,7 @@ export class SandboxValidationReporter {
 
     recommendations.push(
       'Headless: Cân nhắc thêm hỗ trợ cho more binary types',
-      'Headless: Đo lường hiệu năng trên codebase lớn >1000 files'
+      'Headless: Đo lường hiệu năng trên codebase lớn >1000 files',
     );
 
     return {
@@ -246,8 +241,8 @@ export class SandboxValidationReporter {
       const networkCreated = !!dsoNetwork;
       if (networkCreated) testsPassed++;
       else errors.push('Integration: Failed to create DSO network');
-  } catch (err: unknown) {
-    errors.push(`Integration: DSO network creation failed - ${(err as Error).message}`);
+    } catch (err: unknown) {
+      errors.push(`Integration: DSO network creation failed - ${(err as Error).message}`);
     }
 
     testsRun++;
@@ -256,23 +251,23 @@ export class SandboxValidationReporter {
       const securityBlocked = !this.securityFilter.validateCommand(dangerousCmd).safe;
       if (securityBlocked) testsPassed++;
       else errors.push('Integration: Security filter not blocking dangerous commands in sandbox');
-  } catch (err: unknown) {
-    errors.push(`Integration: Security filter error - ${(err as Error).message}`);
+    } catch (err: unknown) {
+      errors.push(`Integration: Security filter error - ${(err as Error).message}`);
     }
 
     testsRun++;
     try {
       await this.dso.cleanupOrphans();
       testsPassed++;
-  } catch (err: unknown) {
-    warnings.push(`Integration: Cleanup reported warnings - ${(err as Error).message}`);
+    } catch (err: unknown) {
+      warnings.push(`Integration: Cleanup reported warnings - ${(err as Error).message}`);
       testsPassed++;
     }
 
     recommendations.push(
       'Integration: Chuẩn bị Docker network cho Phase 18 OLT WebSocket server',
       'Integration: Kiểm tra Rust addon bindings cho Phase 19 memory indexer',
-      'Integration: Đảm bảo cleanup pipeline hoạt động trước khi bàn giao'
+      'Integration: Đảm bảo cleanup pipeline hoạt động trước khi bàn giao',
     );
 
     return {
@@ -289,8 +284,8 @@ export class SandboxValidationReporter {
   }
 
   private calculateOverallStatus(results: ValidationResult[]): 'PASS' | 'FAIL' | 'WARNING' {
-    const hasFail = results.some(r => r.testsFailed > 0);
-    const hasWarning = results.some(r => r.warnings.length > 0);
+    const hasFail = results.some((r) => r.testsFailed > 0);
+    const hasWarning = results.some((r) => r.warnings.length > 0);
 
     if (hasFail) return 'FAIL';
     if (hasWarning) return 'WARNING';
@@ -312,40 +307,40 @@ export class SandboxValidationReporter {
     const forAILLMEngineer: string[] = [];
     const forDevOpsRust: string[] = [];
 
-    const dsoResult = results.find(r => r.module === 'dso');
-    const securityResult = results.find(r => r.module === 'security');
-    const headlessResult = results.find(r => r.module === 'headless');
-    const integrationResult = results.find(r => r.module === 'integration');
+    const dsoResult = results.find((r) => r.module === 'dso');
+    const securityResult = results.find((r) => r.module === 'security');
+    const headlessResult = results.find((r) => r.module === 'headless');
+    const integrationResult = results.find((r) => r.module === 'integration');
 
     if (dsoResult?.warnings.length) {
       forSystemArchitect.push(
         `DSO: ${dsoResult.warnings.length} warnings cần theo dõi`,
-        'DSO: Xem xét tối ưu hóa network cleanup logic'
+        'DSO: Xem xét tối ưu hóa network cleanup logic',
       );
     }
 
     if (securityResult && securityResult.testsFailed > 0) {
       forAILLMEngineer.push(
         `Security: ${securityResult.testsFailed} commands bị false positive/negative`,
-        'Security: Cập nhật blacklist patterns nếu cần'
+        'Security: Cập nhật blacklist patterns nếu cần',
       );
     }
 
     if (headlessResult?.warnings.length) {
       forAILLMEngineer.push(
-        `Headless: ${headlessResult.warnings.length} warnings về excluded extensions`
+        `Headless: ${headlessResult.warnings.length} warnings về excluded extensions`,
       );
     }
 
     if (integrationResult?.passed) {
       forDevOpsRust.push(
         '✅ Integration: Tất cả sandbox modules hoạt động tốt cùng nhau',
-        '✅ Sẵn sàng cho Phase 18 (OLT Telepresence) và Phase 19 (Rust Addon)'
+        '✅ Sẵn sàng cho Phase 18 (OLT Telepresence) và Phase 19 (Rust Addon)',
       );
     } else if (integrationResult) {
       forDevOpsRust.push(
         `⚠️ Integration: ${integrationResult.testsFailed} integration tests failed`,
-        ...integrationResult.errors.map(e => `  - ${e}`)
+        ...integrationResult.errors.map((e) => `  - ${e}`),
       );
     }
 
@@ -356,26 +351,24 @@ export class SandboxValidationReporter {
     const phase18_OLT: string[] = [];
     const phase19_RustAddon: string[] = [];
 
-    const dsoResult = results.find(r => r.module === 'dso');
+    const dsoResult = results.find((r) => r.module === 'dso');
     if (dsoResult?.passed) {
       phase18_OLT.push(
         '✅ DSO Docker network infrastructure sẵn sàng cho OLT WebSocket',
-        'Cần verify Docker socket permissions cho WebSocket server'
+        'Cần verify Docker socket permissions cho WebSocket server',
       );
     }
 
-    const securityResult = results.find(r => r.module === 'security');
+    const securityResult = results.find((r) => r.module === 'security');
     if (securityResult?.passed) {
-      phase18_OLT.push(
-        '✅ Security guardrails sẵn sàng cho remote approval callbacks'
-      );
+      phase18_OLT.push('✅ Security guardrails sẵn sàng cho remote approval callbacks');
     }
 
-    const headlessResult = results.find(r => r.module === 'headless');
+    const headlessResult = results.find((r) => r.module === 'headless');
     if (headlessResult?.passed) {
       phase19_RustAddon.push(
         '✅ Headless scanner context compaction sẵn sàng cho Rust Addon testing',
-        'Cần benchmark tốc độ so với pure JS implementation'
+        'Cần benchmark tốc độ so với pure JS implementation',
       );
     }
 
@@ -383,8 +376,8 @@ export class SandboxValidationReporter {
   }
 
   generateMarkdownReport(report: SandboxValidationReport): string {
-    const statusEmoji = report.overallStatus === 'PASS' ? '✅' :
-                        report.overallStatus === 'FAIL' ? '❌' : '⚠️';
+    const statusEmoji =
+      report.overallStatus === 'PASS' ? '✅' : report.overallStatus === 'FAIL' ? '❌' : '⚠️';
 
     let md = `# 🧪 Sandbox Validation Report\n\n`;
     md += `**Generated:** ${report.generatedAt}\n`;
@@ -407,34 +400,34 @@ export class SandboxValidationReporter {
       md += `- Tests: ${result.testsPassed}/${result.testsRun} passed\n`;
       if (result.errors.length > 0) {
         md += `- **Errors:**\n`;
-        result.errors.forEach(e => md += `  - ${e}\n`);
+        result.errors.forEach((e) => (md += `  - ${e}\n`));
       }
       if (result.warnings.length > 0) {
         md += `- **Warnings:**\n`;
-        result.warnings.forEach(w => md += `  - ${w}\n`);
+        result.warnings.forEach((w) => (md += `  - ${w}\n`));
       }
       if (result.recommendations.length > 0) {
         md += `- **Recommendations:**\n`;
-        result.recommendations.forEach(r => md += `  - ${r}\n`);
+        result.recommendations.forEach((r) => (md += `  - ${r}\n`));
       }
       md += `\n`;
     }
 
     if (report.feedback.forDevOpsRust.length > 0) {
       md += `## 💬 Feedback for DevOps/Rust Engineer\n\n`;
-      report.feedback.forDevOpsRust.forEach(f => md += `- ${f}\n`);
+      report.feedback.forDevOpsRust.forEach((f) => (md += `- ${f}\n`));
       md += `\n`;
     }
 
     if (report.nextSteps.phase18_OLT.length > 0) {
       md += `## 🔮 Next Steps - Phase 18 (OLT)\n\n`;
-      report.nextSteps.phase18_OLT.forEach(s => md += `- ${s}\n`);
+      report.nextSteps.phase18_OLT.forEach((s) => (md += `- ${s}\n`));
       md += `\n`;
     }
 
     if (report.nextSteps.phase19_RustAddon.length > 0) {
       md += `## 🔮 Next Steps - Phase 19 (Rust Addon)\n\n`;
-      report.nextSteps.phase19_RustAddon.forEach(s => md += `- ${s}\n`);
+      report.nextSteps.phase19_RustAddon.forEach((s) => (md += `- ${s}\n`));
     }
 
     return md;
@@ -446,7 +439,8 @@ export class SandboxValidationReporter {
     html += '<title>Sandbox Validation Report</title>\n';
     html += '<style>\n';
     html += 'body { font-family: system-ui, sans-serif; margin: 2rem; }\n';
-    html += '.status-PASS { color: #28a745; } .status-FAIL { color: #dc3545; } .status-WARNING { color: #ffc107; }\n';
+    html +=
+      '.status-PASS { color: #28a745; } .status-FAIL { color: #dc3545; } .status-WARNING { color: #ffc107; }\n';
     html += 'table { border-collapse: collapse; width: 100%; }\n';
     html += 'th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }\n';
     html += 'th { background: #f4f4f4; }\n';

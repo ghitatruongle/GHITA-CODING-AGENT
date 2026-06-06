@@ -42,7 +42,12 @@ export interface TerminalSkillAdapter {
 }
 
 export interface ScreenshotSkillAdapter {
-  captureScreen?: () => Promise<{ mimeType: string; data: string; width?: number; height?: number }>;
+  captureScreen?: () => Promise<{
+    mimeType: string;
+    data: string;
+    width?: number;
+    height?: number;
+  }>;
 }
 
 export interface AppControlSkillAdapter {
@@ -55,6 +60,7 @@ export interface SkillRuntimeAdapters {
   terminal?: TerminalSkillAdapter;
   screenshot?: ScreenshotSkillAdapter;
   app?: AppControlSkillAdapter;
+  onSkillComplete?: (id: string, result: SkillResult) => void | Promise<void>;
 }
 
 export interface SkillRegistrySnapshot {
@@ -105,7 +111,10 @@ function readNumber(input: Record<string, unknown> | undefined, key: string): nu
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
 
-function readStringArray(input: Record<string, unknown> | undefined, key: string): string[] | undefined {
+function readStringArray(
+  input: Record<string, unknown> | undefined,
+  key: string,
+): string[] | undefined {
   const value = input?.[key];
   if (!Array.isArray(value)) return undefined;
   const strings = value.filter((item): item is string => typeof item === 'string');
@@ -176,7 +185,7 @@ export class SkillRegistry {
     const updated: SkillDefinition = {
       ...skill,
       enabled,
-      status: enabled ? skill.status === 'disabled' ? 'ready' : skill.status : 'disabled',
+      status: enabled ? (skill.status === 'disabled' ? 'ready' : skill.status) : 'disabled',
     };
 
     this.skills.set(id, updated);
@@ -190,13 +199,21 @@ export class SkillRegistry {
     if (!skill.enabled) return fail(`Skill is disabled: ${id}`);
 
     try {
-      return await skill.run(invocation, {
+      const result = await skill.run(invocation, {
         registry: this,
         adapters: this.adapters,
         now: Date.now,
       });
+      if (this.adapters.onSkillComplete) {
+        await this.adapters.onSkillComplete(id, result);
+      }
+      return result;
     } catch (error) {
-      return fail(error instanceof Error ? error.message : String(error));
+      const errResult = fail(error instanceof Error ? error.message : String(error));
+      if (this.adapters.onSkillComplete) {
+        await this.adapters.onSkillComplete(id, errResult);
+      }
+      return errResult;
     }
   }
 
@@ -233,6 +250,62 @@ export class SkillRegistry {
     for (const subscriber of this.subscribers) {
       subscriber(snapshot);
     }
+  }
+
+  fork(sessionId: string): SessionSkillRegistry {
+    return new SessionSkillRegistry(this, sessionId);
+  }
+}
+
+export class SessionSkillRegistry {
+  private readonly sessionEnabled = new Map<string, boolean>();
+
+  constructor(
+    public readonly parent: SkillRegistry,
+    public readonly sessionId: string,
+  ) {}
+
+  setEnabled(id: string, enabled: boolean): void {
+    this.sessionEnabled.set(id, enabled);
+  }
+
+  get(id: string): SkillDefinition | undefined {
+    const skill = this.parent.get(id);
+    if (!skill) return undefined;
+    const isEnabled = this.sessionEnabled.has(id)
+      ? !!this.sessionEnabled.get(id)
+      : skill.enabled;
+    return {
+      ...skill,
+      enabled: isEnabled,
+      status: isEnabled ? (skill.status === 'disabled' ? 'ready' : skill.status) : 'disabled',
+    };
+  }
+
+  list(): SkillDefinition[] {
+    return this.parent.list().map((skill) => {
+      const isEnabled = this.sessionEnabled.has(skill.id)
+        ? !!this.sessionEnabled.get(skill.id)
+        : skill.enabled;
+      return {
+        ...skill,
+        enabled: isEnabled,
+        status: isEnabled ? (skill.status === 'disabled' ? 'ready' : skill.status) : 'disabled',
+      };
+    });
+  }
+
+  listEnabled(): SkillDefinition[] {
+    return this.list().filter((skill) => skill.enabled);
+  }
+
+  async run(id: string, invocation: SkillInvocation = {}): Promise<SkillResult> {
+    const skill = this.get(id);
+    if (!skill) return { success: false, error: `Skill not found: ${id}` };
+    if (!skill.enabled) {
+      return { success: false, error: `Skill is disabled in session ${this.sessionId}: ${id}` };
+    }
+    return this.parent.run(id, invocation);
   }
 }
 
@@ -277,7 +350,10 @@ export function createBuiltinSkills(): SkillDefinition[] {
         if (!path) return fail('Missing required input: path');
         if (!adapters.file?.writeFile) return missingAdapter('File write');
         await adapters.file.writeFile(path, content);
-        return ok(`Wrote ${content.length} characters to ${path}.`, { path, bytes: content.length });
+        return ok(`Wrote ${content.length} characters to ${path}.`, {
+          path,
+          bytes: content.length,
+        });
       },
     },
     {
@@ -290,7 +366,12 @@ export function createBuiltinSkills(): SkillDefinition[] {
       scopes: ['workspace'],
       status: 'ready',
       parameters: {
-        path: { type: 'string', description: 'Directory path to list', required: true, default: '.' },
+        path: {
+          type: 'string',
+          description: 'Directory path to list',
+          required: true,
+          default: '.',
+        },
       },
       run: async ({ input }, { adapters }) => {
         const path = readString(input, 'path') ?? '.';
@@ -310,7 +391,12 @@ export function createBuiltinSkills(): SkillDefinition[] {
       status: 'ready',
       parameters: {
         command: { type: 'string', description: 'Command to execute', required: true },
-        timeoutMs: { type: 'number', description: 'Timeout in milliseconds', required: false, default: 30000 },
+        timeoutMs: {
+          type: 'number',
+          description: 'Timeout in milliseconds',
+          required: false,
+          default: 30000,
+        },
       },
       run: async ({ input, cwd, signal }, { adapters }) => {
         const command = readString(input, 'command');
@@ -321,7 +407,10 @@ export function createBuiltinSkills(): SkillDefinition[] {
         return {
           success: result.exitCode === 0,
           output: result.stdout || result.stderr,
-          error: result.exitCode === 0 ? undefined : result.stderr || `Command exited with ${result.exitCode}`,
+          error:
+            result.exitCode === 0
+              ? undefined
+              : result.stderr || `Command exited with ${result.exitCode}`,
           data: result,
         };
       },
@@ -402,18 +491,23 @@ export function createBuiltinSkills(): SkillDefinition[] {
         const porcelain = readBoolean(input, 'porcelain');
         const cmd = porcelain ? 'git status --porcelain' : 'git status';
         const r = await adapters.terminal.runCommand(cmd, { cwd, signal });
-        return { success: r.exitCode === 0, output: r.stdout || r.stderr, error: r.exitCode !== 0 ? r.stderr : undefined, data: r };
+        return {
+          success: r.exitCode === 0,
+          output: r.stdout || r.stderr,
+          error: r.exitCode !== 0 ? r.stderr : undefined,
+          data: r,
+        };
       },
     },
     {
-    id: 'git.commit',
-    name: 'Git Commit',
-    description: 'Record changes to the repository.',
-    category: 'terminal',
-    enabled: false,
-    version: SKILLS_VERSION,
-    scopes: ['workspace'],
-    status: 'disabled',
+      id: 'git.commit',
+      name: 'Git Commit',
+      description: 'Record changes to the repository.',
+      category: 'terminal',
+      enabled: false,
+      version: SKILLS_VERSION,
+      scopes: ['workspace'],
+      status: 'disabled',
       parameters: {
         message: { type: 'string', description: 'Commit message', required: true },
         amend: { type: 'boolean', description: 'Amend last commit', required: false },
@@ -423,9 +517,16 @@ export function createBuiltinSkills(): SkillDefinition[] {
         if (!message) return fail('Missing required input: message');
         if (!adapters.terminal?.runCommand) return missingAdapter('Terminal');
         const amend = readBoolean(input, 'amend');
-        const cmd = amend ? `git commit --amend -m ${escapeShellArg(message)}` : `git commit -m ${escapeShellArg(message)}`;
+        const cmd = amend
+          ? `git commit --amend -m ${escapeShellArg(message)}`
+          : `git commit -m ${escapeShellArg(message)}`;
         const r = await adapters.terminal.runCommand(cmd, { cwd, signal });
-        return { success: r.exitCode === 0, output: r.stdout || r.stderr, error: r.exitCode !== 0 ? r.stderr : undefined, data: { ...r, message } };
+        return {
+          success: r.exitCode === 0,
+          output: r.stdout || r.stderr,
+          error: r.exitCode !== 0 ? r.stderr : undefined,
+          data: { ...r, message },
+        };
       },
     },
     {
@@ -438,13 +539,23 @@ export function createBuiltinSkills(): SkillDefinition[] {
       scopes: ['workspace'],
       status: 'ready',
       parameters: {
-        target: { type: 'string', description: 'Diff target (e.g. HEAD, branch name)', required: false, default: 'HEAD' },
+        target: {
+          type: 'string',
+          description: 'Diff target (e.g. HEAD, branch name)',
+          required: false,
+          default: 'HEAD',
+        },
       },
       run: async ({ input, cwd, signal }, { adapters }) => {
         if (!adapters.terminal?.runCommand) return missingAdapter('Terminal');
         const target = readString(input, 'target') ?? 'HEAD';
         const r = await adapters.terminal.runCommand(`git diff ${target}`, { cwd, signal });
-        return { success: r.exitCode === 0, output: r.stdout || r.stderr, error: r.exitCode !== 0 ? r.stderr : undefined, data: r };
+        return {
+          success: r.exitCode === 0,
+          output: r.stdout || r.stderr,
+          error: r.exitCode !== 0 ? r.stderr : undefined,
+          data: r,
+        };
       },
     },
     {
@@ -457,7 +568,12 @@ export function createBuiltinSkills(): SkillDefinition[] {
       scopes: ['workspace'],
       status: 'ready',
       parameters: {
-        action: { type: 'string', description: 'Action: list, create, delete', required: false, default: 'list' },
+        action: {
+          type: 'string',
+          description: 'Action: list, create, delete',
+          required: false,
+          default: 'list',
+        },
         name: { type: 'string', description: 'Branch name (for create/delete)', required: false },
       },
       run: async ({ input, cwd, signal }, { adapters }) => {
@@ -467,15 +583,20 @@ export function createBuiltinSkills(): SkillDefinition[] {
         let cmd: string;
         if (action === 'create') {
           if (!name) return fail('Missing required input: name for create action');
-          cmd = `git checkout -b ${name}`;
+          cmd = `git checkout -b ${escapeShellArg(name)}`;
         } else if (action === 'delete') {
           if (!name) return fail('Missing required input: name for delete action');
-          cmd = `git branch -d ${name}`;
+          cmd = `git branch -d ${escapeShellArg(name)}`;
         } else {
           cmd = 'git branch';
         }
         const r = await adapters.terminal.runCommand(cmd, { cwd, signal });
-        return { success: r.exitCode === 0, output: r.stdout || r.stderr, error: r.exitCode !== 0 ? r.stderr : undefined, data: r };
+        return {
+          success: r.exitCode === 0,
+          output: r.stdout || r.stderr,
+          error: r.exitCode !== 0 ? r.stderr : undefined,
+          data: r,
+        };
       },
     },
     // --- Docker Skills ---
@@ -490,7 +611,11 @@ export function createBuiltinSkills(): SkillDefinition[] {
       status: 'disabled',
       parameters: {
         image: { type: 'string', description: 'Docker image name', required: true },
-        command: { type: 'string', description: 'Command to run inside container', required: false },
+        command: {
+          type: 'string',
+          description: 'Command to run inside container',
+          required: false,
+        },
         detach: { type: 'boolean', description: 'Run in detached mode', required: false },
         ports: { type: 'string', description: 'Port mapping (e.g. 8080:80)', required: false },
       },
@@ -504,10 +629,15 @@ export function createBuiltinSkills(): SkillDefinition[] {
         let cmd = 'docker run';
         if (detach) cmd += ' -d';
         if (ports) cmd += ` -p ${ports}`;
-        cmd += ` ${image}`;
+        cmd += ` ${escapeShellArg(image)}`;
         if (command) cmd += ` ${command}`;
         const r = await adapters.terminal.runCommand(cmd, { cwd, signal });
-        return { success: r.exitCode === 0, output: r.stdout || r.stderr, error: r.exitCode !== 0 ? r.stderr : undefined, data: r };
+        return {
+          success: r.exitCode === 0,
+          output: r.stdout || r.stderr,
+          error: r.exitCode !== 0 ? r.stderr : undefined,
+          data: r,
+        };
       },
     },
     {
@@ -521,7 +651,12 @@ export function createBuiltinSkills(): SkillDefinition[] {
       status: 'disabled',
       parameters: {
         tag: { type: 'string', description: 'Image tag (e.g. myapp:latest)', required: true },
-        context: { type: 'string', description: 'Build context path', required: false, default: '.' },
+        context: {
+          type: 'string',
+          description: 'Build context path',
+          required: false,
+          default: '.',
+        },
         file: { type: 'string', description: 'Dockerfile path', required: false },
       },
       run: async ({ input, cwd, signal }, { adapters }) => {
@@ -530,11 +665,16 @@ export function createBuiltinSkills(): SkillDefinition[] {
         if (!adapters.terminal?.runCommand) return missingAdapter('Terminal');
         const context = readString(input, 'context') ?? '.';
         const file = readString(input, 'file');
-        let cmd = `docker build -t ${tag}`;
-        if (file) cmd += ` -f ${file}`;
-        cmd += ` ${context}`;
+        let cmd = `docker build -t ${escapeShellArg(tag)}`;
+        if (file) cmd += ` -f ${escapeShellArg(file)}`;
+        cmd += ` ${escapeShellArg(context)}`;
         const r = await adapters.terminal.runCommand(cmd, { cwd, signal });
-        return { success: r.exitCode === 0, output: r.stdout || r.stderr, error: r.exitCode !== 0 ? r.stderr : undefined, data: r };
+        return {
+          success: r.exitCode === 0,
+          output: r.stdout || r.stderr,
+          error: r.exitCode !== 0 ? r.stderr : undefined,
+          data: r,
+        };
       },
     },
     {
@@ -547,14 +687,23 @@ export function createBuiltinSkills(): SkillDefinition[] {
       scopes: ['system'],
       status: 'ready',
       parameters: {
-        all: { type: 'boolean', description: 'Show all containers (including stopped)', required: false },
+        all: {
+          type: 'boolean',
+          description: 'Show all containers (including stopped)',
+          required: false,
+        },
       },
       run: async ({ input, cwd, signal }, { adapters }) => {
         if (!adapters.terminal?.runCommand) return missingAdapter('Terminal');
         const all = readBoolean(input, 'all');
         const cmd = all ? 'docker ps -a' : 'docker ps';
         const r = await adapters.terminal.runCommand(cmd, { cwd, signal });
-        return { success: r.exitCode === 0, output: r.stdout || r.stderr, error: r.exitCode !== 0 ? r.stderr : undefined, data: r };
+        return {
+          success: r.exitCode === 0,
+          output: r.stdout || r.stderr,
+          error: r.exitCode !== 0 ? r.stderr : undefined,
+          data: r,
+        };
       },
     },
     // --- DB Skill ---
@@ -576,10 +725,19 @@ export function createBuiltinSkills(): SkillDefinition[] {
         const query = readString(input, 'query');
         if (!database) return fail('Missing required input: database');
         if (!query) return fail('Missing required input: query');
-        if (!query.trim().toUpperCase().startsWith('SELECT')) return fail('Only SELECT queries are allowed for safety.');
+        if (!query.trim().toUpperCase().startsWith('SELECT'))
+          return fail('Only SELECT queries are allowed for safety.');
         if (!adapters.terminal?.runCommand) return missingAdapter('Terminal');
-        const r = await adapters.terminal.runCommand(`sqlite3 ${database} ${escapeShellArg(query)}`, { cwd, signal });
-        return { success: r.exitCode === 0, output: r.stdout || r.stderr, error: r.exitCode !== 0 ? r.stderr : undefined, data: r };
+        const r = await adapters.terminal.runCommand(
+          `sqlite3 ${database} ${escapeShellArg(query)}`,
+          { cwd, signal },
+        );
+        return {
+          success: r.exitCode === 0,
+          output: r.stdout || r.stderr,
+          error: r.exitCode !== 0 ? r.stderr : undefined,
+          data: r,
+        };
       },
     },
     // --- HTTP Skill ---
@@ -594,7 +752,12 @@ export function createBuiltinSkills(): SkillDefinition[] {
       status: 'ready',
       parameters: {
         url: { type: 'string', description: 'Request URL', required: true },
-        method: { type: 'string', description: 'HTTP method (GET, POST, etc.)', required: false, default: 'GET' },
+        method: {
+          type: 'string',
+          description: 'HTTP method (GET, POST, etc.)',
+          required: false,
+          default: 'GET',
+        },
         headers: { type: 'string', description: 'Request headers (key:value)', required: false },
         body: { type: 'string', description: 'Request body', required: false },
       },
@@ -610,45 +773,65 @@ export function createBuiltinSkills(): SkillDefinition[] {
         if (body) cmd += ` -d ${escapeShellArg(body)}`;
         cmd += ` ${escapeShellArg(url)}`;
         const r = await adapters.terminal.runCommand(cmd, { cwd, timeoutMs: 15000, signal });
-        return { success: r.exitCode === 0, output: r.stdout || r.stderr, error: r.exitCode !== 0 ? r.stderr : undefined, data: r };
+        return {
+          success: r.exitCode === 0,
+          output: r.stdout || r.stderr,
+          error: r.exitCode !== 0 ? r.stderr : undefined,
+          data: r,
+        };
       },
     },
     // --- Code Quality Skills ---
     {
-    id: 'code.format',
-    name: 'Format Code',
-    description: 'Format code using a configured formatter.',
-    category: 'terminal',
-    enabled: false,
-    version: SKILLS_VERSION,
-    scopes: ['workspace'],
-    status: 'disabled',
+      id: 'code.format',
+      name: 'Format Code',
+      description: 'Format code using a configured formatter.',
+      category: 'terminal',
+      enabled: false,
+      version: SKILLS_VERSION,
+      scopes: ['workspace'],
+      status: 'disabled',
       parameters: {
         path: { type: 'string', description: 'File or directory path', required: true },
-        formatter: { type: 'string', description: 'Formatter: prettier, black, rustfmt', required: false, default: 'prettier' },
+        formatter: {
+          type: 'string',
+          description: 'Formatter: prettier, black, rustfmt',
+          required: false,
+          default: 'prettier',
+        },
       },
       run: async ({ input, cwd, signal }, { adapters }) => {
         const path = readString(input, 'path');
         if (!path) return fail('Missing required input: path');
         if (!adapters.terminal?.runCommand) return missingAdapter('Terminal');
         const formatter = readString(input, 'formatter') ?? 'prettier';
-        const cmd = `${formatter} --write ${path}`;
+        const cmd = `${escapeShellArg(formatter)} --write ${escapeShellArg(path)}`;
         const r = await adapters.terminal.runCommand(cmd, { cwd, signal });
-        return { success: r.exitCode === 0, output: r.stdout || r.stderr, error: r.exitCode !== 0 ? r.stderr : undefined, data: { ...r, formatter } };
+        return {
+          success: r.exitCode === 0,
+          output: r.stdout || r.stderr,
+          error: r.exitCode !== 0 ? r.stderr : undefined,
+          data: { ...r, formatter },
+        };
       },
     },
     {
-    id: 'code.lint',
-    name: 'Lint Code',
-    description: 'Run a linter on the codebase.',
-    category: 'terminal',
-    enabled: false,
-    version: SKILLS_VERSION,
-    scopes: ['workspace'],
-    status: 'disabled',
+      id: 'code.lint',
+      name: 'Lint Code',
+      description: 'Run a linter on the codebase.',
+      category: 'terminal',
+      enabled: false,
+      version: SKILLS_VERSION,
+      scopes: ['workspace'],
+      status: 'disabled',
       parameters: {
         path: { type: 'string', description: 'File or directory path', required: true },
-        linter: { type: 'string', description: 'Linter: eslint, flake8, clippy', required: false, default: 'eslint' },
+        linter: {
+          type: 'string',
+          description: 'Linter: eslint, flake8, clippy',
+          required: false,
+          default: 'eslint',
+        },
         fix: { type: 'boolean', description: 'Auto-fix issues', required: false },
       },
       run: async ({ input, cwd, signal }, { adapters }) => {
@@ -657,24 +840,34 @@ export function createBuiltinSkills(): SkillDefinition[] {
         if (!adapters.terminal?.runCommand) return missingAdapter('Terminal');
         const linter = readString(input, 'linter') ?? 'eslint';
         const fix = readBoolean(input, 'fix');
-        let cmd = `${linter} ${path}`;
+        let cmd = `${escapeShellArg(linter)} ${escapeShellArg(path)}`;
         if (fix) cmd += ' --fix';
         const r = await adapters.terminal.runCommand(cmd, { cwd, signal });
-        return { success: r.exitCode === 0, output: r.stdout || r.stderr, error: r.exitCode !== 0 ? r.stderr : undefined, data: { ...r, linter } };
+        return {
+          success: r.exitCode === 0,
+          output: r.stdout || r.stderr,
+          error: r.exitCode !== 0 ? r.stderr : undefined,
+          data: { ...r, linter },
+        };
       },
     },
     // --- Test Skill ---
     {
-    id: 'test.run',
-    name: 'Run Tests',
-    description: 'Run the test suite.',
-    category: 'terminal',
-    enabled: false,
-    version: SKILLS_VERSION,
-    scopes: ['workspace'],
-    status: 'disabled',
+      id: 'test.run',
+      name: 'Run Tests',
+      description: 'Run the test suite.',
+      category: 'terminal',
+      enabled: false,
+      version: SKILLS_VERSION,
+      scopes: ['workspace'],
+      status: 'disabled',
       parameters: {
-        framework: { type: 'string', description: 'Test framework: vitest, jest, pytest, cargo', required: false, default: 'vitest' },
+        framework: {
+          type: 'string',
+          description: 'Test framework: vitest, jest, pytest, cargo',
+          required: false,
+          default: 'vitest',
+        },
         path: { type: 'string', description: 'Specific test file or directory', required: false },
         watch: { type: 'boolean', description: 'Watch mode', required: false },
       },
@@ -683,11 +876,16 @@ export function createBuiltinSkills(): SkillDefinition[] {
         const framework = readString(input, 'framework') ?? 'vitest';
         const path = readString(input, 'path');
         const watch = readBoolean(input, 'watch');
-        let cmd = framework;
+        let cmd = escapeShellArg(framework);
         if (path) cmd += ` ${path}`;
         if (watch) cmd += ' --watch';
         const r = await adapters.terminal.runCommand(cmd, { cwd, signal });
-        return { success: r.exitCode === 0, output: r.stdout || r.stderr, error: r.exitCode !== 0 ? r.stderr : undefined, data: { ...r, framework } };
+        return {
+          success: r.exitCode === 0,
+          output: r.stdout || r.stderr,
+          error: r.exitCode !== 0 ? r.stderr : undefined,
+          data: { ...r, framework },
+        };
       },
     },
     // --- Search Skill ---
@@ -703,7 +901,11 @@ export function createBuiltinSkills(): SkillDefinition[] {
       parameters: {
         query: { type: 'string', description: 'Search pattern', required: true },
         path: { type: 'string', description: 'Directory to search', required: false, default: '.' },
-        extension: { type: 'string', description: 'File extension filter (e.g. ts)', required: false },
+        extension: {
+          type: 'string',
+          description: 'File extension filter (e.g. ts)',
+          required: false,
+        },
       },
       run: async ({ input, cwd, signal }, { adapters }) => {
         const query = readString(input, 'query');
@@ -712,9 +914,14 @@ export function createBuiltinSkills(): SkillDefinition[] {
         const path = readString(input, 'path') ?? '.';
         const extension = readString(input, 'extension');
         let cmd = `rg ${escapeShellArg(query)} ${path}`;
-        if (extension) cmd += ` -g "*.${extension}"`;
+        if (extension) cmd += ` -g "*.${escapeShellArg(extension)}"`;
         const r = await adapters.terminal.runCommand(cmd, { cwd, timeoutMs: 10000, signal });
-        return { success: r.exitCode === 0, output: r.stdout || r.stderr, error: r.exitCode !== 0 ? r.stderr : undefined, data: r };
+        return {
+          success: r.exitCode === 0,
+          output: r.stdout || r.stderr,
+          error: r.exitCode !== 0 ? r.stderr : undefined,
+          data: r,
+        };
       },
     },
     // --- Compress Skill ---
@@ -740,9 +947,14 @@ export function createBuiltinSkills(): SkillDefinition[] {
         const isWin = process.platform === 'win32';
         const cmd = isWin
           ? `powershell Compress-Archive -Path ${source} -DestinationPath ${output}`
-          : `tar -czf ${output} ${source}`;
+          : `tar -czf ${escapeShellArg(output)} ${escapeShellArg(source)}`;
         const r = await adapters.terminal.runCommand(cmd, { cwd, signal });
-        return { success: r.exitCode === 0, output: r.stdout || `Created ${output}`, error: r.exitCode !== 0 ? r.stderr : undefined, data: r };
+        return {
+          success: r.exitCode === 0,
+          output: r.stdout || `Created ${output}`,
+          error: r.exitCode !== 0 ? r.stderr : undefined,
+          data: r,
+        };
       },
     },
     // --- Deploy Check Skill ---
@@ -757,7 +969,10 @@ export function createBuiltinSkills(): SkillDefinition[] {
       status: 'ready',
       run: async ({ cwd, signal }, { adapters }) => {
         if (!adapters.terminal?.runCommand) return missingAdapter('Terminal');
-        const status = await adapters.terminal.runCommand('git status --porcelain', { cwd, signal });
+        const status = await adapters.terminal.runCommand('git status --porcelain', {
+          cwd,
+          signal,
+        });
         const log = await adapters.terminal.runCommand('git log --oneline -5', { cwd, signal });
         const isClean = status.stdout.trim().length === 0;
         const output = [
@@ -765,7 +980,12 @@ export function createBuiltinSkills(): SkillDefinition[] {
           status.stdout.trim() ? `\nUncommitted changes:\n${status.stdout}` : '',
           `\nRecent commits:\n${log.stdout}`,
         ].join('');
-        return { success: isClean, output, error: isClean ? undefined : 'There are uncommitted changes.', data: { isClean, status: status.stdout, log: log.stdout } };
+        return {
+          success: isClean,
+          output,
+          error: isClean ? undefined : 'There are uncommitted changes.',
+          data: { isClean, status: status.stdout, log: log.stdout },
+        };
       },
     },
   ];
@@ -792,8 +1012,6 @@ export async function runSkillSequence(
   return results;
 }
 
-
-
 // --- Phase 2: Skills Auto-Creation & Hub Registry ---
 export * from './auto-create/types.js';
 export { SkillAutoCreator } from './auto-create/engine.js';
@@ -804,8 +1022,75 @@ export { DynamicSkillGenerator, createSkillsSyncCommand } from './registry/dynam
 
 // --- Phase 17: Skill Registry & Composio SaaS Integration ---
 export { ComposioSkillAdapter } from './registry/composioAdapter.js';
-export type { SaaSConnection, SaaSAPILog, SaaSAPIResponse, SaaSCategory, SaaSAppDefinition, WebhookEvent, WebhookHandler } from './registry/composioAdapter.js';
+export type {
+  SaaSConnection,
+  SaaSAPILog,
+  SaaSAPIResponse,
+  SaaSCategory,
+  SaaSAppDefinition,
+  WebhookEvent,
+  WebhookHandler,
+} from './registry/composioAdapter.js';
 
 // --- Phase 2.3: Skill Marketplace (types + catalog only — no Node.js deps) ---
 export { getDefaultCatalog } from './marketplace/defaultCatalog.js';
-export type { SkillManifest, InstalledSkill, SkillCatalog, CatalogFilters, SkillRating } from './marketplace/types.js';
+export type {
+  SkillManifest,
+  InstalledSkill,
+  SkillCatalog,
+  CatalogFilters,
+  SkillRating,
+} from './marketplace/types.js';
+
+// --- Phase 13: Tool Auto-Repair Gate ---
+export {
+  ToolRepairGate,
+  type RepairLLMProvider,
+  type ToolRepairOptions,
+} from './registry/repair-gate.js';
+
+// --- Phase 2: SKILL.md Manifest Loader & Hot-Reload Watcher ---
+export { loadSkillMd, validateSkill, SkillDirectoryWatcher } from './registry/md-loader.js';
+
+// --- Phase 12: Skills Hub + lock.json ---
+export {
+  HubRegistry,
+  SkillGuard,
+  LockManager,
+  AuditLog,
+  createSkillsCommands,
+  computeContentHash,
+  computeFileHash,
+  computeSkillHash,
+  resolveTrustLevel,
+  normalizeRepoUrl,
+  verifySkillHash,
+  verifyFileHash,
+  checkIntegrity,
+  DEFAULT_TRUSTED_REPOS,
+  DEFAULT_HUB_CONFIG,
+} from './hub/index.js';
+
+export type {
+  SkillMeta,
+  SkillSource,
+  TrustLevel,
+  LockEntry,
+  LockFile,
+  HubConfig,
+  HubStats,
+  AuditEntry,
+  AuditAction,
+  VerifyResult,
+  IntegrityReport,
+} from './hub/index.js';
+
+// --- Phase 25: OAuth Handoff, Keychain Storage, Permission Gates, and toolkitSlug Discovery ---
+export {
+  OAuthHandoffManager,
+  KeychainStore,
+  PermissionGateManager,
+  discoverToolkitSlug,
+} from './registry/oauth-handoff.js';
+export type { OAuthSession } from './registry/oauth-handoff.js';
+

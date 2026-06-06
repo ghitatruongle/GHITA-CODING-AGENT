@@ -48,7 +48,7 @@ export class UnifiedRouter implements AIProvider {
   private configPath: string;
   private latencyHistory: LatencyMetric[] = [];
   public fallbackManager: FallbackManager;
-  
+
   // Keep-alive agents
   private readonly httpsAgent = new https.Agent({ keepAlive: true, keepAliveMsecs: 1000 });
   private readonly httpAgent = new http.Agent({ keepAlive: true, keepAliveMsecs: 1000 });
@@ -59,20 +59,23 @@ export class UnifiedRouter implements AIProvider {
     this.fallbackOrder = options.fallbackOrder || ['openai', 'anthropic', 'google', 'ollama'];
     this.encryptionKey = options.encryptionKey || process.env.GHITA_ENCRYPTION_KEY || '';
     if (!options.encryptionKey && !process.env.GHITA_ENCRYPTION_KEY) {
-      throw new Error('GHITA_ENCRYPTION_KEY environment variable or options.encryptionKey is required');
+      throw new Error(
+        'GHITA_ENCRYPTION_KEY environment variable or options.encryptionKey is required',
+      );
     }
-    this.configPath = options.modelsConfigPath || path.resolve(process.cwd(), '.ghita', 'models.yaml');
-    
+    this.configPath =
+      options.modelsConfigPath || path.resolve(process.cwd(), '.ghita', 'models.yaml');
+
     this.fallbackManager = new FallbackManager({
       dbPath: options.dbPath,
       budgetConfigPath: options.budgetConfigPath,
-      fallbackChain: this.fallbackOrder.map(provider => {
+      fallbackChain: this.fallbackOrder.map((provider) => {
         if (provider === 'openai') return 'gpt-4o';
         if (provider === 'anthropic') return 'claude-3-7-sonnet';
         if (provider === 'google') return 'gemini-2.5-pro';
         if (provider === 'ollama') return 'ollama';
         return provider;
-      })
+      }),
     });
 
     this.loadConfig();
@@ -113,7 +116,9 @@ export class UnifiedRouter implements AIProvider {
           try {
             config.apiKey = CryptoHelper.decrypt(config.apiKey, this.encryptionKey);
           } catch (err) {
-            console.error(`Failed to decrypt API Key for provider ${config.type}. Check your encryption key.`);
+            console.error(
+              `Failed to decrypt API Key for provider ${config.type}. Check your encryption key.`,
+            );
           }
         }
 
@@ -160,20 +165,26 @@ export class UnifiedRouter implements AIProvider {
           currentConfig = {};
           const rest = trimmed.substring(1).trim();
           if (rest.includes(':')) {
-      const [k, ...v] = rest.split(':');
-      const key = (k ?? '').trim();
-      const val = v.join(':').trim().replace(/^['"]|['"]$/g, '');
-      (currentConfig as Record<string, unknown>)[key] = val;
-    }
-  } else if (trimmed.includes(':') && currentConfig) {
-    const [k, ...v] = trimmed.split(':');
-    const key = (k ?? '').trim();
-    const val = v.join(':').trim().replace(/^['"]|['"]$/g, '');
-    if (key === 'maxTokens' || key === 'temperature') {
-      (currentConfig as Record<string, unknown>)[key] = Number(val);
-    } else {
-      (currentConfig as Record<string, unknown>)[key] = val;
-    }
+            const [k, ...v] = rest.split(':');
+            const key = (k ?? '').trim();
+            const val = v
+              .join(':')
+              .trim()
+              .replace(/^['"]|['"]$/g, '');
+            (currentConfig as Record<string, unknown>)[key] = val;
+          }
+        } else if (trimmed.includes(':') && currentConfig) {
+          const [k, ...v] = trimmed.split(':');
+          const key = (k ?? '').trim();
+          const val = v
+            .join(':')
+            .trim()
+            .replace(/^['"]|['"]$/g, '');
+          if (key === 'maxTokens' || key === 'temperature') {
+            (currentConfig as Record<string, unknown>)[key] = Number(val);
+          } else {
+            (currentConfig as Record<string, unknown>)[key] = val;
+          }
         }
       }
     }
@@ -209,7 +220,7 @@ export class UnifiedRouter implements AIProvider {
         type: 'ollama',
         baseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
         defaultModel: 'llama3',
-      }
+      },
     ];
 
     for (const config of envProviders) {
@@ -253,7 +264,7 @@ export class UnifiedRouter implements AIProvider {
         }
       },
       messages,
-      options
+      options,
     );
   }
 
@@ -263,20 +274,42 @@ export class UnifiedRouter implements AIProvider {
   async *chatStream(messages: ChatMessage[], options?: ChatOptions): AsyncGenerator<AIStreamChunk> {
     // Check budgets first
     const currentSessionCost = this.fallbackManager.getSessionTotalCost();
-    const maxSessionCost = (this.fallbackManager as unknown as Record<string, unknown>).budgetConfig as { maxCostPerSession: number; maxCostPerDay: number; alertThresholdPercent: number };
+    const maxSessionCost = (this.fallbackManager as unknown as Record<string, unknown>)
+      .budgetConfig as {
+      maxCostPerSession: number;
+      maxCostPerDay: number;
+      alertThresholdPercent: number;
+    };
     if (currentSessionCost >= maxSessionCost.maxCostPerSession) {
-      throw new Error(`[BudgetExceeded] Session cost limit ($${maxSessionCost.maxCostPerSession}) reached. Current: $${currentSessionCost.toFixed(4)}`);
+      throw new Error(
+        `[BudgetExceeded] Session cost limit ($${maxSessionCost.maxCostPerSession}) reached. Current: $${currentSessionCost.toFixed(4)}`,
+      );
     }
 
     const currentDayCost = this.fallbackManager.getDayTotalCost();
-    const maxDayCost = (this.fallbackManager as unknown as Record<string, unknown>).budgetConfig as { maxCostPerSession: number; maxCostPerDay: number; alertThresholdPercent: number };
-  if (currentDayCost >= maxDayCost.maxCostPerDay) {
-    throw new Error(`[BudgetExceeded] Daily cost limit ($${maxDayCost.maxCostPerDay}) reached. Current: $${currentDayCost.toFixed(4)}`);
+    const maxDayCost = (this.fallbackManager as unknown as Record<string, unknown>)
+      .budgetConfig as {
+      maxCostPerSession: number;
+      maxCostPerDay: number;
+      alertThresholdPercent: number;
+    };
+    if (currentDayCost >= maxDayCost.maxCostPerDay) {
+      throw new Error(
+        `[BudgetExceeded] Daily cost limit ($${maxDayCost.maxCostPerDay}) reached. Current: $${currentDayCost.toFixed(4)}`,
+      );
     }
 
     const requestedModel = options?.model;
-    const fallbackManagerInternal = this.fallbackManager as unknown as { sessionId: string; fallbackChain: string[] };
-  const chain = requestedModel ? [requestedModel, ...fallbackManagerInternal.fallbackChain.filter((m: string) => m !== requestedModel)] : fallbackManagerInternal.fallbackChain;
+    const fallbackManagerInternal = this.fallbackManager as unknown as {
+      sessionId: string;
+      fallbackChain: string[];
+    };
+    const chain = requestedModel
+      ? [
+          requestedModel,
+          ...fallbackManagerInternal.fallbackChain.filter((m: string) => m !== requestedModel),
+        ]
+      : fallbackManagerInternal.fallbackChain;
 
     let success = false;
     let accumulatedContent = '';
@@ -307,41 +340,47 @@ export class UnifiedRouter implements AIProvider {
 
         success = true;
         responsePromptTokens = this.fallbackManager.countMessagesTokens(messages);
-        
+
         // Log cost for successful stream
         const responseCompletionTokens = this.fallbackManager.countTokens(accumulatedContent);
-        const cost = this.fallbackManager.calculateCost(finalModel, responsePromptTokens, responseCompletionTokens);
-        
+        const cost = this.fallbackManager.calculateCost(
+          finalModel,
+          responsePromptTokens,
+          responseCompletionTokens,
+        );
+
         this.fallbackManager.logCost({
-    sessionId: (this.fallbackManager as unknown as { sessionId: string }).sessionId,
-    provider: options?.agentRole || 'unknown-provider-stream',
-    model: finalModel,
-    promptTokens: responsePromptTokens,
-    completionTokens: responseCompletionTokens,
-    totalTokens: responsePromptTokens + responseCompletionTokens,
-    cost,
-    success: 1
-  });
+          sessionId: (this.fallbackManager as unknown as { sessionId: string }).sessionId,
+          provider: options?.agentRole || 'unknown-provider-stream',
+          model: finalModel,
+          promptTokens: responsePromptTokens,
+          completionTokens: responseCompletionTokens,
+          totalTokens: responsePromptTokens + responseCompletionTokens,
+          cost,
+          success: 1,
+        });
 
-  break; // Stream succeeded, break the failover loop
-  } catch (err: unknown) {
-  const durationMs = Date.now() - startTime;
-  this.logLatency(provider.type, model, startTime, durationMs, false);
+        break; // Stream succeeded, break the failover loop
+      } catch (err: unknown) {
+        const durationMs = Date.now() - startTime;
+        this.logLatency(provider.type, model, startTime, durationMs, false);
 
-  // Log failed stream attempt
-  this.fallbackManager.logCost({
-    sessionId: (this.fallbackManager as unknown as { sessionId: string }).sessionId,
-    provider: options?.agentRole || 'unknown-provider-stream',
-    model,
-    promptTokens: this.fallbackManager.countMessagesTokens(messages),
-    completionTokens: 0,
-    totalTokens: this.fallbackManager.countMessagesTokens(messages),
-    cost: 0,
-    success: 0,
-    errorMessage: err instanceof Error ? err.message : String(err)
-  });
+        // Log failed stream attempt
+        this.fallbackManager.logCost({
+          sessionId: (this.fallbackManager as unknown as { sessionId: string }).sessionId,
+          provider: options?.agentRole || 'unknown-provider-stream',
+          model,
+          promptTokens: this.fallbackManager.countMessagesTokens(messages),
+          completionTokens: 0,
+          totalTokens: this.fallbackManager.countMessagesTokens(messages),
+          cost: 0,
+          success: 0,
+          errorMessage: err instanceof Error ? err.message : String(err),
+        });
 
-  console.error(`🔴 STREAM FAILOVER: Model ${model} failed. Error: ${err instanceof Error ? err.message : String(err)}. Switching fallback...`);
+        console.error(
+          `🔴 STREAM FAILOVER: Model ${model} failed. Error: ${err instanceof Error ? err.message : String(err)}. Switching fallback...`,
+        );
       }
     }
 
@@ -370,18 +409,21 @@ export class UnifiedRouter implements AIProvider {
         }
 
         const responseCompletionTokens = this.fallbackManager.countTokens(accumulatedContent);
-    this.fallbackManager.logCost({
-      sessionId: (this.fallbackManager as unknown as { sessionId: string }).sessionId,
-      provider: options?.agentRole || 'ollama-fallback-stream',
+        this.fallbackManager.logCost({
+          sessionId: (this.fallbackManager as unknown as { sessionId: string }).sessionId,
+          provider: options?.agentRole || 'ollama-fallback-stream',
           model: finalModel,
           promptTokens: this.fallbackManager.countMessagesTokens(messages),
           completionTokens: responseCompletionTokens,
-          totalTokens: this.fallbackManager.countMessagesTokens(messages) + responseCompletionTokens,
+          totalTokens:
+            this.fallbackManager.countMessagesTokens(messages) + responseCompletionTokens,
           cost: 0,
-          success: 1
+          success: 1,
         });
-  } catch (err: unknown) {
-    throw new Error(`All remote and local Ollama streaming providers failed. Last error: ${err instanceof Error ? err.message : String(err)}`);
+      } catch (err: unknown) {
+        throw new Error(
+          `All remote and local Ollama streaming providers failed. Last error: ${err instanceof Error ? err.message : String(err)}`,
+        );
       }
     }
   }
@@ -399,7 +441,13 @@ export class UnifiedRouter implements AIProvider {
   /**
    * Ghi vết thời gian phản hồi của các mô hình
    */
-  private logLatency(provider: AIProviderType, model: string, startTime: number, durationMs: number, success: boolean): void {
+  private logLatency(
+    provider: AIProviderType,
+    model: string,
+    startTime: number,
+    durationMs: number,
+    success: boolean,
+  ): void {
     this.latencyHistory.push({ provider, model, startTime, durationMs, success });
     if (this.latencyHistory.length > 100) {
       this.latencyHistory.shift(); // Keep last 100 entries
@@ -460,16 +508,16 @@ export class UnifiedRouter implements AIProvider {
       }
     }
 
-if (!resolvedType) {
-  const all = this.registry.getAll();
-  const first = all[0];
-  if (first) return first;
-  throw new Error('UnifiedRouter has no active providers registered.');
-}
+    if (!resolvedType) {
+      const all = this.registry.getAll();
+      const first = all[0];
+      if (first) return first;
+      throw new Error('UnifiedRouter has no active providers registered.');
+    }
 
-  const provider = this.registry.get(resolvedType);
-  if (!provider) throw new Error(`Provider ${resolvedType} not found in registry.`);
-  return provider;
+    const provider = this.registry.get(resolvedType);
+    if (!provider) throw new Error(`Provider ${resolvedType} not found in registry.`);
+    return provider;
   }
 
   private getPrimaryProvider(): AIProvider {
@@ -482,7 +530,7 @@ if (!resolvedType) {
   private adaptPrompts(messages: ChatMessage[], providerType: AIProviderType): ChatMessage[] {
     // Với DeepSeek R1 hoặc các mô hình cụ thể đòi hỏi bọc cấu trúc đặc biệt
     if (providerType === 'deepseek') {
-      return messages.map(msg => {
+      return messages.map((msg) => {
         if (msg.role === 'system') {
           // Bọc chỉ dẫn suy luận cho DeepSeek
           return {
@@ -522,7 +570,10 @@ if (!resolvedType) {
   /**
    * Chèn cấu hình keep-alive cho cuộc gọi
    */
-  private injectKeepAlive(options: ChatOptions | undefined, providerType: AIProviderType): ChatOptions | undefined {
+  private injectKeepAlive(
+    options: ChatOptions | undefined,
+    providerType: AIProviderType,
+  ): ChatOptions | undefined {
     // Chèn agent của unified router để giữ kết nối ổ định
     const agent = providerType === 'ollama' ? this.httpAgent : this.httpsAgent;
     return {

@@ -23,16 +23,21 @@ export class TelepresencePortal {
   private goodFrameCount = 0;
 
   // Command handlers / Callback interfaces
-	public onCommandCallback?: (command: string, args?: Record<string, unknown>) => void;
+  public onCommandCallback?: (command: string, args?: Record<string, unknown>) => void;
   public onPauseCallback?: () => void;
   public onForceBranchCallback?: (branch: string) => void;
   public onInjectVariablesCallback?: (variables: Record<string, string>) => void;
 
-  constructor(private readonly port: number = 8089, encryptionPassword?: string) {
+  constructor(
+    private readonly port: number = 8089,
+    encryptionPassword?: string,
+  ) {
     // Require password from env or parameter - no hardcoded default
     const password = encryptionPassword || process.env.GHITA_TELEPRESENCE_KEY;
     if (!password) {
-      throw new Error('[TelepresencePortal] Encryption password required. Set GHITA_TELEPRESENCE_KEY env or pass to constructor.');
+      throw new Error(
+        '[TelepresencePortal] Encryption password required. Set GHITA_TELEPRESENCE_KEY env or pass to constructor.',
+      );
     }
     // Generate random 16-byte salt per instance for key derivation
     const salt = crypto.randomBytes(16);
@@ -65,9 +70,9 @@ export class TelepresencePortal {
 
         socket.write(
           'HTTP/1.1 101 Switching Protocols\r\n' +
-          'Upgrade: websocket\r\n' +
-          'Connection: Upgrade\r\n' +
-          `Sec-WebSocket-Accept: ${acceptValue}\r\n\r\n`
+            'Upgrade: websocket\r\n' +
+            'Connection: Upgrade\r\n' +
+            `Sec-WebSocket-Accept: ${acceptValue}\r\n\r\n`,
         );
 
         this.clients.add(socket);
@@ -100,7 +105,7 @@ export class TelepresencePortal {
     return new Promise<void>((resolve, reject) => {
       if (!this.server) return reject(new Error('Server not initialized'));
       this.server.listen(this.port, '0.0.0.0', () => {
-	console.info(`[Telepresence] 🚀 WebSocket server listening on port ${this.port}`);
+        console.info(`[Telepresence] 🚀 WebSocket server listening on port ${this.port}`);
         resolve();
       });
       this.server.on('error', reject);
@@ -117,7 +122,7 @@ export class TelepresencePortal {
     this.clients.clear();
     this.socketBuffers.clear();
 
-	if (this.server) {
+    if (this.server) {
       const server = this.server;
       await new Promise<void>((resolve) => {
         server.close(() => {
@@ -243,9 +248,7 @@ export class TelepresencePortal {
     try {
       const sharpModule = await import('sharp');
       const sharp = sharpModule.default;
-      return await sharp(imageBuffer)
-        .jpeg({ quality: this.jpegQuality })
-        .toBuffer();
+      return await sharp(imageBuffer).jpeg({ quality: this.jpegQuality }).toBuffer();
     } catch {
       // Fallback if sharp is not available (e.g. in test env without sharp binaries)
       return imageBuffer;
@@ -259,7 +262,7 @@ export class TelepresencePortal {
     let a = 1;
     let b = 0;
     for (let i = 0; i < buf.length; i++) {
-		a = (a + (buf[i] ?? 0)) % 65521;
+      a = (a + (buf[i] ?? 0)) % 65521;
       b = (b + a) % 65521;
     }
     return (b << 16) | a;
@@ -316,8 +319,8 @@ export class TelepresencePortal {
     buf = Buffer.concat([buf, chunk]);
 
     while (buf.length >= 2) {
-		const byte0 = buf[0] ?? 0;
-    const byte1 = buf[1] ?? 0;
+      const byte0 = buf[0] ?? 0;
+      const byte1 = buf[1] ?? 0;
       const opcode = byte0 & 0x0f;
       const masked = (byte1 & 0x80) !== 0;
       let payloadLen = byte1 & 0x7f;
@@ -350,7 +353,7 @@ export class TelepresencePortal {
       if (masked && maskingKey) {
         const key = maskingKey;
         for (let i = 0; i < payloadLen; i++) {
-		payload[i] = (rawPayload[i] ?? 0) ^ (key[i % 4] ?? 0);
+          payload[i] = (rawPayload[i] ?? 0) ^ (key[i % 4] ?? 0);
         }
       } else {
         rawPayload.copy(payload);
@@ -420,11 +423,14 @@ export class TelepresencePortal {
   /**
    * Parse mobile commands and trigger associated developer control gates
    */
-	private routeRemoteCommand(socket: Socket, message: Record<string, unknown>): void {
+  private routeRemoteCommand(socket: Socket, message: Record<string, unknown>): void {
     const messageType = typeof message.type === 'string' ? message.type : '';
     const messageCommand = typeof message.command === 'string' ? message.command : '';
     const messageCode = typeof message.code === 'string' ? message.code : '';
-    const messageArgs = (typeof message.args === 'object' && message.args !== null) ? message.args as Record<string, unknown> : {};
+    const messageArgs =
+      typeof message.args === 'object' && message.args !== null
+        ? (message.args as Record<string, unknown>)
+        : {};
     if (messageType === 'AUTH_OTP') {
       if (this.verifyOTP(socket, messageCode)) {
         this.sendFrame(socket, 1, Buffer.from(JSON.stringify({ type: 'AUTH_SUCCESS' }), 'utf8'));
@@ -432,7 +438,7 @@ export class TelepresencePortal {
         this.sendFrame(
           socket,
           1,
-          Buffer.from(JSON.stringify({ type: 'AUTH_FAILED', message: 'Invalid OTP code' }), 'utf8')
+          Buffer.from(JSON.stringify({ type: 'AUTH_FAILED', message: 'Invalid OTP code' }), 'utf8'),
         );
       }
       return;
@@ -442,7 +448,10 @@ export class TelepresencePortal {
       this.sendFrame(
         socket,
         1,
-        Buffer.from(JSON.stringify({ type: 'AUTH_REQUIRED', message: 'Authentication required' }), 'utf8')
+        Buffer.from(
+          JSON.stringify({ type: 'AUTH_REQUIRED', message: 'Authentication required' }),
+          'utf8',
+        ),
       );
       return;
     }
@@ -454,29 +463,38 @@ export class TelepresencePortal {
       switch (command) {
         case 'PAUSE':
           this.onPauseCallback?.();
-          this.sendFrame(socket, 1, Buffer.from(JSON.stringify({ type: 'COMMAND_ACK', command: 'PAUSE' }), 'utf8'));
+          this.sendFrame(
+            socket,
+            1,
+            Buffer.from(JSON.stringify({ type: 'COMMAND_ACK', command: 'PAUSE' }), 'utf8'),
+          );
           break;
-        case 'FORCE_BRANCH':
-        {
+        case 'FORCE_BRANCH': {
           const branch = typeof messageArgs.branch === 'string' ? messageArgs.branch : 'default';
           this.onForceBranchCallback?.(branch);
           this.sendFrame(
             socket,
             1,
-            Buffer.from(JSON.stringify({ type: 'COMMAND_ACK', command: 'FORCE_BRANCH', branch }), 'utf8')
+            Buffer.from(
+              JSON.stringify({ type: 'COMMAND_ACK', command: 'FORCE_BRANCH', branch }),
+              'utf8',
+            ),
           );
           break;
         }
-        case 'INJECT_VARIABLES':
-        {
-          const variables = (typeof messageArgs.variables === 'object' && messageArgs.variables !== null)
-            ? messageArgs.variables as Record<string, string>
-            : {} as Record<string, string>;
+        case 'INJECT_VARIABLES': {
+          const variables =
+            typeof messageArgs.variables === 'object' && messageArgs.variables !== null
+              ? (messageArgs.variables as Record<string, string>)
+              : ({} as Record<string, string>);
           this.onInjectVariablesCallback?.(variables);
           this.sendFrame(
             socket,
             1,
-            Buffer.from(JSON.stringify({ type: 'COMMAND_ACK', command: 'INJECT_VARIABLES', variables }), 'utf8')
+            Buffer.from(
+              JSON.stringify({ type: 'COMMAND_ACK', command: 'INJECT_VARIABLES', variables }),
+              'utf8',
+            ),
           );
           break;
         }
@@ -484,7 +502,7 @@ export class TelepresencePortal {
           this.sendFrame(
             socket,
             1,
-            Buffer.from(JSON.stringify({ type: 'COMMAND_UNKNOWN', command }), 'utf8')
+            Buffer.from(JSON.stringify({ type: 'COMMAND_UNKNOWN', command }), 'utf8'),
           );
           break;
       }

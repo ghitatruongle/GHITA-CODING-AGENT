@@ -28,7 +28,7 @@
     "@ghita/skills": "workspace:*",
     "@ghita/shared": "workspace:*",
     "dockerode": "^3.3.5",
-    "better-sqlite3": "^11.7.0"
+    "better-sqlite3": "^12.10.0"
   },
   "devDependencies": {
     "@types/dockerode": "^3.3.31",

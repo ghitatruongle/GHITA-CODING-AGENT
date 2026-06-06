@@ -22,8 +22,8 @@ export interface NudgePattern {
 }
 
 export interface NudgeConfig {
-  minConfidence: number;      // Mức confidence tối thiểu để gợi ý (default: 0.6)
-  autoSaveThreshold: number;  // Tự động lưu không cần hỏi nếu >= ngưỡng này (default: 0.85)
+  minConfidence: number; // Mức confidence tối thiểu để gợi ý (default: 0.6)
+  autoSaveThreshold: number; // Tự động lưu không cần hỏi nếu >= ngưỡng này (default: 0.85)
   patterns?: NudgePattern[];
 }
 
@@ -32,7 +32,8 @@ const DEFAULT_PATTERNS: NudgePattern[] = [
   {
     name: 'preference_en',
     type: 'preference',
-    regex: /\b(?:i prefer|i like|i always use|my preferred|use (?:only|always))\b\s*([^.!?\n]{5,100})/i,
+    regex:
+      /\b(?:i prefer|i like|i always use|my preferred|use (?:only|always))\b\s*([^.!?\n]{5,100})/i,
     confidenceBoost: 0.8,
     extractor: (match) => `User prefers: ${match?.[1]?.trim() ?? ''}`,
   },
@@ -62,14 +63,16 @@ const DEFAULT_PATTERNS: NudgePattern[] = [
   {
     name: 'solution_en',
     type: 'solution',
-    regex: /\b(?:i solved it by|the solution (?:was|is)|the fix (?:was|is)|fixed by doing)\b\s*([^.!?\n]{10,150})/i,
+    regex:
+      /\b(?:i solved it by|the solution (?:was|is)|the fix (?:was|is)|fixed by doing)\b\s*([^.!?\n]{10,150})/i,
     confidenceBoost: 0.85,
     extractor: (match) => `Solution learned: ${match?.[0]?.trim() ?? ''}`,
   },
   {
     name: 'solution_vi',
     type: 'solution',
-    regex: /(?:cách sửa là|đã sửa bằng cách|giải quyết bằng|phương án sửa là)\s*([^.!?\n]{10,150})/i,
+    regex:
+      /(?:cách sửa là|đã sửa bằng cách|giải quyết bằng|phương án sửa là)\s*([^.!?\n]{10,150})/i,
     confidenceBoost: 0.85,
     extractor: (match) => `Cách khắc phục đã học: ${match?.[0]?.trim() ?? ''}`,
   },
@@ -121,10 +124,11 @@ export class MemoryNudgeEngine {
         const match = msg.content.match(pattern.regex);
         if (match) {
           const content = pattern.extractor(match, msg.content);
-          
+
           // Tính toán confidence dựa trên độ dài nội dung và mức độ chính xác của pattern
           const lengthFactor = Math.min(1.0, content.length / 50);
-          const confidence = Math.round((pattern.confidenceBoost * 0.8 + lengthFactor * 0.2) * 100) / 100;
+          const confidence =
+            Math.round((pattern.confidenceBoost * 0.8 + lengthFactor * 0.2) * 100) / 100;
 
           if (confidence >= this.config.minConfidence) {
             suggestions.push({

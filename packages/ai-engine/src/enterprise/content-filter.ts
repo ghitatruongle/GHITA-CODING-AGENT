@@ -59,23 +59,17 @@ export interface ModerationResult {
 // --- Built-in Filter Patterns ---
 
 const BUILTIN_PATTERNS: Record<ContentCategory, RegExp[]> = {
-  hate: [
-    /\b(hate|kill|destroy)\s+(all|every)\s+\w+/i,
-  ],
+  hate: [/\b(hate|kill|destroy)\s+(all|every)\s+\w+/i],
   violence: [
     /\b(how\s+to\s+)?(make|build|create)\s+(a\s+)?(bomb|explosive|weapon)/i,
     /\b(attack|assault|harm|hurt)\s+(someone|people|person)/i,
   ],
-  sexual: [
-    /\b(explicit|nsfw|pornographic)\s+(content|material|image)/i,
-  ],
+  sexual: [/\b(explicit|nsfw|pornographic)\s+(content|material|image)/i],
   self_harm: [
     /\b(how\s+to\s+)?(suicide|self[\s-]harm|cut\s+myself)/i,
     /\b(end\s+my\s+life|kill\s+myself)/i,
   ],
-  harassment: [
-    /\b(you\s+are|you're)\s+(stupid|idiot|dumb|worthless|trash)/i,
-  ],
+  harassment: [/\b(you\s+are|you're)\s+(stupid|idiot|dumb|worthless|trash)/i],
   spam: [
     /\b(buy\s+now|limited\s+offer|act\s+fast|free\s+money|click\s+here)\b/i,
     /\b(earn\s+\$?\d+.{0,20}(per|every)\s+(day|hour|week))/i,
@@ -105,8 +99,17 @@ function analyzeToxicity(text: string): { score: number; categories: ContentCate
 
   // Additional keyword-based scoring
   const toxicKeywords = [
-    'idiot', 'stupid', 'moron', 'trash', 'garbage', 'disgusting',
-    'terrible', 'horrible', 'worst', 'pathetic', 'useless',
+    'idiot',
+    'stupid',
+    'moron',
+    'trash',
+    'garbage',
+    'disgusting',
+    'terrible',
+    'horrible',
+    'worst',
+    'pathetic',
+    'useless',
   ];
 
   let keywordHits = 0;
@@ -131,10 +134,7 @@ export class ContentFilter {
   private rules: ContentFilterRule[] = [];
   private bannedKeywords: Set<string> = new Set();
 
-  constructor(options?: {
-    rules?: ContentFilterRule[];
-    bannedKeywords?: string[];
-  }) {
+  constructor(options?: { rules?: ContentFilterRule[]; bannedKeywords?: string[] }) {
     if (options?.rules) {
       this.rules = options.rules.sort((a, b) => b.priority - a.priority);
     }
@@ -332,7 +332,7 @@ export class ContentFilter {
         bannedKeywords: [...this.bannedKeywords],
       },
       null,
-      2
+      2,
     );
   }
 }

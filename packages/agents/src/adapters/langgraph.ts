@@ -12,7 +12,6 @@ import type {
   LangGraphTool,
 } from './types.js';
 
-
 /**
  * Adapter to convert LangGraph agent configurations into GHITA's ReAct agent format.
  *
@@ -48,22 +47,22 @@ export class LangGraphAdapter implements AgentAdapter<LangGraphAgentConfig> {
    * Convert LangChain message format to GHITA messages.
    */
   convertMessages(externalMessages: unknown[]): BaseMessage[] {
-    return (externalMessages as Array<{ role: string; content: string; tool_calls?: unknown[] }>).map(
-      (msg) => {
-        switch (msg.role) {
-          case 'system':
-            return new SystemMessage(msg.content);
-          case 'user':
-            return new HumanMessage(msg.content);
-          case 'assistant':
-            return new AIMessage(msg.content, {
-              toolCalls: this.parseToolCalls(msg.tool_calls),
-            });
-          default:
-            return new HumanMessage(msg.content);
-        }
-      },
-    );
+    return (
+      externalMessages as Array<{ role: string; content: string; tool_calls?: unknown[] }>
+    ).map((msg) => {
+      switch (msg.role) {
+        case 'system':
+          return new SystemMessage(msg.content);
+        case 'user':
+          return new HumanMessage(msg.content);
+        case 'assistant':
+          return new AIMessage(msg.content, {
+            toolCalls: this.parseToolCalls(msg.tool_calls),
+          });
+        default:
+          return new HumanMessage(msg.content);
+      }
+    });
   }
 
   /**
@@ -107,7 +106,10 @@ export class LangGraphAdapter implements AgentAdapter<LangGraphAgentConfig> {
   static buildLinearGraph(
     nodeIds: string[],
     handlers: Map<string, (state: Record<string, unknown>) => Promise<Record<string, unknown>>>,
-  ): { nodes: Array<{ id: string; handler: typeof handlers extends Map<string, infer H> ? H : never }>; edges: Array<{ from: string; to: string }> } {
+  ): {
+    nodes: Array<{ id: string; handler: typeof handlers extends Map<string, infer H> ? H : never }>;
+    edges: Array<{ from: string; to: string }>;
+  } {
     const nodes = nodeIds.map((id) => ({
       id,
       handler: handlers.get(id) ?? (async (state: Record<string, unknown>) => state),
@@ -116,9 +118,9 @@ export class LangGraphAdapter implements AgentAdapter<LangGraphAgentConfig> {
     const edges: Array<{ from: string; to: string }> = [];
     for (let i = 0; i < nodeIds.length - 1; i++) {
       const from = nodeIds[i];
- const to = nodeIds[i + 1];
- if (!from || !to) continue;
- edges.push({ from, to });
+      const to = nodeIds[i + 1];
+      if (!from || !to) continue;
+      edges.push({ from, to });
     }
 
     return { nodes, edges };
@@ -134,9 +136,10 @@ export class LangGraphAdapter implements AgentAdapter<LangGraphAgentConfig> {
       return {
         id: (call.id as string) ?? `tc_${Math.random().toString(36).slice(2, 8)}`,
         name: ((fn?.name ?? call.name) as string) ?? 'unknown',
-        arguments: typeof fn?.arguments === 'string'
-          ? JSON.parse(fn.arguments as string) as Record<string, unknown>
-          : (call.arguments as Record<string, unknown>) ?? {},
+        arguments:
+          typeof fn?.arguments === 'string'
+            ? (JSON.parse(fn.arguments as string) as Record<string, unknown>)
+            : ((call.arguments as Record<string, unknown>) ?? {}),
       };
     });
   }

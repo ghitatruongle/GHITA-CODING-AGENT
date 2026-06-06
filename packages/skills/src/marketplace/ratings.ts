@@ -54,7 +54,9 @@ export class SkillRatingsStore {
     return data.downloads[skillId] ?? 0;
   }
 
-  async getTopSkills(limit = 10): Promise<Array<{ id: string; rating: number; downloads: number }>> {
+  async getTopSkills(
+    limit = 10,
+  ): Promise<Array<{ id: string; rating: number; downloads: number }>> {
     const data = await this.loadData();
     const skillIds = new Set([
       ...data.ratings.map((r) => r.skillId),
@@ -63,7 +65,8 @@ export class SkillRatingsStore {
 
     const skills = Array.from(skillIds).map((id) => {
       const ratings = data.ratings.filter((r) => r.skillId === id);
-      const avgRating = ratings.length > 0 ? ratings.reduce((a, r) => a + r.score, 0) / ratings.length : 0;
+      const avgRating =
+        ratings.length > 0 ? ratings.reduce((a, r) => a + r.score, 0) / ratings.length : 0;
       return {
         id,
         rating: avgRating,

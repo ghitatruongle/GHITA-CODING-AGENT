@@ -28,7 +28,6 @@ export class ContextManager {
     });
   }
 
-
   /** Ước tính token count (rough: 1 token ≈ 4 chars tiếng Anh, 2 chars tiếng Việt) */
   estimateTokens(messages: ChatMessage[]): number {
     let total = 0;
@@ -68,9 +67,9 @@ export class ContextManager {
     let tokens = 0;
 
     // Duyệt từ cuối lên đầu
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const msg = messages[i];
-    if (!msg) continue;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i];
+      if (!msg) continue;
       const msgTokens = this.estimateTokens([msg]);
       if (tokens + msgTokens > budget && result.length > 0) break;
       result.unshift(msg);

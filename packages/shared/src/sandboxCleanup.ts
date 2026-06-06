@@ -17,7 +17,7 @@ export interface CleanupResult {
 export async function cleanOrphanedSandboxFiles(
   customDirs: string[] = [],
   maxAgeMs: number = 2 * 60 * 60 * 1000, // 2 hours
-  skipDefaults = false
+  skipDefaults = false,
 ): Promise<CleanupResult> {
   const result: CleanupResult = {
     deletedCount: 0,
@@ -55,7 +55,7 @@ export async function cleanOrphanedSandboxFiles(
       const items = fs.readdirSync(baseDir);
       for (const item of items) {
         const fullPath = path.join(baseDir, item);
-        
+
         // Chỉ dọn dẹp các tệp/thư mục khớp với mẫu đặt tên temp của GHITA
         // hoặc các file bên trong thư mục con .ghita/sandbox
         const isGhitaTemp = item.toLowerCase().includes('ghita-');
@@ -73,19 +73,23 @@ export async function cleanOrphanedSandboxFiles(
           if (age > maxAgeMs) {
             // Tính toán dung lượng thu hồi trước khi xóa
             const size = getDirectorySize(fullPath);
-            
+
             // Xóa đệ quy tệp/thư mục
             fs.rmSync(fullPath, { recursive: true, force: true });
-            
+
             result.deletedCount++;
             result.spaceReclaimedBytes += size;
           }
-    } catch (itemErr: unknown) {
-      result.errors.push(`Lỗi khi dọn dẹp tệp "${fullPath}": ${itemErr instanceof Error ? itemErr.message : String(itemErr)}`);
+        } catch (itemErr: unknown) {
+          result.errors.push(
+            `Lỗi khi dọn dẹp tệp "${fullPath}": ${itemErr instanceof Error ? itemErr.message : String(itemErr)}`,
+          );
         }
       }
-  } catch (dirErr: unknown) {
-    result.errors.push(`Lỗi khi truy cập thư mục "${baseDir}": ${dirErr instanceof Error ? dirErr.message : String(dirErr)}`);
+    } catch (dirErr: unknown) {
+      result.errors.push(
+        `Lỗi khi truy cập thư mục "${baseDir}": ${dirErr instanceof Error ? dirErr.message : String(dirErr)}`,
+      );
     }
   }
 
@@ -97,7 +101,7 @@ export async function cleanOrphanedSandboxFiles(
  */
 function getDirectorySize(targetPath: string): number {
   if (!fs.existsSync(targetPath)) return 0;
-  
+
   const stats = fs.statSync(targetPath);
   if (stats.isFile()) {
     return stats.size;

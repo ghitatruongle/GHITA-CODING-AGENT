@@ -23,7 +23,7 @@ export interface JudgeConfig {
 
 export interface JudgeResult {
   passed: boolean;
-  score: number;         // 0-1
+  score: number; // 0-1
   verdict: 'pass' | 'fail' | 'warn';
   reasoning: string;
   task: JudgeTask;
@@ -109,7 +109,7 @@ export const DEFAULT_JUDGE_RULES: JudgeRule[] = [
     name: 'Quality Check',
     task: 'quality',
     passThreshold: 0.5,
-    warnThreshold: 0.3,
+    warnThreshold: 0.6,
     enabled: true,
   },
 ];
@@ -147,10 +147,10 @@ export class LLMJudge {
     content: string,
     task: JudgeTask,
     options?: {
-      query?: string;       // Original query for relevance checking
-      context?: string;     // Additional context
+      query?: string; // Original query for relevance checking
+      context?: string; // Additional context
       customCriteria?: string; // For custom task
-    }
+    },
   ): Promise<JudgeResult> {
     const rule = this.rules.find((r) => r.task === task && r.enabled);
     const passThreshold = rule?.passThreshold ?? 0.5;
@@ -197,7 +197,7 @@ export class LLMJudge {
 
     // All retries failed — return safe default
     return {
-      passed: true,
+      passed: false,
       score: 0,
       verdict: 'warn',
       reasoning: `Judge evaluation failed after ${maxRetries + 1} attempts: ${lastError?.message}`,
@@ -212,7 +212,7 @@ export class LLMJudge {
       query?: string;
       context?: string;
       customCriteria?: string;
-    }
+    },
   ): Promise<JudgeResult[]> {
     const enabledRules = this.rules.filter((r) => r.enabled);
     const results: JudgeResult[] = [];
@@ -234,7 +234,7 @@ export class LLMJudge {
       customCriteria?: string;
       /** Fail if ANY rule fails (default: true) */
       failOnAny?: boolean;
-    }
+    },
   ): Promise<JudgeResult & { allResults: JudgeResult[] }> {
     const allResults = await this.evaluateAll(content, options);
     const failOnAny = options?.failOnAny ?? true;
@@ -271,7 +271,7 @@ export class LLMJudge {
       query?: string;
       context?: string;
       customCriteria?: string;
-    }
+    },
   ): string {
     const rule = this.rules.find((r) => r.task === task);
 

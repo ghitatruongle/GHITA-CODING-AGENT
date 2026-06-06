@@ -1,9 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { MarkdownRulesChecker, MarkdownChecksMiddleware } from '../../packages/agents/src/checker/markdownRules.js';
+import {
+  MarkdownRulesChecker,
+  MarkdownChecksMiddleware,
+} from '../../packages/agents/src/checker/markdownRules.js';
 
-describe('Phase 11: Source-Controlled Markdown CI Checks Gates Unit Tests', () => {
+describe('11: Source-Controlled Markdown CI Checks Gates Unit Tests', () => {
   const tempDir = path.resolve('temp-checks-test');
 
   beforeEach(() => {
@@ -93,7 +96,7 @@ function test(param: any): void {
 `;
       const issues = checker.checkFile('src/index.ts', invalidCode);
       expect(issues.length).toBe(2);
-      
+
       // Issue 1: param: any
       expect(issues[0].ruleId).toBe('no-any');
       expect(issues[0].line).toBe(2);
@@ -169,10 +172,14 @@ Forbidden any type.
       const middleware = new MarkdownChecksMiddleware(tempDir);
       const invalidCode = `const x: any = 'test';`;
 
-      const result = await middleware.preTool('writeFile', {
-        targetFile: 'src/app.ts',
-        codeContent: invalidCode
-      }, {} as any);
+      const result = await middleware.preTool(
+        'writeFile',
+        {
+          targetFile: 'src/app.ts',
+          codeContent: invalidCode,
+        },
+        {} as any,
+      );
 
       expect(result).toBeDefined();
       expect(result!.proceed).toBe(false);
@@ -195,10 +202,14 @@ Todo is fine.
       const middleware = new MarkdownChecksMiddleware(tempDir);
       const warnCode = `// TODO: fix this`;
 
-      const result = await middleware.preTool('writeFile', {
-        targetFile: 'src/app.ts',
-        codeContent: warnCode
-      }, {} as any);
+      const result = await middleware.preTool(
+        'writeFile',
+        {
+          targetFile: 'src/app.ts',
+          codeContent: warnCode,
+        },
+        {} as any,
+      );
 
       expect(result).toBeDefined();
       expect(result!.proceed).toBe(true);
@@ -210,7 +221,7 @@ Todo is fine.
       const checker = new MarkdownRulesChecker(tempDir);
       const originalCode = 'const a: any = 10;\nconst b: any[] = [];';
       const fixedCode = checker.generateFix(originalCode);
-      
+
       expect(fixedCode).toBe('const a: unknown = 10;\nconst b: unknown[] = [];');
     });
 
@@ -218,7 +229,7 @@ Todo is fine.
       const checker = new MarkdownRulesChecker(tempDir);
       const originalCode = 'const a: any = 10;';
       const fixedCode = 'const a: unknown = 10;';
-      
+
       const diff = checker.generateDiff(originalCode, fixedCode);
       expect(diff).toContain('- Dòng 1: const a: any = 10;');
       expect(diff).toContain('+ Dòng 1: const a: unknown = 10;');
@@ -239,10 +250,14 @@ Forbidden any.
       const middleware = new MarkdownChecksMiddleware(tempDir);
       const invalidCode = 'const x: any = 123;';
 
-      const result = await middleware.preTool('writeFile', {
-        targetFile: 'src/app.ts',
-        codeContent: invalidCode
-      }, {} as any);
+      const result = await middleware.preTool(
+        'writeFile',
+        {
+          targetFile: 'src/app.ts',
+          codeContent: invalidCode,
+        },
+        {} as any,
+      );
 
       expect(result).toBeDefined();
       expect(result!.proceed).toBe(false);

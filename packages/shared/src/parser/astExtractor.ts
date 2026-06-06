@@ -28,14 +28,14 @@ export interface ASTNode {
   type: string;
   name: string;
   kind: 'definition' | 'reference';
-  startLine: number;   // 1-indexed
-  endLine: number;     // 1-indexed
-  startCol: number;    // 0-indexed
-  endCol: number;      // 0-indexed
+  startLine: number; // 1-indexed
+  endLine: number; // 1-indexed
+  startCol: number; // 0-indexed
+  endCol: number; // 0-indexed
   children: ASTNode[];
   parentName?: string; // Tên class/method cha (phân cấp)
-  scope: string;       // Định danh phân cấp: "ClassName.methodName"
-  isBroken?: boolean;  // Đánh dấu node bị lỗi cú pháp
+  scope: string; // Định danh phân cấp: "ClassName.methodName"
+  isBroken?: boolean; // Đánh dấu node bị lỗi cú pháp
 }
 
 export interface ProjectConfig {
@@ -58,12 +58,12 @@ export class ProjectConfigSniffer {
 
     // Kotlin
     if (files.includes('build.gradle.kts') || files.includes('build.gradle')) {
-      const isMultiplatform = files.some(f => f.includes('kotlin-multiplatform'));
+      const isMultiplatform = files.some((f) => f.includes('kotlin-multiplatform'));
       return {
         language: 'kotlin',
         framework: isMultiplatform ? 'kotlin-multiplatform' : 'android/jvm',
         buildTool: files.includes('build.gradle.kts') ? 'gradle-kts' : 'gradle',
-        sourceRoot: path.join(projectRoot, 'src')
+        sourceRoot: path.join(projectRoot, 'src'),
       };
     }
 
@@ -73,25 +73,32 @@ export class ProjectConfigSniffer {
         language: 'scala',
         framework: files.includes('build.sc') ? 'mill' : 'sbt',
         buildTool: files.includes('build.sc') ? 'mill' : 'sbt',
-        sourceRoot: path.join(projectRoot, 'src')
+        sourceRoot: path.join(projectRoot, 'src'),
       };
     }
 
     // Pascal
-    if (files.some(f => f.endsWith('.lpr') || f.endsWith('.lpi') || f.endsWith('.dpr') || f.endsWith('.dproj'))) {
+    if (
+      files.some(
+        (f) =>
+          f.endsWith('.lpr') || f.endsWith('.lpi') || f.endsWith('.dpr') || f.endsWith('.dproj'),
+      )
+    ) {
       return {
         language: 'pascal',
-        framework: files.some(f => f.endsWith('.lpi')) ? 'lazarus' : 'delphi',
-        buildTool: files.some(f => f.endsWith('.lpi')) ? 'lazbuild' : 'msbuild',
-        sourceRoot: projectRoot
+        framework: files.some((f) => f.endsWith('.lpi')) ? 'lazarus' : 'delphi',
+        buildTool: files.some((f) => f.endsWith('.lpi')) ? 'lazbuild' : 'msbuild',
+        sourceRoot: projectRoot,
       };
     }
 
     // Fallback: detect by file extension
     const allFiles = this.walkDir(projectRoot);
-    if (allFiles.some(f => f.endsWith('.kt') || f.endsWith('.kts'))) return { language: 'kotlin' };
-    if (allFiles.some(f => f.endsWith('.scala'))) return { language: 'scala' };
-    if (allFiles.some(f => f.endsWith('.pas') || f.endsWith('.pp'))) return { language: 'pascal' };
+    if (allFiles.some((f) => f.endsWith('.kt') || f.endsWith('.kts')))
+      return { language: 'kotlin' };
+    if (allFiles.some((f) => f.endsWith('.scala'))) return { language: 'scala' };
+    if (allFiles.some((f) => f.endsWith('.pas') || f.endsWith('.pp')))
+      return { language: 'pascal' };
 
     throw new Error(`Cannot detect project language in: ${projectRoot}`);
   }
@@ -103,12 +110,12 @@ export class ProjectConfigSniffer {
     const extensions: Record<SupportedASTLanguage, string[]> = {
       kotlin: ['.kt', '.kts'],
       scala: ['.scala'],
-      pascal: ['.pas', '.pp', '.lpr', '.dpr', '.inc']
+      pascal: ['.pas', '.pp', '.lpr', '.dpr', '.inc'],
     };
 
     const exts = extensions[lang];
     const allFiles = this.walkDir(projectRoot);
-    return allFiles.filter(f => exts.some(ext => f.endsWith(ext)));
+    return allFiles.filter((f) => exts.some((ext) => f.endsWith(ext)));
   }
 
   private static walkDir(dir: string): string[] {
@@ -119,7 +126,9 @@ export class ProjectConfigSniffer {
         const fullPath = path.join(dir, entry.name);
         if (entry.isDirectory()) {
           // Bỏ qua node_modules, .git, build output
-          if (!['node_modules', '.git', 'build', 'dist', 'target', '__pycache__'].includes(entry.name)) {
+          if (
+            !['node_modules', '.git', 'build', 'dist', 'target', '__pycache__'].includes(entry.name)
+          ) {
             results.push(...this.walkDir(fullPath));
           }
         } else {
@@ -263,12 +272,16 @@ export class ASTExtractor {
       }
 
       if (!nameNode && anchorNode) nameNode = anchorNode;
-      if (!anchorNode && nameNode) { anchorNode = nameNode; anchorName = 'definition.unknown'; }
+      if (!anchorNode && nameNode) {
+        anchorNode = nameNode;
+        anchorName = 'definition.unknown';
+      }
 
       if (nameNode && anchorNode) {
         const kind = anchorName.startsWith('definition') ? 'definition' : 'reference';
         const type = anchorName.split('.').slice(1).join('.') || 'unknown';
-        const isBroken = this.tolerantParser.isErrorNode(anchorNode) || this.tolerantParser.isErrorNode(nameNode);
+        const isBroken =
+          this.tolerantParser.isErrorNode(anchorNode) || this.tolerantParser.isErrorNode(nameNode);
 
         const astNode: ASTNode = {
           type,
@@ -280,7 +293,7 @@ export class ASTExtractor {
           endCol: anchorNode.endPosition.column,
           children: [],
           scope: '', // Sẽ được tính ở bước buildHierarchy
-          isBroken
+          isBroken,
         };
 
         if (isBroken) {
@@ -304,11 +317,13 @@ export class ASTExtractor {
    */
   private buildHierarchy(nodes: ASTNode[]): void {
     // Sắp xếp theo kích thước phạm vi (node lớn nhất trước)
-    const definitions = nodes.filter(n => n.kind === 'definition').sort((a, b) => {
-      const sizeA = a.endLine - a.startLine;
-      const sizeB = b.endLine - b.startLine;
-      return sizeB - sizeA; // Lớn nhất trước
-    });
+    const definitions = nodes
+      .filter((n) => n.kind === 'definition')
+      .sort((a, b) => {
+        const sizeA = a.endLine - a.startLine;
+        const sizeB = b.endLine - b.startLine;
+        return sizeB - sizeA; // Lớn nhất trước
+      });
 
     // Gán mỗi child cho immediate parent (parent nhỏ nhất chứa child)
     for (let j = 0; j < definitions.length; j++) {
@@ -343,7 +358,7 @@ export class ASTExtractor {
         childSet.add(ch);
       }
     }
-    const rootDefinitions = definitions.filter(d => !childSet.has(d));
+    const rootDefinitions = definitions.filter((d) => !childSet.has(d));
 
     // Gán scope phân cấp chỉ từ root nodes
     for (const node of rootDefinitions) {
@@ -357,11 +372,7 @@ export class ASTExtractor {
         let bestSize = Infinity;
         for (const d of definitions) {
           const size = d.endLine - d.startLine;
-          if (
-            node.startLine >= d.startLine &&
-            node.endLine <= d.endLine &&
-            size < bestSize
-          ) {
+          if (node.startLine >= d.startLine && node.endLine <= d.endLine && size < bestSize) {
             bestParent = d;
             bestSize = size;
           }
@@ -423,14 +434,14 @@ export class ASTExtractor {
   async extractSymbolTags(code: string, lang: SupportedASTLanguage): Promise<SymbolTag[]> {
     const astNodes = await this.extractAST(code, lang);
     return astNodes
-      .filter(n => !n.isBroken) // Loại bỏ node lỗi khỏi repomap
-      .map(n => ({
+      .filter((n) => !n.isBroken) // Loại bỏ node lỗi khỏi repomap
+      .map((n) => ({
         name: n.name,
         kind: n.kind,
         type: n.type,
         startLine: n.startLine,
         endLine: n.endLine,
-        nodeText: undefined
+        nodeText: undefined,
       }));
   }
 }

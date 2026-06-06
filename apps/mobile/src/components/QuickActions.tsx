@@ -28,12 +28,18 @@ export function QuickActions({ disabled = false, onAction }: QuickActionsProps):
 
   const getActionLabel = (id: string) => {
     switch (id) {
-      case 'screenshot': return t('remote.actionScreenshot');
-      case 'cancel': return t('remote.actionCancel');
-      case 'approve': return t('remote.actionApprove');
-      case 'reject': return t('remote.actionReject');
-      case 'skills': return t('remote.actionSkills');
-      default: return id;
+      case 'screenshot':
+        return t('remote.actionScreenshot');
+      case 'cancel':
+        return t('remote.actionCancel');
+      case 'approve':
+        return t('remote.actionApprove');
+      case 'reject':
+        return t('remote.actionReject');
+      case 'skills':
+        return t('remote.actionSkills');
+      default:
+        return id;
     }
   };
 

@@ -6,10 +6,41 @@
 // Tham chiếu: Aider + Claude Code (git)
 // ==============================================================================
 
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
+import { setTimeout as sleep } from 'timers/promises';
 import fs from 'fs';
 import * as path from 'path';
 import type { AgentMiddleware, MiddlewareContext } from '../middleware/types.js';
+
+
+/**
+ * Parse a shell-style command string into argv array for execFile.
+ * Hỗ trợ simple quoted segments; KHÔNG hỗ trợ command substitution/redirects.
+ */
+function tokenizeCommand(cmd: string): string[] {
+  const tokens: string[] = [];
+  let cur = '';
+  let quote: '"' | "'" | null = null;
+  for (let i = 0; i < cmd.length; i++) {
+    const ch = cmd[i];
+    if (quote) {
+      if (ch === quote) { quote = null; } else { cur += ch; }
+      continue;
+    }
+    if (ch === '"' || ch === "'") { quote = ch; continue; }
+    if ((ch === ' ' || ch === '\t') && cur) { tokens.push(cur); cur = ''; continue; }
+    cur += ch;
+  }
+  if (cur) tokens.push(cur);
+  return tokens;
+}
+
+/**
+ * Escape một string để dùng an toàn trong shell argv (single-quote escape).
+ */
+function shellEscape(value: string): string {
+  return "'" + value.replace(/'/g, "'\\''") + "'";
+}
 
 
 // ==============================================================================
@@ -42,16 +73,23 @@ export class GitSafePointManager {
    * Chạy lệnh shell với cơ chế retry luỹ tiến phòng index.lock (Tác vụ 5)
    */
   public static execGit(cmd: string, cwd: string, retries = 5, delay = 100): string {
+    const argv = tokenizeCommand(cmd);
+    const program = argv[0];
+    if (program === undefined) {
+      throw new Error('Empty git command');
+    }
+    const args = argv.slice(1);
     let lastError: Error | undefined;
     for (let attempt = 0; attempt < retries; attempt++) {
       this.checkAndReleaseLock(cwd);
       try {
-        return execSync(cmd, { cwd, encoding: 'utf8', stdio: 'pipe' });
+        return execFileSync(program, args, { cwd, encoding: 'utf8', stdio: 'pipe' });
       } catch (err) {
         lastError = err instanceof Error ? err : new Error(String(err));
-        if (lastError.message.includes('index.lock') || lastError.message.includes('lock')) {
+        if (lastError.message.includes('lock')) {
           const backoff = delay * Math.pow(2, attempt);
-          execSync(`node -e "setTimeout(() => {}, ${backoff})"`, { cwd, encoding: 'utf8', stdio: 'pipe' });
+          // Dùng sleep() thay vì spawn node subprocess
+          sleep(backoff);
           continue;
         }
         throw lastError;
@@ -80,7 +118,7 @@ export class GitSafePointManager {
 
       // 3. Stash hoặc tạo commit nháp. Ở đây ta dùng commit nháp ẩn ghita-temp-safepoint
       this.execGit('git add -A', cwd);
-      this.execGit('git commit -m "ghita-temp-safepoint" --no-verify', cwd);
+      this.execGit(`git commit -m ${shellEscape('ghita-temp-safepoint')} --no-verify`, cwd);
       
       // Ghi log tĩnh hành vi tạo điểm neo
       this.logGitAction(cwd, 'CREATE_SAFEPOINT', 'Created temporary safepoint successfully');

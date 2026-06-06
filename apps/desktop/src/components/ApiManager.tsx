@@ -5,7 +5,11 @@
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from '../i18n';
-import { loadApiConfig, saveApiConfig } from '../utils/apiConfig';
+import { loadApiConfig, saveApiConfig, normalizeApiKeys } from '../utils/apiConfig';
+import {
+  formatModelLabel as formatModelLabelUtil,
+  parseModelLabel as parseModelLabelUtil,
+} from '../utils/modelLabel';
 
 type ProviderId =
   | 'openai'
@@ -32,7 +36,9 @@ type ProviderId =
   | 'voyage'
   | 'ai21'
   | 'sambanova'
-  | 'novita';
+  | 'novita'
+  | 'opencode-zen'
+  | 'nvidia-nim';
 
 interface ProviderConfig {
   id: ProviderId;
@@ -44,17 +50,64 @@ interface ProviderConfig {
   category: 'free' | 'paid' | 'custom';
   fetchModelsUrl?: (key: string, baseUrl: string) => string;
   parseModels?: (data: unknown) => string[];
+  /** Convert API model name to display label (e.g. "DeepSeek V4 Flash Free" -> "DEEPSEEK-V4-FLASH-FREE"). */
+  formatModelLabel?: (apiName: string) => string;
+  /** Convert display label back to API model name. Receives the user-typed/selected display form and the list of available API names. */
+  parseModelLabel?: (displayLabel: string, availableApiNames: string[]) => string;
 }
 
 const PROVIDERS: ProviderConfig[] = [
   {
-    id: 'opengateway',
-    name: 'Gitlawb Opengateway',
-    icon: '🌐',
-    baseUrl: 'https://opengateway.gitlawb.com/v1',
-    keyPlaceholder: 'Miễn phí — không cần key',
-    defaultModels: ['mimo-v2.5-pro', 'mimo-v2.5', 'mimo-v2-pro', 'mimo-v2-omni', 'mimo-v2-flash'],
+    id: 'opencode-zen',
+    name: 'OpenCode Zen',
+    icon: '🧘',
+    baseUrl: 'https://opencode.ai/zen/v1',
+    keyPlaceholder: 'OCZ_API_KEY (miễn phí — không bắt buộc)',
+    defaultModels: [
+      'minimax-m3-free',
+      'deepseek-v4-flash-free',
+      'mimo-v2.5-free',
+      'nemotron-3-super-free',
+    ],
     category: 'free',
+    fetchModelsUrl: (_key, base) => `${base}/models`,
+    parseModels: (data) => {
+      const d = data as { data?: { id: string }[] };
+      return (d.data ?? []).map((m) => m.id).sort();
+    },
+    formatModelLabel: (apiName) => formatModelLabelUtil('opencode-zen', apiName),
+    parseModelLabel: (label, available) => parseModelLabelUtil('opencode-zen', label, available),
+  },
+  {
+    id: 'nvidia-nim',
+    name: 'NVIDIA NIM',
+    icon: '🟢',
+    baseUrl: 'https://integrate.api.nvidia.com/v1',
+    keyPlaceholder: 'nvapi-...',
+    defaultModels: [
+      'nvidia/nemotron-3-super-120b-a12b',
+      'z-ai/glm-5.1',
+      'stepfun-ai/step-3.7-flash',
+      'moonshotai/kimi-k2.6',
+      'mistralai/mistral-medium-3.5-128b',
+      'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning',
+      'deepseek-ai/deepseek-v4-flash',
+      'nvidia/ising-calibration-1-35b-a3b',
+      'minimaxai/minimax-m2.7',
+      'google/gemma-4-31b-it',
+      'mistralai/mistral-small-4-119b-2603',
+      'qwen/qwen3.5-122b-a10b',
+      'qwen/qwen3.5-397b-a17b',
+      'stepfun-ai/step-3.5-flash',
+    ],
+    category: 'free',
+    fetchModelsUrl: (_key, base) => `${base}/models`,
+    parseModels: (data) => {
+      const d = data as { data?: { id: string }[] };
+      return (d.data ?? []).map((m) => m.id).sort();
+    },
+    formatModelLabel: (apiName) => formatModelLabelUtil('nvidia-nim', apiName),
+    parseModelLabel: (label, available) => parseModelLabelUtil('nvidia-nim', label, available),
   },
   {
     id: 'ollama',
@@ -90,7 +143,11 @@ const PROVIDERS: ProviderConfig[] = [
     icon: '🟣',
     baseUrl: 'https://api.anthropic.com',
     keyPlaceholder: 'sk-ant-...',
-    defaultModels: ['claude-sonnet-4-20250514', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
+    defaultModels: [
+      'claude-sonnet-4-20250514',
+      'claude-3-5-haiku-20241022',
+      'claude-3-opus-20240229',
+    ],
     category: 'paid',
   },
   {
@@ -108,12 +165,25 @@ const PROVIDERS: ProviderConfig[] = [
     },
   },
   {
+    id: 'opengateway',
+    name: 'Gitlawb Opengateway',
+    icon: '🌐',
+    baseUrl: 'https://opengateway.gitlawb.com/v1',
+    keyPlaceholder: 'Nhập API key...',
+    defaultModels: ['mimo-v2.5-pro', 'mimo-v2.5', 'mimo-v2-pro', 'mimo-v2-omni', 'mimo-v2-flash'],
+    category: 'paid',
+  },
+  {
     id: 'openrouter',
     name: 'OpenRouter',
     icon: '🔀',
     baseUrl: 'https://openrouter.ai/api/v1',
     keyPlaceholder: 'sk-or-...',
-    defaultModels: ['anthropic/claude-sonnet-4', 'openai/gpt-4o', 'meta-llama/llama-3.1-70b-instruct'],
+    defaultModels: [
+      'anthropic/claude-sonnet-4',
+      'openai/gpt-4o',
+      'meta-llama/llama-3.1-70b-instruct',
+    ],
     category: 'paid',
     fetchModelsUrl: (_key, base) => `${base}/models`,
     parseModels: (data) => {
@@ -201,7 +271,10 @@ const PROVIDERS: ProviderConfig[] = [
     defaultModels: ['llama3.1-8b', 'llama3.1-70b'],
     category: 'paid',
     fetchModelsUrl: (_key, base) => `${base}/models`,
-    parseModels: (data) => { const d = data as { data?: { id: string }[] }; return (d.data ?? []).map((m) => m.id).sort(); },
+    parseModels: (data) => {
+      const d = data as { data?: { id: string }[] };
+      return (d.data ?? []).map((m) => m.id).sort();
+    },
   },
   {
     id: 'together',
@@ -209,10 +282,17 @@ const PROVIDERS: ProviderConfig[] = [
     icon: '🤝',
     baseUrl: 'https://api.together.xyz/v1',
     keyPlaceholder: 'Nhập Together API key...',
-    defaultModels: ['meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo', 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo', 'mistralai/Mixtral-8x7B-Instruct-v0.1'],
+    defaultModels: [
+      'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo',
+      'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo',
+      'mistralai/Mixtral-8x7B-Instruct-v0.1',
+    ],
     category: 'paid',
     fetchModelsUrl: (_key, base) => `${base}/models`,
-    parseModels: (data) => { const d = data as { data?: { id: string }[] }; return (d.data ?? []).map((m) => m.id).sort(); },
+    parseModels: (data) => {
+      const d = data as { data?: { id: string }[] };
+      return (d.data ?? []).map((m) => m.id).sort();
+    },
   },
   {
     id: 'fireworks',
@@ -220,10 +300,16 @@ const PROVIDERS: ProviderConfig[] = [
     icon: '🎆',
     baseUrl: 'https://api.fireworks.ai/inference/v1',
     keyPlaceholder: 'Nhập Fireworks API key...',
-    defaultModels: ['accounts/fireworks/models/llama-v3p1-8b-instruct', 'accounts/fireworks/models/llama-v3p1-70b-instruct'],
+    defaultModels: [
+      'accounts/fireworks/models/llama-v3p1-8b-instruct',
+      'accounts/fireworks/models/llama-v3p1-70b-instruct',
+    ],
     category: 'paid',
     fetchModelsUrl: (_key, base) => `${base}/models`,
-    parseModels: (data) => { const d = data as { data?: { id: string }[] }; return (d.data ?? []).map((m) => m.id).sort(); },
+    parseModels: (data) => {
+      const d = data as { data?: { id: string }[] };
+      return (d.data ?? []).map((m) => m.id).sort();
+    },
   },
   {
     id: 'cohere',
@@ -243,7 +329,10 @@ const PROVIDERS: ProviderConfig[] = [
     defaultModels: ['grok-beta', 'grok-2'],
     category: 'paid',
     fetchModelsUrl: (_key, base) => `${base}/models`,
-    parseModels: (data) => { const d = data as { data?: { id: string }[] }; return (d.data ?? []).map((m) => m.id).sort(); },
+    parseModels: (data) => {
+      const d = data as { data?: { id: string }[] };
+      return (d.data ?? []).map((m) => m.id).sort();
+    },
   },
   {
     id: 'replicate',
@@ -290,7 +379,10 @@ const PROVIDERS: ProviderConfig[] = [
     defaultModels: ['Meta-Llama-3.1-8B-Instruct', 'Meta-Llama-3.1-70B-Instruct'],
     category: 'paid',
     fetchModelsUrl: (_key, base) => `${base}/models`,
-    parseModels: (data) => { const d = data as { data?: { id: string }[] }; return (d.data ?? []).map((m) => m.id).sort(); },
+    parseModels: (data) => {
+      const d = data as { data?: { id: string }[] };
+      return (d.data ?? []).map((m) => m.id).sort();
+    },
   },
   {
     id: 'novita',
@@ -301,7 +393,10 @@ const PROVIDERS: ProviderConfig[] = [
     defaultModels: ['meta-llama/llama-3.1-8b-instruct', 'meta-llama/llama-3.1-70b-instruct'],
     category: 'paid',
     fetchModelsUrl: (_key, base) => `${base}/models`,
-    parseModels: (data) => { const d = data as { data?: { id: string }[] }; return (d.data ?? []).map((m) => m.id).sort(); },
+    parseModels: (data) => {
+      const d = data as { data?: { id: string }[] };
+      return (d.data ?? []).map((m) => m.id).sort();
+    },
   },
   {
     id: 'custom',
@@ -356,17 +451,15 @@ function serializeApiKeysState(keys: ApiKeysState): Record<string, Record<string
   return toSave;
 }
 
-function buildStateFromSnapshot(snapshot: Record<string, Record<string, unknown>> = {}): ApiKeysState {
+function buildStateFromSnapshot(
+  snapshot: Record<string, Record<string, unknown>> = {},
+): ApiKeysState {
   const state = {} as ApiKeysState;
   for (const p of PROVIDERS) {
     const savedEntry = snapshot[p.id];
     let apiKeys: string[] = [];
     if (savedEntry) {
-      if (Array.isArray(savedEntry['apiKeys'])) {
-        apiKeys = (savedEntry['apiKeys'] as string[]).filter(Boolean);
-      } else if (typeof savedEntry['apiKey'] === 'string' && savedEntry['apiKey']) {
-        apiKeys = [savedEntry['apiKey'] as string];
-      }
+      apiKeys = normalizeApiKeys(savedEntry);
     }
     state[p.id] = {
       providerId: p.id,
@@ -387,12 +480,18 @@ function loadFavorites(): Set<ProviderId> {
   try {
     const saved = localStorage.getItem(FAVORITES_KEY);
     if (saved) return new Set(JSON.parse(saved) as ProviderId[]);
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return new Set<ProviderId>();
 }
 
 function saveFavorites(favs: Set<ProviderId>) {
-  try { localStorage.setItem(FAVORITES_KEY, JSON.stringify([...favs])); } catch { /* ignore */ }
+  try {
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify([...favs]));
+  } catch {
+    /* ignore */
+  }
 }
 
 export function ApiManager() {
@@ -402,25 +501,39 @@ export function ApiManager() {
   const [showKey, setShowKey] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [favorites, setFavorites] = useState<Set<ProviderId>>(loadFavorites);
+  // Per-provider draft of the model input so the user can type freely without
+  // the formatter rewriting the value on every keystroke. The draft is cleared
+  // when the field is blurred or the stored value is replaced via fetch.
+  const [modelDraft, setModelDraft] = useState<Partial<Record<ProviderId, string>>>({});
   const { t, lang } = useTranslation();
 
-  const getPlaceholder = useCallback((provider: ProviderConfig) => {
-    if (provider.id === 'opengateway' || provider.id === 'ollama') {
-      return t('apiManager.noKeyNeeded');
-    }
-    if (provider.keyPlaceholder.startsWith('Nhập ') || provider.keyPlaceholder.includes('API key') || provider.keyPlaceholder.includes('key')) {
-      if (lang === 'vi') {
-        return provider.keyPlaceholder.startsWith('Nhập') 
-          ? provider.keyPlaceholder 
-          : `Nhập ${provider.name} API key...`;
-      } else if (lang === 'en') {
-        return `Enter ${provider.name} API key...`;
-      } else {
-        return `请输入 ${provider.name} API key...`;
+  const getPlaceholder = useCallback(
+    (provider: ProviderConfig) => {
+      if (
+        provider.id === 'ollama' ||
+        provider.id === 'opencode-zen'
+      ) {
+        return t('apiManager.noKeyNeeded');
       }
-    }
-    return provider.keyPlaceholder;
-  }, [t, lang]);
+      if (
+        provider.keyPlaceholder.startsWith('Nhập ') ||
+        provider.keyPlaceholder.includes('API key') ||
+        provider.keyPlaceholder.includes('key')
+      ) {
+        if (lang === 'vi') {
+          return provider.keyPlaceholder.startsWith('Nhập')
+            ? provider.keyPlaceholder
+            : `Nhập ${provider.name} API key...`;
+        } else if (lang === 'en') {
+          return `Enter ${provider.name} API key...`;
+        } else {
+          return `请输入 ${provider.name} API key...`;
+        }
+      }
+      return provider.keyPlaceholder;
+    },
+    [t, lang],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -444,7 +557,9 @@ export function ApiManager() {
 
     try {
       void saveApiConfig(serializeApiKeysState(keys));
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, [keys, isConfigLoaded]);
 
   const updateKey = useCallback((id: ProviderId, patch: Partial<ApiKeyEntry>) => {
@@ -454,7 +569,8 @@ export function ApiManager() {
   const toggleFavorite = useCallback((id: ProviderId) => {
     setFavorites((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       saveFavorites(next);
       return next;
     });
@@ -462,12 +578,13 @@ export function ApiManager() {
 
   const handleSave = (id: ProviderId) => {
     const entry = keys[id];
-    const needsNoKey = id === 'ollama' || id === 'opengateway';
+    const needsNoKey = id === 'ollama' || id === 'opencode-zen';
     const input = document.getElementById(`new-key-${id}`) as HTMLInputElement | null;
     const pendingKey = input?.value?.trim();
-    const apiKeys = pendingKey && !entry.apiKeys.includes(pendingKey)
-      ? [...entry.apiKeys, pendingKey]
-      : entry.apiKeys;
+    const apiKeys =
+      pendingKey && !entry.apiKeys.includes(pendingKey)
+        ? [...entry.apiKeys, pendingKey]
+        : entry.apiKeys;
     const nextKeys = {
       ...keys,
       [id]: {
@@ -493,8 +610,30 @@ export function ApiManager() {
       const activeKey = entry.apiKeys[0] ?? '';
       const url = provider.fetchModelsUrl(activeKey, entry.baseUrl);
       const headers: Record<string, string> = {};
-      const openAiCompat = ['openai', 'opengateway', 'mimo', 'openrouter', 'deepseek', 'groq', 'mistral', 'hicap', 'github-models',
-        'cerebras', 'together', 'fireworks', 'cohere', 'xai', 'replicate', 'perplexity', 'voyage', 'ai21', 'sambanova', 'novita'];
+      const openAiCompat = [
+        'openai',
+        'opengateway',
+        'opencode-zen',
+        'nvidia-nim',
+        'mimo',
+        'openrouter',
+        'deepseek',
+        'groq',
+        'mistral',
+        'hicap',
+        'github-models',
+        'cerebras',
+        'together',
+        'fireworks',
+        'cohere',
+        'xai',
+        'replicate',
+        'perplexity',
+        'voyage',
+        'ai21',
+        'sambanova',
+        'novita',
+      ];
       if (activeKey && openAiCompat.includes(id)) {
         headers['Authorization'] = `Bearer ${activeKey}`;
       }
@@ -538,9 +677,7 @@ export function ApiManager() {
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     if (!q) return PROVIDERS;
-    return PROVIDERS.filter(
-      (p) => p.name.toLowerCase().includes(q) || p.id.includes(q),
-    );
+    return PROVIDERS.filter((p) => p.name.toLowerCase().includes(q) || p.id.includes(q));
   }, [search]);
 
   const activeCount = Object.values(keys).filter((k) => k.active).length;
@@ -561,20 +698,36 @@ export function ApiManager() {
   return (
     <div style={{ padding: '20px', overflow: 'auto', height: '100%' }}>
       {/* Header */}
-      <h2 style={{
-        fontSize: '18px', fontWeight: 700, marginBottom: '4px',
-        background: 'var(--accent-gradient)',
-        WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-      }}>
+      <h2
+        style={{
+          fontSize: '18px',
+          fontWeight: 700,
+          marginBottom: '4px',
+          background: 'var(--accent-gradient)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+        }}
+      >
         {t('apiManager.title')}
       </h2>
       <p style={{ color: 'var(--text-muted)', marginBottom: '16px', fontSize: '12px' }}>
-        {activeCount > 0 ? t('apiManager.activeProviders', { count: activeCount }) : t('apiManager.addKeyHint')}
+        {activeCount > 0
+          ? t('apiManager.activeProviders', { count: activeCount })
+          : t('apiManager.addKeyHint')}
       </p>
 
       {/* Search */}
       <div style={{ position: 'relative', marginBottom: '16px' }}>
-        <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', opacity: 0.5 }}>
+        <span
+          style={{
+            position: 'absolute',
+            left: '12px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            fontSize: '14px',
+            opacity: 0.5,
+          }}
+        >
           🔍
         </span>
         <input
@@ -583,10 +736,15 @@ export function ApiManager() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={{
-            width: '100%', padding: '10px 12px 10px 36px',
-            background: 'var(--bg-tertiary)', border: '1px solid var(--border-default)',
-            borderRadius: 'var(--radius-md)', color: 'var(--text-primary)',
-            fontSize: '13px', outline: 'none', boxSizing: 'border-box',
+            width: '100%',
+            padding: '10px 12px 10px 36px',
+            background: 'var(--bg-tertiary)',
+            border: '1px solid var(--border-default)',
+            borderRadius: 'var(--radius-md)',
+            color: 'var(--text-primary)',
+            fontSize: '13px',
+            outline: 'none',
+            boxSizing: 'border-box',
           }}
         />
       </div>
@@ -595,17 +753,31 @@ export function ApiManager() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         {groups.map((group) => (
           <div key={group.label}>
-            <div style={{
-              fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)',
-              textTransform: 'uppercase', letterSpacing: '1px',
-              marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px',
-            }}>
+            <div
+              style={{
+                fontSize: '11px',
+                fontWeight: 700,
+                color: 'var(--text-muted)',
+                textTransform: 'uppercase',
+                letterSpacing: '1px',
+                marginBottom: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
               <span>{group.emoji}</span> {group.label}
-              <span style={{
-                marginLeft: 'auto', fontSize: '10px', fontWeight: 500,
-                background: 'var(--bg-active)', padding: '2px 8px',
-                borderRadius: 'var(--radius-full)', color: 'var(--text-muted)',
-              }}>
+              <span
+                style={{
+                  marginLeft: 'auto',
+                  fontSize: '10px',
+                  fontWeight: 500,
+                  background: 'var(--bg-active)',
+                  padding: '2px 8px',
+                  borderRadius: 'var(--radius-full)',
+                  color: 'var(--text-muted)',
+                }}
+              >
                 {group.list.length}
               </span>
             </div>
@@ -615,7 +787,11 @@ export function ApiManager() {
                 const entry = keys[provider.id];
                 const isExpanded = expandedId === provider.id;
                 const isFav = favorites.has(provider.id);
-                const status = entry.active ? 'active' : entry.apiKeys.length > 0 ? 'ready' : 'none';
+                const status = entry.active
+                  ? 'active'
+                  : entry.apiKeys.length > 0
+                    ? 'ready'
+                    : 'none';
 
                 return (
                   <div
@@ -623,11 +799,12 @@ export function ApiManager() {
                     style={{
                       background: 'var(--bg-surface)',
                       borderRadius: 'var(--radius-md)',
-                      border: status === 'active'
-                        ? '1px solid rgba(34, 197, 94, 0.3)'
-                        : status === 'ready'
-                          ? '1px solid rgba(245, 158, 11, 0.2)'
-                          : '1px solid var(--border-subtle)',
+                      border:
+                        status === 'active'
+                          ? '1px solid rgba(34, 197, 94, 0.3)'
+                          : status === 'ready'
+                            ? '1px solid rgba(245, 158, 11, 0.2)'
+                            : '1px solid var(--border-subtle)',
                       overflow: 'hidden',
                       transition: 'border-color var(--transition-fast)',
                     }}
@@ -636,19 +813,33 @@ export function ApiManager() {
                     <div
                       onClick={() => setExpandedId(isExpanded ? null : provider.id)}
                       style={{
-                        display: 'flex', alignItems: 'center',
-                        padding: '12px 16px', cursor: 'pointer', gap: '10px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '12px 16px',
+                        cursor: 'pointer',
+                        gap: '10px',
                         transition: 'background var(--transition-fast)',
                       }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'var(--bg-hover)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                      }}
                     >
                       {/* Favorite star */}
                       <button
-                        onClick={(e) => { e.stopPropagation(); toggleFavorite(provider.id); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFavorite(provider.id);
+                        }}
                         style={{
-                          background: 'none', border: 'none', cursor: 'pointer',
-                          fontSize: '14px', padding: '2px', opacity: isFav ? 1 : 0.3,
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          padding: '2px',
+                          opacity: isFav ? 1 : 0.3,
                           transition: 'opacity 0.2s',
                         }}
                         title={isFav ? t('apiManager.removeFavorite') : t('apiManager.addFavorite')}
@@ -659,15 +850,27 @@ export function ApiManager() {
                       <span style={{ fontSize: '20px' }}>{provider.icon}</span>
 
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '13px' }}>
+                        <div
+                          style={{
+                            fontWeight: 600,
+                            color: 'var(--text-primary)',
+                            fontSize: '13px',
+                          }}
+                        >
                           {provider.name}
                         </div>
-                        <div style={{
-                          fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px',
-                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                        }}>
+                        <div
+                          style={{
+                            fontSize: '11px',
+                            color: 'var(--text-muted)',
+                            marginTop: '1px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           {status === 'active'
-                            ? `${t('apiManager.model')}: ${entry.selectedModel || '\u2014'}`
+                            ? `${t('apiManager.model')}: ${(provider.formatModelLabel ? provider.formatModelLabel(entry.selectedModel) : entry.selectedModel) || '\u2014'}`
                             : status === 'ready'
                               ? maskKey(entry.apiKeys[0] ?? '')
                               : getPlaceholder(provider)}
@@ -675,52 +878,82 @@ export function ApiManager() {
                       </div>
 
                       {/* Status badge */}
-                      <span style={{
-                        padding: '2px 8px', borderRadius: 'var(--radius-full)',
-                        fontSize: '10px', fontWeight: 600,
-                        background: status === 'active'
-                          ? 'var(--success-bg)'
+                      <span
+                        style={{
+                          padding: '2px 8px',
+                          borderRadius: 'var(--radius-full)',
+                          fontSize: '10px',
+                          fontWeight: 600,
+                          background:
+                            status === 'active'
+                              ? 'var(--success-bg)'
+                              : status === 'ready'
+                                ? 'rgba(245, 158, 11, 0.1)'
+                                : 'var(--bg-surface)',
+                          color:
+                            status === 'active'
+                              ? 'var(--success)'
+                              : status === 'ready'
+                                ? '#f59e0b'
+                                : 'var(--text-muted)',
+                          border:
+                            status === 'active'
+                              ? '1px solid rgba(34, 197, 94, 0.3)'
+                              : status === 'ready'
+                                ? '1px solid rgba(245, 158, 11, 0.2)'
+                                : '1px solid var(--border-subtle)',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {status === 'active'
+                          ? t('apiManager.active')
                           : status === 'ready'
-                            ? 'rgba(245, 158, 11, 0.1)'
-                            : 'var(--bg-surface)',
-                        color: status === 'active'
-                          ? 'var(--success)'
-                          : status === 'ready'
-                            ? '#f59e0b'
-                            : 'var(--text-muted)',
-                        border: status === 'active'
-                          ? '1px solid rgba(34, 197, 94, 0.3)'
-                          : status === 'ready'
-                            ? '1px solid rgba(245, 158, 11, 0.2)'
-                            : '1px solid var(--border-subtle)',
-                        whiteSpace: 'nowrap',
-                      }}>
-                        {status === 'active' ? t('apiManager.active') : status === 'ready' ? t('apiManager.ready') : t('apiManager.notSet')}
+                            ? t('apiManager.ready')
+                            : t('apiManager.notSet')}
                       </span>
 
                       {/* Chevron */}
-                      <span style={{
-                        color: 'var(--text-muted)',
-                        transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                        transition: 'transform 200ms', fontSize: '10px',
-                      }}>
+                      <span
+                        style={{
+                          color: 'var(--text-muted)',
+                          transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                          transition: 'transform 200ms',
+                          fontSize: '10px',
+                        }}
+                      >
                         ▼
                       </span>
                     </div>
 
                     {/* Expanded content */}
                     {isExpanded && (
-                      <div style={{
-                        padding: '0 16px 16px',
-                        borderTop: '1px solid var(--border-subtle)',
-                        display: 'flex', flexDirection: 'column', gap: '12px', paddingTop: '14px',
-                      }}>
+                      <div
+                        style={{
+                          padding: '0 16px 16px',
+                          borderTop: '1px solid var(--border-subtle)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '12px',
+                          paddingTop: '14px',
+                        }}
+                      >
                         {/* Phase 1.1: Multi-Key Management */}
                         <div>
-                          <label style={labelStyle}>{t('apiManager.apiKey')} ({entry.apiKeys.length > 1 ? t('apiManager.keysCount', { count: entry.apiKeys.length }) : entry.apiKeys.length === 1 ? '1 key' : t('apiManager.notSet')})</label>
+                          <label style={labelStyle}>
+                            {t('apiManager.apiKey')} (
+                            {entry.apiKeys.length > 1
+                              ? t('apiManager.keysCount', { count: entry.apiKeys.length })
+                              : entry.apiKeys.length === 1
+                                ? '1 key'
+                                : t('apiManager.notSet')}
+                            )
+                          </label>
                           {/* Existing keys list */}
                           {entry.apiKeys.map((k, idx) => (
-                            <div key={idx} style={{ display: 'flex', gap: '6px', marginBottom: '4px' }}>
+                            <div
+                              key={idx}
+                              style={{ display: 'flex', gap: '6px', marginBottom: '4px' }}
+                            >
                               <input
                                 type={showKey === `${provider.id}-${idx}` ? 'text' : 'password'}
                                 value={k}
@@ -728,16 +961,34 @@ export function ApiManager() {
                                 style={{ ...inputStyle, flex: 1, opacity: 0.8 }}
                               />
                               <button
-                                onClick={() => setShowKey(showKey === `${provider.id}-${idx}` ? null : `${provider.id}-${idx}`)}
+                                onClick={() =>
+                                  setShowKey(
+                                    showKey === `${provider.id}-${idx}`
+                                      ? null
+                                      : `${provider.id}-${idx}`,
+                                  )
+                                }
                                 style={iconBtnStyle}
-                                title={showKey === `${provider.id}-${idx}` ? t('apiManager.hide') : t('apiManager.show')}
+                                title={
+                                  showKey === `${provider.id}-${idx}`
+                                    ? t('apiManager.hide')
+                                    : t('apiManager.show')
+                                }
                               >
-                                {showKey === `${provider.id}-${idx}` ? '\uD83D\uDE48' : '\uD83D\uDC41\uFE0F'}
+                                {showKey === `${provider.id}-${idx}`
+                                  ? '\uD83D\uDE48'
+                                  : '\uD83D\uDC41\uFE0F'}
                               </button>
                               <button
                                 onClick={() => {
                                   const newKeys = entry.apiKeys.filter((_, i) => i !== idx);
-                                  updateKey(provider.id, { apiKeys: newKeys, active: newKeys.length > 0 || provider.id === 'ollama' || provider.id === 'opengateway' });
+                                  updateKey(provider.id, {
+                                    apiKeys: newKeys,
+                                    active:
+                                      newKeys.length > 0 ||
+                                      provider.id === 'ollama' ||
+                                      provider.id === 'opencode-zen',
+                                  });
                                 }}
                                 style={{ ...iconBtnStyle, color: 'var(--error)' }}
                                 title={t('apiManager.removeKey')}
@@ -761,14 +1012,22 @@ export function ApiManager() {
                               style={{ ...inputStyle, flex: 1 }}
                             />
                             <button
-                              onClick={() => setShowKey(showKey === `${provider.id}-new` ? null : `${provider.id}-new`)}
+                              onClick={() =>
+                                setShowKey(
+                                  showKey === `${provider.id}-new` ? null : `${provider.id}-new`,
+                                )
+                              }
                               style={iconBtnStyle}
                             >
-                              {showKey === `${provider.id}-new` ? '\uD83D\uDE48' : '\uD83D\uDC41\uFE0F'}
+                              {showKey === `${provider.id}-new`
+                                ? '\uD83D\uDE48'
+                                : '\uD83D\uDC41\uFE0F'}
                             </button>
                             <button
                               onClick={() => {
-                                const input = document.getElementById(`new-key-${provider.id}`) as HTMLInputElement;
+                                const input = document.getElementById(
+                                  `new-key-${provider.id}`,
+                                ) as HTMLInputElement;
                                 const newKey = input?.value?.trim();
                                 if (newKey && !entry.apiKeys.includes(newKey)) {
                                   updateKey(provider.id, { apiKeys: [...entry.apiKeys, newKey] });
@@ -787,11 +1046,17 @@ export function ApiManager() {
                               <label style={labelStyle}>{t('apiManager.keyStrategy')}</label>
                               <select
                                 value={entry.rotationStrategy}
-                                onChange={(e) => updateKey(provider.id, { rotationStrategy: e.target.value as KeyRotationStrategy })}
+                                onChange={(e) =>
+                                  updateKey(provider.id, {
+                                    rotationStrategy: e.target.value as KeyRotationStrategy,
+                                  })
+                                }
                                 style={inputStyle}
                               >
                                 <option value="failover">{t('apiManager.strategyFailover')}</option>
-                                <option value="round-robin">{t('apiManager.strategyRoundRobin')}</option>
+                                <option value="round-robin">
+                                  {t('apiManager.strategyRoundRobin')}
+                                </option>
                                 <option value="random">{t('apiManager.strategyRandom')}</option>
                               </select>
                             </div>
@@ -819,34 +1084,76 @@ export function ApiManager() {
                             <input
                               type="text"
                               list={`models-list-${provider.id}`}
-                              value={entry.selectedModel}
-                              onChange={(e) => updateKey(provider.id, { selectedModel: e.target.value })}
+                              value={
+                                modelDraft[provider.id] ??
+                                (provider.formatModelLabel
+                                  ? provider.formatModelLabel(entry.selectedModel)
+                                  : entry.selectedModel)
+                              }
+                              onChange={(e) => {
+                                const next = e.target.value;
+                                setModelDraft((prev) => ({ ...prev, [provider.id]: next }));
+                                if (provider.parseModelLabel) {
+                                  updateKey(provider.id, {
+                                    selectedModel: provider.parseModelLabel(
+                                      next,
+                                      entry.availableModels,
+                                    ),
+                                  });
+                                } else {
+                                  updateKey(provider.id, { selectedModel: next });
+                                }
+                              }}
+                              onBlur={() => {
+                                setModelDraft((prev) => {
+                                  if (!(provider.id in prev)) return prev;
+                                  const { [provider.id]: _omit, ...rest } = prev;
+                                  return rest;
+                                });
+                              }}
                               placeholder={t('apiManager.selectModel')}
                               style={{ ...inputStyle, flex: 1 }}
                             />
                             <datalist id={`models-list-${provider.id}`}>
-                              {entry.availableModels.map((m) => (
-                                <option key={m} value={m} />
-                              ))}
+                              {entry.availableModels.map((m) => {
+                                const displayLabel = provider.formatModelLabel
+                                  ? provider.formatModelLabel(m)
+                                  : m;
+                                return <option key={m} value={displayLabel} label={displayLabel} />;
+                              })}
                             </datalist>
 
                             {provider.fetchModelsUrl && (
                               <button
                                 onClick={() => handleFetchModels(provider.id)}
-                                disabled={entry.isFetchingModels || (entry.apiKeys.length === 0 && provider.id !== 'ollama' && provider.id !== 'opengateway')}
+                                disabled={
+                                  entry.isFetchingModels ||
+                                  (entry.apiKeys.length === 0 &&
+                                    provider.id !== 'ollama' &&
+                                    provider.id !== 'opencode-zen')
+                                }
                                 style={{
                                   ...iconBtnStyle,
-                                  opacity: entry.isFetchingModels || (entry.apiKeys.length === 0 && provider.id !== 'ollama' && provider.id !== 'opengateway') ? 0.4 : 1,
+                                  opacity:
+                                    entry.isFetchingModels ||
+                                    (entry.apiKeys.length === 0 &&
+                                      provider.id !== 'ollama' &&
+                                      provider.id !== 'opencode-zen')
+                                      ? 0.4
+                                      : 1,
                                   whiteSpace: 'nowrap',
                                 }}
                                 title={t('apiManager.fetchModels')}
                               >
-                                {entry.isFetchingModels ? '\u23F3' : '\uD83D\uDD04'} {t('apiManager.fetch')}
+                                {entry.isFetchingModels ? '\u23F3' : '\uD83D\uDD04'}{' '}
+                                {t('apiManager.fetch')}
                               </button>
                             )}
                           </div>
                           {entry.fetchError && (
-                            <div style={{ fontSize: '11px', color: 'var(--error)', marginTop: '4px' }}>
+                            <div
+                              style={{ fontSize: '11px', color: 'var(--error)', marginTop: '4px' }}
+                            >
                               {entry.fetchError}
                             </div>
                           )}
@@ -857,16 +1164,26 @@ export function ApiManager() {
                           <button
                             onClick={() => {
                               updateKey(provider.id, {
-                                apiKeys: [], active: false,
+                                apiKeys: [],
+                                active: false,
                                 selectedModel: provider.defaultModels[0] ?? '',
                                 availableModels: provider.defaultModels,
                                 fetchError: null,
                               });
+                              setModelDraft((prev) => {
+                                if (!(provider.id in prev)) return prev;
+                                const { [provider.id]: _omit, ...rest } = prev;
+                                return rest;
+                              });
                             }}
                             style={{
-                              padding: '7px 14px', background: 'var(--error-bg)',
-                              color: 'var(--error)', border: '1px solid rgba(239, 68, 68, 0.2)',
-                              borderRadius: 'var(--radius-sm)', fontSize: '12px', cursor: 'pointer',
+                              padding: '7px 14px',
+                              background: 'var(--error-bg)',
+                              color: 'var(--error)',
+                              border: '1px solid rgba(239, 68, 68, 0.2)',
+                              borderRadius: 'var(--radius-sm)',
+                              fontSize: '12px',
+                              cursor: 'pointer',
                             }}
                           >
                             {t('apiManager.deleteKey')}
@@ -874,10 +1191,14 @@ export function ApiManager() {
                           <button
                             onClick={() => handleSave(provider.id)}
                             style={{
-                              padding: '7px 20px', background: 'var(--accent-primary)',
-                              color: '#fff', border: 'none',
-                              borderRadius: 'var(--radius-sm)', fontSize: '12px',
-                              fontWeight: 600, cursor: 'pointer',
+                              padding: '7px 20px',
+                              background: 'var(--accent-primary)',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: 'var(--radius-sm)',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              cursor: 'pointer',
                             }}
                           >
                             {t('apiManager.save')}
@@ -897,21 +1218,35 @@ export function ApiManager() {
 }
 
 const labelStyle: React.CSSProperties = {
-  display: 'block', fontSize: '11px', fontWeight: 600,
-  color: 'var(--text-secondary)', marginBottom: '5px',
-  textTransform: 'uppercase', letterSpacing: '0.5px',
+  display: 'block',
+  fontSize: '11px',
+  fontWeight: 600,
+  color: 'var(--text-secondary)',
+  marginBottom: '5px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.5px',
 };
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '8px 12px',
-  background: 'var(--bg-tertiary)', border: '1px solid var(--border-default)',
-  borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)',
-  fontSize: '13px', fontFamily: "'Cascadia Code', 'Fira Code', 'Consolas', monospace",
-  outline: 'none', boxSizing: 'border-box',
+  width: '100%',
+  padding: '8px 12px',
+  background: 'var(--bg-tertiary)',
+  border: '1px solid var(--border-default)',
+  borderRadius: 'var(--radius-sm)',
+  color: 'var(--text-primary)',
+  fontSize: '13px',
+  fontFamily: "'Cascadia Code', 'Fira Code', 'Consolas', monospace",
+  outline: 'none',
+  boxSizing: 'border-box',
 };
 
 const iconBtnStyle: React.CSSProperties = {
-  padding: '8px 12px', background: 'var(--bg-active)',
-  color: 'var(--accent-primary)', border: '1px solid rgba(129, 140, 248, 0.2)',
-  borderRadius: 'var(--radius-sm)', fontSize: '12px', cursor: 'pointer', fontWeight: 600,
+  padding: '8px 12px',
+  background: 'var(--bg-active)',
+  color: 'var(--accent-primary)',
+  border: '1px solid rgba(129, 140, 248, 0.2)',
+  borderRadius: 'var(--radius-sm)',
+  fontSize: '12px',
+  cursor: 'pointer',
+  fontWeight: 600,
 };

@@ -33,7 +33,7 @@ export const vi: TranslationKeys = {
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v0.0.3-beta1',
+    version: 'v0.0.3',
     deviceReconnected: 'Khôi phục kết nối với thiết bị: {{name}}',
     devicePaired: 'Đã ghép đôi thành công thiết bị: {{name}}',
     commandReceived: 'Đã nhận lệnh từ thiết bị: {{action}}',
@@ -82,7 +82,8 @@ export const vi: TranslationKeys = {
     mcpServers: 'Máy chủ MCP (Model Context Protocol)',
     mcpServersDesc: 'Cấu hình các máy chủ MCP để mở rộng năng lực công cụ (tools) cho AI.',
     hooks: 'Hooks (Lifecycle Scripts)',
-    hooksDesc: 'Các kịch bản lệnh chạy trước/sau khi gọi công cụ để tự động hóa quy trình làm việc.',
+    hooksDesc:
+      'Các kịch bản lệnh chạy trước/sau khi gọi công cụ để tự động hóa quy trình làm việc.',
     info: 'Thông tin ứng dụng',
     version: 'Phiên bản',
     platform: 'Nền tảng hệ điều hành',
@@ -112,8 +113,10 @@ export const vi: TranslationKeys = {
     shortcutSave: 'Ctrl+S: Lưu',
     shortcutClose: 'Ctrl+W: Đóng',
     shortcutSaveAll: 'Ctrl+Shift+S: Lưu tất cả',
-    unsavedChangesConfirm: 'Tệp tin "{{name}}" có thay đổi chưa lưu. Bạn có chắc chắn muốn đóng và hủy bỏ các thay đổi này không?',
-    binaryNotSupported: 'Không hỗ trợ xem tệp tin nhị phân "{{name}}" trực tiếp trên trình soạn thảo.',
+    unsavedChangesConfirm:
+      'Tệp tin "{{name}}" có thay đổi chưa lưu. Bạn có chắc chắn muốn đóng và hủy bỏ các thay đổi này không?',
+    binaryNotSupported:
+      'Không hỗ trợ xem tệp tin nhị phân "{{name}}" trực tiếp trên trình soạn thảo.',
     readFailed: 'Đọc tệp tin thất bại: {{error}}',
   },
   devices: {
@@ -149,6 +152,9 @@ export const vi: TranslationKeys = {
     guideStep3: '3. Nhập mã xác nhận ghép đôi gồm 6 ký tự khi được nhắc',
     guideStep4: '4. Chờ trong giây lát để hệ thống thiết lập kết nối an toàn',
     guideStep5: '5. Kết nối hoàn tất! Bắt đầu điều khiển tác vụ.',
+    lanEnabled: 'Cho phép thiết bị di động kết nối (LAN/Wi-Fi)',
+    lanEnabledDesc:
+      'Cho phép các thiết bị di động trong cùng mạng LAN/Wi-Fi tìm kiếm và kết nối tới máy tính này.',
   },
   dashboard: {
     title: 'Bảng điều khiển',
@@ -201,18 +207,25 @@ export const vi: TranslationKeys = {
     sortByDownloads: 'Tải xuống nhiều nhất',
     sortByRating: 'Đánh giá cao nhất',
     sortByNewest: 'Tiện ích mới nhất',
-    plugin_ghita_github_assistant_desc: 'Tự động đồng bộ git, push commit, quản lý Pull Requests và issue tracker trực tiếp từ chat panel.',
-    plugin_ghita_docker_orchestrator_desc: 'Đóng gói các skills quản lý container Docker, kiểm tra logs, build image và quản lý volume an toàn.',
+    plugin_ghita_github_assistant_desc:
+      'Tự động đồng bộ git, push commit, quản lý Pull Requests và issue tracker trực tiếp từ chat panel.',
+    plugin_ghita_docker_orchestrator_desc:
+      'Đóng gói các skills quản lý container Docker, kiểm tra logs, build image và quản lý volume an toàn.',
     skill_docker_list_desc: 'Liệt kê các containers đang chạy',
-    plugin_ghita_vercel_deployer_desc: 'Liên kết project, tự động trigger deploy preview, production và audit logs trong quy trình CI/CD.',
-    plugin_ghita_db_client_desc: 'Skills tương tác nhanh với các DB PostgreSQL, MySQL, SQLite, MongoDB. Cho phép AI preview schema và tối ưu query.',
+    plugin_ghita_vercel_deployer_desc:
+      'Liên kết project, tự động trigger deploy preview, production và audit logs trong quy trình CI/CD.',
+    plugin_ghita_db_client_desc:
+      'Skills tương tác nhanh với các DB PostgreSQL, MySQL, SQLite, MongoDB. Cho phép AI preview schema và tối ưu query.',
     skill_db_query_desc: 'Chạy safe select query và phân tích schema',
-    plugin_ghita_jira_connector_desc: 'Đọc và cập nhật ticket Jira, chuyển đổi trạng thái issue, liên kết git commits với story ID tương ứng.',
-    plugin_ghita_vision_grounding_extra_desc: 'Mô hình vision cục bộ bổ trợ nâng cao độ chính xác coordinate recognition khi sử dụng Computer Use trên màn hình lớn.',
+    plugin_ghita_jira_connector_desc:
+      'Đọc và cập nhật ticket Jira, chuyển đổi trạng thái issue, liên kết git commits với story ID tương ứng.',
+    plugin_ghita_vision_grounding_extra_desc:
+      'Mô hình vision cục bộ bổ trợ nâng cao độ chính xác coordinate recognition khi sử dụng Computer Use trên màn hình lớn.',
   },
   workflow: {
     dragNodes: 'KÉO THẢ CÁC NÚT TÁC VỤ',
-    dragNodesDesc: 'Kéo thả các nút hành động vào khung vẽ bên phải để tự thiết kế quy trình tự động hóa.',
+    dragNodesDesc:
+      'Kéo thả các nút hành động vào khung vẽ bên phải để tự thiết kế quy trình tự động hóa.',
     startTrigger: 'Điểm bắt đầu (Trigger)',
     runCommand: 'Chạy câu lệnh terminal',
     callMcpTool: 'Gọi công cụ MCP',
@@ -238,9 +251,11 @@ export const vi: TranslationKeys = {
   },
   ecosystem: {
     title: 'TÍCH HỢP HỆ SINH THÁI & HỆ THỐNG NGOÀI',
-    subtitle: 'Quản lý kênh truyền thông gRPC, API chuẩn hóa Agent Protocol và bộ định tuyến tối ưu hóa chi phí LLM.',
+    subtitle:
+      'Quản lý kênh truyền thông gRPC, API chuẩn hóa Agent Protocol và bộ định tuyến tối ưu hóa chi phí LLM.',
     grpcDaemon: 'MÁY CHỦ DAEMON GIAO TIẾP gRPC',
-    grpcDesc: 'Kênh truyền thông nhị phân hiệu năng cao chuyên biệt cho tiện ích VS Code extension.',
+    grpcDesc:
+      'Kênh truyền thông nhị phân hiệu năng cao chuyên biệt cho tiện ích VS Code extension.',
     serverPort: 'CỔNG TRUYỀN THÔNG (PORT):',
     daemonConsole: 'BẢNG ĐIỀU KHIỂN LIVE LOGS CỦA DAEMON:',
     startDaemon: 'Khởi chạy Daemon',
@@ -253,7 +268,8 @@ export const vi: TranslationKeys = {
     enableAp: 'Kích hoạt AP',
     disableAp: 'Vô hiệu hóa AP',
     dynamicRouter: 'BỘ ĐỊNH TUYẾN DYNAMIC DỰA TRÊN CHI PHÍ & ĐỘ PHỨC TẠP LLM',
-    dynamicRouterDesc: 'Thuật toán tự động phân tích và đánh giá độ phức tạp của câu lệnh (Prompt) để định tuyến mô hình tối ưu.',
+    dynamicRouterDesc:
+      'Thuật toán tự động phân tích và đánh giá độ phức tạp của câu lệnh (Prompt) để định tuyến mô hình tối ưu.',
     maxCostPerTask: 'CHI PHÍ TỐI ĐA CHO MỖI TÁC VỤ ($):',
     complexityRouting: 'ĐỊNH TUYẾN THEO GIỚI HẠN ĐỘ PHỨC TẠP:',
     automaticRouting: 'Định tuyến tự động (Khuyên dùng)',
@@ -273,11 +289,14 @@ export const vi: TranslationKeys = {
     demoMode: 'Chế độ Demo — Dữ liệu mô phỏng',
   },
   chat: {
-    welcomeMessage: 'Xin chào! Tôi là GHITA Assistant, trợ lý AI của bạn. Tôi có thể hỗ trợ bạn lập trình, thực thi các câu lệnh hệ thống trực tiếp, quản lý tệp tin và nhiều tác vụ tự động hóa khác. Hãy nhập câu hỏi của bạn để bắt đầu!',
+    welcomeMessage:
+      'Xin chào! Tôi là GHITA Assistant, trợ lý AI của bạn. Tôi có thể hỗ trợ bạn lập trình, thực thi các câu lệnh hệ thống trực tiếp, quản lý tệp tin và nhiều tác vụ tự động hóa khác. Hãy nhập câu hỏi của bạn để bắt đầu!',
     notConnected: 'Chưa thiết lập được kết nối tới máy chủ...',
-    notConnectedHint: 'Chưa kết nối tới máy chủ dịch vụ. Vui lòng nhập nội dung bất kỳ để xem hướng dẫn thiết lập.',
+    notConnectedHint:
+      'Chưa kết nối tới máy chủ dịch vụ. Vui lòng nhập nội dung bất kỳ để xem hướng dẫn thiết lập.',
     noProvider: 'Chưa cấu hình dịch vụ AI Provider...',
-    noProviderHint: 'Chưa cấu hình API dịch vụ AI. Vui lòng nhập nội dung bất kỳ để xem hướng dẫn thiết lập.',
+    noProviderHint:
+      'Chưa cấu hình API dịch vụ AI. Vui lòng nhập nội dung bất kỳ để xem hướng dẫn thiết lập.',
     systemError: 'Hệ thống gặp sự cố:',
     connecting: 'Đang thiết lập kết nối...',
     reconnect: 'Thử kết nối lại',
@@ -295,9 +314,11 @@ export const vi: TranslationKeys = {
     reject: 'Từ chối lệnh',
     approve: 'Phê duyệt chạy',
     placeholderConnected: 'Nhập câu hỏi cho AI hoặc gõ dấu "/" để hiển thị danh sách lệnh nhanh...',
-    placeholderNoApi: 'Chưa cấu hình API dịch vụ AI. Nhập nội dung bất kỳ để xem hướng dẫn thiết lập.',
+    placeholderNoApi:
+      'Chưa cấu hình API dịch vụ AI. Nhập nội dung bất kỳ để xem hướng dẫn thiết lập.',
     placeholderConnecting: 'Đang kết nối tới máy chủ dịch vụ...',
-    placeholderDisconnected: 'Chưa kết nối tới máy chủ. Nhập nội dung bất kỳ để xem hướng dẫn thiết lập.',
+    placeholderDisconnected:
+      'Chưa kết nối tới máy chủ. Nhập nội dung bất kỳ để xem hướng dẫn thiết lập.',
     compactContext: 'Tóm tắt nội dung trò chuyện',
     clearChat: 'Xóa lịch sử cuộc trò chuyện',
     help: 'Hiển thị tài liệu hỗ trợ nhanh',
@@ -305,9 +326,11 @@ export const vi: TranslationKeys = {
     featureDev: 'Phát triển tính năng mới',
     deployCheck: 'Kiểm tra lỗi trước khi triển khai (Deploy Check)',
     summary: 'Tóm tắt nội dung hội thoại',
-    systemPrompt: 'Bạn là GHITA Assistant, trợ lý AI thông minh được tích hợp trong ứng dụng GHITA CODING AGENT.\n\nKHẢ NĂNG CỐT LÕI: Bạn có thể trực tiếp thực thi lệnh trên máy tính của người dùng. Khi người dùng yêu cầu mở ứng dụng, chạy lệnh, quản lý file — hãy LUÔN đặt lệnh trong code block với ngôn ngữ cmd hoặc powershell. Hệ thống sẽ TỰ ĐỘNG chạy lệnh đó. KHÔNG BAO GIỜ nói "không thể" hay "không có khả năng".\n\nQUY TẮC BẮT BUỘC: Khi cần chạy lệnh, LUÔN sử dụng format sau:\n```cmd\nlệnh cần chạy\n```\nHoặc:\n```powershell\nlệnh cần chạy\n```\n\nVí dụ mở Microsoft Word:\n```cmd\nstart winword\n```\n\nVí dụ mở Notepad:\n```cmd\nnotepad\n```\n\nBạn cũng hỗ trợ: code review, refactor, chạy test, format code, lint, security audit, generate docs.\n\nLuôn tự giới thiệu mình là GHITA Assistant khi được hỏi về danh tính. Trả lời ngắn gọn, trực tiếp.',
+    systemPrompt:
+      'Bạn là GHITA Assistant, trợ lý AI thông minh được tích hợp trong ứng dụng GHITA CODING AGENT.\n\nKHẢ NĂNG CỐT LÕI: Bạn có thể trực tiếp thực thi lệnh trên máy tính của người dùng. Khi người dùng yêu cầu mở ứng dụng, chạy lệnh, quản lý file — hãy LUÔN đặt lệnh trong code block với ngôn ngữ cmd hoặc powershell. Hệ thống sẽ TỰ ĐỘNG chạy lệnh đó. KHÔNG BAO GIỜ nói "không thể" hay "không có khả năng".\n\nQUY TẮC BẮT BUỘC: Khi cần chạy lệnh, LUÔN sử dụng format sau:\n```cmd\nlệnh cần chạy\n```\nHoặc:\n```powershell\nlệnh cần chạy\n```\n\nVí dụ mở Microsoft Word:\n```cmd\nstart winword\n```\n\nVí dụ mở Notepad:\n```cmd\nnotepad\n```\n\nBạn cũng hỗ trợ: code review, refactor, chạy test, format code, lint, security audit, generate docs.\n\nLuôn tự giới thiệu mình là GHITA Assistant khi được hỏi về danh tính. Trả lời ngắn gọn, trực tiếp.',
     openclawEngine: 'GHITA Assistant',
-    skillLearned: 'Tự động học Skill: Trợ lý AI vừa đề xuất và tự tích hợp thành công kỹ năng mới...',
+    skillLearned:
+      'Tự động học Skill: Trợ lý AI vừa đề xuất và tự tích hợp thành công kỹ năng mới...',
     runningAutomation: 'Đang chạy các bước mô phỏng tự động hóa màn hình...',
     noConfig: 'Chưa được cấu hình',
     description: 'Mô tả chi tiết',
@@ -325,7 +348,8 @@ export const vi: TranslationKeys = {
     runError: 'Lỗi',
     messagesCount: '{{count}} tin nhắn',
     compactSuccess: 'Đã compact ngữ cảnh hiển thị: chỉ giữ các tin nhắn gần nhất cho phiên này.',
-    noWorkspace: 'Chưa mở thư mục làm việc. Hãy mở lại project/thư mục trong Explorer trước khi chạy Agent, Review, Feature hoặc Ralph.',
+    noWorkspace:
+      'Chưa mở thư mục làm việc. Hãy mở lại project/thư mục trong Explorer trước khi chạy Agent, Review, Feature hoặc Ralph.',
     permissionCustom: 'Custom: Xác nhận mỗi lệnh & sửa file',
     permissionAuto: 'Auto: Tự do, chỉ hỏi lệnh nguy hiểm (install, download...)',
     liveAgentEvents: 'SỰ KIỆN AGENT TRỰC TUYẾN',
@@ -336,8 +360,10 @@ export const vi: TranslationKeys = {
     shellSwitchHint: 'Nhấn vào tên Shell để chuyển đổi qua lại giữa cmd.exe và PowerShell',
     running: 'Đang chạy lệnh...',
     placeholder: 'Nhập lệnh thực thi tại đây...',
-    failedToExecute: 'Thực thi thất bại. Vui lòng kiểm tra quyền hạn của bạn và đảm bảo lệnh này hợp lệ.',
-    permissionHint: 'Hãy chắc chắn rằng lệnh này tồn tại trong hệ thống và bạn được cấp đủ quyền thực thi.',
+    failedToExecute:
+      'Thực thi thất bại. Vui lòng kiểm tra quyền hạn của bạn và đảm bảo lệnh này hợp lệ.',
+    permissionHint:
+      'Hãy chắc chắn rằng lệnh này tồn tại trong hệ thống và bạn được cấp đủ quyền thực thi.',
     pathNotFound: "Đường dẫn thư mục hoặc tệp tin '{{path}}' không tồn tại",
   },
   errorFallback: {
@@ -399,14 +425,16 @@ export const vi: TranslationKeys = {
   },
   skillManager: {
     title: 'Quản lý các Kỹ năng (Skill Manager)',
-    subtitle: 'Đăng ký, bật/tắt quyền kiểm soát và chạy thử nghiệm an toàn các kỹ năng tự động hóa.',
+    subtitle:
+      'Đăng ký, bật/tắt quyền kiểm soát và chạy thử nghiệm an toàn các kỹ năng tự động hóa.',
     enabledSkills: 'kỹ năng đã kích hoạt',
     testRun: 'Chạy thử nghiệm',
     running: 'Đang chạy kiểm thử...',
   },
   agentGroups: {
     title: 'Nhóm các Trợ lý AI (Agent Groups)',
-    subtitle: 'Quản lý các Agent, phân phối đội hình, phân chia tác vụ và thiết lập bộ nhớ ngữ cảnh liên kết.',
+    subtitle:
+      'Quản lý các Agent, phân phối đội hình, phân chia tác vụ và thiết lập bộ nhớ ngữ cảnh liên kết.',
     registeredAgents: 'Agent đã đăng ký hệ thống',
     runGroupTask: 'Giao tác vụ cho nhóm',
     runningGroup: 'Đội hình Agent đang xử lý...',
@@ -419,7 +447,8 @@ export const vi: TranslationKeys = {
     title: 'DocsGriller — Phỏng vấn Kiến trúc Socratic',
     scanDocs: '/grill-me',
     scanning: 'Đang quét tài liệu...',
-    scanPrompt: 'Nhập lệnh /grill-me để quét tài liệu dự án và tự động phân tích, phát hiện mâu thuẫn kiến trúc',
+    scanPrompt:
+      'Nhập lệnh /grill-me để quét tài liệu dự án và tự động phân tích, phát hiện mâu thuẫn kiến trúc',
     supportedFormats: 'Hỗ trợ phân tích chuyên sâu định dạng file .md và .txt',
     docsScanned: 'Tài liệu đã quét',
     contradictions: 'Mâu thuẫn phát hiện',
@@ -430,7 +459,8 @@ export const vi: TranslationKeys = {
     socraticQuestions: 'Câu hỏi phản biện Socratic ({{count}})',
     sources: 'Các nguồn tham chiếu:',
     designDecisions: 'Quyết định Kiến trúc & Thiết kế',
-    allConsistent: 'Tất cả các tài liệu dự án hoàn toàn nhất quán. Không phát hiện bất kỳ điểm mâu thuẫn nào.',
+    allConsistent:
+      'Tất cả các tài liệu dự án hoàn toàn nhất quán. Không phát hiện bất kỳ điểm mâu thuẫn nào.',
   },
   sandbox: {
     loadingStatus: 'Đang kiểm tra trạng thái Sandbox...',
@@ -442,6 +472,7 @@ export const vi: TranslationKeys = {
     totalRam: 'Tổng RAM tiêu hao',
     networkIo: 'Lưu lượng mạng (I/O)',
     noContainers: 'Hiện không có container sandbox nào đang hoạt động',
-    noContainersDesc: 'Sandbox cách ly sẽ tự động kích hoạt khi Trợ lý AI cần thực thi các bộ test E2E hoặc các dịch vụ độc lập.',
+    noContainersDesc:
+      'Sandbox cách ly sẽ tự động kích hoạt khi Trợ lý AI cần thực thi các bộ test E2E hoặc các dịch vụ độc lập.',
   },
 };

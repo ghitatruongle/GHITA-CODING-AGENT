@@ -113,7 +113,7 @@ describe('ProviderRegistry', () => {
       } as any;
 
       expect(() => registry.registerFromConfig(invalidConfig)).toThrowError(
-        'Unknown provider type: invalid-type'
+        'Unknown provider type: invalid-type',
       );
     });
   });
@@ -135,7 +135,7 @@ describe('ProviderRegistry', () => {
       const status = await registry.getStatus();
 
       expect(status).toHaveLength(2);
-      
+
       const customStatus = status.find((s) => s.type === 'custom');
       const ollamaStatus = status.find((s) => s.type === 'ollama');
 

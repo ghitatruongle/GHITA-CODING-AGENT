@@ -38,7 +38,7 @@
 
   /* Borders */
   --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-default: rgba(255, 255, 255, 0.10);
+  --border-default: rgba(255, 255, 255, 0.1);
   --border-accent: rgba(168, 85, 247, 0.3);
 
   /* Shadows */
@@ -71,7 +71,7 @@
 }
 
 /* --- CSS Variables (Light Theme) --- */
-[data-theme="light"] {
+[data-theme='light'] {
   /* Backgrounds */
   --bg-primary: #f8f9fc;
   --bg-secondary: #ffffff;
@@ -80,7 +80,7 @@
   --bg-surface: rgba(0, 0, 0, 0.03);
   --bg-card: rgba(255, 255, 255, 0.8);
   --bg-hover: rgba(0, 0, 0, 0.05);
-  --bg-active: rgba(99, 102, 241, 0.10);
+  --bg-active: rgba(99, 102, 241, 0.1);
 
   /* Accent */
   --accent-primary: #6366f1;
@@ -96,13 +96,13 @@
 
   /* Semantic */
   --success: #16a34a;
-  --success-bg: rgba(22, 163, 74, 0.10);
+  --success-bg: rgba(22, 163, 74, 0.1);
   --warning: #ca8a04;
-  --warning-bg: rgba(202, 138, 4, 0.10);
+  --warning-bg: rgba(202, 138, 4, 0.1);
   --error: #dc2626;
-  --error-bg: rgba(220, 38, 38, 0.10);
+  --error-bg: rgba(220, 38, 38, 0.1);
   --info: #2563eb;
-  --info-bg: rgba(37, 99, 235, 0.10);
+  --info-bg: rgba(37, 99, 235, 0.1);
 
   /* Borders */
   --border-subtle: rgba(0, 0, 0, 0.06);
@@ -111,9 +111,9 @@
 
   /* Shadows */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.10);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.12);
-  --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.10);
+  --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.1);
 }
 
 /* --- Reset --- */
@@ -135,7 +135,7 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
- 
+
 body {
   font-family: var(--font-sans);
   background: var(--bg-primary);
@@ -147,7 +147,7 @@ body {
   overflow: hidden;
   line-height: 1.5;
 }
- 
+
 #root {
   width: 100vw;
   height: 100vh;
@@ -207,7 +207,8 @@ a:hover {
 }
 
 /* --- Code --- */
-code, pre {
+code,
+pre {
   font-family: var(--font-mono);
 }
 
@@ -227,7 +228,9 @@ button:disabled {
 }
 
 /* --- Input --- */
-input, textarea, select {
+input,
+textarea,
+select {
   font-family: var(--font-sans);
   font-size: inherit;
   color: var(--text-primary);
@@ -235,74 +238,150 @@ input, textarea, select {
   border: 1px solid var(--border-default);
   border-radius: var(--radius-sm);
   padding: 8px 12px;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
-input:focus, textarea:focus, select:focus {
+input:focus,
+textarea:focus,
+select:focus {
   border-color: var(--accent-primary);
   box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.15);
   outline: none;
 }
 
-input::placeholder, textarea::placeholder {
+input::placeholder,
+textarea::placeholder {
   color: var(--text-muted);
 }
 
 /* --- Utility classes --- */
-.flex { display: flex; }
-.flex-col { flex-direction: column; }
-.flex-1 { flex: 1; }
-.items-center { align-items: center; }
-.justify-center { justify-content: center; }
-.justify-between { justify-content: space-between; }
-.gap-1 { gap: 4px; }
-.gap-2 { gap: 8px; }
-.gap-3 { gap: 12px; }
-.gap-4 { gap: 16px; }
-.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hidden { display: none; }
+.flex {
+  display: flex;
+}
+.flex-col {
+  flex-direction: column;
+}
+.flex-1 {
+  flex: 1;
+}
+.items-center {
+  align-items: center;
+}
+.justify-center {
+  justify-content: center;
+}
+.justify-between {
+  justify-content: space-between;
+}
+.gap-1 {
+  gap: 4px;
+}
+.gap-2 {
+  gap: 8px;
+}
+.gap-3 {
+  gap: 12px;
+}
+.gap-4 {
+  gap: 16px;
+}
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hidden {
+  display: none;
+}
 
 /* --- Animations --- */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideDown {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideInRight {
-  from { opacity: 0; transform: translateX(16px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
-.animate-fadeIn { animation: fadeIn var(--transition-normal) ease forwards; }
-.animate-slideUp { animation: slideUp var(--transition-normal) ease forwards; }
-.animate-slideInRight { animation: slideInRight var(--transition-normal) ease forwards; }
-.animate-pulse { animation: pulse 2s ease-in-out infinite; }
-.animate-spin { animation: spin 1s linear infinite; }
+.animate-fadeIn {
+  animation: fadeIn var(--transition-normal) ease forwards;
+}
+.animate-slideUp {
+  animation: slideUp var(--transition-normal) ease forwards;
+}
+.animate-slideInRight {
+  animation: slideInRight var(--transition-normal) ease forwards;
+}
+.animate-pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
 
 /* --- View transitions --- */
 .view-enter {
@@ -356,7 +435,12 @@ input::placeholder, textarea::placeholder {
 
 /* --- Loading skeleton --- */
 .skeleton {
-  background: linear-gradient(90deg, var(--bg-surface) 25%, var(--bg-hover) 50%, var(--bg-surface) 75%);
+  background: linear-gradient(
+    90deg,
+    var(--bg-surface) 25%,
+    var(--bg-hover) 50%,
+    var(--bg-surface) 75%
+  );
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: var(--radius-sm);
@@ -366,15 +450,21 @@ input::placeholder, textarea::placeholder {
 @keyframes computerUsePulse {
   0% {
     border-color: #ef4444;
-    box-shadow: 0 0 8px #ef4444, inset 0 0 4px rgba(239, 68, 68, 0.3);
+    box-shadow:
+      0 0 8px #ef4444,
+      inset 0 0 4px rgba(239, 68, 68, 0.3);
   }
   50% {
     border-color: #f87171;
-    box-shadow: 0 0 16px #ef4444, inset 0 0 8px rgba(239, 68, 68, 0.5);
+    box-shadow:
+      0 0 16px #ef4444,
+      inset 0 0 8px rgba(239, 68, 68, 0.5);
   }
   100% {
     border-color: #ef4444;
-    box-shadow: 0 0 8px #ef4444, inset 0 0 4px rgba(239, 68, 68, 0.3);
+    box-shadow:
+      0 0 8px #ef4444,
+      inset 0 0 4px rgba(239, 68, 68, 0.3);
   }
 }
 

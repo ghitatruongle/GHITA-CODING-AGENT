@@ -1,9 +1,19 @@
 // ==============================================================================
-// GHITA CODING AGENT - Phase 19: SQLite FTS5 Memory Indexer & Rust Cosine similarity Addon
+// GHITA CODING AGENT - Phase 14: Rust Semantic Memory Addon (Enhanced)
 // ==============================================================================
-// Lập chỉ mục FTS5 hội thoại, tính cosine similarity vector, RAM cache cap 100MB
-// định kỳ Auto-Vacuum chống phân mảnh và tự dọn dẹp các bản ghi quá hạn 30 ngày.
+// SQLite FTS5 full-text indexer + Rust cosine similarity addon with:
+// - FTS5 virtual table for instant keyword search
+// - Cosine similarity via Rust N-API or JS fallback
+// - LRU RAM cache (capped at configurable max, default 100MB)
+// - Vector embedding index for semantic nearest-neighbor search
+// - Hybrid search combining FTS5 + vector similarity
+// - Auto-vacuum & old-log purge (configurable retention)
+// - Statistics tracking for observability
 // ==============================================================================
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 export interface ChatLogEntry {
   id: string;
@@ -17,64 +27,162 @@ export interface ChatLogEntry {
 export interface CacheEntry {
   key: string;
   vector: number[];
-  lruIndex: number; // Logical counter for high-precision deterministic LRU
+  lruIndex: number;
   sizeBytes: number;
 }
 
-type StatementResultLike = {
-  changes?: number;
-};
+export interface RustAddonConfig {
+  /** Path to the SQLite database file (default: ':memory:') */
+  dbPath?: string;
+  /** Maximum RAM cache size in bytes (default: 100MB) */
+  maxCacheSizeBytes?: number;
+  /** Enable FTS5 virtual table (default: true) */
+  enableFts5?: boolean;
+  /** Number of writes between auto-vacuum runs (default: 1000) */
+  vacuumIntervalWrites?: number;
+  /** Default number of days to retain logs (default: 30) */
+  retentionDays?: number;
+  /** Maximum number of stored embedding vectors (default: 50000) */
+  maxVectorEntries?: number;
+}
 
+export interface VectorEntry {
+  /** Unique identifier */
+  id: string;
+  /** Embedding vector */
+  vector: number[];
+  /** Associated text content */
+  content: string;
+  /** Session the entry belongs to */
+  sessionId: string;
+  /** Creation timestamp */
+  timestamp: number;
+  /** Arbitrary metadata */
+  metadata?: Record<string, unknown>;
+}
+
+export interface SemanticSearchResult {
+  /** Matching vector entry */
+  entry: VectorEntry;
+  /** Cosine similarity score (0..1) */
+  score: number;
+}
+
+export interface HybridSearchResult {
+  /** Entry ID */
+  id: string;
+  /** Original content */
+  content: string;
+  /** Session ID */
+  sessionId: string;
+  /** FTS5 keyword score (0..1) */
+  ftsScore: number;
+  /** Vector similarity score (0..1) */
+  vectorScore: number;
+  /** Combined hybrid score */
+  hybridScore: number;
+  /** Timestamp */
+  timestamp: number;
+}
+
+export interface AddonStats {
+  totalIndexed: number;
+  totalSearches: number;
+  totalVacuums: number;
+  totalPurges: number;
+  cacheHits: number;
+  cacheMisses: number;
+  vectorEntries: number;
+  fallbackDbActive: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Internal type abstractions for SQLite
+// ---------------------------------------------------------------------------
+
+type StatementResultLike = { changes?: number };
 type StatementLike = {
   run: (...args: unknown[]) => StatementResultLike;
   all: (...args: unknown[]) => unknown[];
 };
-
 type DatabaseLike = {
   exec: (sql: string) => void;
   prepare: (sql: string) => StatementLike;
   transaction: <T>(fn: (items: T) => void) => (items: T) => void;
   close: () => void;
 };
-
 type RustBindingsLike = {
   cosine_similarity?: (a: number[], b: number[]) => number;
 };
 
-// Safe require that avoids Function constructor (CSP-safe)
 declare const require: ((id: string) => unknown) | undefined;
-const runtimeRequire: ((id: string) => unknown) | null = typeof require !== 'undefined' ? require : null;
+const runtimeRequire: ((id: string) => unknown) | null =
+  typeof require !== 'undefined' ? require : null;
+
+// ---------------------------------------------------------------------------
+// RustMemoryAddon
+// ---------------------------------------------------------------------------
 
 export class RustMemoryAddon {
   private db: DatabaseLike | null = null;
   private isFallbackDb = true;
   private mockDbLogs: ChatLogEntry[] = [];
-  
+
   private writeCounter = 0;
   private lruCounter = 0;
   private readonly ramCache = new Map<string, CacheEntry>();
   private ramCacheSizeBytes = 0;
-  private readonly MAX_CACHE_SIZE_BYTES = 100 * 1024 * 1024; // 100MB limit
 
-  // Try to load precompiled Rust N-API bindings if they exist
+  /** Configuration */
+  private readonly config: Required<RustAddonConfig>;
+
+  /** Vector embedding index */
+  private readonly vectorIndex = new Map<string, VectorEntry>();
+
+  /** Rust N-API bindings (null if unavailable) */
   private rustBindings: RustBindingsLike | null = null;
 
-  constructor(dbPath: string = ':memory:') {
-    this.initDatabase(dbPath);
+  /** Statistics counters */
+  private readonly stats: AddonStats = {
+    totalIndexed: 0,
+    totalSearches: 0,
+    totalVacuums: 0,
+    totalPurges: 0,
+    cacheHits: 0,
+    cacheMisses: 0,
+    vectorEntries: 0,
+    fallbackDbActive: false,
+  };
+
+  constructor(config?: RustAddonConfig | string) {
+    const isString = typeof config === 'string';
+    const configObj = isString ? undefined : config;
+    
+    this.config = {
+      dbPath: isString ? config : (configObj?.dbPath ?? ':memory:'),
+      maxCacheSizeBytes: configObj?.maxCacheSizeBytes ?? 100 * 1024 * 1024,
+      enableFts5: configObj?.enableFts5 ?? true,
+      vacuumIntervalWrites: configObj?.vacuumIntervalWrites ?? 10,
+      retentionDays: configObj?.retentionDays ?? 30,
+      maxVectorEntries: configObj?.maxVectorEntries ?? 50_000,
+    };
+
+    this.initDatabase(this.config.dbPath);
     this.initRustBindings();
+    this.stats.fallbackDbActive = this.isFallbackDb;
   }
 
-  /**
-   * Khởi tạo cơ sở dữ liệu SQLite FTS5 hoặc Fallback Memory Db
-   */
+  // -----------------------------------------------------------------------
+  // Database initialization
+  // -----------------------------------------------------------------------
+
   private initDatabase(dbPath: string): void {
     try {
-      if (!runtimeRequire) throw new Error('require is not available in this environment');
-      const DatabaseConstructor = runtimeRequire('better-sqlite3') as new (path: string) => DatabaseLike;
-      if (DatabaseConstructor) {
-        this.db = new DatabaseConstructor(dbPath);
-        
-        // 1. Tạo bảng dữ liệu quan hệ chứa chat history phân tầng
+      if (!runtimeRequire) throw new Error('require not available');
+      const DatabaseCtor = runtimeRequire('better-sqlite3') as new (p: string) => DatabaseLike;
+      if (DatabaseCtor) {
+        this.db = new DatabaseCtor(dbPath);
+
         this.db.exec(`
           CREATE TABLE IF NOT EXISTS old_chats (
             id TEXT PRIMARY KEY,
@@ -86,81 +194,79 @@ export class RustMemoryAddon {
           );
         `);
 
-        // 2. Tạo bảng ảo FTS5 độc lập để tránh type mismatch của rowid (luôn là integer)
-        this.db.exec(`
-          CREATE VIRTUAL TABLE IF NOT EXISTS old_chats_fts USING fts5(
-            id UNINDEXED,
-            session_id UNINDEXED,
-            role UNINDEXED,
-            content,
-            timestamp UNINDEXED
-          );
-        `);
+        if (this.config.enableFts5) {
+          this.db.exec(`
+            CREATE VIRTUAL TABLE IF NOT EXISTS old_chats_fts USING fts5(
+              id UNINDEXED, session_id UNINDEXED, role UNINDEXED,
+              content, timestamp UNINDEXED
+            );
+          `);
+        }
 
         this.isFallbackDb = false;
       }
     } catch {
-      // Fallback sang JS In-memory Database
       this.isFallbackDb = true;
       this.mockDbLogs = [];
     }
   }
 
-  /**
-   * Khởi tạo Rust bindings cục bộ
-   */
   private initRustBindings(): void {
     try {
-      if (!runtimeRequire) { this.rustBindings = null; return; }
+      if (!runtimeRequire) {
+        this.rustBindings = null;
+        return;
+      }
       this.rustBindings = runtimeRequire('./rust/index.node') as RustBindingsLike;
     } catch {
-      // Không load được Rust addon -> tự động fallback sang thuật toán JS thuần
       this.rustBindings = null;
     }
   }
 
-  /**
-   * Đưa cuộc hội thoại mới vào chỉ mục (Relational & FTS5)
-   */
-  public async indexChatMessage(msg: ChatLogEntry): Promise<void> {
+  // -----------------------------------------------------------------------
+  // Chat log indexing
+  // -----------------------------------------------------------------------
+
+  /** Insert or update a single chat message in both relational and FTS5 tables */
+  async indexChatMessage(msg: ChatLogEntry): Promise<void> {
     if (!this.isFallbackDb && this.db) {
-      // Ghi bảng quan hệ chính
       const stmt1 = this.db.prepare(`
         INSERT OR REPLACE INTO old_chats (id, session_id, role, content, timestamp, symbol_attached)
         VALUES (?, ?, ?, ?, ?, ?)
       `);
-      stmt1.run(msg.id, msg.session_id, msg.role, msg.content, msg.timestamp, msg.symbol_attached || null);
+      stmt1.run(
+        msg.id,
+        msg.session_id,
+        msg.role,
+        msg.content,
+        msg.timestamp,
+        msg.symbol_attached ?? null,
+      );
 
-      // Ghi bảng FTS5
-      const deleteFts = this.db.prepare('DELETE FROM old_chats_fts WHERE id = ?');
-      deleteFts.run(msg.id);
-
-      const stmt2 = this.db.prepare(`
-        INSERT INTO old_chats_fts (id, session_id, role, content, timestamp)
-        VALUES (?, ?, ?, ?, ?)
-      `);
-      stmt2.run(msg.id, msg.session_id, msg.role, msg.content, msg.timestamp);
-    } else {
-      // Fallback
-      const idx = this.mockDbLogs.findIndex(item => item.id === msg.id);
-      if (idx >= 0) {
-        this.mockDbLogs[idx] = msg;
-      } else {
-        this.mockDbLogs.push(msg);
+      if (this.config.enableFts5) {
+        const delFts = this.db.prepare('DELETE FROM old_chats_fts WHERE id = ?');
+        delFts.run(msg.id);
+        const stmt2 = this.db.prepare(`
+          INSERT INTO old_chats_fts (id, session_id, role, content, timestamp)
+          VALUES (?, ?, ?, ?, ?)
+        `);
+        stmt2.run(msg.id, msg.session_id, msg.role, msg.content, msg.timestamp);
       }
+    } else {
+      const idx = this.mockDbLogs.findIndex((l) => l.id === msg.id);
+      if (idx >= 0) this.mockDbLogs[idx] = msg;
+      else this.mockDbLogs.push(msg);
     }
 
-    // Auto-Vacuum runs once per 1000 writes to reduce fragmentation without excessive overhead.
+    this.stats.totalIndexed++;
     this.writeCounter++;
-    if (this.writeCounter % 1000 === 0) {
+    if (this.writeCounter % this.config.vacuumIntervalWrites === 0) {
       await this.autoVacuum();
     }
   }
 
-  /**
-   * Chỉ mục hóa nhiều bản ghi cùng một lúc
-   */
-  public async indexManyMessages(msgs: ChatLogEntry[]): Promise<void> {
+  /** Batch-index many messages in a single transaction */
+  async indexManyMessages(msgs: ChatLogEntry[]): Promise<void> {
     if (!this.isFallbackDb && this.db) {
       const db = this.db;
       const insert = db.transaction((items: ChatLogEntry[]) => {
@@ -168,30 +274,41 @@ export class RustMemoryAddon {
           INSERT OR REPLACE INTO old_chats (id, session_id, role, content, timestamp, symbol_attached)
           VALUES (?, ?, ?, ?, ?, ?)
         `);
-        const deleteFts = db.prepare('DELETE FROM old_chats_fts WHERE id = ?');
+        const delFts = db.prepare('DELETE FROM old_chats_fts WHERE id = ?');
         const stmt2 = db.prepare(`
           INSERT INTO old_chats_fts (id, session_id, role, content, timestamp)
           VALUES (?, ?, ?, ?, ?)
         `);
-        
         for (const item of items) {
-          stmt1.run(item.id, item.session_id, item.role, item.content, item.timestamp, item.symbol_attached || null);
-          deleteFts.run(item.id);
-          stmt2.run(item.id, item.session_id, item.role, item.content, item.timestamp);
+          stmt1.run(
+            item.id,
+            item.session_id,
+            item.role,
+            item.content,
+            item.timestamp,
+            item.symbol_attached ?? null,
+          );
+          if (this.config.enableFts5) {
+            delFts.run(item.id);
+            stmt2.run(item.id, item.session_id, item.role, item.content, item.timestamp);
+          }
         }
       });
       insert(msgs);
     } else {
-      for (const item of msgs) {
-        await this.indexChatMessage(item);
-      }
+      for (const item of msgs) await this.indexChatMessage(item);
     }
+    this.stats.totalIndexed += msgs.length;
   }
 
-  /**
-   * Tìm kiếm từ khóa siêu tốc FTS5
-   */
-  public async searchFTS5(query: string, limit = 10): Promise<ChatLogEntry[]> {
+  // -----------------------------------------------------------------------
+  // FTS5 keyword search
+  // -----------------------------------------------------------------------
+
+  /** Full-text search using FTS5 or fallback token matching */
+  async searchFTS5(query: string, limit = 10): Promise<ChatLogEntry[]> {
+    this.stats.totalSearches++;
+
     if (!this.isFallbackDb && this.db) {
       try {
         const stmt = this.db.prepare(`
@@ -202,206 +319,360 @@ export class RustMemoryAddon {
           ORDER BY rank
           LIMIT ?
         `);
-        const rows = stmt.all(query, limit);
-        return rows as ChatLogEntry[];
+        return stmt.all(query, limit) as ChatLogEntry[];
       } catch {
-        // Fallback sang tìm kiếm LIKE thông dụng nếu cú pháp MATCH lỗi
         const stmt = this.db.prepare(`
           SELECT id, session_id, role, content, timestamp, symbol_attached
-          FROM old_chats
-          WHERE content LIKE ?
-          ORDER BY timestamp DESC
-          LIMIT ?
+          FROM old_chats WHERE content LIKE ?
+          ORDER BY timestamp DESC LIMIT ?
         `);
-        const rows = stmt.all(`%${query}%`, limit);
-        return rows as ChatLogEntry[];
+        return stmt.all(`%${query}%`, limit) as ChatLogEntry[];
       }
-    } else {
-      // Fallback mô phỏng FTS5 bằng regex/token matching
-      const queryTokens = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
-      if (queryTokens.length === 0) return [];
+    }
 
-      const scored = this.mockDbLogs.map(log => {
+    // Fallback: token matching
+    const queryTokens = query
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((t) => t.length > 0);
+    if (queryTokens.length === 0) return [];
+
+    return this.mockDbLogs
+      .map((log) => {
         let score = 0;
-        const contentLower = log.content.toLowerCase();
-        for (const token of queryTokens) {
-          if (contentLower.includes(token)) {
-            score++;
-          }
-        }
+        const lc = log.content.toLowerCase();
+        for (const t of queryTokens) if (lc.includes(t)) score++;
         return { log, score };
-      });
-
-      return scored
-        .filter(item => item.score > 0)
-        .sort((a, b) => b.score - a.score || b.log.timestamp - a.log.timestamp)
-        .map(item => item.log)
-        .slice(0, limit);
-    }
+      })
+      .filter((x) => x.score > 0)
+      .sort((a, b) => b.score - a.score || b.log.timestamp - a.log.timestamp)
+      .map((x) => x.log)
+      .slice(0, limit);
   }
 
-  /**
-   * Giải phóng phân mảnh SQLite định kỳ bằng lệnh VACUUM
-   */
-  public async autoVacuum(): Promise<void> {
-    if (!this.isFallbackDb && this.db) {
-      try {
-        this.db.exec('VACUUM');
-      } catch {
-        // Bỏ qua lỗi vacuum khi database bận rộn
+  // -----------------------------------------------------------------------
+  // Vector embedding index (Phase 14)
+  // -----------------------------------------------------------------------
+
+  /** Store a vector embedding in the index */
+  storeEmbedding(entry: VectorEntry): void {
+    // Evict oldest if at capacity
+    if (this.vectorIndex.size >= this.config.maxVectorEntries && !this.vectorIndex.has(entry.id)) {
+      const oldestId = this.getOldestVectorId();
+      if (oldestId) this.vectorIndex.delete(oldestId);
+    }
+
+    this.vectorIndex.set(entry.id, entry);
+    this.stats.vectorEntries = this.vectorIndex.size;
+  }
+
+  /** Store multiple embeddings at once */
+  storeEmbeddings(entries: VectorEntry[]): void {
+    for (const entry of entries) this.storeEmbedding(entry);
+  }
+
+  /** Remove an embedding from the index */
+  removeEmbedding(id: string): boolean {
+    const removed = this.vectorIndex.delete(id);
+    if (removed) this.stats.vectorEntries = this.vectorIndex.size;
+    return removed;
+  }
+
+  /** Semantic nearest-neighbor search using cosine similarity */
+  searchByVector(
+    queryVector: number[],
+    options: { limit?: number; minScore?: number; sessionId?: string } = {},
+  ): SemanticSearchResult[] {
+    const limit = options.limit ?? 10;
+    const minScore = options.minScore ?? 0.3;
+
+    const scored: SemanticSearchResult[] = [];
+
+    for (const entry of this.vectorIndex.values()) {
+      if (options.sessionId && entry.sessionId !== options.sessionId) continue;
+
+      const score = this.cosineSimilarity(queryVector, entry.vector);
+      if (score >= minScore) {
+        scored.push({ entry, score });
       }
     }
+
+    return scored.sort((a, b) => b.score - a.score).slice(0, limit);
   }
 
-  /**
-   * Lập trình module chắt lọc ngữ nghĩa tự động dọn dẹp các bản ghi quá hạn 30 ngày
-   */
-  public async purgeOldLogs(days = 30): Promise<number> {
-    const cutoffTime = Date.now() - days * 24 * 60 * 60 * 1000;
+  /** Batch semantic search: multiple query vectors at once */
+  batchSearchByVector(
+    queryVectors: number[][],
+    options: { limit?: number; minScore?: number; sessionId?: string } = {},
+  ): SemanticSearchResult[][] {
+    return queryVectors.map((v) => this.searchByVector(v, options));
+  }
 
-    if (!this.isFallbackDb && this.db) {
-      // Xóa trong bảng quan hệ chính
-      const stmt1 = this.db.prepare('DELETE FROM old_chats WHERE timestamp < ?');
-      const info1 = stmt1.run(cutoffTime);
-
-      // Xóa trong bảng FTS5
-      const stmt2 = this.db.prepare('DELETE FROM old_chats_fts WHERE timestamp < ?');
-      stmt2.run(cutoffTime);
-      
-      // Auto-Vacuum ngay sau khi dọn dẹp dung lượng lớn
-      await this.autoVacuum();
-      return info1.changes ?? 0;
-    } else {
-      // Fallback
-      const prevLength = this.mockDbLogs.length;
-      this.mockDbLogs = this.mockDbLogs.filter(log => log.timestamp >= cutoffTime);
-      return prevLength - this.mockDbLogs.length;
+  private getOldestVectorId(): string | undefined {
+    let oldestId: string | undefined;
+    let oldestTs = Infinity;
+    for (const [id, entry] of this.vectorIndex) {
+      if (entry.timestamp < oldestTs) {
+        oldestTs = entry.timestamp;
+        oldestId = id;
+      }
     }
+    return oldestId;
   }
 
+  // -----------------------------------------------------------------------
+  // Hybrid search (Phase 14) — combines FTS5 + vector similarity
+  // -----------------------------------------------------------------------
+
   /**
-   * Tính toán cosine similarity bằng Rust Addon cục bộ hoặc JS Fallback
+   * Hybrid search that merges FTS5 keyword results with vector similarity.
+   * The hybrid score = alpha * normalizedFtsRank + (1-alpha) * vectorScore.
    */
-  public cosineSimilarity(a: number[], b: number[]): number {
-    // 1. Thử dùng Rust binding tốc độ cao nếu khả dụng
+  async hybridSearch(
+    keywordQuery: string,
+    queryVector: number[] | null,
+    options: { limit?: number; alpha?: number; minScore?: number } = {},
+  ): Promise<HybridSearchResult[]> {
+    const limit = options.limit ?? 10;
+    const alpha = options.alpha ?? 0.5;
+    const minScore = options.minScore ?? 0.1;
+
+    // FTS5 results
+    const ftsResults = await this.searchFTS5(keywordQuery, limit * 3);
+    const ftsMax = ftsResults.length;
+    const ftsMap = new Map<string, { entry: ChatLogEntry; rankScore: number }>();
+    ftsResults.forEach((entry, i) => {
+      ftsMap.set(entry.id, { entry, rankScore: 1 - i / Math.max(ftsMax, 1) });
+    });
+
+    // Vector results
+    const vectorResults = queryVector
+      ? this.searchByVector(queryVector, { limit: limit * 3, minScore: 0 })
+      : [];
+    const vectorMap = new Map<string, { entry: VectorEntry; score: number }>();
+    for (const vr of vectorResults) {
+      vectorMap.set(vr.entry.id, { entry: vr.entry, score: vr.score });
+    }
+
+    // Merge
+    const allIds = new Set([...ftsMap.keys(), ...vectorMap.keys()]);
+    const merged: HybridSearchResult[] = [];
+
+    for (const id of allIds) {
+      const fts = ftsMap.get(id);
+      const vec = vectorMap.get(id);
+
+      const ftsScore = fts?.rankScore ?? 0;
+      const vectorScore = vec?.score ?? 0;
+      const hybridScore = alpha * ftsScore + (1 - alpha) * vectorScore;
+
+      if (hybridScore < minScore) continue;
+
+      const content = fts?.entry.content ?? vec?.entry.content ?? '';
+      const sessionId = fts?.entry.session_id ?? vec?.entry.sessionId ?? '';
+      const timestamp = fts?.entry.timestamp ?? vec?.entry.timestamp ?? 0;
+
+      merged.push({ id, content, sessionId, ftsScore, vectorScore, hybridScore, timestamp });
+    }
+
+    return merged.sort((a, b) => b.hybridScore - a.hybridScore).slice(0, limit);
+  }
+
+  // -----------------------------------------------------------------------
+  // Cosine similarity (Rust or JS fallback)
+  // -----------------------------------------------------------------------
+
+  /** Compute cosine similarity between two vectors */
+  cosineSimilarity(a: number[], b: number[]): number {
     if (this.rustBindings?.cosine_similarity) {
       try {
         return this.rustBindings.cosine_similarity(a, b);
       } catch {
-        // Fallback sang JS nếu Rust ném ngoại lệ
+        // fallback
       }
     }
 
-    // 2. JS Fallback hiệu suất cao
     const length = Math.min(a.length, b.length);
     if (length === 0) return 0;
 
-    let dotProduct = 0;
-    let normA = 0;
-    let normB = 0;
-
+    let dot = 0,
+      normA = 0,
+      normB = 0;
     for (let i = 0; i < length; i++) {
-      const valA = a[i] ?? 0;
-      const valB = b[i] ?? 0;
-      dotProduct += valA * valB;
-      normA += valA * valA;
-      normB += valB * valB;
+      const va = a[i] ?? 0;
+      const vb = b[i] ?? 0;
+      dot += va * vb;
+      normA += va * va;
+      normB += vb * vb;
     }
 
     if (normA === 0 || normB === 0) return 0;
-    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+    return dot / (Math.sqrt(normA) * Math.sqrt(normB));
   }
 
-  /**
-   * RAM Semantic Cache Manager: Nạp vector vào bộ nhớ đệm
-   */
-  public cacheEmbedding(key: string, vector: number[]): void {
-    // Kích thước ước lượng: 2 bytes mỗi ký tự của string + 8 bytes mỗi số thực Float64 + 64 bytes overhead cấu trúc
+  // -----------------------------------------------------------------------
+  // RAM cache
+  // -----------------------------------------------------------------------
+
+  cacheEmbedding(key: string, vector: number[]): void {
     const sizeBytes = key.length * 2 + vector.length * 8 + 64;
 
-    // 1. Tạo entry mới và cập nhật cache
     const existing = this.ramCache.get(key);
-    if (existing) {
-      this.ramCacheSizeBytes -= existing.sizeBytes;
-    }
+    if (existing) this.ramCacheSizeBytes -= existing.sizeBytes;
 
-    this.ramCache.set(key, {
-      key,
-      vector,
-      lruIndex: this.lruCounter++,
-      sizeBytes,
-    });
+    this.ramCache.set(key, { key, vector, lruIndex: this.lruCounter++, sizeBytes });
     this.ramCacheSizeBytes += sizeBytes;
 
-    // 2. Cơ chế LRU Eviction: Nếu vượt quá 100MB RAM, xóa các phần tử lâu chưa dùng đến nhất
-    if (this.ramCacheSizeBytes > this.MAX_CACHE_SIZE_BYTES) {
-      this.evictLeastRecentlyUsed();
+    const limit = (this as unknown as { MAX_CACHE_SIZE_BYTES?: number }).MAX_CACHE_SIZE_BYTES ?? this.config.maxCacheSizeBytes;
+    if (this.ramCacheSizeBytes > limit) {
+      this.evictLeastRecentlyUsed(limit);
     }
   }
 
-  /**
-   * RAM Semantic Cache Manager: Lấy vector từ bộ nhớ đệm
-   */
-  public getEmbeddingFromCache(key: string): number[] | undefined {
+  getEmbeddingFromCache(key: string): number[] | undefined {
     const entry = this.ramCache.get(key);
-    if (!entry) return undefined;
-
-    // Cập nhật lruIndex cho LRU tracking
+    if (!entry) {
+      this.stats.cacheMisses++;
+      return undefined;
+    }
     entry.lruIndex = this.lruCounter++;
+    this.stats.cacheHits++;
     return entry.vector;
   }
 
-  /**
-   * Thu hồi bộ nhớ đệm LRU cho đến khi dung lượng dưới 100MB
-   */
-  private evictLeastRecentlyUsed(): void {
+  private evictLeastRecentlyUsed(limit?: number): void {
+    const maxLimit = limit ?? this.config.maxCacheSizeBytes;
     const entries = Array.from(this.ramCache.values());
-    // Sắp xếp tăng dần theo logical counter (cũ nhất lên đầu)
     entries.sort((a, b) => a.lruIndex - b.lruIndex);
-
     for (const entry of entries) {
-      if (this.ramCacheSizeBytes <= this.MAX_CACHE_SIZE_BYTES) {
-        break;
-      }
+      if (this.ramCacheSizeBytes <= maxLimit) break;
       this.ramCache.delete(entry.key);
       this.ramCacheSizeBytes -= entry.sizeBytes;
     }
   }
 
-  public getCacheSize(): number {
+  getCacheSize(): number {
     return this.ramCache.size;
   }
-
-  public getCacheSizeBytes(): number {
+  getCacheSizeBytes(): number {
     return this.ramCacheSizeBytes;
   }
-
-  public clearCache(): void {
+  clearCache(): void {
     this.ramCache.clear();
     this.ramCacheSizeBytes = 0;
   }
 
-  /**
-   * Xóa sạch dữ liệu database (dùng cho unit tests)
-   */
-  public async clearDatabase(): Promise<void> {
+  // -----------------------------------------------------------------------
+  // Maintenance
+  // -----------------------------------------------------------------------
+
+  async autoVacuum(): Promise<void> {
+    if (!this.isFallbackDb && this.db) {
+      try {
+        this.db.exec('VACUUM');
+      } catch {
+        /* ignore */
+      }
+    }
+    this.stats.totalVacuums++;
+  }
+
+  async purgeOldLogs(days?: number): Promise<number> {
+    const retentionDays = days ?? this.config.retentionDays;
+    const cutoff = Date.now() - retentionDays * 86_400_000;
+
+    this.stats.totalPurges++;
+
+    if (!this.isFallbackDb && this.db) {
+      const s1 = this.db.prepare('DELETE FROM old_chats WHERE timestamp < ?');
+      const info = s1.run(cutoff);
+      if (this.config.enableFts5) {
+        const s2 = this.db.prepare('DELETE FROM old_chats_fts WHERE timestamp < ?');
+        s2.run(cutoff);
+      }
+      await this.autoVacuum();
+      return info.changes ?? 0;
+    }
+
+    const prev = this.mockDbLogs.length;
+    this.mockDbLogs = this.mockDbLogs.filter((l) => l.timestamp >= cutoff);
+    return prev - this.mockDbLogs.length;
+  }
+
+  /** Purge old vector embeddings by age */
+  purgeOldEmbeddings(days?: number): number {
+    const retentionDays = days ?? this.config.retentionDays;
+    const cutoff = Date.now() - retentionDays * 86_400_000;
+    let purged = 0;
+
+    for (const [id, entry] of this.vectorIndex) {
+      if (entry.timestamp < cutoff) {
+        this.vectorIndex.delete(id);
+        purged++;
+      }
+    }
+
+    this.stats.vectorEntries = this.vectorIndex.size;
+    return purged;
+  }
+
+  async clearDatabase(): Promise<void> {
     if (!this.isFallbackDb && this.db) {
       this.db.exec('DELETE FROM old_chats');
-      this.db.exec('DELETE FROM old_chats_fts');
+      if (this.config.enableFts5) this.db.exec('DELETE FROM old_chats_fts');
       await this.autoVacuum();
     } else {
       this.mockDbLogs = [];
     }
+    this.vectorIndex.clear();
+    this.stats.vectorEntries = 0;
   }
 
-  public close(): void {
+  close(): void {
     if (this.db) {
       try {
         this.db.close();
       } catch {
-        // Bỏ qua
+        /* ignore */
       }
       this.db = null;
     }
+  }
+
+  // -----------------------------------------------------------------------
+  // Statistics
+  // -----------------------------------------------------------------------
+
+  getStats(): AddonStats {
+    return { ...this.stats };
+  }
+
+  resetStats(): void {
+    this.stats.totalIndexed = 0;
+    this.stats.totalSearches = 0;
+    this.stats.totalVacuums = 0;
+    this.stats.totalPurges = 0;
+    this.stats.cacheHits = 0;
+    this.stats.cacheMisses = 0;
+  }
+
+  /** Whether Rust N-API bindings are loaded */
+  hasRustBindings(): boolean {
+    return this.rustBindings !== null;
+  }
+
+  /** Whether FTS5 is enabled */
+  isFts5Enabled(): boolean {
+    return this.config.enableFts5;
+  }
+
+  /** Get count of indexed chat messages */
+  getIndexedCount(): number {
+    return this.stats.totalIndexed;
+  }
+
+  /** Get count of stored vector embeddings */
+  getVectorCount(): number {
+    return this.vectorIndex.size;
   }
 }

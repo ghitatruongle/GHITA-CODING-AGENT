@@ -32,29 +32,31 @@ export interface ASTLockConfig {
  * Xây dựng cấu trúc phân cấp Class.Method cho SymbolTag
  */
 export function buildHierarchy(tags: SymbolTag[]): HierarchicalSymbol[] {
-  const hSymbols: HierarchicalSymbol[] = tags.map(t => ({
+  const hSymbols: HierarchicalSymbol[] = tags.map((t) => ({
     ...t,
     children: [],
-    scope: ''
+    scope: '',
   }));
 
   // Sắp xếp theo kích thước phạm vi dòng (node lớn nhất trước)
-  const definitions = hSymbols.filter(n => n.kind === 'definition').sort((a, b) => {
-    const sizeA = a.endLine - a.startLine;
-    const sizeB = b.endLine - b.startLine;
-    return sizeB - sizeA;
-  });
+  const definitions = hSymbols
+    .filter((n) => n.kind === 'definition')
+    .sort((a, b) => {
+      const sizeA = a.endLine - a.startLine;
+      const sizeB = b.endLine - b.startLine;
+      return sizeB - sizeA;
+    });
 
   // Gán mỗi child cho immediate parent (parent nhỏ nhất chứa child)
   for (let j = 0; j < definitions.length; j++) {
- const child = definitions[j];
- if (!child) continue;
- let bestParent: HierarchicalSymbol | null = null;
- let bestSize = Infinity;
- for (let i = 0; i < definitions.length; i++) {
- if (i === j) continue;
- const candidate = definitions[i];
- if (!candidate) continue;
+    const child = definitions[j];
+    if (!child) continue;
+    let bestParent: HierarchicalSymbol | null = null;
+    let bestSize = Infinity;
+    for (let i = 0; i < definitions.length; i++) {
+      if (i === j) continue;
+      const candidate = definitions[i];
+      if (!candidate) continue;
       const candidateSize = candidate.endLine - candidate.startLine;
       if (
         child.startLine >= candidate.startLine &&
@@ -78,7 +80,7 @@ export function buildHierarchy(tags: SymbolTag[]): HierarchicalSymbol[] {
       childSet.add(ch);
     }
   }
-  const rootDefinitions = definitions.filter(d => !childSet.has(d));
+  const rootDefinitions = definitions.filter((d) => !childSet.has(d));
 
   function assignScope(node: HierarchicalSymbol, parentScope: string): void {
     node.scope = parentScope ? `${parentScope}.${node.name}` : node.name;
@@ -99,11 +101,7 @@ export function buildHierarchy(tags: SymbolTag[]): HierarchicalSymbol[] {
       let bestSize = Infinity;
       for (const d of definitions) {
         const size = d.endLine - d.startLine;
-        if (
-          node.startLine >= d.startLine &&
-          node.endLine <= d.endLine &&
-          size < bestSize
-        ) {
+        if (node.startLine >= d.startLine && node.endLine <= d.endLine && size < bestSize) {
           bestParent = d;
           bestSize = size;
         }
@@ -131,7 +129,7 @@ export function loadASTLockConfig(configPath = '.ghita/rules.yaml'): ASTLockConf
   const config: ASTLockConfig = {
     lockedSymbols: [],
     enabled: true,
-    excludeFiles: []
+    excludeFiles: [],
   };
 
   try {
@@ -194,7 +192,9 @@ export function loadASTLockConfig(configPath = '.ghita/rules.yaml'): ASTLockConf
 import type BetterSqlite3 from 'better-sqlite3';
 
 type BetterSqlite3Database = InstanceType<typeof BetterSqlite3>;
-type BetterSqlite3Statement = BetterSqlite3Database extends { prepare(...args: unknown[]): infer R } ? R : never;
+type BetterSqlite3Statement = BetterSqlite3Database extends { prepare(...args: unknown[]): infer R }
+  ? R
+  : never;
 
 export class ASTLockLogger {
   private dbPath: string | null = null;
@@ -231,17 +231,26 @@ export class ASTLockLogger {
         VALUES (@timestamp, @filePath, @symbolName, @expectedHash, @actualHash, @agentId)
       `);
     } catch (error) {
-      console.warn('[ASTLock] SQLite init failed, using in-memory fallback:', (error as Error).message);
+      console.warn(
+        '[ASTLock] SQLite init failed, using in-memory fallback:',
+        (error as Error).message,
+      );
       this.db = null;
       this.insertStmt = null;
     }
   }
 
-  public async logViolation(filePath: string, symbolName: string, expectedHash: string, actualHash: string, agentId?: string) {
+  public async logViolation(
+    filePath: string,
+    symbolName: string,
+    expectedHash: string,
+    actualHash: string,
+    agentId?: string,
+  ) {
     const logPath = '.ghita/ast-lock-violations.log';
     const timestamp = new Date().toISOString();
     const message = `[${timestamp}] VIOLATION in ${filePath} - Symbol '${symbolName}' changed (expected: ${expectedHash}, actual: ${actualHash})\n`;
-    
+
     // Ghi vào file log tĩnh
     try {
       const dir = path.dirname(logPath);
@@ -261,7 +270,7 @@ export class ASTLockLogger {
           symbolName,
           expectedHash,
           actualHash,
-          agentId: agentId ?? 'unknown'
+          agentId: agentId ?? 'unknown',
         });
       } catch {
         // Bỏ qua lỗi insert
@@ -285,15 +294,24 @@ export class ASTLockEngine {
   /**
    * Khóa danh sách các symbol trong tệp tin từ mã nguồn ban đầu
    */
-  public async lockSymbols(filePath: string, code: string, lang: string, symbolNamesToLock?: string[]) {
+  public async lockSymbols(
+    filePath: string,
+    code: string,
+    lang: string,
+    symbolNamesToLock?: string[],
+  ) {
     try {
       const tags = await this.parser.extractSymbols(code, lang);
       const hierarchy = buildHierarchy(tags);
-      
-      const definitions = hierarchy.filter(t => t.kind === 'definition');
+
+      const definitions = hierarchy.filter((t) => t.kind === 'definition');
 
       for (const def of definitions) {
-        const shouldLock = !symbolNamesToLock || symbolNamesToLock.length === 0 || symbolNamesToLock.includes(def.scope) || symbolNamesToLock.includes(def.name);
+        const shouldLock =
+          !symbolNamesToLock ||
+          symbolNamesToLock.length === 0 ||
+          symbolNamesToLock.includes(def.scope) ||
+          symbolNamesToLock.includes(def.name);
         if (shouldLock && def.nodeText) {
           const hash = computeSemanticHash(def.nodeText);
           const key = `${path.resolve(filePath)}::${def.scope}`;
@@ -308,13 +326,17 @@ export class ASTLockEngine {
   /**
    * Đối soát mã nguồn mới, phát hiện ranh giới bị phá vỡ (Tác vụ 2, 5)
    */
-  public async validate(filePath: string, newCode: string, lang: string): Promise<{ valid: boolean; violations: string[] }> {
+  public async validate(
+    filePath: string,
+    newCode: string,
+    lang: string,
+  ): Promise<{ valid: boolean; violations: string[] }> {
     const resolvedPath = path.resolve(filePath);
     const prefix = `${resolvedPath}::`;
     const violations: string[] = [];
 
     // Lọc danh sách symbol bị khóa của file này
-    const lockedKeys = [...this.lockedHashes.keys()].filter(k => k.startsWith(prefix));
+    const lockedKeys = [...this.lockedHashes.keys()].filter((k) => k.startsWith(prefix));
     if (lockedKeys.length === 0) {
       return { valid: true, violations: [] };
     }
@@ -322,19 +344,19 @@ export class ASTLockEngine {
     try {
       const newTags = await this.parser.extractSymbols(newCode, lang);
       const newHierarchy = buildHierarchy(newTags);
-      const newDefinitions = newHierarchy.filter(t => t.kind === 'definition');
-      
+      const newDefinitions = newHierarchy.filter((t) => t.kind === 'definition');
+
       // Tạo map các symbol mới để đối sánh
       const newDefMap = new Map<string, HierarchicalSymbol>();
       for (const def of newDefinitions) {
         newDefMap.set(def.scope, def);
       }
 
- for (const key of lockedKeys) {
- const scope = key.slice(prefix.length);
- const expectedHash = this.lockedHashes.get(key);
- if (!expectedHash) continue;
- const newDef = newDefMap.get(scope);
+      for (const key of lockedKeys) {
+        const scope = key.slice(prefix.length);
+        const expectedHash = this.lockedHashes.get(key);
+        if (!expectedHash) continue;
+        const newDef = newDefMap.get(scope);
 
         if (!newDef) {
           // Symbol bị xóa hoàn toàn -> Vi phạm nghiêm trọng
@@ -345,18 +367,22 @@ export class ASTLockEngine {
         if (newDef.nodeText) {
           const actualHash = computeSemanticHash(newDef.nodeText);
           if (expectedHash !== actualHash) {
-            violations.push(`AST-LOCK-001: Symbol '${scope}' bị sửa đè hoặc thay đổi trái phép ngoài phạm vi cho phép.`);
+            violations.push(
+              `AST-LOCK-001: Symbol '${scope}' bị sửa đè hoặc thay đổi trái phép ngoài phạm vi cho phép.`,
+            );
           }
         }
       }
     } catch (err) {
       // Trường hợp lỗi parse, coi như vi phạm đề phòng rủi ro
-      violations.push(`AST-LOCK-001: Không thể phân tích cú pháp AST của mã nguồn mới để thẩm định.`);
+      violations.push(
+        `AST-LOCK-001: Không thể phân tích cú pháp AST của mã nguồn mới để thẩm định.`,
+      );
     }
 
     return {
       valid: violations.length === 0,
-      violations
+      violations,
     };
   }
 
@@ -398,28 +424,43 @@ export class ASTLockMiddleware implements AgentMiddleware {
   private detectLanguageFromPath(filePath: string): string {
     const ext = path.extname(filePath).toLowerCase();
     switch (ext) {
-      case '.ts': return 'typescript';
-      case '.js': return 'javascript';
-      case '.py': return 'python';
-      case '.go': return 'go';
-      case '.rs': return 'rust';
-      case '.cs': return 'c_sharp';
+      case '.ts':
+        return 'typescript';
+      case '.js':
+        return 'javascript';
+      case '.py':
+        return 'python';
+      case '.go':
+        return 'go';
+      case '.rs':
+        return 'rust';
+      case '.cs':
+        return 'c_sharp';
       case '.kt':
-      case '.kts': return 'kotlin';
-      case '.scala': return 'scala';
+      case '.kts':
+        return 'kotlin';
+      case '.scala':
+        return 'scala';
       case '.pas':
-      case '.pp': return 'pascal';
-      default: return 'typescript'; // Fallback
+      case '.pp':
+        return 'pascal';
+      default:
+        return 'typescript'; // Fallback
     }
   }
 
   async preTool(
     toolName: string,
     args: Record<string, unknown>,
-    context: MiddlewareContext
+    context: MiddlewareContext,
   ): Promise<{ proceed: boolean; reason?: string } | void> {
     // Chỉ chặn các tool ghi/sửa tệp tin
-    if (toolName !== 'writeFile' && toolName !== 'write_to_file' && toolName !== 'replace_file_content' && toolName !== 'multi_replace_file_content') {
+    if (
+      toolName !== 'writeFile' &&
+      toolName !== 'write_to_file' &&
+      toolName !== 'replace_file_content' &&
+      toolName !== 'multi_replace_file_content'
+    ) {
       return;
     }
 
@@ -427,27 +468,33 @@ export class ASTLockMiddleware implements AgentMiddleware {
     if (!config.enabled) return;
 
     // Lấy đường dẫn tệp tin từ arguments
-    const filePathRaw = (args.filePath || args.filePathRaw || args.targetFile || args.TargetFile) as string;
+    const filePathRaw = (args.filePath ||
+      args.filePathRaw ||
+      args.targetFile ||
+      args.TargetFile) as string;
     if (!filePathRaw) return;
 
     const resolvedPath = path.resolve(filePathRaw);
     const normalizedPath = resolvedPath.replace(/\\/g, '/');
 
     // Kiểm tra tệp tin có nằm trong danh sách exclude không
-    const isExcluded = config.excludeFiles.some(pattern => {
+    const isExcluded = config.excludeFiles.some((pattern) => {
       const normalizedPattern = pattern.replace(/\*/g, '.*');
       return new RegExp(normalizedPattern).test(normalizedPath);
     });
     if (isExcluded) return;
 
     const lang = this.detectLanguageFromPath(resolvedPath);
-    const newContent = (args.content || args.CodeContent || args.ReplacementContent || '') as string;
+    const newContent = (args.content ||
+      args.CodeContent ||
+      args.ReplacementContent ||
+      '') as string;
 
     // Nếu tệp tin đã tồn tại, tiến hành khóa các symbol cũ của nó trước
     if (fs.existsSync(resolvedPath)) {
       try {
         const oldContent = fs.readFileSync(resolvedPath, 'utf8');
-        
+
         // Khóa các symbol được chỉ định trong cấu hình rules.yaml
         // Nếu rules.yaml không cấu hình gì thì mặc định khóa tất cả symbol để bảo vệ tuyệt đối
         await this.engine.lockSymbols(resolvedPath, oldContent, lang, config.lockedSymbols);
@@ -460,16 +507,22 @@ export class ASTLockMiddleware implements AgentMiddleware {
     const result = await this.engine.validate(resolvedPath, newContent, lang);
     if (!result.valid) {
       const reason = result.violations.join('\n');
-      
+
       // Ghi logs ranh giới bị vi phạm (Tác vụ 7)
       for (const violation of result.violations) {
-        this.logger.logViolation(resolvedPath, violation, 'LOCKED', 'MODIFIED', (context.agent?.id || 'agent'));
+        this.logger.logViolation(
+          resolvedPath,
+          violation,
+          'LOCKED',
+          'MODIFIED',
+          context.agent?.id || 'agent',
+        );
       }
 
       // Chặn đứng (Tác vụ 4) và trả về mã lỗi chi tiết AST-LOCK-001 (Tác vụ 5, 6)
       return {
         proceed: false,
-        reason: `[AST-LOCK ERROR] Giao dịch ghi tệp tin bị từ chối.\nLý do:\n${reason}\nVui lòng tự động rollback thay đổi, không chỉnh sửa ngoài phạm vi symbol chỉ định để bảo vệ an toàn API.`
+        reason: `[AST-LOCK ERROR] Giao dịch ghi tệp tin bị từ chối.\nLý do:\n${reason}\nVui lòng tự động rollback thay đổi, không chỉnh sửa ngoài phạm vi symbol chỉ định để bảo vệ an toàn API.`,
       };
     }
 

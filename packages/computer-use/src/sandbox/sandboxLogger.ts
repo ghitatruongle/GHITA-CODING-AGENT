@@ -78,9 +78,9 @@ export class SandboxLogger {
 
       // Tự động cleanup logs cũ hơn 30 ngày
       this.cleanupOldLogs(30);
-  } catch (err: unknown) {
+    } catch (err: unknown) {
       console.warn(
-        `[DSO] SQLite unavailable (${(err as Error).message}), falling back to in-memory logging`
+        `[DSO] SQLite unavailable (${(err as Error).message}), falling back to in-memory logging`,
       );
       this.db = null;
       this.insertStmt = null;
@@ -108,8 +108,8 @@ export class SandboxLogger {
           metadata: entry.metadata ? JSON.stringify(entry.metadata) : null,
           timestamp: entry.timestamp.toISOString(),
         });
-  } catch (err: unknown) {
-      console.warn(`[DSO] SQLite log failed: ${(err as Error).message}`);
+      } catch (err: unknown) {
+        console.warn(`[DSO] SQLite log failed: ${(err as Error).message}`);
       }
     }
 
@@ -133,12 +133,14 @@ export class SandboxLogger {
   /**
    * Query logs từ SQLite với điều kiện lọc
    */
-  queryLogsFromDb(options: {
-    containerId?: string;
-    event?: string;
-    since?: Date;
-    limit?: number;
-  } = {}): SandboxLogEntry[] {
+  queryLogsFromDb(
+    options: {
+      containerId?: string;
+      event?: string;
+      since?: Date;
+      limit?: number;
+    } = {},
+  ): SandboxLogEntry[] {
     if (!this.db) return this.getLogs();
 
     let sql = 'SELECT * FROM sandbox_logs WHERE 1=1';
@@ -165,7 +167,7 @@ export class SandboxLogger {
     }
 
     const rows = this.db.prepare(sql).all(params);
-	return rows.map(this.rowToLogEntry) as SandboxLogEntry[];
+    return rows.map(this.rowToLogEntry) as SandboxLogEntry[];
   }
 
   /**
@@ -194,8 +196,11 @@ export class SandboxLogger {
    */
   getDbLogCount(): number {
     if (!this.db) return 0;
-	const result = this.db.prepare('SELECT COUNT(*) as count FROM sandbox_logs').get() as Record<string, unknown>;
-	return (result?.count as number) ?? 0;
+    const result = this.db.prepare('SELECT COUNT(*) as count FROM sandbox_logs').get() as Record<
+      string,
+      unknown
+    >;
+    return (result?.count as number) ?? 0;
   }
 
   // =========================================================================
@@ -306,29 +311,18 @@ export class SandboxLogger {
     }
 
     return {
-      totalCpuPercent:
-        Math.round(
-          statsArray.reduce((sum, s) => sum + s.cpuPercent, 0) * 100
-        ) / 100,
+      totalCpuPercent: Math.round(statsArray.reduce((sum, s) => sum + s.cpuPercent, 0) * 100) / 100,
       totalMemoryUsageMb:
-        Math.round(
-          statsArray.reduce((sum, s) => sum + s.memoryUsageMb, 0) * 100
-        ) / 100,
+        Math.round(statsArray.reduce((sum, s) => sum + s.memoryUsageMb, 0) * 100) / 100,
       totalMemoryLimitMb:
-        Math.round(
-          statsArray.reduce((sum, s) => sum + s.memoryLimitMb, 0) * 100
-        ) / 100,
+        Math.round(statsArray.reduce((sum, s) => sum + s.memoryLimitMb, 0) * 100) / 100,
       totalNetworkRxMb:
         Math.round(
-          (statsArray.reduce((sum, s) => sum + s.networkRxBytes, 0) /
-            (1024 * 1024)) *
-            100
+          (statsArray.reduce((sum, s) => sum + s.networkRxBytes, 0) / (1024 * 1024)) * 100,
         ) / 100,
       totalNetworkTxMb:
         Math.round(
-          (statsArray.reduce((sum, s) => sum + s.networkTxBytes, 0) /
-            (1024 * 1024)) *
-            100
+          (statsArray.reduce((sum, s) => sum + s.networkTxBytes, 0) / (1024 * 1024)) * 100,
         ) / 100,
       containerCount: statsArray.length,
     };
@@ -338,15 +332,15 @@ export class SandboxLogger {
   // Private Helpers
   // =========================================================================
 
-	private rowToLogEntry(row: unknown): SandboxLogEntry {
-		const r = row as Record<string, unknown>;
-		return {
-			containerId: r.container_id as string,
-			containerName: r.container_name as string,
-			event: r.event as SandboxLogEntry['event'],
-			message: r.message as string,
-			metadata: r.metadata ? JSON.parse(r.metadata as string) : undefined,
-			timestamp: new Date(r.timestamp as string),
-		};
+  private rowToLogEntry(row: unknown): SandboxLogEntry {
+    const r = row as Record<string, unknown>;
+    return {
+      containerId: r.container_id as string,
+      containerName: r.container_name as string,
+      event: r.event as SandboxLogEntry['event'],
+      message: r.message as string,
+      metadata: r.metadata ? JSON.parse(r.metadata as string) : undefined,
+      timestamp: new Date(r.timestamp as string),
+    };
   }
 }

@@ -76,21 +76,24 @@ export function WorkflowView() {
   const [nodes, setNodes] = useState<WorkflowNode[]>(getDefaultNodes(t));
   const [connections, setConnections] = useState<WorkflowConnection[]>(DEFAULT_CONNECTIONS);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  
+
   // Dragging node variables
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
   const canvasRef = useRef<HTMLDivElement | null>(null);
 
   // Link draft state
-  const [linkingFrom, setLinkingFrom] = useState<{ nodeId: string; port: 'output' | 'yes' | 'no' } | null>(null);
+  const [linkingFrom, setLinkingFrom] = useState<{
+    nodeId: string;
+    port: 'output' | 'yes' | 'no';
+  } | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   const handleNodeMouseDown = (e: React.MouseEvent, node: WorkflowNode) => {
     if (linkingFrom) return; // Ignore drag if connecting ports
     setSelectedNodeId(node.id);
     setDraggingNodeId(node.id);
-    
+
     // Calculate mouse click offset relative to node top-left
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     dragOffsetRef.current = {
@@ -109,9 +112,7 @@ export function WorkflowView() {
       const x = Math.max(10, Math.min(2000, e.clientX - canvasRect.left - dragOffsetRef.current.x));
       const y = Math.max(10, Math.min(1000, e.clientY - canvasRect.top - dragOffsetRef.current.y));
 
-      setNodes((prev) =>
-        prev.map((n) => (n.id === draggingNodeId ? { ...n, x, y } : n))
-      );
+      setNodes((prev) => prev.map((n) => (n.id === draggingNodeId ? { ...n, x, y } : n)));
     }
 
     if (linkingFrom) {
@@ -140,7 +141,7 @@ export function WorkflowView() {
     const canvasRect = canvasRef.current.getBoundingClientRect();
     const x = Math.max(10, e.clientX - canvasRect.left - 80);
     const y = Math.max(10, e.clientY - canvasRect.top - 24);
-    
+
     const newNode: WorkflowNode = {
       id: `node-${Date.now()}`,
       type,
@@ -156,23 +157,35 @@ export function WorkflowView() {
 
   const getPlaceholderTitle = (type: WorkflowNode['type']) => {
     switch (type) {
-      case 'start': return `🏁 ${t('workflow.startTrigger')}`;
-      case 'tool': return `🔌 ${t('workflow.callMcpTool')}`;
-      case 'command': return `💻 ${t('workflow.runCommand')}`;
-      case 'condition': return `❓ ${t('workflow.conditionalCheck')}`;
-      case 'loop': return `🔄 ${t('workflow.repeatLoop')}`;
-      case 'end': return `🎯 ${t('workflow.endNode')}`;
+      case 'start':
+        return `🏁 ${t('workflow.startTrigger')}`;
+      case 'tool':
+        return `🔌 ${t('workflow.callMcpTool')}`;
+      case 'command':
+        return `💻 ${t('workflow.runCommand')}`;
+      case 'condition':
+        return `❓ ${t('workflow.conditionalCheck')}`;
+      case 'loop':
+        return `🔄 ${t('workflow.repeatLoop')}`;
+      case 'end':
+        return `🎯 ${t('workflow.endNode')}`;
     }
   };
 
   const getDefaultConfig = (type: WorkflowNode['type']): Record<string, string> => {
     switch (type) {
-      case 'start': return { trigger: 'Manual Run' };
-      case 'tool': return { tool: 'file-writer', target: 'index.ts' };
-      case 'command': return { command: 'npm run lint' };
-      case 'condition': return { condition: 'success === true' };
-      case 'loop': return { maxIterations: '5' };
-      case 'end': return { message: 'Successfully Completed' };
+      case 'start':
+        return { trigger: 'Manual Run' };
+      case 'tool':
+        return { tool: 'file-writer', target: 'index.ts' };
+      case 'command':
+        return { command: 'npm run lint' };
+      case 'condition':
+        return { condition: 'success === true' };
+      case 'loop':
+        return { maxIterations: '5' };
+      case 'end':
+        return { message: 'Successfully Completed' };
     }
   };
 
@@ -224,7 +237,7 @@ export function WorkflowView() {
             toId: toNodeId,
             fromPort: linkingFrom.port,
             toPort: 'input',
-          })
+          }),
       );
     }
     setLinkingFrom(null);
@@ -276,7 +289,9 @@ export function WorkflowView() {
       }}
     >
       {/* Visual canvas dragging CSS helper */}
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         .canvas-grid {
           background-size: 24px 24px;
           background-image: 
@@ -310,7 +325,9 @@ export function WorkflowView() {
         .node-port:hover {
           transform: scale(1.4);
         }
-      `}} />
+      `,
+        }}
+      />
 
       {/* Sidebar Tool Drawer */}
       <div
@@ -326,7 +343,15 @@ export function WorkflowView() {
         }}
       >
         <div>
-          <h3 style={{ margin: '0 0 6px 0', fontSize: '14px', fontWeight: 700, letterSpacing: '0.5px', color: '#c7d2fe' }}>
+          <h3
+            style={{
+              margin: '0 0 6px 0',
+              fontSize: '14px',
+              fontWeight: 700,
+              letterSpacing: '0.5px',
+              color: '#c7d2fe',
+            }}
+          >
             🧩 {t('workflow.dragNodes')}
           </h3>
           <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>
@@ -450,7 +475,15 @@ export function WorkflowView() {
             <span style={{ fontWeight: 700, fontSize: '13px', letterSpacing: '0.5px' }}>
               {t('workflow.visualCanvas')}
             </span>
-            <span style={{ fontSize: '11px', color: '#94a3b8', background: 'rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: '4px' }}>
+            <span
+              style={{
+                fontSize: '11px',
+                color: '#94a3b8',
+                background: 'rgba(255,255,255,0.06)',
+                padding: '2px 8px',
+                borderRadius: '4px',
+              }}
+            >
               {t('workflow.doubleClickHint')}
             </span>
           </div>
@@ -539,7 +572,9 @@ export function WorkflowView() {
                   key={index}
                   d={pathStr}
                   fill="none"
-                  stroke={c.fromPort === 'no' ? '#f43f5e' : c.fromPort === 'yes' ? '#10b981' : '#818cf8'}
+                  stroke={
+                    c.fromPort === 'no' ? '#f43f5e' : c.fromPort === 'yes' ? '#10b981' : '#818cf8'
+                  }
                   strokeWidth="2"
                   markerEnd="url(#arrow)"
                   style={{ opacity: 0.85 }}
@@ -548,43 +583,44 @@ export function WorkflowView() {
             })}
 
             {/* Render live link drafting */}
-            {linkingFrom && (() => {
-              const fromNode = nodes.find((n) => n.id === linkingFrom.nodeId);
-              if (!fromNode) return null;
+            {linkingFrom &&
+              (() => {
+                const fromNode = nodes.find((n) => n.id === linkingFrom.nodeId);
+                if (!fromNode) return null;
 
-              const fromWidth = 160;
-              const fromHeight = fromNode.type === 'condition' ? 76 : 58;
-              const outX = fromNode.x + fromWidth;
-              let outY = fromNode.y + fromHeight / 2;
+                const fromWidth = 160;
+                const fromHeight = fromNode.type === 'condition' ? 76 : 58;
+                const outX = fromNode.x + fromWidth;
+                let outY = fromNode.y + fromHeight / 2;
 
-              if (fromNode.type === 'condition') {
-                if (linkingFrom.port === 'yes') {
-                  outY = fromNode.y + 24;
-                } else if (linkingFrom.port === 'no') {
-                  outY = fromNode.y + 52;
+                if (fromNode.type === 'condition') {
+                  if (linkingFrom.port === 'yes') {
+                    outY = fromNode.y + 24;
+                  } else if (linkingFrom.port === 'no') {
+                    outY = fromNode.y + 52;
+                  }
                 }
-              }
 
-              const dx = Math.abs(mousePos.x - outX) * 0.4;
-              const pathStr = `M ${outX} ${outY} C ${outX + dx} ${outY}, ${mousePos.x - dx} ${mousePos.y}, ${mousePos.x} ${mousePos.y}`;
+                const dx = Math.abs(mousePos.x - outX) * 0.4;
+                const pathStr = `M ${outX} ${outY} C ${outX + dx} ${outY}, ${mousePos.x - dx} ${mousePos.y}, ${mousePos.x} ${mousePos.y}`;
 
-              return (
-                <path
-                  d={pathStr}
-                  fill="none"
-                  stroke="#fbbf24"
-                  strokeWidth="2"
-                  strokeDasharray="4 4"
-                />
-              );
-            })()}
+                return (
+                  <path
+                    d={pathStr}
+                    fill="none"
+                    stroke="#fbbf24"
+                    strokeWidth="2"
+                    strokeDasharray="4 4"
+                  />
+                );
+              })()}
           </svg>
 
           {/* Render workflow nodes */}
           {nodes.map((node) => {
             const isSelected = selectedNodeId === node.id;
             const isCondition = node.type === 'condition';
-            
+
             return (
               <div
                 key={node.id}
@@ -618,7 +654,9 @@ export function WorkflowView() {
                     borderRadius: '8px 8px 0 0',
                   }}
                 >
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span
+                    style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                  >
                     {node.title}
                   </span>
                   <button
@@ -633,8 +671,8 @@ export function WorkflowView() {
                       fontSize: '10px',
                       cursor: 'pointer',
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(248, 113, 113, 0.6)'}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(248, 113, 113, 0.6)')}
                   >
                     ✕
                   </button>
@@ -679,7 +717,18 @@ export function WorkflowView() {
                       }}
                       title="Branch: YES"
                     />
-                    <span style={{ position: 'absolute', right: '8px', top: '15px', fontSize: '8px', color: '#10b981', fontWeight: 600 }}>YES</span>
+                    <span
+                      style={{
+                        position: 'absolute',
+                        right: '8px',
+                        top: '15px',
+                        fontSize: '8px',
+                        color: '#10b981',
+                        fontWeight: 600,
+                      }}
+                    >
+                      YES
+                    </span>
 
                     {/* NO Output */}
                     <div
@@ -693,7 +742,18 @@ export function WorkflowView() {
                       }}
                       title="Branch: NO"
                     />
-                    <span style={{ position: 'absolute', right: '8px', top: '43px', fontSize: '8px', color: '#f43f5e', fontWeight: 600 }}>NO</span>
+                    <span
+                      style={{
+                        position: 'absolute',
+                        right: '8px',
+                        top: '43px',
+                        fontSize: '8px',
+                        color: '#f43f5e',
+                        fontWeight: 600,
+                      }}
+                    >
+                      NO
+                    </span>
                   </>
                 ) : (
                   node.type !== 'end' && (
@@ -728,20 +788,32 @@ export function WorkflowView() {
           flexShrink: 0,
         }}
       >
-        <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: '#c7d2fe', letterSpacing: '0.5px' }}>
+        <h3
+          style={{
+            margin: 0,
+            fontSize: '13px',
+            fontWeight: 700,
+            color: '#c7d2fe',
+            letterSpacing: '0.5px',
+          }}
+        >
           ⚙️ {t('workflow.configPanel')}
         </h3>
 
         {selectedNode ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', flex: 1 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '11px', color: '#94a3b8' }}>{t('workflow.stepTitle')}</label>
+              <label style={{ fontSize: '11px', color: '#94a3b8' }}>
+                {t('workflow.stepTitle')}
+              </label>
               <input
                 type="text"
                 value={selectedNode.title}
                 onChange={(e) => {
                   const val = e.target.value;
-                  setNodes((prev) => prev.map((n) => (n.id === selectedNode.id ? { ...n, title: val } : n)));
+                  setNodes((prev) =>
+                    prev.map((n) => (n.id === selectedNode.id ? { ...n, title: val } : n)),
+                  );
                 }}
                 style={{
                   padding: '8px 10px',
@@ -770,8 +842,8 @@ export function WorkflowView() {
                       prev.map((n) =>
                         n.id === selectedNode.id
                           ? { ...n, config: { ...n.config, [key]: val } }
-                          : n
-                      )
+                          : n,
+                      ),
                     );
                   }}
                   style={{
@@ -803,14 +875,34 @@ export function WorkflowView() {
             </div>
           </div>
         ) : (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '12px', textAlign: 'center' }}>
+          <div
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#64748b',
+              fontSize: '12px',
+              textAlign: 'center',
+            }}
+          >
             {t('workflow.selectNodeHint')}
           </div>
         )}
 
         {/* JSON Code Compile Preview */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '16px' }}>
-          <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>{t('workflow.compiledJson')}</span>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '6px',
+            borderTop: '1px solid rgba(255,255,255,0.06)',
+            paddingTop: '16px',
+          }}
+        >
+          <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>
+            {t('workflow.compiledJson')}
+          </span>
           <pre
             style={{
               margin: 0,

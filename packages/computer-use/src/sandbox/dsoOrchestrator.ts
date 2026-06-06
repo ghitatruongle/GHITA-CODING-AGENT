@@ -36,9 +36,7 @@ export class DSOOrchestrator {
   private containers: Map<string, ContainerInfo> = new Map(); // containerId → info
 
   constructor(dockerSocket?: string) {
-    this.docker = dockerSocket
-      ? new Docker({ socketPath: dockerSocket })
-      : new Docker();
+    this.docker = dockerSocket ? new Docker({ socketPath: dockerSocket }) : new Docker();
     this.logger = new SandboxLogger();
     this.sandboxId = randomBytes(8).toString('hex');
   }
@@ -87,9 +85,9 @@ export class DSOOrchestrator {
       });
 
       return networkId;
-  } catch (err: unknown) {
-    const error = err as Error;
-	if ((error as unknown as Record<string, unknown>).statusCode === 409) {
+    } catch (err: unknown) {
+      const error = err as Error;
+      if ((error as unknown as Record<string, unknown>).statusCode === 409) {
         const networks = await this.docker.listNetworks({
           filters: { name: [networkName] },
         });
@@ -163,7 +161,7 @@ export class DSOOrchestrator {
     // Connect vào network nếu có
     if (this.networks.size > 0) {
       const networkName = Array.from(this.networks.keys())[0];
-      const networkId = networkName ? (this.networks.get(networkName) || '') : '';
+      const networkId = networkName ? this.networks.get(networkName) || '' : '';
       if (networkId) {
         const network = this.docker.getNetwork(networkId);
         await network.connect({
@@ -223,10 +221,7 @@ export class DSOOrchestrator {
   private buildVolumeBinds(volumes?: VolumeMount[]): string[] {
     if (!volumes || volumes.length === 0) return [];
 
-    return volumes.map(
-      (v) =>
-        `${v.hostPath}:${v.containerPath}${v.readOnly ? ':ro' : ''}`
-    );
+    return volumes.map((v) => `${v.hostPath}:${v.containerPath}${v.readOnly ? ':ro' : ''}`);
   }
 
   // =========================================================================
@@ -295,12 +290,12 @@ export class DSOOrchestrator {
             })`,
             timestamp: new Date(),
           });
-  } catch (err: unknown) {
-    this.logger.log({
-      containerId: containerInfo.Id,
-      containerName: containerInfo.Names?.[0] || 'unknown',
-      event: 'error',
-      message: `Failed to cleanup orphan: ${(err as Error).message}`,
+        } catch (err: unknown) {
+          this.logger.log({
+            containerId: containerInfo.Id,
+            containerName: containerInfo.Names?.[0] || 'unknown',
+            event: 'error',
+            message: `Failed to cleanup orphan: ${(err as Error).message}`,
             timestamp: new Date(),
           });
         }
@@ -310,12 +305,12 @@ export class DSOOrchestrator {
       await this.cleanupOrphanNetworks();
 
       return cleaned;
-  } catch (err: unknown) {
-    this.logger.log({
-      containerId: 'system',
-      containerName: 'dso-orchestrator',
-      event: 'error',
-      message: `Orphan cleanup failed: ${(err as Error).message}`,
+    } catch (err: unknown) {
+      this.logger.log({
+        containerId: 'system',
+        containerName: 'dso-orchestrator',
+        event: 'error',
+        message: `Orphan cleanup failed: ${(err as Error).message}`,
         timestamp: new Date(),
       });
       return 0;
@@ -378,43 +373,32 @@ export class DSOOrchestrator {
     const stats = await container.stats({ stream: false });
 
     const cpuDelta =
-      stats.cpu_stats.cpu_usage.total_usage -
-      stats.precpu_stats.cpu_usage.total_usage;
-    const systemDelta =
-      stats.cpu_stats.system_cpu_usage -
-      stats.precpu_stats.system_cpu_usage;
+      stats.cpu_stats.cpu_usage.total_usage - stats.precpu_stats.cpu_usage.total_usage;
+    const systemDelta = stats.cpu_stats.system_cpu_usage - stats.precpu_stats.system_cpu_usage;
     const cpuCount = stats.cpu_stats.online_cpus || 1;
-    const cpuPercent = systemDelta > 0
-      ? (cpuDelta / systemDelta) * cpuCount * 100
-      : 0;
+    const cpuPercent = systemDelta > 0 ? (cpuDelta / systemDelta) * cpuCount * 100 : 0;
 
     return {
       containerId,
       cpuPercent: Math.round(cpuPercent * 100) / 100,
-      memoryUsageMb:
-        Math.round(
-          ((stats.memory_stats.usage || 0) / (1024 * 1024)) * 100
-        ) / 100,
-      memoryLimitMb:
-        Math.round(
-          ((stats.memory_stats.limit || 0) / (1024 * 1024)) * 100
-        ) / 100,
+      memoryUsageMb: Math.round(((stats.memory_stats.usage || 0) / (1024 * 1024)) * 100) / 100,
+      memoryLimitMb: Math.round(((stats.memory_stats.limit || 0) / (1024 * 1024)) * 100) / 100,
       networkRxBytes: Object.values(stats.networks || {}).reduce(
         (sum: number, net: Record<string, unknown>) => sum + ((net.rx_bytes as number) || 0),
-        0
+        0,
       ),
       networkTxBytes: Object.values(stats.networks || {}).reduce(
         (sum: number, net: Record<string, unknown>) => sum + ((net.tx_bytes as number) || 0),
-        0
+        0,
       ),
       blockReadBytes:
-		stats.blkio_stats?.io_service_bytes_recursive?.find(
-			(b: unknown) => (b as Record<string, unknown>).op === 'Read'
-		)?.value as number || 0,
-		blockWriteBytes:
-		stats.blkio_stats?.io_service_bytes_recursive?.find(
-			(b: unknown) => (b as Record<string, unknown>).op === 'Write'
-		)?.value as number || 0,
+        (stats.blkio_stats?.io_service_bytes_recursive?.find(
+          (b: unknown) => (b as Record<string, unknown>).op === 'Read',
+        )?.value as number) || 0,
+      blockWriteBytes:
+        (stats.blkio_stats?.io_service_bytes_recursive?.find(
+          (b: unknown) => (b as Record<string, unknown>).op === 'Write',
+        )?.value as number) || 0,
       timestamp: new Date(),
     };
   }
@@ -516,12 +500,12 @@ export class DSOOrchestrator {
         message: `Container "${info.name}" destroyed`,
         timestamp: new Date(),
       });
-  } catch (err: unknown) {
-    this.logger.log({
-      containerId,
-      containerName: info.name,
-      event: 'error',
-      message: `Failed to destroy container: ${(err as Error).message}`,
+    } catch (err: unknown) {
+      this.logger.log({
+        containerId,
+        containerName: info.name,
+        event: 'error',
+        message: `Failed to destroy container: ${(err as Error).message}`,
         timestamp: new Date(),
       });
     }
@@ -584,18 +568,15 @@ export class DSOOrchestrator {
           else resolve();
         });
       });
-  } catch (err: unknown) {
-    const error = err as Error;
-    if (!error.message?.includes('No such image')) {
-      throw new Error(`Failed to pull image "${image}": ${error.message}`);
+    } catch (err: unknown) {
+      const error = err as Error;
+      if (!error.message?.includes('No such image')) {
+        throw new Error(`Failed to pull image "${image}": ${error.message}`);
       }
     }
   }
 
-  private async waitForHealthy(
-    containerId: string,
-    config: SandboxServiceConfig
-  ): Promise<void> {
+  private async waitForHealthy(containerId: string, config: SandboxServiceConfig): Promise<void> {
     const hc = config.healthCheck;
     if (!hc) throw new Error('Health check config is required');
     const interval = hc.intervalMs || DEFAULT_HEALTH_CHECK_INTERVAL_MS;
@@ -620,9 +601,7 @@ export class DSOOrchestrator {
       await this.sleep(interval);
     }
 
-    throw new Error(
-      `Health check failed for "${config.name}" after ${maxRetries} attempts`
-    );
+    throw new Error(`Health check failed for "${config.name}" after ${maxRetries} attempts`);
   }
 
   private sleep(ms: number): Promise<void> {

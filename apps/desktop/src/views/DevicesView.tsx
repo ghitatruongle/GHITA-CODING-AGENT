@@ -22,7 +22,8 @@ interface ServerHealth {
   devices?: DeviceInfo[];
 }
 
-const getOnlineDevices = (devices?: DeviceInfo[]) => (devices ?? []).filter((device) => device.connected);
+const getOnlineDevices = (devices?: DeviceInfo[]) =>
+  (devices ?? []).filter((device) => device.connected);
 
 export function DevicesView() {
   const { t } = useTranslation();
@@ -35,6 +36,50 @@ export function DevicesView() {
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [codeCountdown, setCodeCountdown] = useState(300);
+  const [lanEnabled, setLanEnabled] = useState(false);
+
+  // Load initial LAN setting
+  useEffect(() => {
+    const loadLan = async () => {
+      try {
+        const enabled = await invoke<boolean>('get_lan_enabled');
+        setLanEnabled(enabled);
+      } catch (e) {
+        console.error('Failed to load LAN setting:', e);
+      }
+    };
+    loadLan();
+  }, []);
+
+  const handleToggleLan = async () => {
+    try {
+      const targetValue = !lanEnabled;
+      await invoke('set_lan_enabled', { enabled: targetValue });
+      setLanEnabled(targetValue);
+
+      // If server is currently running, we need to restart it to apply the binding changes
+      if (serverStatus === 'listening') {
+        setError('Đang áp dụng thay đổi và khởi động lại Server...');
+        // Stop server
+        await invoke('stop_server');
+        setServerStatus('offline');
+        setHealth(null);
+        // Start server again after 1.5 seconds
+        setTimeout(async () => {
+          try {
+            await invoke<string>('start_server');
+            setTimeout(pollStatus, 1500);
+            setError(null);
+          } catch (e) {
+            setError(String(e));
+            setServerStatus('error');
+          }
+        }, 1500);
+      }
+    } catch (e) {
+      setError(String(e));
+    }
+  };
 
   // Poll server status
   const pollStatus = useCallback(async () => {
@@ -96,7 +141,7 @@ export function DevicesView() {
   // Countdown for pairing code
   useEffect(() => {
     if (serverStatus !== 'listening' || !health?.codeExpiresAt) return;
-    
+
     const updateCountdown = () => {
       const remaining = Math.max(0, Math.round(((health.codeExpiresAt ?? 0) - Date.now()) / 1000));
       setCodeCountdown(remaining);
@@ -147,7 +192,8 @@ export function DevicesView() {
     }
   };
 
-  const formatCountdown = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
+  const formatCountdown = (s: number) =>
+    `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
   const formatUptime = (s: number) => {
     const m = Math.floor(s / 60);
     const sec = Math.floor(s % 60);
@@ -159,7 +205,16 @@ export function DevicesView() {
 
   return (
     <div style={{ padding: '24px', overflow: 'auto', height: '100%' }}>
-      <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px', background: 'var(--accent-gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+      <h2
+        style={{
+          fontSize: '20px',
+          fontWeight: 700,
+          marginBottom: '8px',
+          background: 'var(--accent-gradient)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+        }}
+      >
         {t('devices.title')}
       </h2>
       <p style={{ color: 'var(--text-muted)', marginBottom: '24px', fontSize: '13px' }}>
@@ -168,55 +223,200 @@ export function DevicesView() {
 
       {/* Error */}
       {error && (
-        <div style={{ background: 'var(--error-bg)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius-md)', padding: '12px 16px', marginBottom: '16px', color: 'var(--error)', fontSize: '13px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div
+          style={{
+            background: 'var(--error-bg)',
+            border: '1px solid rgba(239,68,68,0.3)',
+            borderRadius: 'var(--radius-md)',
+            padding: '12px 16px',
+            marginBottom: '16px',
+            color: 'var(--error)',
+            fontSize: '13px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
           <span>{error}</span>
-          <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', fontWeight: 600, fontSize: '16px' }}>x</button>
+          <button
+            onClick={() => setError(null)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--error)',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '16px',
+            }}
+          >
+            x
+          </button>
         </div>
       )}
 
       {/* Server Control */}
-      <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', padding: '24px', marginBottom: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+      <div
+        style={{
+          background: 'var(--bg-surface)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '24px',
+          marginBottom: '20px',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '16px',
+          }}
+        >
           <div>
-            <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>{t('devices.communicationServer')}</h3>
+            <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>
+              {t('devices.communicationServer')}
+            </h3>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: serverStatus === 'listening' ? 'var(--success)' : 'var(--text-muted)', display: 'inline-block' }} />
-              <span style={{ fontSize: '13px', color: serverStatus === 'listening' ? 'var(--success)' : 'var(--text-muted)' }}>
-                {serverStatus === 'listening' ? t('devices.statusRunning') : serverStatus === 'error' ? t('devices.statusError') : t('devices.statusOff')}
+              <span
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: serverStatus === 'listening' ? 'var(--success)' : 'var(--text-muted)',
+                  display: 'inline-block',
+                }}
+              />
+              <span
+                style={{
+                  fontSize: '13px',
+                  color: serverStatus === 'listening' ? 'var(--success)' : 'var(--text-muted)',
+                }}
+              >
+                {serverStatus === 'listening'
+                  ? t('devices.statusRunning')
+                  : serverStatus === 'error'
+                    ? t('devices.statusError')
+                    : t('devices.statusOff')}
               </span>
-              {health?.uptime != null && <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '8px' }}>{t('devices.uptime')} {formatUptime(health.uptime)}</span>}
+              {health?.uptime != null && (
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '8px' }}>
+                  {t('devices.uptime')} {formatUptime(health.uptime)}
+                </span>
+              )}
             </div>
           </div>
           <button
             onClick={serverStatus === 'listening' ? handleStopServer : handleStartServer}
             disabled={isStarting}
-            style={{ padding: '10px 24px', background: serverStatus === 'listening' ? 'var(--error)' : 'var(--accent-primary)', color: '#fff', border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 600, cursor: isStarting ? 'not-allowed' : 'pointer', opacity: isStarting ? 0.6 : 1 }}
+            style={{
+              padding: '10px 24px',
+              background: serverStatus === 'listening' ? 'var(--error)' : 'var(--accent-primary)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 'var(--radius-sm)',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: isStarting ? 'not-allowed' : 'pointer',
+              opacity: isStarting ? 0.6 : 1,
+            }}
           >
-            {isStarting ? t('devices.starting') : serverStatus === 'listening' ? t('devices.stopServer') : t('devices.startServer')}
+            {isStarting
+              ? t('devices.starting')
+              : serverStatus === 'listening'
+                ? t('devices.stopServer')
+                : t('devices.startServer')}
           </button>
         </div>
 
         {/* IP + Port info */}
         {serverStatus === 'listening' && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', padding: '16px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', marginBottom: '12px' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+              gap: '12px',
+              padding: '16px',
+              background: 'var(--bg-tertiary)',
+              borderRadius: 'var(--radius-md)',
+              marginBottom: '12px',
+            }}
+          >
             <div>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>{t('devices.ipAddress')}</div>
-              <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--accent-primary)', fontFamily: 'var(--font-mono)' }}>
+              <div
+                style={{
+                  fontSize: '11px',
+                  color: 'var(--text-muted)',
+                  textTransform: 'uppercase',
+                  marginBottom: '4px',
+                }}
+              >
+                {t('devices.ipAddress')}
+              </div>
+              <div
+                style={{
+                  fontSize: '18px',
+                  fontWeight: 700,
+                  color: 'var(--accent-primary)',
+                  fontFamily: 'var(--font-mono)',
+                }}
+              >
                 {primaryIp || t('devices.searching')}
               </div>
               {health?.localIps && health.localIps.length > 1 && (
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', wordBreak: 'break-all' }}>
+                <div
+                  style={{
+                    fontSize: '11px',
+                    color: 'var(--text-muted)',
+                    marginTop: '4px',
+                    wordBreak: 'break-all',
+                  }}
+                >
                   {t('devices.otherIps')} {health.localIps.slice(1).join(', ')}
                 </div>
               )}
             </div>
             <div>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>{t('devices.port')}</div>
-              <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>{port}</div>
+              <div
+                style={{
+                  fontSize: '11px',
+                  color: 'var(--text-muted)',
+                  textTransform: 'uppercase',
+                  marginBottom: '4px',
+                }}
+              >
+                {t('devices.port')}
+              </div>
+              <div
+                style={{
+                  fontSize: '18px',
+                  fontWeight: 700,
+                  color: 'var(--text-primary)',
+                  fontFamily: 'var(--font-mono)',
+                }}
+              >
+                {port}
+              </div>
             </div>
             <div>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>{t('devices.hostname')}</div>
-              <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--accent-primary)', fontFamily: 'var(--font-mono)', wordBreak: 'break-all' }}>
+              <div
+                style={{
+                  fontSize: '11px',
+                  color: 'var(--text-muted)',
+                  textTransform: 'uppercase',
+                  marginBottom: '4px',
+                }}
+              >
+                {t('devices.hostname')}
+              </div>
+              <div
+                style={{
+                  fontSize: '18px',
+                  fontWeight: 700,
+                  color: 'var(--accent-primary)',
+                  fontFamily: 'var(--font-mono)',
+                  wordBreak: 'break-all',
+                }}
+              >
                 {health?.hostname || 'DESKTOP'}
               </div>
             </div>
@@ -225,45 +425,208 @@ export function DevicesView() {
 
         {/* Connection string */}
         {serverStatus === 'listening' && primaryIp && (
-          <div style={{ padding: '12px 16px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div
+            style={{
+              padding: '12px 16px',
+              background: 'var(--bg-tertiary)',
+              borderRadius: 'var(--radius-md)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
             <div>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>{t('devices.connectionAddress')}</div>
-              <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--accent-primary)', fontFamily: 'var(--font-mono)' }}>
+              <div
+                style={{
+                  fontSize: '11px',
+                  color: 'var(--text-muted)',
+                  textTransform: 'uppercase',
+                  marginBottom: '4px',
+                }}
+              >
+                {t('devices.connectionAddress')}
+              </div>
+              <div
+                style={{
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: 'var(--accent-primary)',
+                  fontFamily: 'var(--font-mono)',
+                }}
+              >
                 http://{primaryIp}:{port}
               </div>
             </div>
             <button
               onClick={() => navigator.clipboard.writeText(`http://${primaryIp}:${port}`)}
-              style={{ padding: '6px 12px', background: 'var(--bg-active)', color: 'var(--accent-primary)', border: '1px solid rgba(129,140,248,0.2)', borderRadius: 'var(--radius-sm)', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}
+              style={{
+                padding: '6px 12px',
+                background: 'var(--bg-active)',
+                color: 'var(--accent-primary)',
+                border: '1px solid rgba(129,140,248,0.2)',
+                borderRadius: 'var(--radius-sm)',
+                fontSize: '12px',
+                cursor: 'pointer',
+                fontWeight: 600,
+              }}
             >
               {t('common.copy')}
             </button>
           </div>
         )}
+        {/* Toggle LAN */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '12px 0',
+            borderTop: '1px solid var(--border-subtle)',
+            marginTop: '16px',
+          }}
+        >
+          <div style={{ marginRight: '16px' }}>
+            <div style={{ fontSize: '14px', color: 'var(--text-primary)', fontWeight: 500 }}>
+              {t('devices.lanEnabled')}
+            </div>
+            <div
+              style={{
+                fontSize: '12px',
+                color: 'var(--text-muted)',
+                marginTop: '2px',
+                lineHeight: '1.4',
+              }}
+            >
+              {t('devices.lanEnabledDesc')}
+            </div>
+          </div>
+          <label
+            style={{
+              position: 'relative',
+              display: 'inline-block',
+              width: '44px',
+              height: '22px',
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={lanEnabled}
+              onChange={handleToggleLan}
+              style={{ opacity: 0, width: 0, height: 0 }}
+            />
+            <span
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: lanEnabled ? 'var(--accent-primary)' : '#475569',
+                borderRadius: '22px',
+                transition: '0.2s',
+              }}
+            >
+              <span
+                style={{
+                  position: 'absolute',
+                  content: '""',
+                  height: '16px',
+                  width: '16px',
+                  left: lanEnabled ? '24px' : '4px',
+                  bottom: '3px',
+                  backgroundColor: 'white',
+                  borderRadius: '50%',
+                  transition: '0.2s',
+                }}
+              />
+            </span>
+          </label>
+        </div>
       </div>
 
       {/* Pairing Code */}
       {serverStatus === 'listening' && health?.pairingCode && (
-        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: 'var(--radius-lg)', padding: '24px', marginBottom: '20px', textAlign: 'center' }}>
-          <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '16px' }}>{t('devices.pairingCode')}</h3>
-          <div style={{ fontSize: '36px', fontWeight: 700, letterSpacing: '8px', fontFamily: 'var(--font-mono)', color: 'var(--accent-primary)', background: 'var(--bg-tertiary)', padding: '16px 32px', borderRadius: 'var(--radius-md)', display: 'inline-block', marginBottom: '12px' }}>
+        <div
+          style={{
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-accent)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '24px',
+            marginBottom: '20px',
+            textAlign: 'center',
+          }}
+        >
+          <h3
+            style={{
+              fontSize: '14px',
+              fontWeight: 600,
+              color: 'var(--text-secondary)',
+              marginBottom: '16px',
+            }}
+          >
+            {t('devices.pairingCode')}
+          </h3>
+          <div
+            style={{
+              fontSize: '36px',
+              fontWeight: 700,
+              letterSpacing: '8px',
+              fontFamily: 'var(--font-mono)',
+              color: 'var(--accent-primary)',
+              background: 'var(--bg-tertiary)',
+              padding: '16px 32px',
+              borderRadius: 'var(--radius-md)',
+              display: 'inline-block',
+              marginBottom: '12px',
+            }}
+          >
             {health.pairingCode}
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t('devices.expiresAfter')} {formatCountdown(codeCountdown)}</div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>{t('devices.pairingInstructions')}</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+            {t('devices.expiresAfter')} {formatCountdown(codeCountdown)}
+          </div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>
+            {t('devices.pairingInstructions')}
+          </div>
         </div>
       )}
 
       {/* Bluetooth Connection Guide */}
       {serverStatus === 'listening' && (
-        <div style={{ background: 'var(--bg-surface)', border: '1px solid rgba(96,165,250,0.3)', borderRadius: 'var(--radius-lg)', padding: '24px', marginBottom: '20px' }}>
+        <div
+          style={{
+            background: 'var(--bg-surface)',
+            border: '1px solid rgba(96,165,250,0.3)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '24px',
+            marginBottom: '20px',
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
             <span style={{ fontSize: '22px' }}>🔵</span>
-            <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{t('devices.bluetoothConnection')}</h3>
+            <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+              {t('devices.bluetoothConnection')}
+            </h3>
           </div>
           <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
             <p style={{ marginBottom: '8px' }}>{t('devices.bluetoothGuide')}</p>
-            <div style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--accent-primary)', background: 'var(--bg-tertiary)', padding: '12px 20px', borderRadius: 'var(--radius-md)', textAlign: 'center', marginBottom: '12px', letterSpacing: '2px', wordBreak: 'break-all' }}>
+            <div
+              style={{
+                fontSize: '20px',
+                fontWeight: 700,
+                fontFamily: 'var(--font-mono)',
+                color: 'var(--accent-primary)',
+                background: 'var(--bg-tertiary)',
+                padding: '12px 20px',
+                borderRadius: 'var(--radius-md)',
+                textAlign: 'center',
+                marginBottom: '12px',
+                letterSpacing: '2px',
+                wordBreak: 'break-all',
+              }}
+            >
               {health?.hostname || 'DESKTOP'}
             </div>
             <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
@@ -275,18 +638,50 @@ export function DevicesView() {
 
       {/* Connected Devices */}
       {health?.devices && health.devices.length > 0 && (
-        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+        <div
+          style={{
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 'var(--radius-lg)',
+            overflow: 'hidden',
+          }}
+        >
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)' }}>
-            <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{t('devices.connectedDevices')}</h3>
+            <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+              {t('devices.connectedDevices')}
+            </h3>
           </div>
           {health.devices.map((device, index) => (
-            <div key={`${device.id}-${index}`} style={{ display: 'flex', alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid var(--border-subtle)', gap: '12px' }}>
-              <span style={{ fontSize: '20px' }}>{device.platform === 'android' ? '📱' : '💻'}</span>
+            <div
+              key={`${device.id}-${index}`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                padding: '12px 20px',
+                borderBottom: '1px solid var(--border-subtle)',
+                gap: '12px',
+              }}
+            >
+              <span style={{ fontSize: '20px' }}>
+                {device.platform === 'android' ? '📱' : '💻'}
+              </span>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>{device.name}</div>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{device.platform} - {t('devices.lastSeen')} {new Date(device.lastSeen).toLocaleTimeString()}</div>
+                <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
+                  {device.name}
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                  {device.platform} - {t('devices.lastSeen')}{' '}
+                  {new Date(device.lastSeen).toLocaleTimeString()}
+                </div>
               </div>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: device.connected ? 'var(--success)' : 'var(--text-muted)' }} />
+              <span
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: device.connected ? 'var(--success)' : 'var(--text-muted)',
+                }}
+              />
               <button
                 onClick={() => handleUnpairDevice(device.id)}
                 style={{
@@ -319,9 +714,32 @@ export function DevicesView() {
 
       {/* Instructions when server is off */}
       {serverStatus !== 'listening' && (
-        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', padding: '24px' }}>
-          <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '12px' }}>{t('devices.connectionGuide')}</h3>
-          <ol style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: 1.8, paddingLeft: '20px' }}>
+        <div
+          style={{
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '24px',
+          }}
+        >
+          <h3
+            style={{
+              fontSize: '14px',
+              fontWeight: 600,
+              color: 'var(--text-primary)',
+              marginBottom: '12px',
+            }}
+          >
+            {t('devices.connectionGuide')}
+          </h3>
+          <ol
+            style={{
+              color: 'var(--text-secondary)',
+              fontSize: '13px',
+              lineHeight: 1.8,
+              paddingLeft: '20px',
+            }}
+          >
             <li>{t('devices.guideStep1')}</li>
             <li>{t('devices.guideStep2')}</li>
             <li>{t('devices.guideStep3')}</li>

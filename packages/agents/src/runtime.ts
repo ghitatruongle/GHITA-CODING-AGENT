@@ -162,7 +162,12 @@ export class AgentManager {
     this.tasks.set(task.id, running);
 
     try {
-      const result = await this.runtime({ agent, task: running, skills: this.skills, memory: this.memory });
+      const result = await this.runtime({
+        agent,
+        task: running,
+        skills: this.skills,
+        memory: this.memory,
+      });
       const completed: AgentTask = {
         ...running,
         status: 'completed',
@@ -264,7 +269,10 @@ export class AgentGroupManager {
   }
 }
 
-export function createDefaultAgentManager(skills?: SkillRegistry, memory?: AgentMemoryLike): AgentManager {
+export function createDefaultAgentManager(
+  skills?: SkillRegistry,
+  memory?: AgentMemoryLike,
+): AgentManager {
   const manager = new AgentManager(undefined, skills, memory);
 
   manager.create({
@@ -289,7 +297,13 @@ export function createDefaultAgentManager(skills?: SkillRegistry, memory?: Agent
     name: 'Desktop Agent',
     role: 'executor',
     description: 'Controls desktop mouse, keyboard, screenshots, and apps.',
-    skills: ['computer.moveMouse', 'computer.click', 'computer.typeText', 'screenshot.capture', 'app.open'],
+    skills: [
+      'computer.moveMouse',
+      'computer.click',
+      'computer.typeText',
+      'screenshot.capture',
+      'app.open',
+    ],
   });
   manager.create({
     name: 'Memory Agent',
@@ -309,13 +323,17 @@ export function createDefaultAgentGroupManager(agentManager: AgentManager): Agen
   groupManager.create({
     name: 'Dev Team',
     description: 'Code implementation, review, and verification.',
-    agents: [byName.get('Coder Agent'), byName.get('Reviewer Agent')].filter((id): id is string => Boolean(id)),
+    agents: [byName.get('Coder Agent'), byName.get('Reviewer Agent')].filter((id): id is string =>
+      Boolean(id),
+    ),
     task: 'Implement a scoped code change and verify it.',
   });
   groupManager.create({
     name: 'Automation Team',
     description: 'Browser and desktop automation workflows.',
-    agents: [byName.get('Browser Agent'), byName.get('Desktop Agent')].filter((id): id is string => Boolean(id)),
+    agents: [byName.get('Browser Agent'), byName.get('Desktop Agent')].filter((id): id is string =>
+      Boolean(id),
+    ),
     task: 'Open browser, inspect page data, and execute desktop actions when approved.',
   });
   groupManager.create({

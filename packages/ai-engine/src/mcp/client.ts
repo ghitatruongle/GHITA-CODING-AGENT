@@ -47,13 +47,13 @@ export class MCPClient {
       entry.error = undefined;
 
       // Discover tools via JSON-RPC
-    const response = await entry.transport.send({
-      method: 'tools/list',
-      params: {},
-    }) as Record<string, unknown>;
+      const response = (await entry.transport.send({
+        method: 'tools/list',
+        params: {},
+      })) as Record<string, unknown>;
 
-    const result = (response.result ?? {}) as Record<string, unknown>;
-    const tools = (result.tools ?? []) as MCPTool[];
+      const result = (response.result ?? {}) as Record<string, unknown>;
+      const tools = (result.tools ?? []) as MCPTool[];
       entry.tools = tools.map((t) => ({ ...t, serverName: name }));
       return entry.tools;
     } catch (error) {
@@ -74,18 +74,25 @@ export class MCPClient {
   }
 
   /** Gọi MCP tool */
-  async callTool(serverName: string, toolName: string, args: Record<string, unknown>): Promise<MCPToolResult> {
+  async callTool(
+    serverName: string,
+    toolName: string,
+    args: Record<string, unknown>,
+  ): Promise<MCPToolResult> {
     const entry = this.servers.get(serverName);
     if (!entry) throw new Error(`MCP server "${serverName}" not found`);
     if (!entry.connected) throw new Error(`MCP server "${serverName}" is not connected`);
 
-    const response = await entry.transport.send({
+    const response = (await entry.transport.send({
       method: 'tools/call',
       params: { name: toolName, arguments: args },
-    }) as Record<string, unknown>;
+    })) as Record<string, unknown>;
 
     const result = (response.result ?? {}) as Record<string, unknown>;
-    const content = (result.content ?? [{ type: 'text', text: JSON.stringify(result) }]) as Array<{ type: string; text: string }>;
+    const content = (result.content ?? [{ type: 'text', text: JSON.stringify(result) }]) as Array<{
+      type: string;
+      text: string;
+    }>;
     return {
       content,
       isError: (result.isError as boolean) ?? false,

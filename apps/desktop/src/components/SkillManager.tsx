@@ -27,7 +27,10 @@ const MOCK_COMPUTER_SKILLS: SkillDefinition[] = [
       x: { type: 'number', description: 'X coordinate', required: true },
       y: { type: 'number', description: 'Y coordinate', required: true },
     },
-    run: async () => ({ success: false, error: 'OS Automation adapter is only available when connected to host sidecar.' }),
+    run: async () => ({
+      success: false,
+      error: 'OS Automation adapter is only available when connected to host sidecar.',
+    }),
   },
   {
     id: 'computer.click',
@@ -42,7 +45,10 @@ const MOCK_COMPUTER_SKILLS: SkillDefinition[] = [
       x: { type: 'number', description: 'Optional X coordinate', required: false },
       y: { type: 'number', description: 'Optional Y coordinate', required: false },
     },
-    run: async () => ({ success: false, error: 'OS Automation adapter is only available when connected to host sidecar.' }),
+    run: async () => ({
+      success: false,
+      error: 'OS Automation adapter is only available when connected to host sidecar.',
+    }),
   },
   {
     id: 'computer.typeText',
@@ -56,7 +62,10 @@ const MOCK_COMPUTER_SKILLS: SkillDefinition[] = [
     parameters: {
       text: { type: 'string', description: 'Text to type', required: true },
     },
-    run: async () => ({ success: false, error: 'OS Automation adapter is only available when connected to host sidecar.' }),
+    run: async () => ({
+      success: false,
+      error: 'OS Automation adapter is only available when connected to host sidecar.',
+    }),
   },
   {
     id: 'computer.screenshot',
@@ -67,7 +76,10 @@ const MOCK_COMPUTER_SKILLS: SkillDefinition[] = [
     version: '0.1.0',
     scopes: ['desktop'],
     status: 'disabled',
-    run: async () => ({ success: false, error: 'OS Automation adapter is only available when connected to host sidecar.' }),
+    run: async () => ({
+      success: false,
+      error: 'OS Automation adapter is only available when connected to host sidecar.',
+    }),
   },
 ];
 
@@ -81,7 +93,10 @@ const MOCK_BROWSER_SKILLS: SkillDefinition[] = [
     version: '0.1.0',
     scopes: ['browser'],
     status: 'disabled',
-    run: async () => ({ success: false, error: 'Browser Control adapter is only available when connected to host sidecar.' }),
+    run: async () => ({
+      success: false,
+      error: 'Browser Control adapter is only available when connected to host sidecar.',
+    }),
   },
   {
     id: 'browser.navigate',
@@ -95,7 +110,10 @@ const MOCK_BROWSER_SKILLS: SkillDefinition[] = [
     parameters: {
       url: { type: 'string', description: 'URL to open', required: true },
     },
-    run: async () => ({ success: false, error: 'Browser Control adapter is only available when connected to host sidecar.' }),
+    run: async () => ({
+      success: false,
+      error: 'Browser Control adapter is only available when connected to host sidecar.',
+    }),
   },
   {
     id: 'browser.extract',
@@ -109,7 +127,10 @@ const MOCK_BROWSER_SKILLS: SkillDefinition[] = [
     parameters: {
       selector: { type: 'string', description: 'Optional CSS selector', required: false },
     },
-    run: async () => ({ success: false, error: 'Browser Control adapter is only available when connected to host sidecar.' }),
+    run: async () => ({
+      success: false,
+      error: 'Browser Control adapter is only available when connected to host sidecar.',
+    }),
   },
   {
     id: 'browser.fill',
@@ -124,7 +145,10 @@ const MOCK_BROWSER_SKILLS: SkillDefinition[] = [
       selector: { type: 'string', description: 'CSS selector', required: true },
       value: { type: 'string', description: 'Value to enter', required: true },
     },
-    run: async () => ({ success: false, error: 'Browser Control adapter is only available when connected to host sidecar.' }),
+    run: async () => ({
+      success: false,
+      error: 'Browser Control adapter is only available when connected to host sidecar.',
+    }),
   },
 ];
 
@@ -229,7 +253,9 @@ function ResultLine({ result }: { result?: SkillResult }) {
         lineHeight: 1.5,
       }}
     >
-      {result.success ? result.output ?? 'Skill ran successfully.' : result.error ?? 'Skill failed.'}
+      {result.success
+        ? (result.output ?? 'Skill ran successfully.')
+        : (result.error ?? 'Skill failed.')}
     </div>
   );
 }
@@ -255,11 +281,17 @@ export function SkillManager() {
       if (active && s) {
         setSocket(s);
         setConnected(s.connected);
-        s.on('connect', () => { if (active) setConnected(true); });
-        s.on('disconnect', () => { if (active) setConnected(false); });
+        s.on('connect', () => {
+          if (active) setConnected(true);
+        });
+        s.on('disconnect', () => {
+          if (active) setConnected(false);
+        });
       }
     });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
 
   const categories = useMemo(() => {
@@ -289,7 +321,10 @@ export function SkillManager() {
           const timer = setTimeout(() => {
             if (!settled) {
               settled = true;
-              resolvePromise({ success: false, error: 'Skill execution timed out on host sidecar.' });
+              resolvePromise({
+                success: false,
+                error: 'Skill execution timed out on host sidecar.',
+              });
             }
           }, 15000);
           socket.emit('run_skill', { id: skill.id, input }, (res: SkillResult) => {
@@ -304,7 +339,10 @@ export function SkillManager() {
       } catch (err: unknown) {
         setLastResults((current) => ({
           ...current,
-          [skill.id]: { success: false, error: err instanceof Error ? err.message : 'Failed to proxy skill execution.' },
+          [skill.id]: {
+            success: false,
+            error: err instanceof Error ? err.message : 'Failed to proxy skill execution.',
+          },
         }));
       }
     } else {
@@ -318,7 +356,14 @@ export function SkillManager() {
 
   return (
     <div style={{ padding: '24px', overflow: 'auto', height: '100%' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', marginBottom: '20px' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          gap: '16px',
+          marginBottom: '20px',
+        }}
+      >
         <div>
           <h2
             style={{
@@ -348,14 +393,18 @@ export function SkillManager() {
           <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--accent-secondary)' }}>
             {snapshot.enabled}/{snapshot.total}
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{t('skillManager.enabledSkills')}</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+            {t('skillManager.enabledSkills')}
+          </div>
         </div>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
         {categories.map(([category, skills]) => (
           <section key={category}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+            <div
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}
+            >
               <span
                 style={{
                   width: '8px',
@@ -364,7 +413,13 @@ export function SkillManager() {
                   background: CATEGORY_ACCENTS[category],
                 }}
               />
-              <h3 style={{ fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+              <h3
+                style={{
+                  fontSize: '13px',
+                  color: 'var(--text-secondary)',
+                  textTransform: 'uppercase',
+                }}
+              >
                 {CATEGORY_LABELS[category]} ({snapshot.byCategory[category]})
               </h3>
             </div>
@@ -385,16 +440,30 @@ export function SkillManager() {
                     style={{
                       borderRadius: 'var(--radius-md)',
                       border: `1px solid ${skill.enabled ? accent : 'var(--border-subtle)'}`,
-                      background: skill.enabled ? 'rgba(255, 255, 255, 0.055)' : 'var(--bg-surface)',
+                      background: skill.enabled
+                        ? 'rgba(255, 255, 255, 0.055)'
+                        : 'var(--bg-surface)',
                       padding: '16px',
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
                       <div>
-                        <h4 style={{ fontSize: '14px', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                        <h4
+                          style={{
+                            fontSize: '14px',
+                            color: 'var(--text-primary)',
+                            marginBottom: '4px',
+                          }}
+                        >
                           {skill.name}
                         </h4>
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                        <div
+                          style={{
+                            fontSize: '11px',
+                            color: 'var(--text-muted)',
+                            fontFamily: 'var(--font-mono)',
+                          }}
+                        >
                           {skill.id}
                         </div>
                       </div>
@@ -414,7 +483,14 @@ export function SkillManager() {
                       </span>
                     </div>
 
-                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5, marginTop: '10px' }}>
+                    <p
+                      style={{
+                        fontSize: '12px',
+                        color: 'var(--text-muted)',
+                        lineHeight: 1.5,
+                        marginTop: '10px',
+                      }}
+                    >
                       {skill.description}
                     </p>
 

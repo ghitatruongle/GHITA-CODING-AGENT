@@ -13,17 +13,17 @@ import { SOCKET_EVENTS, generateId } from '@ghita/shared';
 import type { DeviceInfo } from '@ghita/shared';
 import { PairingManager } from './pairing.js';
 import { ScreenCapture } from './screen-capture.js';
-import type {
-  ServerConfig,
-  ServerEvents,
-  PairedDevice,
-  CommandPayload,
-} from './types.js';
+import type { ServerConfig, ServerEvents, PairedDevice, CommandPayload } from './types.js';
+import { ChannelPluginRegistry } from './channel-plugin-contract.js';
 
 const DEFAULT_PAIRED_DEVICES_FILE = path.resolve(homedir(), '.ghita-paired-devices.json');
 
 function normalizeAddress(address = ''): string {
-  return address.replace(/^::ffff:/, '').replace(/^\[|\]$/g, '').trim().toLowerCase();
+  return address
+    .replace(/^::ffff:/, '')
+    .replace(/^\[|\]$/g, '')
+    .trim()
+    .toLowerCase();
 }
 
 function isLoopbackAddress(address = ''): boolean {
@@ -58,6 +58,7 @@ export class CommunicationServer {
   private connectedDevices = new Map<string, PairedDevice>();
   private pairedDevicesFile: string;
   private pendingApprovals = new Map<string, (approved: boolean) => void>();
+  readonly channelRegistry = new ChannelPluginRegistry();
 
   private loadPairedDevices(): void {
     try {
@@ -79,20 +80,22 @@ export class CommunicationServer {
               });
             }
           }
-		console.info(`[CommServer] Loaded ${list.length} paired devices from persistent storage.`);
+          console.info(
+            `[CommServer] Loaded ${list.length} paired devices from persistent storage.`,
+          );
         }
       }
-} catch (e: unknown) {
-    const message = e instanceof Error ? e.message : String(e);
-    console.error(`[CommServer] Failed to load persistent paired devices: ${message}`);
-  }
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      console.error(`[CommServer] Failed to load persistent paired devices: ${message}`);
+    }
   }
 
   private savePairedDevices(): void {
     try {
       const list = Array.from(this.connectedDevices.values())
-        .filter(d => d.id && d.id !== 'cloud_session') // Chỉ lưu thiết bị LAN thực tế, bỏ cloud
-        .map(d => ({
+        .filter((d) => d.id && d.id !== 'cloud_session') // Chỉ lưu thiết bị LAN thực tế, bỏ cloud
+        .map((d) => ({
           id: d.id,
           name: d.name,
           platform: d.platform,
@@ -101,10 +104,10 @@ export class CommunicationServer {
           secret: d.secret,
         }));
       fs.writeFileSync(this.pairedDevicesFile, JSON.stringify(list, null, 2), 'utf8');
-} catch (e: unknown) {
-    const message = e instanceof Error ? e.message : String(e);
-    console.error(`[CommServer] Failed to save paired devices: ${message}`);
-  }
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      console.error(`[CommServer] Failed to save paired devices: ${message}`);
+    }
   }
 
   readonly pairing: PairingManager;
@@ -112,7 +115,8 @@ export class CommunicationServer {
 
   constructor(config: Partial<ServerConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.pairedDevicesFile = this.config.pairedDevicesFile || 
+    this.pairedDevicesFile =
+      this.config.pairedDevicesFile ||
       (process.env.NODE_ENV === 'test'
         ? path.resolve(tmpdir(), `.ghita-paired-devices-test-${generateId()}.json`)
         : DEFAULT_PAIRED_DEVICES_FILE);
@@ -178,7 +182,7 @@ export class CommunicationServer {
       for (const [, addrs] of entries) {
         if (!addrs) continue;
         for (const addr of addrs) {
-		const family = addr.family as string | number;
+          const family = addr.family as string | number;
           const isIPv4 = family === 'IPv4' || family === 4;
           if (isIPv4 && !addr.internal) {
             return addr.address;
@@ -189,7 +193,9 @@ export class CommunicationServer {
     };
 
     const getSanitizedHostname = (): string => {
-      return hostname().toUpperCase().replace(/[^A-Z0-9-]/g, '');
+      return hostname()
+        .toUpperCase()
+        .replace(/[^A-Z0-9-]/g, '');
     };
 
     this.httpServer = createServer((req, res) => {
@@ -207,37 +213,93 @@ export class CommunicationServer {
         return;
       }
 
+      // Route channel webhooks (Tauri HTTP server mount channels)
+      const channelWebhookMatch = req.url ? req.url.match(/^\/channels\/([^/]+)\/adapters\/([^/]+)\/webhook/) : null;
+      if (channelWebhookMatch) {
+        const channelId = channelWebhookMatch[1] || '';
+        const adapterId = channelWebhookMatch[2] || '';
+        const channel = this.channelRegistry.getChannel(channelId);
+        if (channel) {
+          const adapter = channel.adapters[adapterId];
+          if (adapter && typeof adapter.handleWebhook === 'function') {
+            const handleWebhook = adapter.handleWebhook;
+            let body = '';
+            req.on('data', chunk => {
+              body += chunk;
+            });
+            req.on('end', () => {
+              try {
+                const parsedBody = body ? JSON.parse(body) : {};
+                const mockReq = { headers: req.headers, method: req.method, url: req.url, body: parsedBody, rawBody: body };
+                const mockRes = {
+                  writeHead: (status: number, headers?: Record<string, string | string[]>) => {
+                    res.writeHead(status, headers);
+                  },
+                  end: (data: unknown) => {
+                    res.end(data as string | Uint8Array);
+                  },
+                  status: (code: number) => {
+                    res.statusCode = code;
+                    return mockRes;
+                  },
+                  json: (jsonObj: unknown) => {
+                    res.writeHead(res.statusCode || 200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify(jsonObj));
+                  }
+                };
+                void handleWebhook(mockReq, mockRes);
+              } catch {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Invalid webhook request payload' }));
+              }
+            });
+            return;
+          }
+        }
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Webhook endpoint for channel "${channelId}" adapter "${adapterId}" not found.` }));
+        return;
+      }
+
       if (req.url === '/health') {
         const state = this.pairing.getState();
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
-          status: 'ok',
-          connectedDevices: this.deviceCount,
-          uptime: process.uptime(),
-          localIP: getLocalIP(),
-          port: this.config.port,
-          ...(isLoopback ? { pairingCode: this.pairing.getCode(), codeExpiresAt: state.expiresAt } : {}),
-          hostname: getSanitizedHostname(),
-          ...(isLoopback ? { devices: this.getConnectedDevices() } : {}),
-        }));
+        res.end(
+          JSON.stringify({
+            status: 'ok',
+            connectedDevices: this.deviceCount,
+            uptime: process.uptime(),
+            localIP: getLocalIP(),
+            port: this.config.port,
+            ...(isLoopback
+              ? { pairingCode: this.pairing.getCode(), codeExpiresAt: state.expiresAt }
+              : {}),
+            hostname: getSanitizedHostname(),
+            ...(isLoopback ? { devices: this.getConnectedDevices() } : {}),
+          }),
+        );
         return;
       }
 
       if (req.url === '/pair') {
         if (!isLoopback) {
           res.writeHead(403, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Pairing code is only available from the desktop app.' }));
+          res.end(
+            JSON.stringify({ error: 'Pairing code is only available from the desktop app.' }),
+          );
           return;
         }
 
         const state = this.pairing.getState();
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
-          code: this.pairing.getCode(),
-          expiresAt: state.expiresAt,
-          port: this.config.port,
-          localIP: getLocalIP(),
-        }));
+        res.end(
+          JSON.stringify({
+            code: this.pairing.getCode(),
+            expiresAt: state.expiresAt,
+            port: this.config.port,
+            localIP: getLocalIP(),
+          }),
+        );
         return;
       }
 
@@ -248,7 +310,10 @@ export class CommunicationServer {
     this.io = new SocketIOServer(this.httpServer, {
       cors: {
         ...this.config.cors,
-        origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+        origin: (
+          origin: string | undefined,
+          callback: (err: Error | null, allow?: boolean) => void,
+        ) => {
           if (isAllowedLocalOrigin(origin)) {
             callback(null, true);
             return;
@@ -265,7 +330,7 @@ export class CommunicationServer {
 
     // Start pairing auto-refresh
     this.pairing.startAutoRefresh((newCode) => {
-	console.info(`[CommServer] Pairing code refreshed: ${newCode}`);
+      console.info(`[CommServer] Pairing code refreshed: ${newCode}`);
     });
 
     return new Promise<void>((resolve, reject) => {
@@ -278,10 +343,10 @@ export class CommunicationServer {
       });
 
       this.httpServer.listen(this.config.port, this.config.host, () => {
-	console.info(
-			`[CommServer] 🚀 Socket.io server listening on ${this.config.host}:${this.config.port}`,
-		);
-		console.info(`[CommServer] 🔑 Pairing code: ${this.pairing.getCode()}`);
+        console.info(
+          `[CommServer] 🚀 Socket.io server listening on ${this.config.host}:${this.config.port}`,
+        );
+        console.info(`[CommServer] 🔑 Pairing code: ${this.pairing.getCode()}`);
         resolve();
       });
     });
@@ -308,7 +373,7 @@ export class CommunicationServer {
       this.io = null;
     }
 
-	if (this.httpServer) {
+    if (this.httpServer) {
       const server = this.httpServer;
       await new Promise<void>((resolve) => {
         server.close(() => {
@@ -326,11 +391,13 @@ export class CommunicationServer {
    * Enable global terminal command approval handler linked to remote devices
    */
   enableGlobalCommandApproval(): void {
-	(globalThis as Record<string, unknown>).approveCommandHandler = async (command: string): Promise<boolean> => {
+    (globalThis as Record<string, unknown>).approveCommandHandler = async (
+      command: string,
+    ): Promise<boolean> => {
       return new Promise<boolean>((resolve) => {
         const id = `approve_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
         this.pendingApprovals.set(id, resolve);
-        
+
         this.broadcastRequireApproval({
           id,
           command,
@@ -361,7 +428,7 @@ export class CommunicationServer {
    * Disable the global terminal command approval handler
    */
   disableGlobalCommandApproval(): void {
-	(globalThis as Record<string, unknown>).approveCommandHandler = null;
+    (globalThis as Record<string, unknown>).approveCommandHandler = null;
     this.pendingApprovals.clear();
   }
 
@@ -472,11 +539,7 @@ export class CommunicationServer {
   /**
    * Broadcast terminal command approval requirement
    */
-  broadcastRequireApproval(data: {
-    id: string;
-    command: string;
-    timestamp: number;
-  }): void {
+  broadcastRequireApproval(data: { id: string; command: string; timestamp: number }): void {
     if (!this.io) return;
     this.io.to('paired-devices').emit(SOCKET_EVENTS.REQUIRE_APPROVAL, data);
   }
@@ -489,12 +552,15 @@ export class CommunicationServer {
     if (!this.io) return;
 
     this.io.on('connection', (socket: Socket) => {
-	console.info(`[CommServer] New connection: ${socket.id}`);
+      console.info(`[CommServer] New connection: ${socket.id}`);
 
       // --- Pairing ---
-      socket.on(SOCKET_EVENTS.PAIR, (data: { code?: string; deviceId?: string; authToken?: string; timestamp?: number }) => {
-        this.handlePairing(socket, data);
-      });
+      socket.on(
+        SOCKET_EVENTS.PAIR,
+        (data: { code?: string; deviceId?: string; authToken?: string; timestamp?: number }) => {
+          this.handlePairing(socket, data);
+        },
+      );
 
       // --- Commands ---
       socket.on(SOCKET_EVENTS.COMMAND, (data: CommandPayload) => {
@@ -566,17 +632,20 @@ export class CommunicationServer {
       });
 
       // --- Phase 5A: MCP Tool Call ---
-      socket.on('mcp_tool_call', (data: { serverName: string; toolName: string; args: Record<string, unknown> }) => {
-        const device = this.findDeviceBySocket(socket.id);
-        if (!device) {
-          socket.emit(SOCKET_EVENTS.ERROR, { message: 'Unauthorized: Device is not paired' });
-          return;
-        }
-        device.lastSeen = Date.now();
-	console.info(`[CommServer] MCP tool call: ${data.toolName} on ${data.serverName}`);
-        // Forward to event handler — orchestrator will handle actual MCP call
-        this.events.onChat?.(device.id, JSON.stringify({ type: 'mcp_tool_call', ...data }));
-      });
+      socket.on(
+        'mcp_tool_call',
+        (data: { serverName: string; toolName: string; args: Record<string, unknown> }) => {
+          const device = this.findDeviceBySocket(socket.id);
+          if (!device) {
+            socket.emit(SOCKET_EVENTS.ERROR, { message: 'Unauthorized: Device is not paired' });
+            return;
+          }
+          device.lastSeen = Date.now();
+          console.info(`[CommServer] MCP tool call: ${data.toolName} on ${data.serverName}`);
+          // Forward to event handler — orchestrator will handle actual MCP call
+          this.events.onChat?.(device.id, JSON.stringify({ type: 'mcp_tool_call', ...data }));
+        },
+      );
 
       // --- Phase 5C: Web Search ---
       socket.on('web_search', (data: { query: string; maxResults?: number }) => {
@@ -586,7 +655,7 @@ export class CommunicationServer {
           return;
         }
         device.lastSeen = Date.now();
-	console.info(`[CommServer] Web search: ${data.query}`);
+        console.info(`[CommServer] Web search: ${data.query}`);
         this.events.onChat?.(device.id, JSON.stringify({ type: 'web_search', ...data }));
       });
 
@@ -598,13 +667,13 @@ export class CommunicationServer {
           return;
         }
         device.lastSeen = Date.now();
-	console.info(`[CommServer] Image input received`);
+        console.info(`[CommServer] Image input received`);
         this.events.onChat?.(device.id, JSON.stringify({ type: 'image_input', ...data }));
       });
 
       // --- Sync Language ---
       socket.on(SOCKET_EVENTS.SYNC_LANGUAGE, (data: { language: string }) => {
-	console.info(`[CommServer] Sync language received: ${data.language}`);
+        console.info(`[CommServer] Sync language received: ${data.language}`);
         socket.broadcast.emit(SOCKET_EVENTS.SYNC_LANGUAGE, data);
       });
 
@@ -612,7 +681,7 @@ export class CommunicationServer {
       socket.on(SOCKET_EVENTS.DISCONNECT, (reason: string) => {
         const device = this.findDeviceBySocket(socket.id);
         if (device) {
-	console.info(`[CommServer] Device disconnected: ${device.name} (${reason})`);
+          console.info(`[CommServer] Device disconnected: ${device.name} (${reason})`);
           device.connected = false;
           this.events.onDeviceDisconnected?.(device.id);
         }
@@ -620,7 +689,10 @@ export class CommunicationServer {
     });
   }
 
-  private handlePairing(socket: Socket, data: { code?: string; deviceId?: string; authToken?: string; timestamp?: number }): void {
+  private handlePairing(
+    socket: Socket,
+    data: { code?: string; deviceId?: string; authToken?: string; timestamp?: number },
+  ): void {
     const code = data.code?.toUpperCase();
     const deviceId = data.deviceId;
     const authToken = data.authToken;
@@ -655,16 +727,25 @@ export class CommunicationServer {
 
       // Generate new pairing code after successful pair (security)
       this.pairing.regenerate();
-	console.info(`[CommServer] ✅ Device paired: ${device.name} (${device.id})`);
+      console.info(`[CommServer] ✅ Device paired: ${device.name} (${device.id})`);
     } else if (deviceId) {
       // Session Resumption / Reconnection
       device = this.connectedDevices.get(deviceId);
       if (device && device.secret && authToken === device.secret) {
         // Device is already paired on this server session!
+        if (device.socketId && device.socketId !== socket.id) {
+          const oldSocket = this.io?.sockets?.sockets?.get(device.socketId);
+          if (oldSocket) {
+            console.info(
+              `[CommServer] Disconnecting old socket ${device.socketId} for device ${device.id}`,
+            );
+            oldSocket.disconnect(true);
+          }
+        }
         device.socketId = socket.id;
         device.connected = true;
         device.lastSeen = Date.now();
-	console.info(`[CommServer] 🔄 Session resumed for device: ${device.name} (${device.id})`);
+        console.info(`[CommServer] 🔄 Session resumed for device: ${device.name} (${device.id})`);
       } else {
         socket.emit(SOCKET_EVENTS.ERROR, { message: 'Session expired. Please re-pair.' });
         return;

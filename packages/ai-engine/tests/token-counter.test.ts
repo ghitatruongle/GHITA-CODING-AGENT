@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { estimateTokens, estimateMessagesTokens, fitsInContext, truncateToFit, getContextInfo } from '../src/utils/token-counter.js';
+import {
+  estimateTokens,
+  estimateMessagesTokens,
+  fitsInContext,
+  truncateToFit,
+  getContextInfo,
+} from '../src/utils/token-counter.js';
 
 describe('Token Counter', () => {
   describe('estimateTokens', () => {
@@ -15,7 +21,9 @@ describe('Token Counter', () => {
 
     it('should estimate more tokens for longer text', () => {
       const short = estimateTokens('Hello');
-      const long = estimateTokens('Hello world, this is a much longer message with many more words and characters.');
+      const long = estimateTokens(
+        'Hello world, this is a much longer message with many more words and characters.',
+      );
       expect(long).toBeGreaterThan(short);
     });
   });
@@ -38,20 +46,14 @@ describe('Token Counter', () => {
 
   describe('fitsInContext', () => {
     it('should fit small messages in large context', () => {
-      const result = fitsInContext(
-        [{ role: 'user' as const, content: 'Hello' }],
-        128000,
-      );
+      const result = fitsInContext([{ role: 'user' as const, content: 'Hello' }], 128000);
       expect(result.fits).toBe(true);
       expect(result.available).toBeGreaterThan(0);
     });
 
     it('should not fit huge messages in small context', () => {
       const hugeContent = 'x'.repeat(100000);
-      const result = fitsInContext(
-        [{ role: 'user' as const, content: hugeContent }],
-        100,
-      );
+      const result = fitsInContext([{ role: 'user' as const, content: hugeContent }], 100);
       expect(result.fits).toBe(false);
     });
   });
@@ -84,10 +86,7 @@ describe('Token Counter', () => {
 
   describe('getContextInfo', () => {
     it('should return context window info', () => {
-      const info = getContextInfo(
-        [{ role: 'user' as const, content: 'Hello' }],
-        128000,
-      );
+      const info = getContextInfo([{ role: 'user' as const, content: 'Hello' }], 128000);
       expect(info.maxTokens).toBe(128000);
       expect(info.usedTokens).toBeGreaterThan(0);
       expect(info.remainingTokens).toBeGreaterThan(0);

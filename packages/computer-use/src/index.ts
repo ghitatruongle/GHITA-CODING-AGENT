@@ -10,7 +10,11 @@ export * from './vision/types.js';
 export { GuiGrounder } from './vision/grounding.js';
 export { VisionScreenshotAnalyzer } from './vision/analyzer.js';
 export { ActionParser } from './actionParser.js';
-export { HeadlessSearchScanner, type HeadlessSearchOptions, type HeadlessSearchResult } from './scanner/headlessSearch.js';
+export {
+  HeadlessSearchScanner,
+  type HeadlessSearchOptions,
+  type HeadlessSearchResult,
+} from './scanner/headlessSearch.js';
 
 export const COMPUTER_USE_VERSION = '0.1.0';
 
@@ -61,7 +65,11 @@ export interface ComputerUseStatus {
   missing: string[];
 }
 
-function success(action: ComputerUseAction, output: string, data?: unknown): ComputerUseActionResult {
+function success(
+  action: ComputerUseAction,
+  output: string,
+  data?: unknown,
+): ComputerUseActionResult {
   return { action, success: true, output, data };
 }
 
@@ -166,7 +174,10 @@ export class ComputerUseController {
   /**
    * Execute prediction string (UI-TARS or multimodal action output) on screen context.
    */
-  async executeActionText(prediction: string, size: ScreenSize): Promise<ComputerUseActionResult[]> {
+  async executeActionText(
+    prediction: string,
+    size: ScreenSize,
+  ): Promise<ComputerUseActionResult[]> {
     const parsedActions = ActionParser.parse({
       prediction,
       factor: 1000,
@@ -183,14 +194,19 @@ export class ComputerUseController {
       const startCoords = inputs.start_coords; // [physX, physY]
       // const endCoords = inputs.end_coords; // [physX, physY]
 
-      const startPoint: Point | undefined = startCoords ? { x: startCoords[0], y: startCoords[1] } : undefined;
+      const startPoint: Point | undefined = startCoords
+        ? { x: startCoords[0], y: startCoords[1] }
+        : undefined;
       // const endPoint: Point | undefined = endCoords ? { x: endCoords[0], y: endCoords[1] } : undefined;
 
       switch (type) {
         case 'mouse_move':
         case 'hover': {
           if (!startPoint) {
-            result = failure({ type: 'moveMouse', point: { x: 0, y: 0 } }, 'Missing start_coords for hover/mouse_move');
+            result = failure(
+              { type: 'moveMouse', point: { x: 0, y: 0 } },
+              'Missing start_coords for hover/mouse_move',
+            );
           } else {
             result = await this.moveMouse(startPoint);
           }
@@ -211,7 +227,10 @@ export class ComputerUseController {
             await this.adapter.click(startPoint, 'left');
             await new Promise((resolve) => setTimeout(resolve, 100));
             await this.adapter.click(startPoint, 'left');
-            result = success(actionObj, `Double clicked left at ${startPoint ? `${startPoint.x}, ${startPoint.y}` : 'current position'}`);
+            result = success(
+              actionObj,
+              `Double clicked left at ${startPoint ? `${startPoint.x}, ${startPoint.y}` : 'current position'}`,
+            );
           }
           break;
         }
@@ -234,13 +253,13 @@ export class ComputerUseController {
             }
             await new Promise((resolve) => setTimeout(resolve, 200));
           }
-	result = await this.typeText(String(text));
+          result = await this.typeText(String(text));
           break;
         }
         case 'press':
         case 'hotkey': {
           const key = inputs.key || inputs.hotkey || inputs.text || '';
-	result = await this.pressKey(String(key));
+          result = await this.pressKey(String(key));
           break;
         }
         case 'screenshot': {
@@ -249,7 +268,7 @@ export class ComputerUseController {
         }
         case 'wait': {
           const actionObj: ComputerUseAction = { type: 'screenshot' };
-	const waitTime = inputs.time ? parseInt(String(inputs.time), 10) * 1000 : 5000;
+          const waitTime = inputs.time ? parseInt(String(inputs.time), 10) * 1000 : 5000;
           await new Promise((resolve) => setTimeout(resolve, waitTime));
           result = success(actionObj, `Waited for ${waitTime}ms.`);
           break;
@@ -269,7 +288,9 @@ export class ComputerUseController {
 
 // Node-only sandbox and guardrail exports live in '@ghita/computer-use/node'.
 
-export function createComputerUseSkills(controller = new ComputerUseController()): SkillDefinition[] {
+export function createComputerUseSkills(
+  controller = new ComputerUseController(),
+): SkillDefinition[] {
   return [
     {
       id: 'computer.moveMouse',

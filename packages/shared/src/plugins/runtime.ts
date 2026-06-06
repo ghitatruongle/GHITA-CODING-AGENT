@@ -13,19 +13,22 @@ export class PluginRuntime {
   /**
    * Safe execution wrapper to run user plugins without crashing the main thread
    */
-	private async safeExecute<T, A extends unknown[]>(
-		pluginId: string,
-		hookName: keyof PluginHooks,
-		fn: (...args: A) => Promise<T> | T,
-		...args: A
-	): Promise<T | undefined> {
+  private async safeExecute<T, A extends unknown[]>(
+    pluginId: string,
+    hookName: keyof PluginHooks,
+    fn: (...args: A) => Promise<T> | T,
+    ...args: A
+  ): Promise<T | undefined> {
     try {
       logger.info(`[PluginRuntime] Running hook ${hookName} for plugin ${pluginId}`);
       // Simple dynamic timeout wrapper if it takes too long
       const result = await fn(...args);
       return result;
- } catch (error: unknown) {
- logger.error(`[PluginRuntime] Error executing ${hookName} in plugin ${pluginId}: ${error instanceof Error ? error.message : String(error)}`, error);
+    } catch (error: unknown) {
+      logger.error(
+        `[PluginRuntime] Error executing ${hookName} in plugin ${pluginId}: ${error instanceof Error ? error.message : String(error)}`,
+        error,
+      );
       return undefined;
     }
   }
@@ -50,13 +53,17 @@ export class PluginRuntime {
         const fullEntrypointPath = path.resolve(pluginDir, manifest.entrypoint);
         // Validate entrypoint stays within plugin directory (prevent traversal)
         if (!fullEntrypointPath.startsWith(path.resolve(pluginDir))) {
-          logger.error(`[PluginRuntime] Blocked plugin entrypoint path traversal: ${manifest.entrypoint}`);
+          logger.error(
+            `[PluginRuntime] Blocked plugin entrypoint path traversal: ${manifest.entrypoint}`,
+          );
           return false;
         }
         // Only allow .js/.mjs/.ts files
         const ext = path.extname(fullEntrypointPath).toLowerCase();
         if (!['.js', '.mjs', '.ts'].includes(ext)) {
-          logger.error(`[PluginRuntime] Blocked plugin entrypoint with disallowed extension: ${ext}`);
+          logger.error(
+            `[PluginRuntime] Blocked plugin entrypoint with disallowed extension: ${ext}`,
+          );
           return false;
         }
         const fileUrl = `file://${fullEntrypointPath.replace(/\\/g, '/')}`;
@@ -65,17 +72,17 @@ export class PluginRuntime {
 
         // Dynamic import
         const pluginModule = await import(fileUrl);
-        
+
         // Simple sandbox context binding if they export a factory or default initializer
         let hooks: PluginHooks = {};
         if (typeof pluginModule.default === 'function') {
           // Initialize plugin by passing a safe interface/api
- const sandboxConsole = {
- log: (...args: unknown[]) => logger.info(`[Plugin:${manifest.id}]`, ...args),
- error: (...args: unknown[]) => logger.error(`[Plugin:${manifest.id}]`, ...args),
- warn: (...args: unknown[]) => logger.warn(`[Plugin:${manifest.id}]`, ...args),
+          const sandboxConsole = {
+            log: (...args: unknown[]) => logger.info(`[Plugin:${manifest.id}]`, ...args),
+            error: (...args: unknown[]) => logger.error(`[Plugin:${manifest.id}]`, ...args),
+            warn: (...args: unknown[]) => logger.warn(`[Plugin:${manifest.id}]`, ...args),
           };
-          
+
           hooks = pluginModule.default({
             console: sandboxConsole,
             version: manifest.version,
@@ -98,8 +105,11 @@ export class PluginRuntime {
 
       logger.info(`[PluginRuntime] Successfully loaded plugin: ${manifest.name} (${manifest.id})`);
       return true;
- } catch (error: unknown) {
- logger.error(`[PluginRuntime] Failed to load plugin ${manifest.id}: ${error instanceof Error ? error.message : String(error)}`, error);
+    } catch (error: unknown) {
+      logger.error(
+        `[PluginRuntime] Failed to load plugin ${manifest.id}: ${error instanceof Error ? error.message : String(error)}`,
+        error,
+      );
       return false;
     }
   }
@@ -121,8 +131,10 @@ export class PluginRuntime {
       this.plugins.delete(pluginId);
       logger.info(`[PluginRuntime] Unloaded plugin: ${pluginId}`);
       return true;
- } catch (error: unknown) {
- logger.error(`[PluginRuntime] Error unloading plugin ${pluginId}: ${error instanceof Error ? error.message : String(error)}`);
+    } catch (error: unknown) {
+      logger.error(
+        `[PluginRuntime] Error unloading plugin ${pluginId}: ${error instanceof Error ? error.message : String(error)}`,
+      );
       return false;
     }
   }
@@ -132,7 +144,7 @@ export class PluginRuntime {
    */
   public async triggerPreTool(
     toolName: string,
-    input: unknown
+    input: unknown,
   ): Promise<{ allowed: boolean; reason?: string; modifiedInput?: unknown }> {
     let currentInput = input;
 
@@ -144,12 +156,14 @@ export class PluginRuntime {
         'preTool',
         plugin.hooks.preTool,
         toolName,
-        currentInput
+        currentInput,
       );
 
       if (hookResult) {
         if (!hookResult.allowed) {
-          logger.warn(`[PluginRuntime] Tool ${toolName} rejected by plugin ${pluginId}. Reason: ${hookResult.reason}`);
+          logger.warn(
+            `[PluginRuntime] Tool ${toolName} rejected by plugin ${pluginId}. Reason: ${hookResult.reason}`,
+          );
           return { allowed: false, reason: hookResult.reason };
         }
         if (hookResult.modifiedInput !== undefined) {
@@ -167,7 +181,7 @@ export class PluginRuntime {
   public async triggerPostTool(
     toolName: string,
     input: unknown,
-    result: SkillResult
+    result: SkillResult,
   ): Promise<SkillResult> {
     let currentResult = { ...result };
 
@@ -180,7 +194,7 @@ export class PluginRuntime {
         plugin.hooks.postTool,
         toolName,
         input,
-        currentResult
+        currentResult,
       );
 
       if (hookResult) {

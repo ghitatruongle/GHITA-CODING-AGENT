@@ -22,7 +22,10 @@ const STATUS_CONFIG: Record<ConnectionState, { color: string; label: string }> =
   error: { color: Colors.error, label: 'status.error' },
 };
 
-export function ConnectionStatus({ state, compact = false }: ConnectionStatusProps): React.JSX.Element {
+export function ConnectionStatus({
+  state,
+  compact = false,
+}: ConnectionStatusProps): React.JSX.Element {
   const { t } = useTranslation();
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -58,17 +61,8 @@ export function ConnectionStatus({ state, compact = false }: ConnectionStatusPro
 
   return (
     <View style={styles.container}>
-      <Animated.View
-        style={[
-          styles.dot,
-          { backgroundColor: config.color, opacity: pulseAnim },
-        ]}
-      />
-      {!compact && (
-        <Text style={[styles.label, { color: config.color }]}>
-          {t(config.label)}
-        </Text>
-      )}
+      <Animated.View style={[styles.dot, { backgroundColor: config.color, opacity: pulseAnim }]} />
+      {!compact && <Text style={[styles.label, { color: config.color }]}>{t(config.label)}</Text>}
     </View>
   );
 }

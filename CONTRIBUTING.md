@@ -97,15 +97,18 @@ Use [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```markdown
 ## Description
+
 [Brief explanation of the change]
 
 ## Type of Change
+
 - [ ] New feature
 - [ ] Bug fix
 - [ ] Documentation
 - [ ] Refactor
 
 ## How to Test
+
 1. [Step 1]
 2. [Step 2]
 
@@ -213,15 +216,18 @@ Sử dụng chuẩn [Conventional Commits](https://www.conventionalcommits.org/)
 
 ```markdown
 ## Description
+
 [Mô tả ngắn gọn về những thay đổi trong PR này]
 
 ## Type of Change
+
 - [ ] New feature (Tính năng mới)
 - [ ] Bug fix (Sửa lỗi)
 - [ ] Documentation (Cập nhật tài liệu)
 - [ ] Refactor (Tái cấu trúc)
 
 ## How to Test
+
 1. [Bước kiểm thử 1]
 2. [Bước kiểm thử 2]
 

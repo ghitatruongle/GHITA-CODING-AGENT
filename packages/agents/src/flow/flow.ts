@@ -2,13 +2,7 @@
 // GHITA CODING AGENT - Flow Orchestration Engine
 // ==============================================================================
 
-import type {
-  FlowStep,
-  FlowStepResult,
-  FlowContext,
-  FlowConfig,
-  FlowRunResult,
-} from './types.js';
+import type { FlowStep, FlowStepResult, FlowContext, FlowConfig, FlowRunResult } from './types.js';
 
 function generateId(): string {
   return `flow_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -137,9 +131,7 @@ export class Flow {
     const allResults: FlowStepResult[] = [];
 
     for (const chunk of chunks) {
-      const chunkResults = await Promise.all(
-        chunk.map((step) => this.executeStep(step, context)),
-      );
+      const chunkResults = await Promise.all(chunk.map((step) => this.executeStep(step, context)));
       for (const result of chunkResults) {
         context.results.set(result.stepId, result);
       }
@@ -162,7 +154,7 @@ export class Flow {
       const ready: FlowStep[] = [];
       for (const id of remaining) {
         const step = stepMap.get(id);
- if (!step) continue;
+        if (!step) continue;
         const deps = step.dependsOn ?? [];
         const allDepsMet = deps.every((d) => completed.has(d));
         if (allDepsMet) ready.push(step);
@@ -173,9 +165,7 @@ export class Flow {
       }
 
       // Execute ready steps in parallel
-      const chunkResults = await Promise.all(
-        ready.map((step) => this.executeStep(step, context)),
-      );
+      const chunkResults = await Promise.all(ready.map((step) => this.executeStep(step, context)));
 
       for (const result of chunkResults) {
         context.results.set(result.stepId, result);
@@ -230,10 +220,7 @@ export class Flow {
           const timeoutPromise = new Promise<never>((_, reject) =>
             setTimeout(() => reject(new Error(`Step "${step.id}" timed out`)), step.timeout),
           );
-          output = await Promise.race([
-            step.execute(depOutputs, context),
-            timeoutPromise,
-          ]);
+          output = await Promise.race([step.execute(depOutputs, context), timeoutPromise]);
         } else {
           output = await step.execute(depOutputs, context);
         }

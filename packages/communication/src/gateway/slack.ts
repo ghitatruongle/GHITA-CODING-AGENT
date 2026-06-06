@@ -30,11 +30,11 @@ export class SlackGateway implements CommunicationGateway {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.token}`,
+          Authorization: `Bearer ${this.token}`,
         },
         body: JSON.stringify({ channel: channelId, text }),
       });
-      const data = await response.json() as { ok: boolean };
+      const data = (await response.json()) as { ok: boolean };
       return response.ok && data.ok;
     } catch (error) {
       console.error('[Slack Gateway] Failed to send message:', error);
@@ -51,7 +51,12 @@ export class SlackGateway implements CommunicationGateway {
   /**
    * Test-only helper to simulate receiving a message
    */
-  simulateMessage(text: string, channelId = 'C12345', userId = 'U12345', username = 'slack_user'): void {
+  simulateMessage(
+    text: string,
+    channelId = 'C12345',
+    userId = 'U12345',
+    username = 'slack_user',
+  ): void {
     if (this.messageHandler) {
       const msg: GatewayMessage = {
         id: `sl_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
@@ -65,4 +70,22 @@ export class SlackGateway implements CommunicationGateway {
       this.messageHandler(msg);
     }
   }
+}
+
+/**
+ * Daemon-friendly wrapper: start Slack bot, returns stop function.
+ * Used by GatewayDaemon.registerWorker().
+ */
+export async function startSlackBot(
+  token: string,
+  onMessage: (msg: unknown) => void | Promise<void>,
+): Promise<{ stop: () => Promise<void> }> {
+  const gateway = new SlackGateway(token);
+  await gateway.initialize();
+  gateway.onMessage(onMessage as (m: GatewayMessage) => void | Promise<void>);
+  return {
+    stop: async () => {
+      await gateway.stop();
+    },
+  };
 }

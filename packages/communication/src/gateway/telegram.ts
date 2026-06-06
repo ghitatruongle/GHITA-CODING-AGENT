@@ -24,7 +24,7 @@ export class TelegramGateway implements CommunicationGateway {
 
     try {
       // In production, we'd setup the real Telegram Bot client (e.g., node-telegram-bot-api)
-      // Since dependencies might not have node-telegram-bot-api, we'll do a simple HTTP polling mock fallback 
+      // Since dependencies might not have node-telegram-bot-api, we'll do a simple HTTP polling mock fallback
       // or mock client that validates the token format.
       if (!this.token) return false;
       return true;
@@ -38,7 +38,7 @@ export class TelegramGateway implements CommunicationGateway {
     if (this.isMock) {
       return true;
     }
-	try {
+    try {
       if (!this.token) return false;
       // In production: HTTP POST to https://api.telegram.org/bot<token>/sendMessage
       const response = await fetch(`https://api.telegram.org/bot${this.token}/sendMessage`, {
@@ -67,7 +67,12 @@ export class TelegramGateway implements CommunicationGateway {
   /**
    * Test-only helper to simulate receiving a message
    */
-  simulateMessage(text: string, channelId = '12345678', userId = 'user_tg_1', username = 'tg_user'): void {
+  simulateMessage(
+    text: string,
+    channelId = '12345678',
+    userId = 'user_tg_1',
+    username = 'tg_user',
+  ): void {
     if (this.messageHandler) {
       const msg: GatewayMessage = {
         id: `tg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
@@ -81,4 +86,21 @@ export class TelegramGateway implements CommunicationGateway {
       this.messageHandler(msg);
     }
   }
+}
+
+/**
+ * Daemon-friendly wrapper: start Telegram bot, returns stop function.
+ */
+export async function startTelegramBot(
+  token: string,
+  onMessage: (msg: unknown) => void | Promise<void>,
+): Promise<{ stop: () => Promise<void> }> {
+  const gateway = new TelegramGateway(token);
+  await gateway.initialize();
+  gateway.onMessage(onMessage as (m: GatewayMessage) => void | Promise<void>);
+  return {
+    stop: async () => {
+      await gateway.stop();
+    },
+  };
 }

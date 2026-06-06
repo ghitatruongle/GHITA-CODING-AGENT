@@ -17,9 +17,11 @@ const PORT = parseInt(process.env.PORT || '3002', 10);
 const HOST = '0.0.0.0';
 
 const app = express();
-app.use(cors({
-  origin: false, // Disable CORS for HTTP endpoints — only Socket.IO needs CORS
-}));
+app.use(
+  cors({
+    origin: false, // Disable CORS for HTTP endpoints — only Socket.IO needs CORS
+  }),
+);
 
 // Health check endpoint
 app.get('/health', (_req, res) => {
@@ -27,7 +29,7 @@ app.get('/health', (_req, res) => {
     status: 'ok',
     uptime: process.uptime(),
     timestamp: Date.now(),
-    message: 'GHITA Cloud Relay Server is operational.'
+    message: 'GHITA Cloud Relay Server is operational.',
   });
 });
 
@@ -44,7 +46,10 @@ export const io = new Server(httpServer, {
 
 // Map of pairing codes to paired sockets
 // pairingCode -> { desktopSocketId?, mobileSocketId? }
-export const pairings = new Map<string, { desktopSocketId?: string; mobileSocketId?: string; createdAt: number }>();
+export const pairings = new Map<
+  string,
+  { desktopSocketId?: string; mobileSocketId?: string; createdAt: number }
+>();
 
 // Map of socket ID to their metadata
 export const socketMeta = new Map<string, { role: 'desktop' | 'mobile'; pairingCode: string }>();
@@ -106,12 +111,14 @@ io.on('connection', (socket: Socket) => {
 
     // Register desktop
     const pair = pairings.get(code) || { createdAt: Date.now() };
-    
+
     // If another desktop was registered on this code, notify or replace
     if (pair.desktopSocketId && pair.desktopSocketId !== socket.id) {
       const oldSocket = io.sockets.sockets.get(pair.desktopSocketId);
       if (oldSocket) {
-        console.info(`[Relay] Displacing old desktop socket ${pair.desktopSocketId} on code ${code}`);
+        console.info(
+          `[Relay] Displacing old desktop socket ${pair.desktopSocketId} on code ${code}`,
+        );
         oldSocket.emit('error', { message: 'Displaced by another desktop session' });
         oldSocket.disconnect(true);
       }
@@ -155,7 +162,7 @@ io.on('connection', (socket: Socket) => {
 
     // Register mobile
     const pair = pairings.get(code) || { createdAt: Date.now() };
-    
+
     // If another mobile was registered on this code, replace
     if (pair.mobileSocketId && pair.mobileSocketId !== socket.id) {
       const oldSocket = io.sockets.sockets.get(pair.mobileSocketId);
@@ -196,7 +203,16 @@ io.on('connection', (socket: Socket) => {
     }
 
     // 2. Ignore server control events
-    if (['register_desktop', 'pair_mobile', 'disconnect', 'error', 'pair_confirm', 'waiting_for_desktop'].includes(event)) {
+    if (
+      [
+        'register_desktop',
+        'pair_mobile',
+        'disconnect',
+        'error',
+        'pair_confirm',
+        'waiting_for_desktop',
+      ].includes(event)
+    ) {
       return;
     }
 
@@ -209,7 +225,9 @@ io.on('connection', (socket: Socket) => {
       // If we don't have a peer, let mobile know
       const meta = socketMeta.get(socket.id);
       if (meta && meta.role === 'mobile' && event === 'pair') {
-        socket.emit('error', { message: 'Desktop is currently offline. Please wait or check your desktop server.' });
+        socket.emit('error', {
+          message: 'Desktop is currently offline. Please wait or check your desktop server.',
+        });
       }
     }
   });
@@ -266,9 +284,11 @@ if (process.env.NODE_ENV !== 'test') {
   setInterval(() => {
     const now = Date.now();
     for (const [code, pair] of pairings) {
-      if (!pair.desktopSocketId && !pair.mobileSocketId && (now - pair.createdAt) > PAIRING_TTL_MS) {
+      if (!pair.desktopSocketId && !pair.mobileSocketId && now - pair.createdAt > PAIRING_TTL_MS) {
         pairings.delete(code);
-        console.info(`[Relay] Evicted stale pairing code ${code} (age: ${Math.round((now - pair.createdAt) / 60000)}min)`);
+        console.info(
+          `[Relay] Evicted stale pairing code ${code} (age: ${Math.round((now - pair.createdAt) / 60000)}min)`,
+        );
       }
     }
   }, 60_000); // Sweep every 60 seconds

@@ -18,7 +18,7 @@ class TestProvider implements AIProvider {
   readonly name = 'MockOpenAI';
   readonly defaultModel = 'gpt-4o';
   readonly models = ['gpt-4o', 'gpt-4o-mini'];
-  
+
   constructor(readonly config: any) {}
 
   async isReady(): Promise<boolean> {
@@ -274,12 +274,12 @@ providers:
       registry.register(new MockGoogle({ apiKey: 'goog' }));
       registry.register(new MockDeepSeek({ apiKey: 'ds' }));
 
-    router = new UnifiedRouter({
-      registry,
-      defaultProvider: 'openai',
-      modelsConfigPath: path.resolve(tempDir, 'missing.yaml'),
-      encryptionKey: secretKey,
-    });
+      router = new UnifiedRouter({
+        registry,
+        defaultProvider: 'openai',
+        modelsConfigPath: path.resolve(tempDir, 'missing.yaml'),
+        encryptionKey: secretKey,
+      });
     });
 
     it('should route gpt model to openai', () => {
@@ -315,7 +315,13 @@ providers:
       readonly name = 'SpyDeepSeek';
       async chat(messages: any[], options?: any): Promise<any> {
         receivedMessages.push(...messages);
-        return { content: 'OK', model: 'deepseek-r1', provider: 'deepseek' as any, usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 }, finishReason: 'stop' as const };
+        return {
+          content: 'OK',
+          model: 'deepseek-r1',
+          provider: 'deepseek' as any,
+          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+          finishReason: 'stop' as const,
+        };
       }
     }
 
@@ -399,7 +405,11 @@ providers:
     // Write a YAML with a dummy provider to prevent loadFromEnv
     // (loadFromEnv always registers ollama since it needs no apiKey)
     const dummyYaml = path.resolve(tempDir, 'dummy-provider.yaml');
-    fs.writeFileSync(dummyYaml, 'providers:\n  - type: opengateway\n    apiKey: "dummy"\n    defaultModel: "test"\n', 'utf-8');
+    fs.writeFileSync(
+      dummyYaml,
+      'providers:\n  - type: opengateway\n    apiKey: "dummy"\n    defaultModel: "test"\n',
+      'utf-8',
+    );
 
     const registry = new ProviderRegistry();
     // Don't use the registry from YAML — override it empty after construction

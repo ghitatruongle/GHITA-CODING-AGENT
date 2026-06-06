@@ -9,7 +9,7 @@ export class AIBaseError extends Error {
     super(message);
     this.name = this.constructor.name;
     this.cause = cause;
-    
+
     // Restore prototype chain
     Object.setPrototypeOf(this, new.target.prototype);
     if (Error.captureStackTrace) {
@@ -36,7 +36,12 @@ export class AIValidationError extends AIBaseError {
   readonly errors: unknown[];
   readonly rawResponse: string;
 
-  constructor(schemaDescription: string, rawResponse: string, errors: unknown[], message = 'Structured output validation failed') {
+  constructor(
+    schemaDescription: string,
+    rawResponse: string,
+    errors: unknown[],
+    message = 'Structured output validation failed',
+  ) {
     super(`${message}: ${schemaDescription}`);
     this.schemaDescription = schemaDescription;
     this.rawResponse = rawResponse;
@@ -59,7 +64,13 @@ export class AIRateLimitError extends AIBaseError {
   readonly remaining?: number;
   readonly resetTime?: Date;
 
-  constructor(provider: string, message = 'Rate limit exceeded', limit?: number, remaining?: number, resetTime?: Date) {
+  constructor(
+    provider: string,
+    message = 'Rate limit exceeded',
+    limit?: number,
+    remaining?: number,
+    resetTime?: Date,
+  ) {
     super(`[${provider} Rate Limit] ${message}`);
     this.provider = provider;
     this.limit = limit;
@@ -85,7 +96,12 @@ export class AIToolCallRepairError extends AIBaseError {
   readonly attempts: number;
   readonly toolErrors: unknown[];
 
-  constructor(rawResponse: string, attempts: number, toolErrors: unknown[], message = 'Failed to repair tool call output') {
+  constructor(
+    rawResponse: string,
+    attempts: number,
+    toolErrors: unknown[],
+    message = 'Failed to repair tool call output',
+  ) {
     super(`${message} after ${attempts} attempts`);
     this.rawResponse = rawResponse;
     this.attempts = attempts;
@@ -108,7 +124,11 @@ export class AISecurityGuardrailError extends AIBaseError {
   readonly threatType: string;
   readonly details?: unknown;
 
-  constructor(threatType: string, details?: unknown, message = 'Security guardrail violation detected') {
+  constructor(
+    threatType: string,
+    details?: unknown,
+    message = 'Security guardrail violation detected',
+  ) {
     super(`${message} (${threatType})`);
     this.threatType = threatType;
     this.details = details;
@@ -132,7 +152,9 @@ export class AIBudgetExceededError extends AIBaseError {
   readonly period: string;
 
   constructor(limit: number, currentSpent: number, period = 'monthly') {
-    super(`AI spending budget exceeded. Limit: $${limit}, Current Spent: $${currentSpent} (${period})`);
+    super(
+      `AI spending budget exceeded. Limit: $${limit}, Current Spent: $${currentSpent} (${period})`,
+    );
     this.limit = limit;
     this.currentSpent = currentSpent;
     this.period = period;

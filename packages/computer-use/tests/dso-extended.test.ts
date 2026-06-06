@@ -13,10 +13,7 @@ import type {
   ContainerStats,
   SandboxLogEntry,
 } from '../src/sandbox/types.js';
-import {
-  GHITA_SANDBOX_LABEL,
-  DEFAULT_RESOURCE_LIMITS,
-} from '../src/sandbox/types.js';
+import { GHITA_SANDBOX_LABEL, DEFAULT_RESOURCE_LIMITS } from '../src/sandbox/types.js';
 
 // =============================================================================
 // Mock Dockerode
@@ -166,7 +163,7 @@ describe('DSOOrchestrator — port mapping', () => {
             '53/udp': [{ HostIp: '0.0.0.0', HostPort: '5353' }],
           }),
         }),
-      })
+      }),
     );
   });
 
@@ -188,7 +185,7 @@ describe('DSOOrchestrator — port mapping', () => {
             '53/udp': [{ HostIp: '0.0.0.0', HostPort: '5353' }],
           }),
         }),
-      })
+      }),
     );
   });
 
@@ -206,7 +203,7 @@ describe('DSOOrchestrator — port mapping', () => {
             '3000/tcp': [{ HostIp: '0.0.0.0', HostPort: '' }],
           }),
         }),
-      })
+      }),
     );
   });
 
@@ -222,7 +219,7 @@ describe('DSOOrchestrator — port mapping', () => {
         HostConfig: expect.objectContaining({
           PortBindings: {},
         }),
-      })
+      }),
     );
   });
 });
@@ -252,7 +249,7 @@ describe('DSOOrchestrator — volume mounts', () => {
         HostConfig: expect.objectContaining({
           Binds: [],
         }),
-      })
+      }),
     );
   });
 
@@ -276,7 +273,7 @@ describe('DSOOrchestrator — volume mounts', () => {
             '/logs/pg:/var/log/postgresql',
           ]),
         }),
-      })
+      }),
     );
   });
 });
@@ -300,7 +297,7 @@ describe('DSOOrchestrator — env vars', () => {
     expect(mockDocker.createContainer).toHaveBeenCalledWith(
       expect.objectContaining({
         Env: [],
-      })
+      }),
     );
   });
 
@@ -314,7 +311,7 @@ describe('DSOOrchestrator — env vars', () => {
     expect(mockDocker.createContainer).toHaveBeenCalledWith(
       expect.objectContaining({
         Env: ['NODE_ENV=production'],
-      })
+      }),
     );
   });
 
@@ -336,7 +333,7 @@ describe('DSOOrchestrator — env vars', () => {
           'POSTGRES_PASSWORD=secret',
           'POSTGRES_DB=mydb',
         ]),
-      })
+      }),
     );
   });
 
@@ -350,7 +347,7 @@ describe('DSOOrchestrator — env vars', () => {
     expect(mockDocker.createContainer).toHaveBeenCalledWith(
       expect.objectContaining({
         Env: ['DATABASE_URL=postgres://user:p@ss@host:5432/db'],
-      })
+      }),
     );
   });
 });
@@ -378,7 +375,7 @@ describe('DSOOrchestrator — command', () => {
     expect(mockDocker.createContainer).toHaveBeenCalledWith(
       expect.objectContaining({
         Cmd: ['node', 'server.js'],
-      })
+      }),
     );
   });
 
@@ -388,7 +385,7 @@ describe('DSOOrchestrator — command', () => {
     expect(mockDocker.createContainer).toHaveBeenCalledWith(
       expect.objectContaining({
         Cmd: undefined,
-      })
+      }),
     );
   });
 });
@@ -471,7 +468,7 @@ describe('DSOOrchestrator — resource limits', () => {
           NanoCpus: 4e9,
           Memory: DEFAULT_RESOURCE_LIMITS.memoryMb * 1024 * 1024,
         }),
-      })
+      }),
     );
   });
 
@@ -488,7 +485,7 @@ describe('DSOOrchestrator — resource limits', () => {
           NanoCpus: DEFAULT_RESOURCE_LIMITS.cpuCores * 1e9,
           Memory: 512 * 1024 * 1024,
         }),
-      })
+      }),
     );
   });
 
@@ -505,7 +502,7 @@ describe('DSOOrchestrator — resource limits', () => {
           NanoCpus: 0,
           Memory: 0,
         }),
-      })
+      }),
     );
   });
 });
@@ -667,12 +664,18 @@ describe('SandboxLogger — advanced', () => {
 
   it('should return logs in insertion order (newest first in memory)', () => {
     logger.log({
-      containerId: 'c1', containerName: 'first', event: 'start',
-      message: 'first', timestamp: new Date(1000),
+      containerId: 'c1',
+      containerName: 'first',
+      event: 'start',
+      message: 'first',
+      timestamp: new Date(1000),
     });
     logger.log({
-      containerId: 'c2', containerName: 'second', event: 'start',
-      message: 'second', timestamp: new Date(2000),
+      containerId: 'c2',
+      containerName: 'second',
+      event: 'start',
+      message: 'second',
+      timestamp: new Date(2000),
     });
 
     const logs = logger.getLogs();
@@ -682,8 +685,11 @@ describe('SandboxLogger — advanced', () => {
   it('should filter logs by event type correctly', () => {
     for (const event of ['start', 'stop', 'error', 'health', 'resource'] as const) {
       logger.log({
-        containerId: 'c1', containerName: 'c', event,
-        message: `${event} event`, timestamp: new Date(),
+        containerId: 'c1',
+        containerName: 'c',
+        event,
+        message: `${event} event`,
+        timestamp: new Date(),
       });
     }
 
@@ -696,8 +702,11 @@ describe('SandboxLogger — advanced', () => {
 
   it('should handle getLogsByContainer with no matches', () => {
     logger.log({
-      containerId: 'c1', containerName: 'c', event: 'start',
-      message: 'test', timestamp: new Date(),
+      containerId: 'c1',
+      containerName: 'c',
+      event: 'start',
+      message: 'test',
+      timestamp: new Date(),
     });
 
     expect(logger.getLogsByContainer('nonexistent')).toEqual([]);
@@ -705,8 +714,11 @@ describe('SandboxLogger — advanced', () => {
 
   it('should handle getLogsByEvent with no matches', () => {
     logger.log({
-      containerId: 'c1', containerName: 'c', event: 'start',
-      message: 'test', timestamp: new Date(),
+      containerId: 'c1',
+      containerName: 'c',
+      event: 'start',
+      message: 'test',
+      timestamp: new Date(),
     });
 
     expect(logger.getLogsByEvent('error')).toEqual([]);
@@ -721,9 +733,27 @@ describe('SandboxLogger — advanced', () => {
   });
 
   it('getSessionSummary should count unique containers', () => {
-    logger.log({ containerId: 'c1', containerName: 'a', event: 'start', message: 'a', timestamp: new Date() });
-    logger.log({ containerId: 'c2', containerName: 'b', event: 'start', message: 'b', timestamp: new Date() });
-    logger.log({ containerId: 'c1', containerName: 'a', event: 'stop', message: 'a stop', timestamp: new Date() });
+    logger.log({
+      containerId: 'c1',
+      containerName: 'a',
+      event: 'start',
+      message: 'a',
+      timestamp: new Date(),
+    });
+    logger.log({
+      containerId: 'c2',
+      containerName: 'b',
+      event: 'start',
+      message: 'b',
+      timestamp: new Date(),
+    });
+    logger.log({
+      containerId: 'c1',
+      containerName: 'a',
+      event: 'stop',
+      message: 'a stop',
+      timestamp: new Date(),
+    });
 
     const summary = logger.getSessionSummary();
     expect(summary.totalLogs).toBe(3);
@@ -741,17 +771,19 @@ describe('SandboxLogger — advanced', () => {
   });
 
   it('computeResourceSummary should handle single container', () => {
-    const stats: ContainerStats[] = [{
-      containerId: 'c1',
-      cpuPercent: 75,
-      memoryUsageMb: 1024,
-      memoryLimitMb: 2048,
-      networkRxBytes: 5000,
-      networkTxBytes: 2000,
-      blockReadBytes: 1000,
-      blockWriteBytes: 500,
-      timestamp: new Date(),
-    }];
+    const stats: ContainerStats[] = [
+      {
+        containerId: 'c1',
+        cpuPercent: 75,
+        memoryUsageMb: 1024,
+        memoryLimitMb: 2048,
+        networkRxBytes: 5000,
+        networkTxBytes: 2000,
+        blockReadBytes: 1000,
+        blockWriteBytes: 500,
+        timestamp: new Date(),
+      },
+    ];
 
     const summary = SandboxLogger.computeResourceSummary(stats);
     expect(summary.totalCpuPercent).toBe(75);
@@ -764,8 +796,11 @@ describe('SandboxLogger — advanced', () => {
 
     for (let i = 0; i < 5; i++) {
       smallLogger.log({
-        containerId: 'test', containerName: 'c', event: 'start',
-        message: `log ${i}`, timestamp: new Date(),
+        containerId: 'test',
+        containerName: 'c',
+        event: 'start',
+        message: `log ${i}`,
+        timestamp: new Date(),
       });
     }
 
@@ -779,12 +814,18 @@ describe('SandboxLogger — advanced', () => {
     const tinyLogger = new SandboxLogger({ maxLogs: 1 });
 
     tinyLogger.log({
-      containerId: 'c1', containerName: 'a', event: 'start',
-      message: 'first', timestamp: new Date(),
+      containerId: 'c1',
+      containerName: 'a',
+      event: 'start',
+      message: 'first',
+      timestamp: new Date(),
     });
     tinyLogger.log({
-      containerId: 'c2', containerName: 'b', event: 'start',
-      message: 'second', timestamp: new Date(),
+      containerId: 'c2',
+      containerName: 'b',
+      event: 'start',
+      message: 'second',
+      timestamp: new Date(),
     });
 
     expect(tinyLogger.getLogs()).toHaveLength(1);
@@ -793,8 +834,11 @@ describe('SandboxLogger — advanced', () => {
 
   it('should store metadata in log entries', () => {
     logger.log({
-      containerId: 'c1', containerName: 'c', event: 'start',
-      message: 'test', timestamp: new Date(),
+      containerId: 'c1',
+      containerName: 'c',
+      event: 'start',
+      message: 'test',
+      timestamp: new Date(),
       metadata: { ports: [{ containerPort: 80, hostPort: 8080 }] },
     });
 
@@ -807,8 +851,11 @@ describe('SandboxLogger — advanced', () => {
 
     for (const event of events) {
       logger.log({
-        containerId: 'c1', containerName: 'c', event,
-        message: `${event} msg`, timestamp: new Date(),
+        containerId: 'c1',
+        containerName: 'c',
+        event,
+        message: `${event} msg`,
+        timestamp: new Date(),
       });
     }
 

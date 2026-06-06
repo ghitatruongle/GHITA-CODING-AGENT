@@ -8,7 +8,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['../../tests/unit/phase6-relay.test.ts'],
+    include: ['../../tests/unit/relay-server.test.ts'],
     testTimeout: 10000,
     alias: {
       'socket.io': resolve(__dirname, '../../tests/unit/socket-io-relay-mock.ts'),

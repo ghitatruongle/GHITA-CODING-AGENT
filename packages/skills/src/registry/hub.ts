@@ -33,11 +33,11 @@ export class SkillHub {
    */
   saveSkill(template: SkillTemplate): string {
     this.ensureDirectory();
-    
+
     // Đảm bảo ID an toàn cho file system
     const safeId = template.id.replace(/[^a-zA-Z0-9.-]/g, '_');
     const filePath = path.join(this.hubPath, `${safeId}.json`);
-    
+
     fs.writeFileSync(filePath, JSON.stringify(template, null, 2), 'utf-8');
     return template.id;
   }
@@ -72,7 +72,7 @@ export class SkillHub {
   getSkill(id: string): SkillTemplate | null {
     const safeId = id.replace(/[^a-zA-Z0-9.-]/g, '_');
     const filePath = path.join(this.hubPath, `${safeId}.json`);
-    
+
     if (!fs.existsSync(filePath)) return null;
 
     try {
@@ -89,7 +89,7 @@ export class SkillHub {
   deleteSkill(id: string): boolean {
     const safeId = id.replace(/[^a-zA-Z0-9.-]/g, '_');
     const filePath = path.join(this.hubPath, `${safeId}.json`);
-    
+
     if (!fs.existsSync(filePath)) return false;
 
     try {
@@ -129,15 +129,18 @@ export class SkillHub {
    * Tìm kiếm skills theo keyword
    */
   searchSkills(query: string): SkillTemplate[] {
-    const tokens = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+    const tokens = query
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((t) => t.length > 0);
     const all = this.loadSkills();
 
     if (tokens.length === 0) return all;
 
-    return all.filter(skill => {
+    return all.filter((skill) => {
       const name = skill.name.toLowerCase();
       const desc = skill.description.toLowerCase();
-      return tokens.every(token => name.includes(token) || desc.includes(token));
+      return tokens.every((token) => name.includes(token) || desc.includes(token));
     });
   }
 

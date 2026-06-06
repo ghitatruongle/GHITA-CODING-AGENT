@@ -12,7 +12,6 @@ import type {
   OpenAIAgentTool,
 } from './types.js';
 
-
 /**
  * Adapter to convert OpenAI Agents SDK configurations into GHITA's format.
  *
@@ -50,11 +49,13 @@ export class OpenAIAgentsAdapter implements AgentAdapter<OpenAIAgentConfig> {
    * Convert OpenAI chat messages to GHITA messages.
    */
   convertMessages(externalMessages: unknown[]): BaseMessage[] {
-    return (externalMessages as Array<{
-      role: string;
-      content: string;
-      tool_calls?: Array<{ id: string; function: { name: string; arguments: string } }>;
-    }>).map((msg) => {
+    return (
+      externalMessages as Array<{
+        role: string;
+        content: string;
+        tool_calls?: Array<{ id: string; function: { name: string; arguments: string } }>;
+      }>
+    ).map((msg) => {
       switch (msg.role) {
         case 'system':
           return new SystemMessage(msg.content);

@@ -15,22 +15,26 @@ const MALICIOUS_PATTERNS: Array<{
 }> = [
   {
     regex: /rm\s+-rf?\s+([/*~]|\.\.?)/i,
-    reason: 'Phát hiện lệnh rm -rf trên thư mục nhạy cảm (root, wildcard, home hoặc parent). Có thể gây mất mát toàn bộ dữ liệu.',
+    reason:
+      'Phát hiện lệnh rm -rf trên thư mục nhạy cảm (root, wildcard, home hoặc parent). Có thể gây mất mát toàn bộ dữ liệu.',
     threatLevel: 'CRITICAL',
   },
   {
     regex: /:\(\)\{\s*:\s*\|\s*:\s*&\s*\}\s*;\s*:/,
-    reason: 'Phát hiện Fork bomb, có thể gây tràn tài nguyên RAM/CPU và treo hệ thống ngay lập tức.',
+    reason:
+      'Phát hiện Fork bomb, có thể gây tràn tài nguyên RAM/CPU và treo hệ thống ngay lập tức.',
     threatLevel: 'CRITICAL',
   },
   {
     regex: /dd\s+if=.*of=/i,
-    reason: 'Phát hiện lệnh ghi đè block trực tiếp qua dd, nguy cơ làm hỏng phân vùng ổ cứng hệ thống.',
+    reason:
+      'Phát hiện lệnh ghi đè block trực tiếp qua dd, nguy cơ làm hỏng phân vùng ổ cứng hệ thống.',
     threatLevel: 'CRITICAL',
   },
   {
     regex: /(curl|wget|fetch)\s+.*\s*\|\s*(bash|sh|zsh|powershell|pwsh)/i,
-    reason: 'Phát hiện cơ chế tải script từ internet và thực thi trực tiếp qua shell, nguy cơ chạy mã độc hại giấu tên.',
+    reason:
+      'Phát hiện cơ chế tải script từ internet và thực thi trực tiếp qua shell, nguy cơ chạy mã độc hại giấu tên.',
     threatLevel: 'HIGH',
   },
   {
@@ -45,7 +49,8 @@ const MALICIOUS_PATTERNS: Array<{
   },
   {
     regex: /(bash|sh|zsh)\s+-i\s*>&?/i,
-    reason: 'Phát hiện hành vi khởi tạo interactive shell, thường được dùng trong các cuộc tấn công reverse shell.',
+    reason:
+      'Phát hiện hành vi khởi tạo interactive shell, thường được dùng trong các cuộc tấn công reverse shell.',
     threatLevel: 'CRITICAL',
   },
   {
@@ -60,12 +65,14 @@ const MALICIOUS_PATTERNS: Array<{
   },
   {
     regex: /(echo|tee|cat|>)\s+.*\/etc\/(passwd|shadow|sudoers|hosts)/i,
-    reason: 'Phát hiện nỗ lực sửa đổi hoặc đọc các tệp cấu hình hệ thống nhạy cảm của hệ điều hành.',
+    reason:
+      'Phát hiện nỗ lực sửa đổi hoặc đọc các tệp cấu hình hệ thống nhạy cảm của hệ điều hành.',
     threatLevel: 'HIGH',
   },
   {
     regex: /chmod\s+777\s+/i,
-    reason: 'Phát hiện nỗ lực cấp quyền đọc, ghi và thực thi tối đa (chmod 777) cho file hoặc thư mục.',
+    reason:
+      'Phát hiện nỗ lực cấp quyền đọc, ghi và thực thi tối đa (chmod 777) cho file hoặc thư mục.',
     threatLevel: 'MEDIUM',
   },
 ];
@@ -131,10 +138,10 @@ export class SecurityGuard {
       for (const item of obj) {
         strings.push(...this.extractStringValues(item));
       }
-} else if (typeof obj === 'object') {
-    const record = obj as Record<string, unknown>;
-    for (const key of Object.keys(record)) {
-      strings.push(...this.extractStringValues(record[key]));
+    } else if (typeof obj === 'object') {
+      const record = obj as Record<string, unknown>;
+      for (const key of Object.keys(record)) {
+        strings.push(...this.extractStringValues(record[key]));
       }
     }
 

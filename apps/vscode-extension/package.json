@@ -22,8 +22,18 @@
         "category": "GHITA CODING AGENT"
       },
       {
+        "command": "ghita-sidecar.disconnect",
+        "title": "GHITA: Disconnect Sidecar",
+        "category": "GHITA CODING AGENT"
+      },
+      {
         "command": "ghita-sidecar.syncWorkspace",
         "title": "GHITA: Sync Workspace Files",
+        "category": "GHITA CODING AGENT"
+      },
+      {
+        "command": "ghita-sidecar.stats",
+        "title": "GHITA: Show Sync Statistics",
         "category": "GHITA CODING AGENT"
       }
     ],
@@ -39,6 +49,21 @@
           "type": "boolean",
           "default": true,
           "description": "Whether to auto-sync workspace files on save."
+        },
+        "ghita.debounceMs": {
+          "type": "integer",
+          "default": 300,
+          "description": "Debounce interval in ms for file save sync."
+        },
+        "ghita.maxRetries": {
+          "type": "integer",
+          "default": 20,
+          "description": "Maximum reconnection attempts."
+        },
+        "ghita.reconnectDelayMs": {
+          "type": "integer",
+          "default": 2000,
+          "description": "Delay between reconnection attempts in ms."
         }
       }
     }

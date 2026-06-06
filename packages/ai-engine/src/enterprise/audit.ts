@@ -117,9 +117,7 @@ export class AuditLogger {
   /** Log an audit event */
   log(event: Omit<AuditEvent, 'eventId' | 'timestamp'>): AuditEvent {
     // Check severity threshold
-    if (
-      SEVERITY_ORDER[event.severity] < SEVERITY_ORDER[this.config.minSeverity]
-    ) {
+    if (SEVERITY_ORDER[event.severity] < SEVERITY_ORDER[this.config.minSeverity]) {
       // Return a dummy event but don't store
       return {
         ...event,
@@ -158,7 +156,7 @@ export class AuditLogger {
           outcome: fullEvent.outcome,
           resource: fullEvent.resource,
           errorMessage: fullEvent.errorMessage,
-        })
+        }),
       );
     }
 

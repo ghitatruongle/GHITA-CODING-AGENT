@@ -4,7 +4,15 @@
 // ==============================================================================
 
 import React, { useEffect, useState } from 'react';
-import { View, Image, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Image,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  TouchableWithoutFeedback,
+} from 'react-native';
+import type { GestureResponderEvent, LayoutChangeEvent } from 'react-native';
 import { Colors } from '../theme/colors';
 import { FontSize, Spacing, Radius } from '../theme/styles';
 import { useTranslation } from '../i18n/context';
@@ -13,15 +21,23 @@ interface ScreenPreviewProps {
   imageBase64: string | null;
   loading?: boolean;
   connected?: boolean;
+  onScreenTouch?: (x: number, y: number) => void;
 }
 
 export function ScreenPreview({
   imageBase64,
   loading = false,
   connected = false,
+  onScreenTouch,
 }: ScreenPreviewProps): React.JSX.Element {
   const { t } = useTranslation();
   const [imageError, setImageError] = useState(false);
+  const [dimensions, setDimensions] = useState({ width: 320, height: 240 });
+
+  const handleLayout = (event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    setDimensions({ width, height });
+  };
 
   useEffect(() => {
     setImageError(false);
@@ -37,16 +53,28 @@ export function ScreenPreview({
     );
   }
 
+  const handleTouch = (evt: GestureResponderEvent) => {
+    if (!onScreenTouch || dimensions.width === 0 || dimensions.height === 0) return;
+    const { locationX, locationY } = evt.nativeEvent;
+
+    // Tính toán tọa độ tương đối từ 0.0 đến 1.0 dựa vào kích thước thực tế của container
+    const rx = locationX / dimensions.width;
+    const ry = locationY / dimensions.height;
+    onScreenTouch(rx, ry);
+  };
+
   if (imageBase64 && !imageError) {
     return (
-      <View style={styles.container}>
-        <Image
-          source={{ uri: `data:image/jpeg;base64,${imageBase64}` }}
-          style={styles.image}
-          resizeMode="contain"
-          accessibilityLabel="Desktop screen preview"
-          onError={() => setImageError(true)}
-        />
+      <View style={styles.container} onLayout={handleLayout}>
+        <TouchableWithoutFeedback onPress={handleTouch}>
+          <Image
+            source={{ uri: `data:image/jpeg;base64,${imageBase64}` }}
+            style={styles.image}
+            resizeMode="contain"
+            accessibilityLabel="Desktop screen preview"
+            onError={() => setImageError(true)}
+          />
+        </TouchableWithoutFeedback>
       </View>
     );
   }

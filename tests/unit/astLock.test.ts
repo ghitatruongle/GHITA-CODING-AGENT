@@ -3,17 +3,16 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import * as agents from '../../packages/agents/src/index.js';
-import { 
-  ASTLockEngine, 
-  ASTLockMiddleware, 
-  buildHierarchy, 
-  computeSemanticHash, 
-  loadASTLockConfig 
+import {
+  ASTLockEngine,
+  ASTLockMiddleware,
+  buildHierarchy,
+  computeSemanticHash,
+  loadASTLockConfig,
 } from '../../packages/agents/src/index.js';
 import type { SymbolTag } from '@ghita/shared';
 
-describe('Phase 3: AST-Lock Unit Tests', () => {
-
+describe('3: AST-Lock Unit Tests', () => {
   // ==============================================================================
   // 1. buildHierarchy & computeSemanticHash
   // ==============================================================================
@@ -26,7 +25,7 @@ describe('Phase 3: AST-Lock Unit Tests', () => {
           type: 'class',
           startLine: 10,
           endLine: 50,
-          nodeText: 'class MyClass { ... }'
+          nodeText: 'class MyClass { ... }',
         },
         {
           name: 'methodA',
@@ -34,7 +33,7 @@ describe('Phase 3: AST-Lock Unit Tests', () => {
           type: 'method',
           startLine: 15,
           endLine: 30,
-          nodeText: 'methodA() { ... }'
+          nodeText: 'methodA() { ... }',
         },
         {
           name: 'methodB',
@@ -42,7 +41,7 @@ describe('Phase 3: AST-Lock Unit Tests', () => {
           type: 'method',
           startLine: 35,
           endLine: 48,
-          nodeText: 'methodB() { ... }'
+          nodeText: 'methodB() { ... }',
         },
         {
           name: 'nestedHelper',
@@ -50,7 +49,7 @@ describe('Phase 3: AST-Lock Unit Tests', () => {
           type: 'function',
           startLine: 20,
           endLine: 28,
-          nodeText: 'function nestedHelper() { ... }'
+          nodeText: 'function nestedHelper() { ... }',
         },
         {
           name: 'externalFunc',
@@ -58,18 +57,18 @@ describe('Phase 3: AST-Lock Unit Tests', () => {
           type: 'function',
           startLine: 60,
           endLine: 70,
-          nodeText: 'function externalFunc() { ... }'
-        }
+          nodeText: 'function externalFunc() { ... }',
+        },
       ];
 
       const hierarchy = buildHierarchy(mockTags);
-      const definitions = hierarchy.filter(d => d.kind === 'definition');
+      const definitions = hierarchy.filter((d) => d.kind === 'definition');
 
-      const myClass = definitions.find(d => d.name === 'MyClass')!;
-      const methodA = definitions.find(d => d.name === 'methodA')!;
-      const methodB = definitions.find(d => d.name === 'methodB')!;
-      const nestedHelper = definitions.find(d => d.name === 'nestedHelper')!;
-      const externalFunc = definitions.find(d => d.name === 'externalFunc')!;
+      const myClass = definitions.find((d) => d.name === 'MyClass')!;
+      const methodA = definitions.find((d) => d.name === 'methodA')!;
+      const methodB = definitions.find((d) => d.name === 'methodB')!;
+      const nestedHelper = definitions.find((d) => d.name === 'nestedHelper')!;
+      const externalFunc = definitions.find((d) => d.name === 'externalFunc')!;
 
       // Scope checks
       expect(myClass.scope).toBe('MyClass');
@@ -96,7 +95,9 @@ describe('Phase 3: AST-Lock Unit Tests', () => {
       const hash2 = computeSemanticHash(code2);
 
       expect(hash1).toBe(hash2);
-      expect(hash1).toBe(crypto.createHash('sha256').update('functioncalculate(){return42;}').digest('hex'));
+      expect(hash1).toBe(
+        crypto.createHash('sha256').update('functioncalculate(){return42;}').digest('hex'),
+      );
     });
   });
 
@@ -135,12 +136,9 @@ astLock:
       expect(config.lockedSymbols).toEqual([
         'SecurityGate',
         'calculateInternal',
-        'Class.lockedMethod'
+        'Class.lockedMethod',
       ]);
-      expect(config.excludeFiles).toEqual([
-        '**/tests/**',
-        '**/*.test.ts'
-      ]);
+      expect(config.excludeFiles).toEqual(['**/tests/**', '**/*.test.ts']);
     });
 
     it('should return fallback default config if rules.yaml does not exist', () => {
@@ -175,9 +173,30 @@ astLock:
 
       // Simulates PolyglotTagParser returning SymbolTags
       const extractSpy = vi.spyOn((engine as any).parser, 'extractSymbols').mockResolvedValue([
-        { name: 'Auth', kind: 'definition', type: 'class', startLine: 2, endLine: 9, nodeText: 'export class Auth { ... }' },
-        { name: 'login', kind: 'definition', type: 'method', startLine: 3, endLine: 5, nodeText: 'login(user: string) { return true; }' },
-        { name: 'logout', kind: 'definition', type: 'method', startLine: 6, endLine: 8, nodeText: 'logout() { return false; }' }
+        {
+          name: 'Auth',
+          kind: 'definition',
+          type: 'class',
+          startLine: 2,
+          endLine: 9,
+          nodeText: 'export class Auth { ... }',
+        },
+        {
+          name: 'login',
+          kind: 'definition',
+          type: 'method',
+          startLine: 3,
+          endLine: 5,
+          nodeText: 'login(user: string) { return true; }',
+        },
+        {
+          name: 'logout',
+          kind: 'definition',
+          type: 'method',
+          startLine: 6,
+          endLine: 8,
+          nodeText: 'logout() { return false; }',
+        },
       ]);
 
       await engine.lockSymbols('dummy.ts', mockCode, 'typescript', ['Auth.logout']);
@@ -186,9 +205,30 @@ astLock:
 
       // 1. Validation Success: new code doesn't change locked 'logout' method
       extractSpy.mockResolvedValue([
-        { name: 'Auth', kind: 'definition', type: 'class', startLine: 2, endLine: 10, nodeText: 'export class Auth { ... }' },
-        { name: 'login', kind: 'definition', type: 'method', startLine: 3, endLine: 6, nodeText: 'login(user: string) { console.log(user); return true; }' }, // modified
-        { name: 'logout', kind: 'definition', type: 'method', startLine: 7, endLine: 9, nodeText: 'logout() { return false; }' } // identical logic
+        {
+          name: 'Auth',
+          kind: 'definition',
+          type: 'class',
+          startLine: 2,
+          endLine: 10,
+          nodeText: 'export class Auth { ... }',
+        },
+        {
+          name: 'login',
+          kind: 'definition',
+          type: 'method',
+          startLine: 3,
+          endLine: 6,
+          nodeText: 'login(user: string) { console.log(user); return true; }',
+        }, // modified
+        {
+          name: 'logout',
+          kind: 'definition',
+          type: 'method',
+          startLine: 7,
+          endLine: 9,
+          nodeText: 'logout() { return false; }',
+        }, // identical logic
       ]);
 
       const res = await engine.validate('dummy.ts', 'some new code', 'typescript');
@@ -206,8 +246,22 @@ astLock:
       `;
 
       const extractSpy = vi.spyOn((engine as any).parser, 'extractSymbols').mockResolvedValue([
-        { name: 'Engine', kind: 'definition', type: 'class', startLine: 2, endLine: 6, nodeText: 'export class Engine { ... }' },
-        { name: 'start', kind: 'definition', type: 'method', startLine: 3, endLine: 5, nodeText: 'start() { return "started"; }' }
+        {
+          name: 'Engine',
+          kind: 'definition',
+          type: 'class',
+          startLine: 2,
+          endLine: 6,
+          nodeText: 'export class Engine { ... }',
+        },
+        {
+          name: 'start',
+          kind: 'definition',
+          type: 'method',
+          startLine: 3,
+          endLine: 5,
+          nodeText: 'start() { return "started"; }',
+        },
       ]);
 
       // Lock 'Engine.start'
@@ -215,25 +269,46 @@ astLock:
 
       // 1. Fail because locked method is modified
       extractSpy.mockResolvedValue([
-        { name: 'Engine', kind: 'definition', type: 'class', startLine: 2, endLine: 6, nodeText: 'export class Engine { ... }' },
-        { name: 'start', kind: 'definition', type: 'method', startLine: 3, endLine: 5, nodeText: 'start() { return "hacked"; }' } // modified
+        {
+          name: 'Engine',
+          kind: 'definition',
+          type: 'class',
+          startLine: 2,
+          endLine: 6,
+          nodeText: 'export class Engine { ... }',
+        },
+        {
+          name: 'start',
+          kind: 'definition',
+          type: 'method',
+          startLine: 3,
+          endLine: 5,
+          nodeText: 'start() { return "hacked"; }',
+        }, // modified
       ]);
 
       let res = await engine.validate('dummy.ts', 'modified code', 'typescript');
       expect(res.valid).toBe(false);
-      expect(res.violations[0]).toContain("AST-LOCK-001");
-      expect(res.violations[0]).toContain("Engine.start");
+      expect(res.violations[0]).toContain('AST-LOCK-001');
+      expect(res.violations[0]).toContain('Engine.start');
 
       // 2. Fail because locked method is deleted
       extractSpy.mockResolvedValue([
-        { name: 'Engine', kind: 'definition', type: 'class', startLine: 2, endLine: 3, nodeText: 'export class Engine {}' }
+        {
+          name: 'Engine',
+          kind: 'definition',
+          type: 'class',
+          startLine: 2,
+          endLine: 3,
+          nodeText: 'export class Engine {}',
+        },
       ]);
 
       res = await engine.validate('dummy.ts', 'deleted code', 'typescript');
       expect(res.valid).toBe(false);
-      expect(res.violations[0]).toContain("AST-LOCK-001");
-      expect(res.violations[0]).toContain("Engine.start");
-      expect(res.violations[0]).toContain("xoá hoặc đổi tên");
+      expect(res.violations[0]).toContain('AST-LOCK-001');
+      expect(res.violations[0]).toContain('Engine.start');
+      expect(res.violations[0]).toContain('xoá hoặc đổi tên');
     });
   });
 
@@ -248,7 +323,7 @@ astLock:
     beforeEach(() => {
       engine = new ASTLockEngine();
       middleware = new ASTLockMiddleware(engine);
-      
+
       // Mock rules config path
       (middleware as any).configPath = 'non-existent-rules.yaml';
     });
@@ -274,13 +349,33 @@ astLock:
       fs.writeFileSync(testFile, originalCode, 'utf8');
 
       // Mock PolyglotTagParser to yield symbol dynamically
-      const extractSpy = vi.spyOn((engine as any).parser, 'extractSymbols').mockImplementation(async (code: string) => {
-        if (code.includes('100')) {
-          return [{ name: 'safeCalc', kind: 'definition', type: 'function', startLine: 2, endLine: 4, nodeText: 'export function safeCalc() { return 100; }' }];
-        } else {
-          return [{ name: 'safeCalc', kind: 'definition', type: 'function', startLine: 2, endLine: 4, nodeText: 'export function safeCalc() { return 200; }' }];
-        }
-      });
+      const extractSpy = vi
+        .spyOn((engine as any).parser, 'extractSymbols')
+        .mockImplementation(async (code: string) => {
+          if (code.includes('100')) {
+            return [
+              {
+                name: 'safeCalc',
+                kind: 'definition',
+                type: 'function',
+                startLine: 2,
+                endLine: 4,
+                nodeText: 'export function safeCalc() { return 100; }',
+              },
+            ];
+          } else {
+            return [
+              {
+                name: 'safeCalc',
+                kind: 'definition',
+                type: 'function',
+                startLine: 2,
+                endLine: 4,
+                nodeText: 'export function safeCalc() { return 200; }',
+              },
+            ];
+          }
+        });
 
       // Write physical rules.yaml mock
       const yamlContent = `
@@ -294,13 +389,19 @@ astLock:
       fs.writeFileSync('.ghita/rules.yaml.test-mock', yamlContent, 'utf-8');
 
       // Mock detectLanguageFromPath and configPath
-      const loadConfigSpy = vi.spyOn(middleware as any, 'detectLanguageFromPath').mockReturnValue('typescript');
+      const loadConfigSpy = vi
+        .spyOn(middleware as any, 'detectLanguageFromPath')
+        .mockReturnValue('typescript');
       (middleware as any).configPath = '.ghita/rules.yaml.test-mock';
 
       // Lock original
       await engine.lockSymbols(testFile, originalCode, 'typescript', ['safeCalc']);
 
-      const res = await middleware.preTool('writeFile', { targetFile: testFile, content: 'export function safeCalc() { return 200; }' }, { agent: { id: 'agent-1' } } as any);
+      const res = await middleware.preTool(
+        'writeFile',
+        { targetFile: testFile, content: 'export function safeCalc() { return 200; }' },
+        { agent: { id: 'agent-1' } } as any,
+      );
 
       expect(res).toBeDefined();
       expect(res!.proceed).toBe(false);
@@ -343,9 +444,13 @@ astLock:
       (middleware as any).configPath = configMockPath;
 
       const mockExcludedFile = path.resolve('src/excluded/somefile.ts');
-      
-      const res = await middleware.preTool('writeFile', { targetFile: mockExcludedFile, content: 'some code' }, { agent: { id: 'agent-1' } } as any);
-      
+
+      const res = await middleware.preTool(
+        'writeFile',
+        { targetFile: mockExcludedFile, content: 'some code' },
+        { agent: { id: 'agent-1' } } as any,
+      );
+
       expect(res).toBeUndefined();
 
       if (fs.existsSync(configMockPath)) {

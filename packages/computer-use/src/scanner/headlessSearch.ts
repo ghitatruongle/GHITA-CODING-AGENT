@@ -50,9 +50,30 @@ export class HeadlessSearchScanner {
     this.removeComments = options.removeComments ?? true;
     this.maxFileSize = options.maxFileSize ?? 1024 * 1024; // 1MB
     this.excludedExtensions = options.excludedExtensions ?? [
-      '.png', '.jpg', '.jpeg', '.gif', '.pdf', '.zip', '.tar', '.gz',
-      '.log', '.exe', '.dll', '.so', '.dylib', '.db', '.sqlite', '.sqlite3',
-      '.woff', '.woff2', '.ttf', '.eot', '.mp3', '.mp4', '.avi', '.mov'
+      '.png',
+      '.jpg',
+      '.jpeg',
+      '.gif',
+      '.pdf',
+      '.zip',
+      '.tar',
+      '.gz',
+      '.log',
+      '.exe',
+      '.dll',
+      '.so',
+      '.dylib',
+      '.db',
+      '.sqlite',
+      '.sqlite3',
+      '.woff',
+      '.woff2',
+      '.ttf',
+      '.eot',
+      '.mp3',
+      '.mp4',
+      '.avi',
+      '.mov',
     ];
   }
 
@@ -92,9 +113,10 @@ export class HeadlessSearchScanner {
     count: number;
     compressionRatio: number;
   } {
-    const ratio = this.compressionMetrics.totalOriginal > 0
-      ? this.compressionMetrics.totalCompressed / this.compressionMetrics.totalOriginal
-      : 0;
+    const ratio =
+      this.compressionMetrics.totalOriginal > 0
+        ? this.compressionMetrics.totalCompressed / this.compressionMetrics.totalOriginal
+        : 0;
     return {
       ...this.compressionMetrics,
       compressionRatio: Math.round(ratio * 100) / 100,
@@ -114,7 +136,7 @@ export class HeadlessSearchScanner {
       originalLinesCount: 0,
       compressedSize: 0,
       uncompressedSize: 0,
-      content: ''
+      content: '',
     };
 
     // 1. Kiểm tra file tồn tại và là file thông thường
@@ -200,7 +222,11 @@ export class HeadlessSearchScanner {
   /**
    * Thuật toán Sliding Window Bracket Balancer cân bằng dấu ngoặc { }
    */
-  private doBalanceBrackets(lines: string[], start: number, end: number): { start: number; end: number } {
+  private doBalanceBrackets(
+    lines: string[],
+    start: number,
+    end: number,
+  ): { start: number; end: number } {
     let currentStart = start;
     let currentEnd = end;
     const maxExpansion = this.range * 2; // Giới hạn mở rộng tối đa để tránh scan cả tệp
@@ -226,7 +252,7 @@ export class HeadlessSearchScanner {
     let iterations = 0;
     while (balance !== 0 && iterations < maxExpansion) {
       iterations++;
-      
+
       if (balance > 0) {
         // Nhiều dấu mở { hơn đóng } -> mở rộng xuống dưới để tìm }
         if (currentEnd < lines.length - 1) {
@@ -294,7 +320,7 @@ export class HeadlessSearchScanner {
 
     // 2. Loại bỏ comment đơn dòng // ... nhưng giữ lại URL (http://, https://, file://)
     const lines = cleaned.split(/\r?\n/);
-    const processedLines = lines.map(line => {
+    const processedLines = lines.map((line) => {
       // Phân tách bởi //
       const parts = line.split('//');
       if (parts.length <= 1) return line;
@@ -302,7 +328,7 @@ export class HeadlessSearchScanner {
       // Kiểm tra xem // có phải một phần của URL hay không
       const firstPart = parts[0];
       if (firstPart === undefined) return line;
-      
+
       const matchUrl = /https?:$|file:$/i.test(firstPart);
       if (matchUrl) {
         // Giữ lại URL
@@ -319,7 +345,7 @@ export class HeadlessSearchScanner {
 
     for (const line of processedLines) {
       const trimmed = line.trim();
-      
+
       // Nếu dòng trống, bỏ qua hoặc giữ lại tùy vị trí
       if (!trimmed) {
         if (!isHeaderSection) finalLines.push(line);
@@ -327,12 +353,13 @@ export class HeadlessSearchScanner {
       }
 
       // Nhận diện dòng import hoặc require
-      const isImport = trimmed.startsWith('import ') || 
-                       trimmed.startsWith('export * from') ||
-                       trimmed.startsWith('import type ') ||
-                       /const\s+.*\s+=\s+require\(/.test(trimmed) ||
-                       /let\s+.*\s+=\s+require\(/.test(trimmed) ||
-                       /var\s+.*\s+=\s+require\(/.test(trimmed);
+      const isImport =
+        trimmed.startsWith('import ') ||
+        trimmed.startsWith('export * from') ||
+        trimmed.startsWith('import type ') ||
+        /const\s+.*\s+=\s+require\(/.test(trimmed) ||
+        /let\s+.*\s+=\s+require\(/.test(trimmed) ||
+        /var\s+.*\s+=\s+require\(/.test(trimmed);
 
       if (isHeaderSection && isImport) {
         // Bỏ qua dòng import ở đầu

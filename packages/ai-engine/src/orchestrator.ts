@@ -26,7 +26,8 @@ import { SecurityChecker } from './hooks/security-checkers.js';
 import type { z } from 'zod';
 import { generateObject, type GenerateObjectResponse } from './utils/structured.js';
 import { SemanticCache } from './utils/cache.js';
-import { CostTracker, BudgetManager } from './utils/cost.js';
+import { CostTracker, BudgetManager, createCostMiddleware } from './cost/index.js';
+import { wrapProvider } from './utils/middleware.js';
 import { SmartRouter } from './routing/smart-router.js';
 import type { RoutingDecision } from './routing/types.js';
 import { ModelDiscovery } from './discovery/model-discovery.js';
@@ -48,6 +49,7 @@ export class Orchestrator {
   // Phase 8 modules
   readonly costTracker: CostTracker;
   readonly budgetManager: BudgetManager;
+  private costMiddleware: ReturnType<typeof createCostMiddleware>;
   readonly semanticCache: SemanticCache;
 
   // Phase 1.3+1.4: Discovery & Smart Routing
@@ -102,8 +104,15 @@ export class Orchestrator {
       limit,
       period: 'monthly',
       onAlert: (spent, limit, percentage) => {
-        console.warn(`[Orchestrator] AI budget alert: spent $${spent.toFixed(4)} of $${limit.toFixed(4)} (${(percentage * 100).toFixed(1)}%)`);
-      }
+        console.warn(
+          `[Orchestrator] AI budget alert: spent $${spent.toFixed(4)} of $${limit.toFixed(4)} (${(percentage * 100).toFixed(1)}%)`,
+        );
+      },
+    });
+
+    this.costMiddleware = createCostMiddleware({
+      costTracker: this.costTracker,
+      budgetManager: this.budgetManager,
     });
 
     // Phase 8: Semantic prompt cache
@@ -112,14 +121,14 @@ export class Orchestrator {
         embed: async (text) => {
           const emb = await this.embed(text);
           return { embedding: emb.embedding };
-        }
+        },
       },
       {
         qdrantUrl: config.qdrantUrl,
         collectionName: config.collectionName,
         threshold: config.cacheThreshold ?? 0.95,
-        fallbackToInMemory: true
-      }
+        fallbackToInMemory: true,
+      },
     );
 
     // Phase 1.3: Model Discovery
@@ -152,7 +161,11 @@ export class Orchestrator {
       authStyle: 'bearer',
       parseResponse: (data: unknown) => {
         const d = data as { data?: { id: string }[] };
-        return (d.data ?? []).map((m) => ({ id: m.id, name: m.id, provider: providerType as string }));
+        return (d.data ?? []).map((m) => ({
+          id: m.id,
+          name: m.id,
+          provider: providerType as string,
+        }));
       },
     });
   }
@@ -196,28 +209,7 @@ export class Orchestrator {
       maxAttempts,
     );
 
-    const modelName = options?.model || provider.defaultModel || 'default';
-    const promptTokens = response.usage?.promptTokens ?? 0;
-    const completionTokens = response.usage?.completionTokens ?? 0;
-
-    const stepCost = this.costTracker.calculateCost(modelName, promptTokens, completionTokens);
-    await this.costTracker.trackCost(modelName, promptTokens, completionTokens);
-this.budgetManager.recordSpent(stepCost);
-
-  if ((globalThis as Record<string, unknown>).broadcastCostTelemetryHandler) {
     try {
-      const handler = (globalThis as Record<string, unknown>).broadcastCostTelemetryHandler as (data: Record<string, unknown>) => void;
-      handler({
-      inputTokens: promptTokens,
-      outputTokens: completionTokens,
-      totalTokens: promptTokens + completionTokens,
-      costUsd: this.costTracker.getTotalCost(),
-      limitUsd: this.budgetManager.getLimit(),
-    });
-    } catch {}
-  }
-
-  try {
       await this.semanticCache.set(cacheKey, response);
     } catch {}
 
@@ -234,7 +226,7 @@ this.budgetManager.recordSpent(stepCost);
     const cacheKey = serializeMessages(messages);
 
     try {
-      const cached = await this.semanticCache.get(cacheKey) as ChatResponse | null;
+      const cached = (await this.semanticCache.get(cacheKey)) as ChatResponse | null;
       if (cached) {
         yield {
           content: cached.content,
@@ -258,7 +250,6 @@ this.budgetManager.recordSpent(stepCost);
     let success = false;
     let lastError: Error | undefined;
 
-    try {
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         accumulatedContent = '';
@@ -328,45 +319,13 @@ this.budgetManager.recordSpent(stepCost);
     try {
       await this.semanticCache.set(cacheKey, completeResponse);
     } catch {}
-    } finally {
-      // Cost tracking always runs regardless of consumer behavior (early return/cancel)
-      if (success) {
-        if (finalUsage.totalTokens === 0) {
-          const promptText = serializeMessages(messages);
-          const estPrompt = Math.ceil(promptText.length / 4);
-          const estCompletion = Math.ceil(accumulatedContent.length / 4);
-          finalUsage = {
-            promptTokens: estPrompt,
-            completionTokens: estCompletion,
-            totalTokens: estPrompt + estCompletion,
-          };
-        }
-
-        const stepCost = this.costTracker.calculateCost(resolvedModel, finalUsage.promptTokens, finalUsage.completionTokens);
-        await this.costTracker.trackCost(resolvedModel, finalUsage.promptTokens, finalUsage.completionTokens);
-        this.budgetManager.recordSpent(stepCost);
-
-        if ((globalThis as Record<string, unknown>).broadcastCostTelemetryHandler) {
-          try {
-            const handler = (globalThis as Record<string, unknown>).broadcastCostTelemetryHandler as (data: Record<string, unknown>) => void;
-            handler({
-              inputTokens: finalUsage.promptTokens,
-              outputTokens: finalUsage.completionTokens,
-              totalTokens: finalUsage.totalTokens,
-              costUsd: this.costTracker.getTotalCost(),
-              limitUsd: this.budgetManager.getLimit(),
-            });
-          } catch {}
-        }
-      }
-    }
   }
 
   /** Tạo cấu trúc đầu ra (structured output) theo schema của Zod */
   async generateObject<T>(
     schema: z.ZodType<T>,
     messages: ChatMessage[],
-    options?: ChatOptions & { provider?: AIProviderType }
+    options?: ChatOptions & { provider?: AIProviderType },
   ): Promise<GenerateObjectResponse<T>> {
     return generateObject(this, schema, messages, options);
   }
@@ -374,22 +333,18 @@ this.budgetManager.recordSpent(stepCost);
   /** Tạo vector embedding cho một chuỗi text */
   async embed(
     text: string,
-    options?: { model?: string; provider?: AIProviderType }
+    options?: { model?: string; provider?: AIProviderType },
   ): Promise<EmbeddingResponse> {
     const provider = this.resolveProvider(options?.provider);
     const maxAttempts = this.config.retryAttempts ?? 2;
 
-    return await this.executeWithFallback(
-      (p) => p.embed(text, options),
-      provider,
-      maxAttempts,
-    );
+    return await this.executeWithFallback((p) => p.embed(text, options), provider, maxAttempts);
   }
 
   /** Tạo vector embedding cho danh sách các chuỗi text */
   async embedMany(
     texts: string[],
-    options?: { model?: string; provider?: AIProviderType }
+    options?: { model?: string; provider?: AIProviderType },
   ): Promise<EmbeddingManyResponse> {
     const provider = this.resolveProvider(options?.provider);
     const maxAttempts = this.config.retryAttempts ?? 2;
@@ -404,8 +359,8 @@ this.budgetManager.recordSpent(stepCost);
   /** Sinh ảnh từ văn bản */
   async generateImage(
     prompt: string,
-  options?: Record<string, unknown> & { provider?: AIProviderType }
-): Promise<{ url: string; b64?: string }> {
+    options?: Record<string, unknown> & { provider?: AIProviderType },
+  ): Promise<{ url: string; b64?: string }> {
     const provider = this.resolveProvider(options?.provider);
     const maxAttempts = this.config.retryAttempts ?? 2;
 
@@ -424,8 +379,8 @@ this.budgetManager.recordSpent(stepCost);
   /** Chuyển văn bản thành giọng nói */
   async generateSpeech(
     text: string,
-  options?: Record<string, unknown> & { provider?: AIProviderType }
-): Promise<{ audio: Buffer; contentType: string }> {
+    options?: Record<string, unknown> & { provider?: AIProviderType },
+  ): Promise<{ audio: Buffer; contentType: string }> {
     const provider = this.resolveProvider(options?.provider);
     const maxAttempts = this.config.retryAttempts ?? 2;
 
@@ -444,8 +399,8 @@ this.budgetManager.recordSpent(stepCost);
   /** Sinh video từ văn bản */
   async generateVideo(
     prompt: string,
-  options?: Record<string, unknown> & { provider?: AIProviderType }
-): Promise<{ url: string }> {
+    options?: Record<string, unknown> & { provider?: AIProviderType },
+  ): Promise<{ url: string }> {
     const provider = this.resolveProvider(options?.provider);
     const maxAttempts = this.config.retryAttempts ?? 2;
 
@@ -464,8 +419,8 @@ this.budgetManager.recordSpent(stepCost);
   /** Chuyển giọng nói thành văn bản */
   async transcribe(
     audio: Buffer,
-  options?: Record<string, unknown> & { provider?: AIProviderType }
-): Promise<{ text: string }> {
+    options?: Record<string, unknown> & { provider?: AIProviderType },
+  ): Promise<{ text: string }> {
     const provider = this.resolveProvider(options?.provider);
     const maxAttempts = this.config.retryAttempts ?? 2;
 
@@ -539,7 +494,11 @@ this.budgetManager.recordSpent(stepCost);
   }
 
   /** Gọi MCP tool */
-  async callMCPTool(serverName: string, toolName: string, args: Record<string, unknown>): Promise<MCPToolResult> {
+  async callMCPTool(
+    serverName: string,
+    toolName: string,
+    args: Record<string, unknown>,
+  ): Promise<MCPToolResult> {
     return this.mcpClient.callTool(serverName, toolName, args);
   }
 
@@ -551,13 +510,20 @@ this.budgetManager.recordSpent(stepCost);
   }
 
   /** Chạy pre-tool hooks */
-  async runPreToolHooks(toolName: string, toolArgs?: Record<string, unknown>): Promise<HookResult[]> {
-    return this.hookRunner.runHooks('pre_tool', toolName, toolArgs);
+  async runPreToolHooks(
+    toolName: string,
+    toolArgs?: Record<string, unknown>,
+  ): Promise<HookResult[]> {
+    return this.hookRunner.runPreTool(toolName, toolArgs);
   }
 
   /** Chạy post-tool hooks */
-  async runPostToolHooks(toolName: string, toolArgs?: Record<string, unknown>, toolResult?: string): Promise<HookResult[]> {
-    return this.hookRunner.runHooks('post_tool', toolName, toolArgs, toolResult);
+  async runPostToolHooks(
+    toolName: string,
+    toolArgs?: Record<string, unknown>,
+    toolResult?: string,
+  ): Promise<HookResult[]> {
+    return this.hookRunner.runPostTool(toolName, toolArgs, toolResult);
   }
 
   // --- Phase 5C: Built-in Tools ---
@@ -598,11 +564,32 @@ this.budgetManager.recordSpent(stepCost);
 
     // Direct type match first
     const allTypes: AIProviderType[] = [
-      'openai', 'anthropic', 'google', 'ollama', 'custom',
-      'opengateway', 'mimo', 'openrouter', 'deepseek', 'groq',
-      'mistral', 'hicap', 'github-models',
-      'cerebras', 'together', 'fireworks', 'cohere', 'xai',
-      'replicate', 'perplexity', 'voyage', 'ai21', 'sambanova', 'novita',
+      'openai',
+      'anthropic',
+      'google',
+      'ollama',
+      'custom',
+      'opengateway',
+      'mimo',
+      'openrouter',
+      'deepseek',
+      'groq',
+      'mistral',
+      'hicap',
+      'github-models',
+      'cerebras',
+      'together',
+      'fireworks',
+      'cohere',
+      'xai',
+      'replicate',
+      'perplexity',
+      'voyage',
+      'ai21',
+      'sambanova',
+      'novita',
+      'opencode-zen',
+      'nvidia-nim',
     ];
     for (const type of allTypes) {
       if (key === type || key.includes(type)) return type;
@@ -618,7 +605,7 @@ this.budgetManager.recordSpent(stepCost);
     // 1. Ưu tiên cao nhất: Preferred provider do người dùng chỉ định thủ công
     if (preferred) {
       const p = this.registry.get(preferred);
-      if (p) return p;
+      if (p) return this.wrapWithCostMiddleware(p);
     }
 
     // 2. Định tuyến theo agentRole nếu có cấu hình routing
@@ -628,7 +615,7 @@ this.budgetManager.recordSpent(stepCost);
         const providerType = this.mapModelKeyToProviderType(modelKey);
         if (providerType) {
           const p = this.registry.get(providerType);
-          if (p) return p;
+          if (p) return this.wrapWithCostMiddleware(p);
         }
       }
     }
@@ -636,31 +623,38 @@ this.budgetManager.recordSpent(stepCost);
     // 3. Ưu tiên tiếp theo: defaultProvider > fallback đầu tiên > bất kỳ sẵn sàng
     if (this.defaultProvider) {
       const p = this.registry.get(this.defaultProvider);
-      if (p) return p;
+      if (p) return this.wrapWithCostMiddleware(p);
     }
 
     if (this.fallbackOrder.length > 0) {
       for (const type of this.fallbackOrder) {
         const p = this.registry.get(type);
-        if (p) return p;
+        if (p) return this.wrapWithCostMiddleware(p);
       }
     }
 
-  // Lấy bất kỳ provider nào
-  const all = this.registry.getAll();
-  if (all.length > 0) {
-    const first = all[0];
-    if (first) return first;
-  }
+    // Lấy bất kỳ provider nào
+    const all = this.registry.getAll();
+    if (all.length > 0) {
+      const first = all[0];
+      if (first) return this.wrapWithCostMiddleware(first);
+    }
 
     throw new Error('No AI providers registered');
+  }
+
+  private wrapWithCostMiddleware(provider: AIProvider): AIProvider {
+    return wrapProvider(provider, {
+      chat: [this.costMiddleware.chat],
+      chatStream: [this.costMiddleware.chatStream],
+    });
   }
 
   private findFallbackProvider(currentType: AIProviderType): AIProvider | null {
     for (const type of this.fallbackOrder) {
       if (type === currentType) continue;
       const p = this.registry.get(type);
-      if (p) return p;
+      if (p) return this.wrapWithCostMiddleware(p);
     }
     return null;
   }

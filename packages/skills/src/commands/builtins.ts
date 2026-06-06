@@ -36,20 +36,21 @@ function reconstructAbstract(invertedIndex: Record<string, number[]> | undefined
  */
 async function getUniversalModel(): Promise<UniversalChatModel> {
   const registry = new ProviderRegistry();
-  
+
   // Resolve API keys from env or configuration loader
   const apiKey = process.env.OPENAI_API_KEY;
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
   const googleKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-  
+
   // API keys are resolved from environment variables.
   // Config file (api-config.json) is managed by Tauri backend and synced via syncApiConfigToOrchestrator().
-  
+
   if (apiKey) registry.register(new OpenAIProvider({ type: 'openai', apiKey }));
-  if (anthropicKey) registry.register(new AnthropicProvider({ type: 'anthropic', apiKey: anthropicKey }));
+  if (anthropicKey)
+    registry.register(new AnthropicProvider({ type: 'anthropic', apiKey: anthropicKey }));
   if (googleKey) registry.register(new GoogleProvider({ type: 'google', apiKey: googleKey }));
   registry.register(new OllamaProvider({ type: 'ollama' })); // Always register Ollama fallback
-  
+
   return new UniversalChatModel({ registry });
 }
 
@@ -90,21 +91,26 @@ export function createBuiltinSlashCommands(): SlashCommand[] {
       usage: '/code-review [target branch/commit]',
       execute: async (args: string) => {
         const target = args.trim() || 'HEAD';
-        
+
         let diff = '';
         try {
           diff = execSync(`git diff ${target}`, { encoding: 'utf8', timeout: 5000 }).trim();
           if (!diff) {
-            diff = 'No changes found against target. Current status:\n' + execSync('git status -s', { encoding: 'utf8' }).trim();
+            diff =
+              'No changes found against target. Current status:\n' +
+              execSync('git status -s', { encoding: 'utf8' }).trim();
           }
-      } catch (err: unknown) {
-        diff = `// Git diff failed: ${(err as Error).message}\nShowing mock code diff:\n+ export function profileFunction() {\n- export function wrap() {\n+ console.log("AHPI wrap");\n+ }`;
+        } catch (err: unknown) {
+          diff = `// Git diff failed: ${(err as Error).message}\nShowing mock code diff:\n+ export function profileFunction() {\n- export function wrap() {\n+ console.log("AHPI wrap");\n+ }`;
         }
 
         // Initialize LLM gateway
         const universalModel = await getUniversalModel();
-        const llmCall = async (msgs: Array<{ constructor: { name: string }; getText: () => string }>, options?: { model?: string }) => {
-          const chatMessages = msgs.map(m => {
+        const llmCall = async (
+          msgs: Array<{ constructor: { name: string }; getText: () => string }>,
+          options?: { model?: string },
+        ) => {
+          const chatMessages = msgs.map((m) => {
             let role: 'system' | 'user' | 'assistant' = 'user';
             const className = m.constructor.name;
             if (className === 'SystemMessage') role = 'system';
@@ -116,18 +122,20 @@ export function createBuiltinSlashCommands(): SlashCommand[] {
           try {
             const resp = await universalModel.chat(chatMessages, { model: modelName });
             return new AIMessage(resp.content);
-      } catch (err: unknown) {
-        return new AIMessage(JSON.stringify({
-          consensusScore: 8,
-          spec: `### Mocked Multi-Agent Review Report\n- **Consensus Score**: 8/10\n- **Summary**: Multi-agent review executed in offline/fallback mode.\n- **Security**: Passed.\n- **Performance**: Checked.\n- **Details**: ${(err as Error).message}`
-            }));
+          } catch (err: unknown) {
+            return new AIMessage(
+              JSON.stringify({
+                consensusScore: 8,
+                spec: `### Mocked Multi-Agent Review Report\n- **Consensus Score**: 8/10\n- **Summary**: Multi-agent review executed in offline/fallback mode.\n- **Security**: Passed.\n- **Performance**: Checked.\n- **Details**: ${(err as Error).message}`,
+              }),
+            );
           }
         };
 
         const engine = new DebateEngine({ llmCall, model: 'gpt-4o-mini' });
         const result = await engine.runDebate(
           `Review code changes against ${target}`,
-          `Target changes diff:\n${diff}`
+          `Target changes diff:\n${diff}`,
         );
 
         return `### 🔍 Multi-Agent Review Panel Results (Consensus Score: ${result.consensusScore}/10)\n\n${result.spec}\n\n*Review history logged.*`;
@@ -162,9 +170,17 @@ export function createBuiltinSlashCommands(): SlashCommand[] {
           return '[DEEP-RESEARCH] Vui lòng nhập từ khóa tìm kiếm. Ví dụ: `/deep-research attention mechanisms`';
         }
 
-        let works: Array<{ title?: string; publication_year?: number; cited_by_count?: number; doi?: string; abstract_inverted_index?: Record<string, number[]> }> = [];
+        let works: Array<{
+          title?: string;
+          publication_year?: number;
+          cited_by_count?: number;
+          doi?: string;
+          abstract_inverted_index?: Record<string, number[]>;
+        }> = [];
         try {
-          const response = await fetch(`https://api.openalex.org/works?search=${encodeURIComponent(query)}&per_page=3`);
+          const response = await fetch(
+            `https://api.openalex.org/works?search=${encodeURIComponent(query)}&per_page=3`,
+          );
           if (response.ok) {
             const data = await response.json();
             works = data.results || [];
@@ -182,9 +198,18 @@ export function createBuiltinSlashCommands(): SlashCommand[] {
               cited_by_count: 12500,
               doi: 'https://doi.org/10.1145/3052973.3053000',
               abstract_inverted_index: {
-                'We': [0], 'propose': [1], 'a': [2], 'new': [3], 'simple': [4], 'network': [5],
-                'architecture': [6], 'based': [7], 'solely': [8], 'on': [9], 'attention.': [10]
-              }
+                We: [0],
+                propose: [1],
+                a: [2],
+                new: [3],
+                simple: [4],
+                network: [5],
+                architecture: [6],
+                based: [7],
+                solely: [8],
+                on: [9],
+                'attention.': [10],
+              },
             },
             {
               title: `Deep Learning applications for ${query}`,
@@ -192,22 +217,30 @@ export function createBuiltinSlashCommands(): SlashCommand[] {
               cited_by_count: 340,
               doi: 'https://doi.org/10.1145/3400000',
               abstract_inverted_index: {
-                'This': [0], 'paper': [1], 'surveys': [2], 'recent': [3], 'advances': [4], 'in': [5],
-                'deep': [6], 'learning.': [7]
-              }
-            }
+                This: [0],
+                paper: [1],
+                surveys: [2],
+                recent: [3],
+                advances: [4],
+                in: [5],
+                deep: [6],
+                'learning.': [7],
+              },
+            },
           ];
         }
 
-        const reconstructedPapers = works.map((w) => {
-          const title = w.title || 'Untitled Work';
-          const year = w.publication_year || 'Unknown';
-          const citations = w.cited_by_count || 0;
-          const doi = w.doi || 'N/A';
-          const abstract = reconstructAbstract(w.abstract_inverted_index);
+        const reconstructedPapers = works
+          .map((w) => {
+            const title = w.title || 'Untitled Work';
+            const year = w.publication_year || 'Unknown';
+            const citations = w.cited_by_count || 0;
+            const doi = w.doi || 'N/A';
+            const abstract = reconstructAbstract(w.abstract_inverted_index);
 
-          return `### 📄 ${title}\n- **Year**: ${year} | **Citations**: ${citations}\n- **DOI**: [${doi}](${doi})\n- **Abstract**: ${abstract}\n`;
-        }).join('\n');
+            return `### 📄 ${title}\n- **Year**: ${year} | **Citations**: ${citations}\n- **DOI**: [${doi}](${doi})\n- **Abstract**: ${abstract}\n`;
+          })
+          .join('\n');
 
         // Synthesize research overview using LLM
         const prompt = `You are a Senior Academic Researcher.
@@ -222,19 +255,20 @@ Provide a structured review including:
 
         try {
           const universalModel = await getUniversalModel();
-          const resp = await universalModel.chat([
-            { role: 'user', content: prompt }
-          ], { model: 'gpt-4o-mini' });
+          const resp = await universalModel.chat([{ role: 'user', content: prompt }], {
+            model: 'gpt-4o-mini',
+          });
           return `## 🔬 Deep Research Report: "${query}"\n\n${resp.content}\n\n---\n\n### 📚 Referenced Works (OpenAlex)\n\n${reconstructedPapers}`;
         } catch {
           // If LLM call fails, return the raw papers review
           return `## 🔬 Deep Research Report: "${query}" (Reference Bibliography)\n\n${reconstructedPapers}`;
         }
-      }
+      },
     },
     {
       ...createGrillMeCommand(),
-      description: 'Socratic docs-aware design interview: quét docs/, phát hiện mâu thuẫn, kiểm tra thiết kế',
+      description:
+        'Socratic docs-aware design interview: quét docs/, phát hiện mâu thuẫn, kiểm tra thiết kế',
     },
     createSkillsSyncCommand(new SkillHub()),
     // ===== Phase 2.2: New Slash Commands =====
@@ -244,7 +278,13 @@ Provide a structured review including:
       trigger: '/test',
       usage: '/test [--framework vitest|jest|pytest] [--path <file>] [--watch]',
       flags: [
-        { name: '--framework', short: '-f', description: 'Test framework', type: 'string', default: 'vitest' },
+        {
+          name: '--framework',
+          short: '-f',
+          description: 'Test framework',
+          type: 'string',
+          default: 'vitest',
+        },
         { name: '--path', short: '-p', description: 'Specific test file', type: 'string' },
         { name: '--watch', short: '-w', description: 'Watch mode', type: 'boolean' },
       ],
@@ -252,7 +292,12 @@ Provide a structured review including:
         const framework = (parsed?.flags['framework'] as string) ?? 'vitest';
         const path = parsed?.flags['path'] as string | undefined;
         const watch = parsed?.flags['watch'] === true;
-        let cmd = framework === 'vitest' ? 'npx vitest run' : framework === 'jest' ? 'npx jest' : `${framework}`;
+        let cmd =
+          framework === 'vitest'
+            ? 'npx vitest run'
+            : framework === 'jest'
+              ? 'npx jest'
+              : `${framework}`;
         if (path) cmd += ` ${path}`;
         if (watch) cmd += ' --watch';
         try {
@@ -270,15 +315,30 @@ Provide a structured review including:
       trigger: '/format',
       usage: '/format --path <file> [--formatter prettier|black|rustfmt]',
       flags: [
-        { name: '--path', short: '-p', description: 'File or directory', type: 'string', required: true },
-        { name: '--formatter', short: '-f', description: 'Formatter to use', type: 'string', default: 'prettier' },
+        {
+          name: '--path',
+          short: '-p',
+          description: 'File or directory',
+          type: 'string',
+          required: true,
+        },
+        {
+          name: '--formatter',
+          short: '-f',
+          description: 'Formatter to use',
+          type: 'string',
+          default: 'prettier',
+        },
       ],
       execute: async (_args, parsed) => {
         const path = parsed?.flags['path'] as string;
         if (!path) return 'Missing required flag: --path';
         const formatter = (parsed?.flags['formatter'] as string) ?? 'prettier';
         try {
-          const result = execSync(`${formatter} --write ${path}`, { encoding: 'utf8', timeout: 30000 });
+          const result = execSync(`${formatter} --write ${path}`, {
+            encoding: 'utf8',
+            timeout: 30000,
+          });
           return `Formatted \`${path}\` with ${formatter}.\n\`\`\`\n${result.slice(0, 1000)}\n\`\`\``;
         } catch (err: unknown) {
           const e = err as { message?: string };
@@ -292,9 +352,21 @@ Provide a structured review including:
       trigger: '/lint',
       usage: '/lint --path <file> [--fix] [--linter eslint|flake8]',
       flags: [
-        { name: '--path', short: '-p', description: 'File or directory', type: 'string', required: true },
+        {
+          name: '--path',
+          short: '-p',
+          description: 'File or directory',
+          type: 'string',
+          required: true,
+        },
         { name: '--fix', description: 'Auto-fix issues', type: 'boolean' },
-        { name: '--linter', short: '-l', description: 'Linter to use', type: 'string', default: 'eslint' },
+        {
+          name: '--linter',
+          short: '-l',
+          description: 'Linter to use',
+          type: 'string',
+          default: 'eslint',
+        },
       ],
       execute: async (_args, parsed) => {
         const path = parsed?.flags['path'] as string;
@@ -318,7 +390,13 @@ Provide a structured review including:
       trigger: '/explain',
       usage: '/explain --file <path> [--lines 10-20]',
       flags: [
-        { name: '--file', short: '-f', description: 'File to explain', type: 'string', required: true },
+        {
+          name: '--file',
+          short: '-f',
+          description: 'File to explain',
+          type: 'string',
+          required: true,
+        },
         { name: '--lines', short: '-l', description: 'Line range (e.g. 10-20)', type: 'string' },
       ],
       execute: async (_args, parsed) => {
@@ -335,9 +413,10 @@ Provide a structured review including:
             content = linesArr.slice(start - 1, end).join('\n');
           }
           const model = await getUniversalModel();
-          const resp = await model.chat([
-            { role: 'user', content: `Explain this code concisely:\n\`\`\`\n${content}\n\`\`\`` }
-          ], { model: 'gpt-4o-mini' });
+          const resp = await model.chat(
+            [{ role: 'user', content: `Explain this code concisely:\n\`\`\`\n${content}\n\`\`\`` }],
+            { model: 'gpt-4o-mini' },
+          );
           return resp.content;
         } catch (err: unknown) {
           const e = err as { message?: string };
@@ -351,8 +430,20 @@ Provide a structured review including:
       trigger: '/refactor',
       usage: '/refactor --file <path> [--type extract|simplify|rename]',
       flags: [
-        { name: '--file', short: '-f', description: 'File to refactor', type: 'string', required: true },
-        { name: '--type', short: '-t', description: 'Refactor type', type: 'string', default: 'simplify' },
+        {
+          name: '--file',
+          short: '-f',
+          description: 'File to refactor',
+          type: 'string',
+          required: true,
+        },
+        {
+          name: '--type',
+          short: '-t',
+          description: 'Refactor type',
+          type: 'string',
+          default: 'simplify',
+        },
       ],
       execute: async (_args, parsed) => {
         const file = parsed?.flags['file'] as string;
@@ -361,9 +452,15 @@ Provide a structured review including:
         try {
           const content = execSync(`cat ${file}`, { encoding: 'utf8' });
           const model = await getUniversalModel();
-          const resp = await model.chat([
-            { role: 'user', content: `Suggest ${refactorType} refactoring for this code. Be specific and actionable:\n\`\`\`\n${content}\n\`\`\`` }
-          ], { model: 'gpt-4o-mini' });
+          const resp = await model.chat(
+            [
+              {
+                role: 'user',
+                content: `Suggest ${refactorType} refactoring for this code. Be specific and actionable:\n\`\`\`\n${content}\n\`\`\``,
+              },
+            ],
+            { model: 'gpt-4o-mini' },
+          );
           return `### Refactor Suggestions (${refactorType}) for \`${file}\`\n\n${resp.content}`;
         } catch (err: unknown) {
           const e = err as { message?: string };
@@ -377,7 +474,13 @@ Provide a structured review including:
       trigger: '/optimize',
       usage: '/optimize --file <path>',
       flags: [
-        { name: '--file', short: '-f', description: 'File to optimize', type: 'string', required: true },
+        {
+          name: '--file',
+          short: '-f',
+          description: 'File to optimize',
+          type: 'string',
+          required: true,
+        },
       ],
       execute: async (_args, parsed) => {
         const file = parsed?.flags['file'] as string;
@@ -385,9 +488,15 @@ Provide a structured review including:
         try {
           const content = execSync(`cat ${file}`, { encoding: 'utf8' });
           const model = await getUniversalModel();
-          const resp = await model.chat([
-            { role: 'user', content: `Analyze this code for performance optimizations. Suggest specific improvements:\n\`\`\`\n${content}\n\`\`\`` }
-          ], { model: 'gpt-4o-mini' });
+          const resp = await model.chat(
+            [
+              {
+                role: 'user',
+                content: `Analyze this code for performance optimizations. Suggest specific improvements:\n\`\`\`\n${content}\n\`\`\``,
+              },
+            ],
+            { model: 'gpt-4o-mini' },
+          );
           return `### Optimization Suggestions for \`${file}\`\n\n${resp.content}`;
         } catch (err: unknown) {
           const e = err as { message?: string };
@@ -401,7 +510,13 @@ Provide a structured review including:
       trigger: '/doc',
       usage: '/doc --file <path> [--format md|jsdoc]',
       flags: [
-        { name: '--file', short: '-f', description: 'File to document', type: 'string', required: true },
+        {
+          name: '--file',
+          short: '-f',
+          description: 'File to document',
+          type: 'string',
+          required: true,
+        },
         { name: '--format', description: 'Output format', type: 'string', default: 'md' },
       ],
       execute: async (_args, parsed) => {
@@ -411,9 +526,15 @@ Provide a structured review including:
         try {
           const content = execSync(`cat ${file}`, { encoding: 'utf8' });
           const model = await getUniversalModel();
-          const resp = await model.chat([
-            { role: 'user', content: `Generate ${format} documentation for this code:\n\`\`\`\n${content}\n\`\`\`` }
-          ], { model: 'gpt-4o-mini' });
+          const resp = await model.chat(
+            [
+              {
+                role: 'user',
+                content: `Generate ${format} documentation for this code:\n\`\`\`\n${content}\n\`\`\``,
+              },
+            ],
+            { model: 'gpt-4o-mini' },
+          );
           return `### Documentation for \`${file}\`\n\n${resp.content}`;
         } catch (err: unknown) {
           const e = err as { message?: string };
@@ -427,25 +548,40 @@ Provide a structured review including:
       trigger: '/security',
       usage: '/security [--path <dir>]',
       flags: [
-        { name: '--path', short: '-p', description: 'Directory to audit', type: 'string', default: '.' },
+        {
+          name: '--path',
+          short: '-p',
+          description: 'Directory to audit',
+          type: 'string',
+          default: '.',
+        },
       ],
       execute: async (_args, parsed) => {
         const auditPath = (parsed?.flags['path'] as string) ?? '.';
         const results: string[] = [];
         // npm audit
         try {
-          const npmResult = execSync('npm audit --json 2>/dev/null', { encoding: 'utf8', timeout: 30000, cwd: auditPath });
+          const npmResult = execSync('npm audit --json 2>/dev/null', {
+            encoding: 'utf8',
+            timeout: 30000,
+            cwd: auditPath,
+          });
           results.push(`npm audit:\n\`\`\`json\n${npmResult.slice(0, 2000)}\n\`\`\``);
         } catch {
           results.push('npm audit: no package-lock.json or npm not available');
         }
         // Check for common secrets in code
         try {
-          const grepResult = execSync(`grep -rn "password\\|secret\\|api_key\\|token" ${auditPath}/src/ 2>/dev/null | head -20`, { encoding: 'utf8', timeout: 10000 });
+          const grepResult = execSync(
+            `grep -rn "password\\|secret\\|api_key\\|token" ${auditPath}/src/ 2>/dev/null | head -20`,
+            { encoding: 'utf8', timeout: 10000 },
+          );
           if (grepResult.trim()) {
             results.push(`Potential secrets found:\n\`\`\`\n${grepResult}\n\`\`\``);
           }
-        } catch { /* no matches or grep not available */ }
+        } catch {
+          /* no matches or grep not available */
+        }
         return `### Security Audit Report\n\n${results.join('\n\n') || 'No issues found.'}`;
       },
     },
@@ -455,7 +591,13 @@ Provide a structured review including:
       trigger: '/deps',
       usage: '/deps [--type outdated|unused|tree]',
       flags: [
-        { name: '--type', short: '-t', description: 'Analysis type', type: 'string', default: 'outdated' },
+        {
+          name: '--type',
+          short: '-t',
+          description: 'Analysis type',
+          type: 'string',
+          default: 'outdated',
+        },
       ],
       execute: async (_args, parsed) => {
         const analysisType = (parsed?.flags['type'] as string) ?? 'outdated';
@@ -486,9 +628,15 @@ Provide a structured review including:
         const to = parsed?.flags['to'] as string;
         if (!from || !to) return 'Missing required flags: --from and --to';
         const model = await getUniversalModel();
-        const resp = await model.chat([
-          { role: 'user', content: `Create a step-by-step migration guide from ${from} to ${to}. Include code examples, common pitfalls, and testing strategies.` }
-        ], { model: 'gpt-4o-mini' });
+        const resp = await model.chat(
+          [
+            {
+              role: 'user',
+              content: `Create a step-by-step migration guide from ${from} to ${to}. Include code examples, common pitfalls, and testing strategies.`,
+            },
+          ],
+          { model: 'gpt-4o-mini' },
+        );
         return `### Migration Guide: ${from} → ${to}\n\n${resp.content}`;
       },
     },
@@ -499,7 +647,13 @@ Provide a structured review including:
       usage: '/benchmark [--path <file>] [--iterations <n>]',
       flags: [
         { name: '--path', short: '-p', description: 'Benchmark script', type: 'string' },
-        { name: '--iterations', short: '-n', description: 'Number of iterations', type: 'string', default: '10' },
+        {
+          name: '--iterations',
+          short: '-n',
+          description: 'Number of iterations',
+          type: 'string',
+          default: '10',
+        },
       ],
       execute: async (_args, parsed) => {
         const path = parsed?.flags['path'] as string | undefined;

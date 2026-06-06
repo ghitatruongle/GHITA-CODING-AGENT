@@ -42,26 +42,30 @@ interface SandboxFile {
   cleanup: () => Promise<void>;
 }
 
-const LANGUAGE_RUNNERS: Record<SandboxLanguage, { cmd: string; args: (file: string) => string[] }> = {
-  javascript: {
-    cmd: process.execPath,
-    args: (file) => [file],
-  },
-  typescript: {
-    cmd: process.execPath,
-    args: (file) => ['--import', 'tsx', file],
-  },
-  python: {
-    cmd: 'python3',
-    args: (file) => [file],
-  },
-  shell: {
-    cmd: process.platform === 'win32' ? 'cmd' : 'sh',
-    args: (file) => (process.platform === 'win32' ? ['/c', file] : [file]),
-  },
-};
+const LANGUAGE_RUNNERS: Record<SandboxLanguage, { cmd: string; args: (file: string) => string[] }> =
+  {
+    javascript: {
+      cmd: process.execPath,
+      args: (file) => [file],
+    },
+    typescript: {
+      cmd: process.execPath,
+      args: (file) => ['--import', 'tsx', file],
+    },
+    python: {
+      cmd: 'python3',
+      args: (file) => [file],
+    },
+    shell: {
+      cmd: process.platform === 'win32' ? 'cmd' : 'sh',
+      args: (file) => (process.platform === 'win32' ? ['/c', file] : [file]),
+    },
+  };
 
-const DOCKER_RUNNERS: Record<SandboxLanguage, { image: string; cmd: string; args: (file: string) => string[] }> = {
+const DOCKER_RUNNERS: Record<
+  SandboxLanguage,
+  { image: string; cmd: string; args: (file: string) => string[] }
+> = {
   javascript: {
     image: 'node:20-alpine',
     cmd: 'node',
@@ -99,14 +103,14 @@ async function writeTempFile(
     javascript: '.mjs',
     typescript: '.mts',
     python: '.py',
-    shell: (isDocker || process.platform !== 'win32') ? '.sh' : '.cmd',
+    shell: isDocker || process.platform !== 'win32' ? '.sh' : '.cmd',
   };
 
   const filename = `sandbox${extensions[lang]}`;
   const filepath = join(dir, filename);
 
   await mkdir(dir, { recursive: true });
-  
+
   let finalCode = code;
   if (isDocker && lang === 'shell') {
     // Normalise line endings to LF for Linux containers to avoid CRLF issues
@@ -165,21 +169,13 @@ async function runInDocker(
   file: SandboxFile,
   startTime: number,
 ): Promise<SandboxResult> {
-  const {
-    timeoutMs = 30_000,
-    language = 'javascript',
-    env = {},
-  } = config;
+  const { timeoutMs = 30_000, language = 'javascript', env = {} } = config;
 
   const runner = DOCKER_RUNNERS[language];
   const containerId = randomBytes(8).toString('hex');
   const containerName = `ghita-sandbox-${containerId}`;
 
-  const dockerArgs = [
-    'run',
-    '--rm',
-    '--name', containerName,
-  ];
+  const dockerArgs = ['run', '--rm', '--name', containerName];
 
   if (config.memoryLimitMb) {
     dockerArgs.push(`--memory=${config.memoryLimitMb}m`);
@@ -281,16 +277,8 @@ async function runInDocker(
 }
 
 /** Fallback runner executing safely on local host interpreter */
-async function runInLocal(
-  code: string,
-  config: SandboxConfig = {},
-): Promise<SandboxResult> {
-  const {
-    timeoutMs = 30_000,
-    language = 'javascript',
-    cwd,
-    env = {},
-  } = config;
+async function runInLocal(code: string, config: SandboxConfig = {}): Promise<SandboxResult> {
+  const { timeoutMs = 30_000, language = 'javascript', cwd, env = {} } = config;
 
   const runner = LANGUAGE_RUNNERS[language];
   if (!runner) {
@@ -311,9 +299,10 @@ async function runInLocal(
   const startTime = Date.now();
 
   return new Promise<SandboxResult>((resolve) => {
-    const spawnArgs = language === 'javascript' || language === 'typescript'
-      ? [...buildSpawnArgs(config), ...runner.args(file.path)]
-      : runner.args(file.path);
+    const spawnArgs =
+      language === 'javascript' || language === 'typescript'
+        ? [...buildSpawnArgs(config), ...runner.args(file.path)]
+        : runner.args(file.path);
 
     const cleanEnv: Record<string, string> = {};
     for (const [key, value] of Object.entries(process.env)) {
@@ -448,7 +437,9 @@ export async function runInSandbox(
         const result = await runInDocker(code, config, tempDir, file, startTime);
         return result;
       } catch (err: unknown) {
-        console.warn(`[Sandbox Warning] Docker container failed: ${(err as Error).message}. Falling back to safe Local Interpreter host stream.`);
+        console.warn(
+          `[Sandbox Warning] Docker container failed: ${(err as Error).message}. Falling back to safe Local Interpreter host stream.`,
+        );
       } finally {
         // Always cleanup temp files regardless of Docker success/failure
         await file?.cleanup();
@@ -460,16 +451,16 @@ export async function runInSandbox(
         }
       }
     } else {
-      console.warn('[Sandbox Warning] Docker is not available. Falling back to safe Local Interpreter host stream.');
+      console.warn(
+        '[Sandbox Warning] Docker is not available. Falling back to safe Local Interpreter host stream.',
+      );
     }
   }
 
   // Fallback to local interpreter
   const localResult = await runInLocal(code, config);
   const fallbackMsg = `[Sandbox Warning] Docker container not available or failed. Falling back to safe Local Interpreter host stream.`;
-  localResult.stderr = localResult.stderr
-    ? `${fallbackMsg}\n${localResult.stderr}`
-    : fallbackMsg;
+  localResult.stderr = localResult.stderr ? `${fallbackMsg}\n${localResult.stderr}` : fallbackMsg;
 
   return localResult;
 }
@@ -501,7 +492,9 @@ export function createSandboxSkill() {
         return { success: false, error: 'Missing required input: code' };
       }
 
-      const language = (typeof input?.language === 'string' ? input.language : 'javascript') as SandboxLanguage;
+      const language = (
+        typeof input?.language === 'string' ? input.language : 'javascript'
+      ) as SandboxLanguage;
       const timeoutMs = typeof input?.timeoutMs === 'number' ? input.timeoutMs : 30000;
 
       const result = await runInSandbox(code, { language, timeoutMs });

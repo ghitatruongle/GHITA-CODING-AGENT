@@ -26,7 +26,7 @@ describe('FallbackManager & Cost Tracker', () => {
     manager = new FallbackManager({
       dbPath,
       budgetConfigPath,
-      fallbackChain: ['model-primary', 'model-secondary', 'model-tertiary']
+      fallbackChain: ['model-primary', 'model-secondary', 'model-tertiary'],
     });
   });
 
@@ -55,7 +55,7 @@ describe('FallbackManager & Cost Tracker', () => {
   it('should count token for ChatMessages list', () => {
     const messages: ChatMessage[] = [
       { role: 'system', content: 'You are helpful.' },
-      { role: 'user', content: 'Hello!' }
+      { role: 'user', content: 'Hello!' },
     ];
     const totalCount = manager.countMessagesTokens(messages);
     expect(totalCount).toBeGreaterThan(10);
@@ -81,7 +81,7 @@ describe('FallbackManager & Cost Tracker', () => {
       completionTokens: 1000,
       totalTokens: 2000,
       cost: 0.0125,
-      success: 1
+      success: 1,
     });
 
     const sessionCost = manager.getSessionTotalCost();
@@ -102,7 +102,7 @@ describe('FallbackManager & Cost Tracker', () => {
       completionTokens: 5000,
       totalTokens: 10000,
       cost: 0.06, // $0.06 USD
-      success: 1
+      success: 1,
     });
 
     expect(consoleWarnSpy).toHaveBeenCalled();
@@ -119,7 +119,7 @@ describe('FallbackManager & Cost Tracker', () => {
       completionTokens: 10000,
       totalTokens: 20000,
       cost: 0.15, // $0.15 USD
-      success: 1
+      success: 1,
     });
 
     const callFn = vi.fn().mockResolvedValue({
@@ -127,7 +127,7 @@ describe('FallbackManager & Cost Tracker', () => {
       model: 'gpt-4o',
       provider: 'openai',
       usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 },
-      finishReason: 'stop'
+      finishReason: 'stop',
     });
 
     await expect(manager.executeWithFailover(callFn, [])).rejects.toThrow('Session cost limit');
@@ -135,16 +135,17 @@ describe('FallbackManager & Cost Tracker', () => {
 
   it('should failover to next model when primary model returns rate limit error', async () => {
     const errorMsg = 'HTTP 429: Too many requests';
-    
+
     // Cuộc gọi đầu tiên trả về lỗi Rate Limit, cuộc gọi thứ hai thành công
-    const callFn = vi.fn()
+    const callFn = vi
+      .fn()
       .mockRejectedValueOnce(new Error(errorMsg))
       .mockResolvedValueOnce({
         content: 'Response from fallback!',
         model: 'model-secondary',
         provider: 'anthropic',
         usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-        finishReason: 'stop'
+        finishReason: 'stop',
       } as ChatResponse);
 
     const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
@@ -155,7 +156,9 @@ describe('FallbackManager & Cost Tracker', () => {
     expect(callFn).toHaveBeenCalledTimes(2);
 
     // Kiểm tra SQLite lưu log failover chính xác
-    const logs = (manager as any).db.prepare('SELECT * FROM cost_logs ORDER BY timestamp ASC').all();
+    const logs = (manager as any).db
+      .prepare('SELECT * FROM cost_logs ORDER BY timestamp ASC')
+      .all();
     expect(logs.length).toBe(2);
     expect(logs[0].model).toBe('model-primary');
     expect(logs[0].success).toBe(0);
@@ -167,7 +170,8 @@ describe('FallbackManager & Cost Tracker', () => {
 
   it('should fall back to local Ollama when all remote providers fail', async () => {
     // 3 remote providers in chain fail
-    const callFn = vi.fn()
+    const callFn = vi
+      .fn()
       .mockRejectedValueOnce(new Error('Auth error'))
       .mockRejectedValueOnce(new Error('Timeout'))
       .mockRejectedValueOnce(new Error('HTTP 429'))
@@ -177,7 +181,7 @@ describe('FallbackManager & Cost Tracker', () => {
         model: 'ollama/qwen2.5-coder:1.5b',
         provider: 'ollama',
         usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-        finishReason: 'stop'
+        finishReason: 'stop',
       } as ChatResponse);
 
     const response = await manager.executeWithFailover(callFn, []);

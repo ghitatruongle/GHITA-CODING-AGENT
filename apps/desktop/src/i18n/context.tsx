@@ -7,12 +7,13 @@ import { useAppStore } from '../stores/appStore';
 import { vi } from './vi';
 import { en } from './en';
 import { zh } from './zh';
+import { ru } from './ru';
 import type { TranslationKeys } from './types';
 
 type Translations = TranslationKeys;
 type TFunction = (key: string, params?: Record<string, string | number>) => string;
 
-const translations: Record<string, Translations> = { vi, en, zh };
+const translations: Record<string, Translations> = { vi, en, zh, ru };
 
 const I18nContext = createContext<{ t: TFunction; lang: string }>({
   // BUG FIX #10: the previous default swallowed params entirely, so
@@ -36,17 +37,17 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const value = useMemo(() => {
     const dict = translations[language] || translations.vi;
 
-  const t: TFunction = (key, params) => {
-    const parts = key.split('.');
-    let result: unknown = dict as unknown;
-    for (const part of parts) {
-      if (result != null && typeof result === 'object') {
-        result = (result as Record<string, unknown>)[part];
-      } else {
-        return key;
+    const t: TFunction = (key, params) => {
+      const parts = key.split('.');
+      let result: unknown = dict as unknown;
+      for (const part of parts) {
+        if (result != null && typeof result === 'object') {
+          result = (result as Record<string, unknown>)[part];
+        } else {
+          return key;
+        }
       }
-    }
-    if (typeof result !== 'string') return key;
+      if (typeof result !== 'string') return key;
 
       if (params) {
         return Object.entries(params).reduce(

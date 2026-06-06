@@ -52,6 +52,8 @@ export interface TranslationKeys {
     pairErrNoIp: string;
     pairErrBtFail: string;
     pairErrBtFindFail: string;
+    pairErrApiKeyMissing: string;
+    noCodeFromServer: string;
   };
   remote: {
     disconnectTitle: string;
@@ -62,7 +64,7 @@ export interface TranslationKeys {
     lostConnectionDesc: string;
     goBack: string;
     chatTimeoutTitle: string;
-    chatTimeoutDesc: string;
+    screenshotTimeoutDesc: string;
     screenTitle: string;
     screenPreviewTitle: string;
     screenPreviewPlaceholder: string;
@@ -89,6 +91,10 @@ export interface TranslationKeys {
     securityApprovalDesc: string;
     securityApproveBtn: string;
     securityRejectBtn: string;
+    skillsTitle: string;
+    skillsLoading: string;
+    noSkills: string;
+    skillRunning: string;
   };
   settings: {
     title: string;

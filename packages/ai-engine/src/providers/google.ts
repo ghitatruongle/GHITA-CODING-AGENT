@@ -3,15 +3,17 @@
 // ==============================================================================
 
 import type { AIStreamChunk } from '@ghita/shared';
-import type { ChatMessage, ChatOptions, ChatResponse, ProviderConfig, EmbeddingResponse, EmbeddingManyResponse } from '../types.js';
+import type {
+  ChatMessage,
+  ChatOptions,
+  ChatResponse,
+  ProviderConfig,
+  EmbeddingResponse,
+  EmbeddingManyResponse,
+} from '../types.js';
 import { BaseProvider } from './base.js';
 
-const GOOGLE_MODELS = [
-  'gemini-1.5-pro',
-  'gemini-1.5-flash',
-  'gemini-2.0-flash-exp',
-  'gemini-pro',
-];
+const GOOGLE_MODELS = ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-2.0-flash-exp', 'gemini-pro'];
 
 export class GoogleProvider extends BaseProvider {
   readonly type = 'google' as const;
@@ -86,10 +88,7 @@ export class GoogleProvider extends BaseProvider {
     };
   }
 
-  async *chatStream(
-    messages: ChatMessage[],
-    options?: ChatOptions,
-  ): AsyncGenerator<AIStreamChunk> {
+  async *chatStream(messages: ChatMessage[], options?: ChatOptions): AsyncGenerator<AIStreamChunk> {
     const apiKey = this.getApiKey();
     const model = this.getModel(options);
 
@@ -141,7 +140,7 @@ export class GoogleProvider extends BaseProvider {
         const jsonMatch = buffer.match(/\{"candidates":\[.*?\]\}/);
         if (jsonMatch) {
           const matchIndex = jsonMatch.index ?? 0;
-      buffer = buffer.slice(matchIndex + jsonMatch[0].length);
+          buffer = buffer.slice(matchIndex + jsonMatch[0].length);
           try {
             const parsed = JSON.parse(jsonMatch[0]) as {
               candidates: Array<{
@@ -149,9 +148,7 @@ export class GoogleProvider extends BaseProvider {
                 finishReason?: string;
               }>;
             };
-            const text = parsed.candidates[0]?.content?.parts
-              ?.map((p) => p.text)
-              .join('');
+            const text = parsed.candidates[0]?.content?.parts?.map((p) => p.text).join('');
             if (text) {
               yield { content: text, done: false, provider: 'google', model };
             }
@@ -178,9 +175,7 @@ export class GoogleProvider extends BaseProvider {
       }));
   }
 
-  private mapFinishReason(
-    reason: string | undefined,
-  ): 'stop' | 'length' | 'error' | 'aborted' {
+  private mapFinishReason(reason: string | undefined): 'stop' | 'length' | 'error' | 'aborted' {
     switch (reason) {
       case 'STOP':
         return 'stop';
@@ -205,7 +200,7 @@ export class GoogleProvider extends BaseProvider {
             parts: [{ text }],
           },
         }),
-      }
+      },
     );
 
     if (!response.ok) {
@@ -241,7 +236,7 @@ export class GoogleProvider extends BaseProvider {
             },
           })),
         }),
-      }
+      },
     );
 
     if (!response.ok) {

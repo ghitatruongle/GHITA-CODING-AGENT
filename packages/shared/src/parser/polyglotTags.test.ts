@@ -19,7 +19,7 @@ const __dirname = path.dirname(__filename);
 const TEMP_TEST_DIR = path.resolve(__dirname, '../../resources/test-temp');
 const TEMP_DB_PATH = path.join(TEMP_TEST_DIR, 'test-symbol-cache.db');
 
-describe('Phase 1: Polyglot SCM Parser & AST Tags Tests', () => {
+describe('1: Polyglot SCM Parser & AST Tags Tests', () => {
   let downloader: WasmParserDownloader;
   let parser: PolyglotTagParser;
   let ranker: PageRankRanker;
@@ -93,26 +93,26 @@ describe('Phase 1: Polyglot SCM Parser & AST Tags Tests', () => {
       `;
 
       const tags = await parser.extractSymbols(code, 'typescript');
-      
+
       expect(tags.length).toBeGreaterThan(0);
 
       // Kiểm định định nghĩa Class
-      const classDef = tags.find(t => t.name === 'UserService' && t.kind === 'definition');
+      const classDef = tags.find((t) => t.name === 'UserService' && t.kind === 'definition');
       expect(classDef).toBeDefined();
       expect(classDef?.type).toBe('class');
 
       // Kiểm định định nghĩa Method
-      const methodDef = tags.find(t => t.name === 'getUser' && t.kind === 'definition');
+      const methodDef = tags.find((t) => t.name === 'getUser' && t.kind === 'definition');
       expect(methodDef).toBeDefined();
       expect(methodDef?.type).toBe('method');
 
       // Kiểm định định nghĩa Function
-      const funcDef = tags.find(t => t.name === 'databaseCall' && t.kind === 'definition');
+      const funcDef = tags.find((t) => t.name === 'databaseCall' && t.kind === 'definition');
       expect(funcDef).toBeDefined();
       expect(funcDef?.type).toBe('function');
 
       // Kiểm định tham chiếu (class instantiation)
-      const classRef = tags.find(t => t.name === 'UserService' && t.kind === 'reference');
+      const classRef = tags.find((t) => t.name === 'UserService' && t.kind === 'reference');
       expect(classRef).toBeDefined();
       expect(classRef?.type).toBe('class');
     }, 15000);
@@ -138,15 +138,15 @@ mgr.calculate_total(123)
       expect(tags.length).toBeGreaterThan(0);
 
       // Verify Class definition
-      const classDef = tags.find(t => t.name === 'OrderManager' && t.kind === 'definition');
+      const classDef = tags.find((t) => t.name === 'OrderManager' && t.kind === 'definition');
       expect(classDef).toBeDefined();
 
       // Verify Method definition
-      const methodDef = tags.find(t => t.name === 'calculate_total' && t.kind === 'definition');
+      const methodDef = tags.find((t) => t.name === 'calculate_total' && t.kind === 'definition');
       expect(methodDef).toBeDefined();
 
       // Verify Function definition
-      const funcDef = tags.find(t => t.name === 'get_order_items' && t.kind === 'definition');
+      const funcDef = tags.find((t) => t.name === 'get_order_items' && t.kind === 'definition');
       expect(funcDef).toBeDefined();
     }, 15000);
 
@@ -178,15 +178,15 @@ func main() {
       expect(tags.length).toBeGreaterThan(0);
 
       // Verify struct/type definition
-      const structDef = tags.find(t => t.name === 'Book' && t.kind === 'definition');
+      const structDef = tags.find((t) => t.name === 'Book' && t.kind === 'definition');
       expect(structDef).toBeDefined();
 
       // Verify method definition
-      const methodDef = tags.find(t => t.name === 'GetTitle' && t.kind === 'definition');
+      const methodDef = tags.find((t) => t.name === 'GetTitle' && t.kind === 'definition');
       expect(methodDef).toBeDefined();
 
       // Verify function definition
-      const funcDef = tags.find(t => t.name === 'printBook' && t.kind === 'definition');
+      const funcDef = tags.find((t) => t.name === 'printBook' && t.kind === 'definition');
       expect(funcDef).toBeDefined();
     }, 15000);
 
@@ -222,28 +222,52 @@ func main() {
       // - utils.ts defines 'helper'
       // - service.ts defines 'runService' which references/calls 'helper'
       // - main.ts defines 'main' which references/calls 'runService'
-      
+
       const files = [
         {
           filePath: 'utils.ts',
           tags: [
-            { name: 'helper', kind: 'definition', type: 'function', startLine: 1, endLine: 5 } as const
-          ]
+            {
+              name: 'helper',
+              kind: 'definition',
+              type: 'function',
+              startLine: 1,
+              endLine: 5,
+            } as const,
+          ],
         },
         {
           filePath: 'service.ts',
           tags: [
-            { name: 'runService', kind: 'definition', type: 'function', startLine: 1, endLine: 10 } as const,
-            { name: 'helper', kind: 'reference', type: 'call', startLine: 4, endLine: 4 } as const // Gọi helper bên trong runService
-          ]
+            {
+              name: 'runService',
+              kind: 'definition',
+              type: 'function',
+              startLine: 1,
+              endLine: 10,
+            } as const,
+            { name: 'helper', kind: 'reference', type: 'call', startLine: 4, endLine: 4 } as const, // Gọi helper bên trong runService
+          ],
         },
         {
           filePath: 'main.ts',
           tags: [
-            { name: 'main', kind: 'definition', type: 'function', startLine: 1, endLine: 8 } as const,
-            { name: 'runService', kind: 'reference', type: 'call', startLine: 3, endLine: 3 } as const // Gọi runService bên trong main
-          ]
-        }
+            {
+              name: 'main',
+              kind: 'definition',
+              type: 'function',
+              startLine: 1,
+              endLine: 8,
+            } as const,
+            {
+              name: 'runService',
+              kind: 'reference',
+              type: 'call',
+              startLine: 3,
+              endLine: 3,
+            } as const, // Gọi runService bên trong main
+          ],
+        },
       ];
 
       const ranks = ranker.rankSymbols(files);
@@ -268,7 +292,13 @@ func main() {
       const hash = cache.calculateHash(content);
 
       const mockSymbols = [
-        { name: 'UserService', kind: 'definition', type: 'class', startLine: 1, endLine: 1 } as const
+        {
+          name: 'UserService',
+          kind: 'definition',
+          type: 'class',
+          startLine: 1,
+          endLine: 1,
+        } as const,
       ];
 
       // 1. Kiểm tra cache trống ban đầu
@@ -278,7 +308,7 @@ func main() {
       // 2. Lưu vào cache và lấy ra
       cache.saveCachedSymbols(filePath, hash, [...mockSymbols]);
       const cachedFetch = cache.getCachedSymbols(filePath, hash);
-      
+
       expect(cachedFetch).not.toBeNull();
       expect(cachedFetch?.length).toBe(1);
       expect(cachedFetch?.[0]?.name).toBe('UserService');

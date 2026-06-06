@@ -1,5 +1,5 @@
 // ==============================================================================
-// GHITA CODING AGENT - Agent Middleware Types
+// GHITA CODING AGENT - Agent Middleware Types (Phase 12 Enhanced)
 // ==============================================================================
 
 import type { ManagedAgent } from '../index.js';
@@ -102,4 +102,54 @@ export interface AgentMiddleware {
 
   /** Called when the agent completes */
   onComplete?(context: MiddlewareContext, finalResponse: BaseMessage): Promise<void>;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 12: Pipeline configuration & metrics
+// ---------------------------------------------------------------------------
+
+/** Configuration for the middleware pipeline */
+export interface MiddlewarePipelineConfig {
+  /** Maximum execution time for a single middleware hook (ms, default: 30_000) */
+  middlewareTimeoutMs?: number;
+  /** Whether to stop the pipeline on middleware error (default: false) */
+  errorBoundary?: boolean;
+  /** Dry-run mode — execute hooks but don't apply mutations (default: false) */
+  dryRun?: boolean;
+  /** Maximum number of middleware metrics entries to retain (default: 500) */
+  maxMetricsEntries?: number;
+  /** Whether to collect execution metrics (default: true) */
+  metricsEnabled?: boolean;
+}
+
+/** Execution metric for a single middleware invocation */
+export interface MiddlewareMetric {
+  /** Middleware name */
+  middlewareName: string;
+  /** Hook phase that was called */
+  phase: 'preModel' | 'postModel' | 'preTool' | 'postTool' | 'onError' | 'onComplete';
+  /** Execution duration in milliseconds */
+  durationMs: number;
+  /** Whether the hook succeeded */
+  success: boolean;
+  /** Error message if the hook failed */
+  error?: string;
+  /** Timestamp of execution */
+  timestamp: number;
+}
+
+/** Summary statistics for a middleware */
+export interface MiddlewareStats {
+  /** Middleware name */
+  name: string;
+  /** Total invocations across all phases */
+  totalCalls: number;
+  /** Successful invocations */
+  successCount: number;
+  /** Failed invocations */
+  failureCount: number;
+  /** Average duration in ms */
+  avgDurationMs: number;
+  /** Last execution timestamp */
+  lastExecutedAt: number;
 }

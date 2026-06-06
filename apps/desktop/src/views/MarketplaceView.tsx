@@ -14,7 +14,8 @@ const MARKETPLACE_PLUGINS: PluginManifest[] = [
   {
     id: 'ghita-github-assistant',
     name: 'GitHub Assistant',
-    description: 'Tự động đồng bộ git, push commit, quản lý Pull Requests và issue tracker trực tiếp từ chat panel.',
+    description:
+      'Tự động đồng bộ git, push commit, quản lý Pull Requests và issue tracker trực tiếp từ chat panel.',
     version: '1.0.2',
     author: 'GHITA Dev Team',
     type: 'code',
@@ -25,7 +26,8 @@ const MARKETPLACE_PLUGINS: PluginManifest[] = [
   {
     id: 'ghita-docker-orchestrator',
     name: 'Docker Container Orchestrator',
-    description: 'Đóng gói các skills quản lý container Docker, kiểm tra logs, build image và quản lý volume an toàn.',
+    description:
+      'Đóng gói các skills quản lý container Docker, kiểm tra logs, build image và quản lý volume an toàn.',
     version: '0.9.5',
     author: 'Docker Community',
     type: 'bundle',
@@ -43,7 +45,8 @@ const MARKETPLACE_PLUGINS: PluginManifest[] = [
   {
     id: 'ghita-vercel-deployer',
     name: 'Vercel Deployment Automation',
-    description: 'Liên kết project, tự động trigger deploy preview, production và audit logs trong quy trình CI/CD.',
+    description:
+      'Liên kết project, tự động trigger deploy preview, production và audit logs trong quy trình CI/CD.',
     version: '1.1.0',
     author: 'Vercel Expert',
     type: 'code',
@@ -53,7 +56,8 @@ const MARKETPLACE_PLUGINS: PluginManifest[] = [
   {
     id: 'ghita-db-client',
     name: 'Database Explorer Skill Pack',
-    description: 'Skills tương tác nhanh với các DB PostgreSQL, MySQL, SQLite, MongoDB. Cho phép AI preview schema và tối ưu query.',
+    description:
+      'Skills tương tác nhanh với các DB PostgreSQL, MySQL, SQLite, MongoDB. Cho phép AI preview schema và tối ưu query.',
     version: '1.2.0',
     author: 'Database Pros',
     type: 'bundle',
@@ -71,7 +75,8 @@ const MARKETPLACE_PLUGINS: PluginManifest[] = [
   {
     id: 'ghita-jira-connector',
     name: 'Jira Workspace Sync',
-    description: 'Đọc và cập nhật ticket Jira, chuyển đổi trạng thái issue, liên kết git commits với story ID tương ứng.',
+    description:
+      'Đọc và cập nhật ticket Jira, chuyển đổi trạng thái issue, liên kết git commits với story ID tương ứng.',
     version: '0.8.2',
     author: 'Atlassian Community',
     type: 'code',
@@ -81,7 +86,8 @@ const MARKETPLACE_PLUGINS: PluginManifest[] = [
   {
     id: 'ghita-vision-grounding-extra',
     name: 'Advanced Visual Grounding SDK',
-    description: 'Mô hình vision cục bộ bổ trợ nâng cao độ chính xác coordinate recognition khi sử dụng Computer Use trên màn hình lớn.',
+    description:
+      'Mô hình vision cục bộ bổ trợ nâng cao độ chính xác coordinate recognition khi sử dụng Computer Use trên màn hình lớn.',
     version: '2.0.0',
     author: 'Vision AI Lab',
     type: 'code',
@@ -131,7 +137,10 @@ export function MarketplaceView() {
     }));
     // Avoid duplicates: hardcoded plugins take priority
     const hardcodedIds = new Set(localizedHardcoded.map((p) => p.id));
-    const merged = [...localizedHardcoded, ...catalogAsPlugins.filter((p) => !hardcodedIds.has(p.id))];
+    const merged = [
+      ...localizedHardcoded,
+      ...catalogAsPlugins.filter((p) => !hardcodedIds.has(p.id)),
+    ];
     return merged;
   }, [catalogSkills, t]);
 
@@ -205,13 +214,28 @@ export function MarketplaceView() {
   };
 
   return (
-    <div style={{ height: '100%', overflow: 'auto', padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      
+    <div
+      style={{
+        height: '100%',
+        overflow: 'auto',
+        padding: '32px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '24px',
+      }}
+    >
       {/* Header section */}
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h2 style={{ fontSize: '26px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '6px' }}>
+            <h2
+              style={{
+                fontSize: '26px',
+                fontWeight: 800,
+                color: 'var(--text-primary)',
+                marginBottom: '6px',
+              }}
+            >
               {t('marketplace.title')} 🧩
             </h2>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
@@ -277,7 +301,7 @@ export function MarketplaceView() {
               bundle: t('marketplace.filterBundle') + ' 📦',
               installed: t('marketplace.filterInstalled') + ' ✅',
             }[type];
-            
+
             const active = filterType === type;
             return (
               <button
@@ -337,8 +361,12 @@ export function MarketplaceView() {
           }}
         >
           <span style={{ fontSize: '48px' }}>🧩</span>
-          <div style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{t('marketplace.emptyTitle')}</div>
-          <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>{t('marketplace.emptyHint')}</div>
+          <div style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+            {t('marketplace.emptyTitle')}
+          </div>
+          <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+            {t('marketplace.emptyHint')}
+          </div>
         </div>
       ) : (
         <div
@@ -386,15 +414,24 @@ export function MarketplaceView() {
                     left: 0,
                     width: '100%',
                     height: '3px',
-                    background: plugin.type === 'code' 
-                      ? 'linear-gradient(90deg, #ec4899, #c084fc)' 
-                      : 'linear-gradient(90deg, #60a5fa, #22d3ee)',
+                    background:
+                      plugin.type === 'code'
+                        ? 'linear-gradient(90deg, #ec4899, #c084fc)'
+                        : 'linear-gradient(90deg, #60a5fa, #22d3ee)',
                   }}
                 />
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div style={{ fontWeight: 700, fontSize: '18px', color: 'var(--text-primary)' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                    }}
+                  >
+                    <div
+                      style={{ fontWeight: 700, fontSize: '18px', color: 'var(--text-primary)' }}
+                    >
                       {plugin.name}
                     </div>
                     <span
@@ -403,7 +440,8 @@ export function MarketplaceView() {
                         fontWeight: 600,
                         padding: '2px 8px',
                         borderRadius: '20px',
-                        background: plugin.type === 'code' ? 'rgba(236,72,153,0.1)' : 'rgba(96,165,250,0.1)',
+                        background:
+                          plugin.type === 'code' ? 'rgba(236,72,153,0.1)' : 'rgba(96,165,250,0.1)',
                         color: plugin.type === 'code' ? '#f472b6' : '#60a5fa',
                         border: `1px solid ${plugin.type === 'code' ? 'rgba(236,72,153,0.2)' : 'rgba(96,165,250,0.2)'}`,
                       }}
@@ -412,28 +450,61 @@ export function MarketplaceView() {
                     </span>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '10px', fontSize: '12px', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: '10px',
+                      fontSize: '12px',
+                      color: 'var(--text-muted)',
+                      flexWrap: 'wrap',
+                    }}
+                  >
                     <span>v{plugin.version}</span>
                     <span>•</span>
-                    <span>{t('marketplace.author')} <strong>{plugin.author}</strong></span>
+                    <span>
+                      {t('marketplace.author')} <strong>{plugin.author}</strong>
+                    </span>
                     {catalogMeta.get(plugin.id) && (
                       <>
                         <span>•</span>
-                        <span>{(catalogMeta.get(plugin.id)?.downloads ?? 0).toLocaleString()} {t('marketplace.downloads')}</span>
+                        <span>
+                          {(catalogMeta.get(plugin.id)?.downloads ?? 0).toLocaleString()}{' '}
+                          {t('marketplace.downloads')}
+                        </span>
                         <span>•</span>
-                        <span>{'★'.repeat(Math.round(catalogMeta.get(plugin.id)?.rating ?? 0))} ({(catalogMeta.get(plugin.id)?.rating ?? 0).toFixed(1)})</span>
+                        <span>
+                          {'★'.repeat(Math.round(catalogMeta.get(plugin.id)?.rating ?? 0))} (
+                          {(catalogMeta.get(plugin.id)?.rating ?? 0).toFixed(1)})
+                        </span>
                       </>
                     )}
                   </div>
 
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '13.5px', lineHeight: 1.5, margin: 0 }}>
+                  <p
+                    style={{
+                      color: 'var(--text-secondary)',
+                      fontSize: '13.5px',
+                      lineHeight: 1.5,
+                      margin: 0,
+                    }}
+                  >
                     {plugin.description}
                   </p>
 
                   {/* Permissions Required */}
                   {plugin.permissions && plugin.permissions.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', marginRight: '4px' }}>
+                    <div
+                      style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}
+                    >
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          color: 'var(--text-muted)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          marginRight: '4px',
+                        }}
+                      >
                         {t('marketplace.permissions')}
                       </span>
                       {plugin.permissions.map((perm) => (
@@ -506,8 +577,16 @@ export function MarketplaceView() {
                             />
                           </label>
                         </div>
-                        <span style={{ fontSize: '12px', color: ipState?.enabled ? 'var(--success)' : 'var(--text-muted)', fontWeight: 600 }}>
-                          {ipState?.enabled ? t('marketplace.activated') : t('marketplace.deactivated')}
+                        <span
+                          style={{
+                            fontSize: '12px',
+                            color: ipState?.enabled ? 'var(--success)' : 'var(--text-muted)',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {ipState?.enabled
+                            ? t('marketplace.activated')
+                            : t('marketplace.deactivated')}
                         </span>
                       </div>
                     )}
@@ -564,7 +643,6 @@ export function MarketplaceView() {
                     )}
                   </div>
                 </div>
-
               </div>
             );
           })}

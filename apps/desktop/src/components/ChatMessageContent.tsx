@@ -39,7 +39,13 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
     }
   };
 
-  const isShellCommand = !lang || lang === 'cmd' || lang === 'powershell' || lang === 'shell' || lang === 'bash' || lang === 'sh';
+  const isShellCommand =
+    !lang ||
+    lang === 'cmd' ||
+    lang === 'powershell' ||
+    lang === 'shell' ||
+    lang === 'bash' ||
+    lang === 'sh';
   const isRunnable = isShellCommand && code.split('\n').filter((line) => line.trim()).length <= 3;
 
   const handleRun = async () => {
@@ -65,22 +71,35 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
     if (result.success) {
       setOutput(result.stdout || t('chat.runSuccessNoOutput'));
     } else {
-      setOutput(result.stderr || result.stdout || `(${t('chat.runError')}, exit code: ${result.code})`);
+      setOutput(
+        result.stderr || result.stdout || `(${t('chat.runError')}, exit code: ${result.code})`,
+      );
     }
     setIsRunning(false);
   };
 
   return (
-    <div style={{
-      margin: '8px 0', borderRadius: '6px',
-      background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)',
-      overflow: 'hidden',
-    }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '4px 10px', fontSize: '10px', color: '#64748b',
-        background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.05)',
-      }}>
+    <div
+      style={{
+        margin: '8px 0',
+        borderRadius: '6px',
+        background: 'rgba(0,0,0,0.3)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '4px 10px',
+          fontSize: '10px',
+          color: '#64748b',
+          background: 'rgba(255,255,255,0.03)',
+          borderBottom: '1px solid rgba(255,255,255,0.05)',
+        }}
+      >
         <span style={{ textTransform: 'uppercase', fontWeight: 600 }}>{lang || 'command'}</span>
         <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
           <button
@@ -115,8 +134,12 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
               disabled={isRunning}
               style={{
                 background: isRunning ? 'rgba(99,102,241,0.3)' : 'rgba(99,102,241,0.6)',
-                color: '#fff', border: 'none', borderRadius: '4px',
-                padding: '2px 10px', fontSize: '10px', cursor: isRunning ? 'default' : 'pointer',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '4px',
+                padding: '2px 10px',
+                fontSize: '10px',
+                cursor: isRunning ? 'default' : 'pointer',
                 fontWeight: 600,
               }}
             >
@@ -125,23 +148,41 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
           )}
         </div>
       </div>
-      <pre style={{
-        margin: 0, padding: '10px', fontSize: '12px', color: '#e2e8f0',
-        whiteSpace: 'pre-wrap', wordBreak: 'break-all', overflow: 'auto',
-        maxHeight: '200px', fontFamily: "'Cascadia Code', 'Fira Code', monospace",
-      }}>
+      <pre
+        style={{
+          margin: 0,
+          padding: '10px',
+          fontSize: '12px',
+          color: '#e2e8f0',
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-all',
+          overflow: 'auto',
+          maxHeight: '200px',
+          fontFamily: "'Cascadia Code', 'Fira Code', monospace",
+        }}
+      >
         {code}
       </pre>
       {output && (
-        <div style={{
-          padding: '8px 10px', fontSize: '11px',
-          borderTop: '1px solid rgba(255,255,255,0.05)',
-          background: 'rgba(0,0,0,0.2)',
-          color: output.includes(t('chat.runError')) || output.toLowerCase().includes('error') || output.includes('错误') ? '#f87171' : '#86efac',
-          whiteSpace: 'pre-wrap', wordBreak: 'break-all',
-          maxHeight: '120px', overflow: 'auto',
-          fontFamily: "'Cascadia Code', 'Fira Code', monospace",
-        }}>
+        <div
+          style={{
+            padding: '8px 10px',
+            fontSize: '11px',
+            borderTop: '1px solid rgba(255,255,255,0.05)',
+            background: 'rgba(0,0,0,0.2)',
+            color:
+              output.includes(t('chat.runError')) ||
+              output.toLowerCase().includes('error') ||
+              output.includes('错误')
+                ? '#f87171'
+                : '#86efac',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-all',
+            maxHeight: '120px',
+            overflow: 'auto',
+            fontFamily: "'Cascadia Code', 'Fira Code', monospace",
+          }}
+        >
           {output}
         </div>
       )}
@@ -420,18 +461,14 @@ export function MarkdownMessage({ content }: { content: string }) {
       remarkPlugins={[remarkGfm]}
       rehypePlugins={[rehypeSanitize]}
       components={{
-        p: ({ children }) => (
-          <p style={{ margin: '0 0 8px 0' }}>{children}</p>
-        ),
+        p: ({ children }) => <p style={{ margin: '0 0 8px 0' }}>{children}</p>,
         ul: ({ children }) => (
           <ul style={{ margin: '0 0 8px 0', paddingLeft: '18px' }}>{children}</ul>
         ),
         ol: ({ children }) => (
           <ol style={{ margin: '0 0 8px 0', paddingLeft: '18px' }}>{children}</ol>
         ),
-        li: ({ children }) => (
-          <li style={{ margin: '2px 0' }}>{children}</li>
-        ),
+        li: ({ children }) => <li style={{ margin: '2px 0' }}>{children}</li>,
         blockquote: ({ children }) => (
           <blockquote
             style={{

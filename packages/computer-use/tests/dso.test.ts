@@ -12,10 +12,7 @@ import type {
   ContainerStats,
   SandboxLogEntry,
 } from '../src/sandbox/types.js';
-import {
-  GHITA_SANDBOX_LABEL,
-  DEFAULT_RESOURCE_LIMITS,
-} from '../src/sandbox/types.js';
+import { GHITA_SANDBOX_LABEL, DEFAULT_RESOURCE_LIMITS } from '../src/sandbox/types.js';
 
 // =============================================================================
 // Mock Dockerode
@@ -112,7 +109,7 @@ describe('DSOOrchestrator', () => {
           Labels: expect.objectContaining({
             [GHITA_SANDBOX_LABEL]: expect.any(String),
           }),
-        })
+        }),
       );
     });
 
@@ -126,22 +123,16 @@ describe('DSOOrchestrator', () => {
 
     it('nên tái sử dụng network đã tồn tại trên Docker (statusCode 409)', async () => {
       mockDocker.createNetwork.mockRejectedValueOnce({ statusCode: 409 });
-      mockDocker.listNetworks.mockResolvedValueOnce([
-        { Id: 'existing-net-id' },
-      ]);
+      mockDocker.listNetworks.mockResolvedValueOnce([{ Id: 'existing-net-id' }]);
 
       const networkId = await dso.createNetwork('existing-net');
       expect(networkId).toBe('existing-net-id');
     });
 
     it('nên throw error nếu tạo network thất bại', async () => {
-      mockDocker.createNetwork.mockRejectedValueOnce(
-        new Error('Docker daemon not running')
-      );
+      mockDocker.createNetwork.mockRejectedValueOnce(new Error('Docker daemon not running'));
 
-      await expect(dso.createNetwork('fail-net')).rejects.toThrow(
-        'Failed to create network'
-      );
+      await expect(dso.createNetwork('fail-net')).rejects.toThrow('Failed to create network');
     });
   });
 
@@ -175,7 +166,7 @@ describe('DSOOrchestrator', () => {
             [GHITA_SANDBOX_LABEL]: expect.any(String),
             'ghita-service-name': 'test-service',
           }),
-        })
+        }),
       );
     });
 
@@ -189,11 +180,8 @@ describe('DSOOrchestrator', () => {
 
       expect(mockDocker.createContainer).toHaveBeenCalledWith(
         expect.objectContaining({
-          Env: expect.arrayContaining([
-            'NODE_ENV=production',
-            'PORT=3000',
-          ]),
-        })
+          Env: expect.arrayContaining(['NODE_ENV=production', 'PORT=3000']),
+        }),
       );
     });
 
@@ -207,7 +195,7 @@ describe('DSOOrchestrator', () => {
           EndpointConfig: expect.objectContaining({
             Aliases: ['test-service'],
           }),
-        })
+        }),
       );
     });
   });
@@ -241,7 +229,7 @@ describe('DSOOrchestrator', () => {
               '/tmp/config:/etc/postgres:ro',
             ]),
           }),
-        })
+        }),
       );
     });
 
@@ -265,7 +253,7 @@ describe('DSOOrchestrator', () => {
               '443/tcp': [{ HostIp: '0.0.0.0', HostPort: '' }],
             }),
           }),
-        })
+        }),
       );
     });
   });
@@ -346,7 +334,7 @@ describe('DSOOrchestrator', () => {
             Memory: 2048 * 1024 * 1024,
             MemorySwap: 2048 * 1024 * 1024,
           }),
-        })
+        }),
       );
     });
 
@@ -362,7 +350,7 @@ describe('DSOOrchestrator', () => {
             NanoCpus: DEFAULT_RESOURCE_LIMITS.cpuCores * 1e9,
             Memory: DEFAULT_RESOURCE_LIMITS.memoryMb * 1024 * 1024,
           }),
-        })
+        }),
       );
     });
 

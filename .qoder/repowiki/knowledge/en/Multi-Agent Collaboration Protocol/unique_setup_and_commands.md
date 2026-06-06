@@ -1,2 +1,0 @@
-- Initialize a new collaboration session: `bash create-chat.sh`
-- Join an existing session as a specific role: `bash join-chat.sh <role_name>` (e.g., `developer`, `reviewer`)

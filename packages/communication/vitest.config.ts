@@ -5,7 +5,11 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['../../tests/unit/communicationServer.test.ts'],
+    include: [
+      'tests/**/*.test.ts',
+      '../../tests/unit/communicationServer.test.ts',
+      '../../tests/unit/channels.test.ts'
+    ],
     testTimeout: 10000,
     alias: {
       'socket.io': resolve(__dirname, '../../tests/unit/socket-io-mock.ts'),
@@ -13,7 +17,3 @@ export default defineConfig({
     },
   },
 });
-
-
-
-

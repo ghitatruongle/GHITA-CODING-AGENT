@@ -6,7 +6,7 @@ import type { Agent, AgentGroup, AgentRole, AgentTask } from '@ghita/shared';
 import type { AgentMemory } from '@ghita/memory';
 
 export interface SkillRegistry {
- [key: string]: Record<string, unknown>;
+  [key: string]: Record<string, unknown>;
 }
 
 // --- Phase 4: Multi-Agent & Pipeline exports ---
@@ -50,7 +50,7 @@ export type {
   StructuredOutputSchema,
 } from './react/types.js';
 
-// Agent Middleware
+// Agent Middleware (Phase 12 Enhanced)
 export { MiddlewarePipeline } from './middleware/pipeline.js';
 export type {
   AgentMiddleware,
@@ -61,6 +61,9 @@ export type {
   AgentStepResult,
   HumanApprovalRequest,
   HumanApprovalResponse,
+  MiddlewarePipelineConfig,
+  MiddlewareMetric,
+  MiddlewareStats,
 } from './middleware/types.js';
 
 // Flow Orchestration
@@ -73,6 +76,10 @@ export type {
   FlowRunResult,
   FlowProcessMode,
 } from './flow/types.js';
+
+// Task Delegation Pipeline
+export { TaskDelegationPipeline } from './orchestrator/pipeline.js';
+export type { DelegatedTask, PipelineConfig, PipelineResult } from './orchestrator/pipeline.js';
 
 // Agent Adapters
 export { LangGraphAdapter } from './adapters/langgraph.js';
@@ -271,7 +278,12 @@ export class AgentManager {
     this.tasks.set(task.id, running);
 
     try {
-      const result = await this.runtime({ agent, task: running, skills: this.skills, memory: this.memory });
+      const result = await this.runtime({
+        agent,
+        task: running,
+        skills: this.skills,
+        memory: this.memory,
+      });
       const completed: AgentTask = {
         ...running,
         status: 'completed',
@@ -373,7 +385,10 @@ export class AgentGroupManager {
   }
 }
 
-export function createDefaultAgentManager(skills?: SkillRegistry, memory?: AgentMemory): AgentManager {
+export function createDefaultAgentManager(
+  skills?: SkillRegistry,
+  memory?: AgentMemory,
+): AgentManager {
   const manager = new AgentManager(undefined, skills, memory);
 
   manager.create({
@@ -398,7 +413,13 @@ export function createDefaultAgentManager(skills?: SkillRegistry, memory?: Agent
     name: 'Desktop Agent',
     role: 'executor',
     description: 'Controls desktop mouse, keyboard, screenshots, and apps.',
-    skills: ['computer.moveMouse', 'computer.click', 'computer.typeText', 'screenshot.capture', 'app.open'],
+    skills: [
+      'computer.moveMouse',
+      'computer.click',
+      'computer.typeText',
+      'screenshot.capture',
+      'app.open',
+    ],
   });
   manager.create({
     name: 'Memory Agent',
@@ -418,13 +439,17 @@ export function createDefaultAgentGroupManager(agentManager: AgentManager): Agen
   groupManager.create({
     name: 'Dev Team',
     description: 'Code implementation, review, and verification.',
-    agents: [byName.get('Coder Agent'), byName.get('Reviewer Agent')].filter((id): id is string => Boolean(id)),
+    agents: [byName.get('Coder Agent'), byName.get('Reviewer Agent')].filter((id): id is string =>
+      Boolean(id),
+    ),
     task: 'Implement a scoped code change and verify it.',
   });
   groupManager.create({
     name: 'Automation Team',
     description: 'Browser and desktop automation workflows.',
-    agents: [byName.get('Browser Agent'), byName.get('Desktop Agent')].filter((id): id is string => Boolean(id)),
+    agents: [byName.get('Browser Agent'), byName.get('Desktop Agent')].filter((id): id is string =>
+      Boolean(id),
+    ),
     task: 'Open browser, inspect page data, and execute desktop actions when approved.',
   });
   groupManager.create({
@@ -437,15 +462,31 @@ export function createDefaultAgentGroupManager(agentManager: AgentManager): Agen
   return groupManager;
 }
 
-// --- Phase 4: Subagent Spawner & Cron Scheduler ---
+// --- Phase 4/6: Subagent Spawner, Channel & State Sync ---
 export { SubagentSpawner } from './subagent/spawner.js';
-export type { SubagentSpawnInput, SubagentSpawnResult, SubagentState } from './subagent/types.js';
+export { AgentChannel } from './subagent/channel.js';
+export { StateSyncManager } from './subagent/sync.js';
+export type {
+  SubagentSpawnInput,
+  SubagentSpawnResult,
+  SubagentState,
+  SpawnerConfig,
+  ChannelMessage,
+  ChannelSubscription,
+  StateSnapshot,
+  StateDiff,
+  SyncConfig,
+} from './subagent/types.js';
 export { CronScheduler } from './scheduler/cron.js';
 export type { ScheduledTaskConfig, ScheduledTask } from './scheduler/types.js';
 
 // --- Phase 6: Debate-Driven Architectural Alignment ---
 export { DebateEngine } from './orchestrator/debateEngine.js';
-export type { DebateResult, DebateCallbacks, DebateEngineOptions } from './orchestrator/debateEngine.js';
+export type {
+  DebateResult,
+  DebateCallbacks,
+  DebateEngineOptions,
+} from './orchestrator/debateEngine.js';
 
 // --- Phase 7A: Agent SDK ---
 export { GhitAgentClient } from './sdk/client.js';
@@ -462,14 +503,18 @@ export { WorkflowAgent } from './workflow/engine.js';
 export type { WorkflowStep, WorkflowCallbacks } from './workflow/engine.js';
 
 // --- Phase 3: AST-Lock ---
-export { ASTLockEngine, ASTLockMiddleware, buildHierarchy, computeSemanticHash, loadASTLockConfig } from './checker/astLock.js';
+export {
+  ASTLockEngine,
+  ASTLockMiddleware,
+  buildHierarchy,
+  computeSemanticHash,
+  loadASTLockConfig,
+} from './checker/astLock.js';
 export type { HierarchicalSymbol, ASTLockConfig } from './checker/astLock.js';
 
-// --- Phase 8: Git Safe-Points & Safe-Rollback Loop ---
+// --- Phase 8: Git Safe-Points & Safe-Rollback Loop + Phase 12 Enhancements ---
 export { GitSafePointManager, GitSafePointMiddleware } from './git/workflow.js';
 
 // --- Phase 11: Source-Controlled Markdown CI Checks Gates ---
 export { MarkdownRulesChecker, MarkdownChecksMiddleware } from './checker/markdownRules.js';
 export type { MarkdownRule, CheckIssue } from './checker/markdownRules.js';
-
-

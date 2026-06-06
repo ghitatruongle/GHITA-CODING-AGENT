@@ -40,18 +40,18 @@
 
 ## Tech Stack
 
-| Component | Technology |
-|---|---|
-| Desktop | Tauri 2.x + React (TypeScript) |
-| Mobile | React Native (Android) — minSdk=28 |
-| AI Engine | Vercel AI SDK / LiteLLM / LangChain.js |
-| Browser | Playwright / CloakBrowser |
-| Computer Use | nut.js / UI-TARS |
-| Communication | Socket.IO |
-| Local AI | Ollama |
-| Code Editor | Monaco Editor |
-| Terminal | xterm.js + node-pty |
-| Build | Turborepo + pnpm workspace |
+| Component     | Technology                             |
+| ------------- | -------------------------------------- |
+| Desktop       | Tauri 2.x + React (TypeScript)         |
+| Mobile        | React Native (Android) — minSdk=28     |
+| AI Engine     | Vercel AI SDK / LiteLLM / LangChain.js |
+| Browser       | Playwright / CloakBrowser              |
+| Computer Use  | nut.js / UI-TARS                       |
+| Communication | Socket.IO                              |
+| Local AI      | Ollama                                 |
+| Code Editor   | Monaco Editor                          |
+| Terminal      | xterm.js + node-pty                    |
+| Build         | Turborepo + pnpm workspace             |
 
 ---
 
@@ -113,6 +113,7 @@ cp .env.example .env
 See [`.env.example`](.env.example) for required environment variables.
 
 **Important:**
+
 - At minimum, configure one AI provider (OpenAI, Anthropic, Google, or Ollama)
 - For local AI, set `OLLAMA_BASE_URL=http://localhost:11434` and ensure Ollama is running
 - Default port for Socket.IO server is `8080` (configurable via `SOCKET_PORT`)
@@ -143,24 +144,28 @@ pnpm dev:android
 ## Common Issues & Troubleshooting
 
 ### Desktop app won't start
+
 - Ensure Rust is installed: `rustc --version`
 - Ensure Node.js >= 20 is installed: `node --version`
 - Rebuild the sidecar server if needed
 - Check that port 8080 is not already in use
 
 ### Mobile app can't connect to desktop
+
 - Ensure both devices are on the same network
 - Check that the communication server is running (check Dashboard view)
 - Verify the pairing code is correct
 - Try using manual IP address instead of cloud discovery
 
 ### AI provider not working
+
 - Verify API keys in `.env` file
 - Check that the provider is enabled in the API Manager
 - For Ollama, ensure it's running: `ollama serve`
 - Check network connectivity for cloud providers
 
 ### Skills not working
+
 - Some skills require specific adapters (file, terminal, screenshot)
 - Computer and browser skills are disabled by default for security
 - Enable skills in the Skills view if needed
@@ -170,34 +175,34 @@ pnpm dev:android
 
 ## Scripts
 
-| Script | Description |
-|---|---|
-| `pnpm dev` | Run all workspaces in dev mode |
-| `pnpm dev:desktop` | Run desktop app (Tauri) |
-| `pnpm dev:android` | Run Android app |
-| `pnpm build` | Build everything |
-| `pnpm build:desktop` | Build desktop app |
-| `pnpm build:android` | Build Android APK |
-| `pnpm build:packages` | Build packages only |
-| `pnpm lint` | Check code style |
-| `pnpm lint:fix` | Auto-fix lint issues |
-| `pnpm typecheck` | Check TypeScript |
-| `pnpm format` | Format code with Prettier |
-| `pnpm test` | Run tests |
-| `pnpm clean` | Remove build artifacts |
-| `pnpm clean:all` | Remove everything (including node_modules) |
+| Script                | Description                                |
+| --------------------- | ------------------------------------------ |
+| `pnpm dev`            | Run all workspaces in dev mode             |
+| `pnpm dev:desktop`    | Run desktop app (Tauri)                    |
+| `pnpm dev:android`    | Run Android app                            |
+| `pnpm build`          | Build everything                           |
+| `pnpm build:desktop`  | Build desktop app                          |
+| `pnpm build:android`  | Build Android APK                          |
+| `pnpm build:packages` | Build packages only                        |
+| `pnpm lint`           | Check code style                           |
+| `pnpm lint:fix`       | Auto-fix lint issues                       |
+| `pnpm typecheck`      | Check TypeScript                           |
+| `pnpm format`         | Format code with Prettier                  |
+| `pnpm test`           | Run tests                                  |
+| `pnpm clean`          | Remove build artifacts                     |
+| `pnpm clean:all`      | Remove everything (including node_modules) |
 
 ---
 
 ## Changelog
 
-| Version | Date | Description |
-|---|---|---|
-| DEMO | 19/05/2026 | Initial demo release |
-| Update 0.0.1 | 21/05/2026 | Optimized phone-computer connection and fixed minor bugs |
-| Update 0.0.2 beta1 | 21/05/2026 | Code Editor VSCode-style, File Explorer, Multi-tab, 13 AI providers, Dashboard real-time, API Manager redesign, Chat markdown rendering, Token counter |
-| Update 0.0.2 beta2 | 22/05/2026 | Sandboxed workspace tools (CRUD, pure-Node grep search, block traversal), Socket.IO live telemetry and terminal command approval consent gate, integration testing and compilation |
-| Update 0.0.2 | 26/05/2026 | Added 6 breakthrough features: SCTI trajectory self-healing, AST-Lock method protection, Live Telepresence stream, Rust memory addon, AHPI performance heatmap, DebateEngine reviewer panel, and /deep-research command |
+| Version            | Date       | Description                                                                                                                                                                                                                                                                               |
+| ------------------ | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DEMO               | 19/05/2026 | Initial demo release                                                                                                                                                                                                                                                                      |
+| Update 0.0.1       | 21/05/2026 | Optimized phone-computer connection and fixed minor bugs                                                                                                                                                                                                                                  |
+| Update 0.0.2 beta1 | 21/05/2026 | Code Editor VSCode-style, File Explorer, Multi-tab, 13 AI providers, Dashboard real-time, API Manager redesign, Chat markdown rendering, Token counter                                                                                                                                    |
+| Update 0.0.2 beta2 | 22/05/2026 | Sandboxed workspace tools (CRUD, pure-Node grep search, block traversal), Socket.IO live telemetry and terminal command approval consent gate, integration testing and compilation                                                                                                        |
+| Update 0.0.2       | 26/05/2026 | Added 6 breakthrough features: SCTI trajectory self-healing, AST-Lock method protection, Live Telepresence stream, Rust memory addon, AHPI performance heatmap, DebateEngine reviewer panel, and /deep-research command                                                                   |
 | Update 0.0.3 beta1 | 02/06/2026 | Real Terminal PTY (node-pty sidecar), Playwright-Stealth multi-tab browser, Agentic Observe & Act layer, Sandbox guardrails, VS Code extension WebSocket sync, Monaco linter diagnostics & diff view, Mobile touch remote control, Embedded Tauri webview, E2E integration & CI benchmark |
 
 ---
@@ -232,18 +237,18 @@ pnpm dev:android
 
 ## Công nghệ Sử dụng
 
-| Thành phần | Công nghệ |
-|---|---|
-| Desktop | Tauri 2.x + React (TypeScript) |
-| Mobile | React Native (Android) — minSdk=28 |
-| AI Engine | Vercel AI SDK / LiteLLM / LangChain.js |
-| Browser | Playwright / CloakBrowser |
-| Computer Use | nut.js / UI-TARS |
-| Giao tiếp | Socket.IO |
-| Local AI | Ollama |
-| Code Editor | Monaco Editor |
-| Terminal | xterm.js + node-pty |
-| Build Tool | Turborepo + pnpm workspace |
+| Thành phần   | Công nghệ                              |
+| ------------ | -------------------------------------- |
+| Desktop      | Tauri 2.x + React (TypeScript)         |
+| Mobile       | React Native (Android) — minSdk=28     |
+| AI Engine    | Vercel AI SDK / LiteLLM / LangChain.js |
+| Browser      | Playwright / CloakBrowser              |
+| Computer Use | nut.js / UI-TARS                       |
+| Giao tiếp    | Socket.IO                              |
+| Local AI     | Ollama                                 |
+| Code Editor  | Monaco Editor                          |
+| Terminal     | xterm.js + node-pty                    |
+| Build Tool   | Turborepo + pnpm workspace             |
 
 ---
 
@@ -305,6 +310,7 @@ cp .env.example .env
 Xem tệp [`.env.example`](.env.example) để biết danh sách các biến môi trường bắt buộc.
 
 **Lưu ý quan trọng:**
+
 - Tối thiểu, hãy cấu hình một nhà cung cấp AI (OpenAI, Anthropic, Google hoặc Ollama)
 - Đối với AI cục bộ, hãy đặt `OLLAMA_BASE_URL=http://localhost:11434` và đảm bảo Ollama đang chạy
 - Cổng mặc định cho Socket.IO server là `8080` (có thể cấu hình qua `SOCKET_PORT`)
@@ -335,24 +341,28 @@ pnpm dev:android
 ## Các Vấn đề Thường Gặp & Khắc Phục Sự Cố
 
 ### Ứng dụng desktop không khởi động được
+
 - Đảm bảo Rust đã được cài đặt: `rustc --version`
 - Đảm bảo Node.js >= 20 đã được cài đặt: `node --version`
 - Xây dựng lại sidecar server nếu cần
 - Kiểm tra rằng cổng 8080 không đang được sử dụng bởi ứng dụng khác
 
 ### Ứng dụng di động không thể kết nối với desktop
+
 - Đảm bảo cả hai thiết bị đều trên cùng mạng
 - Kiểm tra rằng communication server đang chạy (xem Dashboard view)
 - Xác minh mã ghép nối (pairing code) là chính xác
 - Thử sử dụng địa chỉ IP thủ công thay vì cloud discovery
 
 ### Nhà cung cấp AI không hoạt động
+
 - Xác minh các khóa API trong tệp `.env`
 - Kiểm tra rằng nhà cung cấp đã được bật trong API Manager
 - Đối với Ollama, đảm bảo nó đang chạy: `ollama serve`
 - Kiểm tra kết nối mạng cho các nhà cung cấp đám mây
 
 ### Kỹ năng (Skills) không hoạt động
+
 - Một số kỹ năng yêu cầu các adapter cụ thể (file, terminal, screenshot)
 - Kỹ năng máy tính và trình duyệt bị tắt mặc định vì lý do bảo mật
 - Bật kỹ năng trong Skills view nếu cần
@@ -362,34 +372,34 @@ pnpm dev:android
 
 ## Các Lệnh Scripts
 
-| Lệnh | Mô tả |
-|---|---|
-| `pnpm dev` | Chạy tất cả các dự án con ở chế độ dev |
-| `pnpm dev:desktop` | Chạy ứng dụng máy tính (Tauri) |
-| `pnpm dev:android` | Chạy ứng dụng Android |
-| `pnpm build` | Xây dựng (build) toàn bộ dự án |
-| `pnpm build:desktop` | Xây dựng ứng dụng máy tính |
-| `pnpm build:android` | Tạo tệp cài đặt Android (.APK) |
-| `pnpm build:packages` | Chỉ xây dựng các gói thư viện nội bộ |
-| `pnpm lint` | Kiểm tra lỗi cú pháp và định dạng mã |
-| `pnpm lint:fix` | Tự động sửa lỗi cú pháp |
-| `pnpm typecheck` | Kiểm tra kiểu TypeScript |
-| `pnpm format` | Định dạng mã nguồn bằng Prettier |
-| `pnpm test` | Chạy các bài kiểm thử |
-| `pnpm clean` | Xóa các tệp build tạm |
-| `pnpm clean:all` | Xóa tất cả các tệp tạm (bao gồm cả node_modules) |
+| Lệnh                  | Mô tả                                            |
+| --------------------- | ------------------------------------------------ |
+| `pnpm dev`            | Chạy tất cả các dự án con ở chế độ dev           |
+| `pnpm dev:desktop`    | Chạy ứng dụng máy tính (Tauri)                   |
+| `pnpm dev:android`    | Chạy ứng dụng Android                            |
+| `pnpm build`          | Xây dựng (build) toàn bộ dự án                   |
+| `pnpm build:desktop`  | Xây dựng ứng dụng máy tính                       |
+| `pnpm build:android`  | Tạo tệp cài đặt Android (.APK)                   |
+| `pnpm build:packages` | Chỉ xây dựng các gói thư viện nội bộ             |
+| `pnpm lint`           | Kiểm tra lỗi cú pháp và định dạng mã             |
+| `pnpm lint:fix`       | Tự động sửa lỗi cú pháp                          |
+| `pnpm typecheck`      | Kiểm tra kiểu TypeScript                         |
+| `pnpm format`         | Định dạng mã nguồn bằng Prettier                 |
+| `pnpm test`           | Chạy các bài kiểm thử                            |
+| `pnpm clean`          | Xóa các tệp build tạm                            |
+| `pnpm clean:all`      | Xóa tất cả các tệp tạm (bao gồm cả node_modules) |
 
 ---
 
 ## Nhật ký Thay đổi (Changelog)
 
-| Phiên bản | Ngày | Mô tả |
-|---|---|---|
-| DEMO | 19/05/2026 | Bản demo phát hành đầu tiên |
-| Cập nhật 0.0.1 | 21/05/2026 | Tối ưu kết nối điện thoại-máy tính và sửa các lỗi nhỏ |
-| Cập nhật 0.0.2 beta1 | 21/05/2026 | Tích hợp trình biên tập mã kiểu VSCode, Trình quản lý tệp, Đa thẻ (Multi-tab), 13 nhà cung cấp AI, Bảng điều khiển thời gian thực, Thiết kế lại quản lý API, Hiển thị chat định dạng markdown, Bộ đếm token |
-| Cập nhật 0.0.2 beta2 | 22/05/2026 | Các công cụ không gian làm việc an toàn (CRUD, tìm kiếm grep thuần Node, duyệt khối), Kết nối Socket.IO trực tiếp và cơ chế phê duyệt lệnh terminal, kiểm thử tích hợp và biên dịch |
-| Cập nhật 0.0.2 | 26/05/2026 | Thêm 6 tính năng đột phá: Tự chữa lành quỹ đạo SCTI, Bảo vệ phương thức AST-Lock, Stream hiện diện trực tiếp, Addon bộ nhớ Rust, Bản đồ nhiệt hiệu năng AHPI, Bảng đánh giá tranh biện DebateEngine và lệnh /deep-research |
+| Phiên bản            | Ngày       | Mô tả                                                                                                                                                                                                                                                                               |
+| -------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DEMO                 | 19/05/2026 | Bản demo phát hành đầu tiên                                                                                                                                                                                                                                                         |
+| Cập nhật 0.0.1       | 21/05/2026 | Tối ưu kết nối điện thoại-máy tính và sửa các lỗi nhỏ                                                                                                                                                                                                                               |
+| Cập nhật 0.0.2 beta1 | 21/05/2026 | Tích hợp trình biên tập mã kiểu VSCode, Trình quản lý tệp, Đa thẻ (Multi-tab), 13 nhà cung cấp AI, Bảng điều khiển thời gian thực, Thiết kế lại quản lý API, Hiển thị chat định dạng markdown, Bộ đếm token                                                                         |
+| Cập nhật 0.0.2 beta2 | 22/05/2026 | Các công cụ không gian làm việc an toàn (CRUD, tìm kiếm grep thuần Node, duyệt khối), Kết nối Socket.IO trực tiếp và cơ chế phê duyệt lệnh terminal, kiểm thử tích hợp và biên dịch                                                                                                 |
+| Cập nhật 0.0.2       | 26/05/2026 | Thêm 6 tính năng đột phá: Tự chữa lành quỹ đạo SCTI, Bảo vệ phương thức AST-Lock, Stream hiện diện trực tiếp, Addon bộ nhớ Rust, Bản đồ nhiệt hiệu năng AHPI, Bảng đánh giá tranh biện DebateEngine và lệnh /deep-research                                                          |
 | Cập nhật 0.0.3 beta1 | 02/06/2026 | Terminal PTY thật (node-pty sidecar), Trình duyệt Playwright-Stealth đa thẻ, Lớp Agentic Observe & Act, Bảo vệ sandbox, VS Code extension đồng bộ WebSocket, Monaco chẩn đoán linter & diff view, Mobile điều khiển cảm ứng từ xa, Tauri webview nhúng, Tích hợp E2E & CI benchmark |
 
 ---
@@ -424,18 +434,18 @@ Sử dụng giấy phép [MIT](LICENSE) — Bản quyền (c) 2026 thuộc về 
 
 ## 技术栈
 
-| 组件 | 技术 |
-|---|---|
-| 桌面端 | Tauri 2.x + React (TypeScript) |
-| 移动端 | React Native (Android) — minSdk=28 |
-| AI 引擎 | Vercel AI SDK / LiteLLM / LangChain.js |
-| 浏览器自动化 | Playwright / CloakBrowser |
-| 计算机操作 | nut.js / UI-TARS |
-| 通信 | Socket.IO |
-| 本地 AI | Ollama |
-| 代码编辑器 | Monaco Editor |
-| 终端 | xterm.js + node-pty |
-| 构建工具 | Turborepo + pnpm workspace |
+| 组件         | 技术                                   |
+| ------------ | -------------------------------------- |
+| 桌面端       | Tauri 2.x + React (TypeScript)         |
+| 移动端       | React Native (Android) — minSdk=28     |
+| AI 引擎      | Vercel AI SDK / LiteLLM / LangChain.js |
+| 浏览器自动化 | Playwright / CloakBrowser              |
+| 计算机操作   | nut.js / UI-TARS                       |
+| 通信         | Socket.IO                              |
+| 本地 AI      | Ollama                                 |
+| 代码编辑器   | Monaco Editor                          |
+| 终端         | xterm.js + node-pty                    |
+| 构建工具     | Turborepo + pnpm workspace             |
 
 ---
 
@@ -497,6 +507,7 @@ cp .env.example .env
 所需环境变量详见 [`.env.example`](.env.example)。
 
 **重要提示:**
+
 - 至少配置一个 AI 服务商(OpenAI、Anthropic、Google 或 Ollama)
 - 使用本地 AI 时,请设置 `OLLAMA_BASE_URL=http://localhost:11434` 并确保 Ollama 正在运行
 - Socket.IO 服务器默认端口为 `8080`(可通过 `SOCKET_PORT` 配置)
@@ -527,24 +538,28 @@ pnpm dev:android
 ## 常见问题与故障排除
 
 ### 桌面应用无法启动
+
 - 确认已安装 Rust:`rustc --version`
 - 确认已安装 Node.js >= 20:`node --version`
 - 如有需要请重新构建 sidecar 服务器
 - 检查 8080 端口未被其他程序占用
 
 ### 移动应用无法连接桌面端
+
 - 确认两台设备处于同一网络
 - 检查通信服务器是否正在运行(查看 Dashboard 视图)
 - 验证配对码是否正确
 - 尝试使用手动 IP 地址代替云发现
 
 ### AI 服务商无法使用
+
 - 验证 `.env` 文件中的 API 密钥
 - 检查 API Manager 中该服务商是否已启用
 - 对于 Ollama,确保其正在运行:`ollama serve`
 - 检查云服务商的网络连接
 
 ### 技能(Skills)无法使用
+
 - 部分技能需要特定的适配器(file、terminal、screenshot)
 - 计算机和浏览器技能默认出于安全考虑被禁用
 - 如有需要请在 Skills 视图中启用
@@ -554,35 +569,53 @@ pnpm dev:android
 
 ## 常用脚本命令
 
-| 命令 | 说明 |
-|---|---|
-| `pnpm dev` | 以开发模式运行所有子项目 |
-| `pnpm dev:desktop` | 运行桌面应用(Tauri) |
-| `pnpm dev:android` | 运行安卓应用 |
-| `pnpm build` | 构建整个项目 |
-| `pnpm build:desktop` | 构建桌面应用 |
-| `pnpm build:android` | 构建安卓 APK |
-| `pnpm build:packages` | 仅构建内部库包 |
-| `pnpm lint` | 检查代码风格 |
-| `pnpm lint:fix` | 自动修复代码风格问题 |
-| `pnpm typecheck` | 检查 TypeScript 类型 |
-| `pnpm format` | 使用 Prettier 格式化代码 |
-| `pnpm test` | 运行测试用例 |
-| `pnpm clean` | 清理构建产物 |
-| `pnpm clean:all` | 清理所有文件(包括 node_modules) |
+| 命令                  | 说明                            |
+| --------------------- | ------------------------------- |
+| `pnpm dev`            | 以开发模式运行所有子项目        |
+| `pnpm dev:desktop`    | 运行桌面应用(Tauri)             |
+| `pnpm dev:android`    | 运行安卓应用                    |
+| `pnpm build`          | 构建整个项目                    |
+| `pnpm build:desktop`  | 构建桌面应用                    |
+| `pnpm build:android`  | 构建安卓 APK                    |
+| `pnpm build:packages` | 仅构建内部库包                  |
+| `pnpm lint`           | 检查代码风格                    |
+| `pnpm lint:fix`       | 自动修复代码风格问题            |
+| `pnpm typecheck`      | 检查 TypeScript 类型            |
+| `pnpm format`         | 使用 Prettier 格式化代码        |
+| `pnpm test`           | 运行测试用例                    |
+| `pnpm clean`          | 清理构建产物                    |
+| `pnpm clean:all`      | 清理所有文件(包括 node_modules) |
 
 ---
 
 ## 更新日志
 
-| 版本 | 日期 | 说明 |
-|---|---|---|
-| DEMO | 19/05/2026 | 首次发布演示版 |
-| 更新 0.0.1 | 21/05/2026 | 优化手机与电脑的连接,修复若干小问题 |
-| 更新 0.0.2 beta1 | 21/05/2026 | 集成 VSCode 风格代码编辑器、文件管理器、多标签页、13 家 AI 服务商、实时仪表盘、API 管理器重新设计、聊天 Markdown 渲染、Token 计数器 |
-| 更新 0.0.2 beta2 | 22/05/2026 | 安全的工作区工具(CRUD、纯 Node grep 搜索、区块遍历)、Socket.IO 实时遥测与终端命令审批同意机制、集成测试与编译 |
-| 更新 0.0.2 | 26/05/2026 | 新增 6 项突破性功能:SCTI 轨迹自愈、AST-Lock 方法保护、实时远程呈现流、Rust 内存插件、AHPI 性能热力图、DebateEngine 评审面板以及 /deep-research 命令 |
+| 版本             | 日期       | 说明                                                                                                                                                                                                                                         |
+| ---------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DEMO             | 19/05/2026 | 首次发布演示版                                                                                                                                                                                                                               |
+| 更新 0.0.1       | 21/05/2026 | 优化手机与电脑的连接,修复若干小问题                                                                                                                                                                                                          |
+| 更新 0.0.2 beta1 | 21/05/2026 | 集成 VSCode 风格代码编辑器、文件管理器、多标签页、13 家 AI 服务商、实时仪表盘、API 管理器重新设计、聊天 Markdown 渲染、Token 计数器                                                                                                          |
+| 更新 0.0.2 beta2 | 22/05/2026 | 安全的工作区工具(CRUD、纯 Node grep 搜索、区块遍历)、Socket.IO 实时遥测与终端命令审批同意机制、集成测试与编译                                                                                                                                |
+| 更新 0.0.2       | 26/05/2026 | 新增 6 项突破性功能:SCTI 轨迹自愈、AST-Lock 方法保护、实时远程呈现流、Rust 内存插件、AHPI 性能热力图、DebateEngine 评审面板以及 /deep-research 命令                                                                                          |
 | 更新 0.0.3 beta1 | 02/06/2026 | 真实终端 PTY(node-pty sidecar)、Playwright-Stealth 多标签页浏览器、Agentic Observe & Act 层、Sandbox 安全护栏、VS Code 扩展 WebSocket 同步、Monaco linter 诊断与 diff 视图、移动端触摸远程控制、嵌入式 Tauri webview、E2E 集成与 CI 基准测试 |
+
+---
+
+## Security & Configuration Notes / 安全与配置说明
+
+### English
+
+- **Content Security Policy (CSP)**: The `'unsafe-inline'` directive in `style-src` is required during development to support dynamic style injections. For production releases, it is highly recommended to tighten this configuration using nonces or hashes.
+- **Sidecar Port Model**: The background PTY and Node helper services run inside a Tauri sidecar model. The communication port is dynamically assigned during launch and stored inside the Tauri application state.
+- **Updater Signature**: The public key fingerprint for application updates is:
+  `dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU1N0E2RTdGMkQ0MUI5MDgKUldTY09EVmRZV3hzYmxSdllrWnFZMkZ6Y3k5amIyOTFjMkZ1Wkc5M2VYSmhkR2x2Ymw5amEyVnkK`
+
+### Tiếng Việt / 中文
+
+- **Chính sách bảo mật nội dung (CSP) / 内容安全策略**: Directive `'unsafe-inline'` trong `style-src` được yêu cầu trong quá trình phát triển để hỗ trợ chèn CSS động. Trong môi trường production, khuyến nghị thắt chặt chính sách bằng cách sử dụng nonce hoặc hash.
+- **Mô hình cổng Sidecar / Sidecar 端口模型**: Dịch vụ hỗ trợ Node và PTY chạy trong mô hình sidecar của Tauri. Cổng kết nối được cấp phát động khi khởi chạy ứng dụng.
+- **Chữ ký cập nhật / 更新签名**: Vân tay khóa công khai cho trình cập nhật tự động là:
+  `dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU1N0E2RTdGMkQ0MUI5MDgKUldTY09EVmRZV3hzYmxSdllrWnFZMkZ6Y3k5amIyOTFjMkZ1Wkc5M2VYSmhkR2x2Ymw5amEyVnkK`
 
 ---
 

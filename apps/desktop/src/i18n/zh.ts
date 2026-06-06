@@ -33,7 +33,7 @@ export const zh: TranslationKeys = {
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v0.0.3-beta1',
+    version: 'v0.0.3',
     deviceReconnected: '已重新连接设备: {{name}}',
     devicePaired: '成功配对设备: {{name}}',
     commandReceived: '从设备收到命令: {{action}}',
@@ -149,6 +149,8 @@ export const zh: TranslationKeys = {
     guideStep3: '3. 出现提示时，输入 6 位配对 PIN 码',
     guideStep4: '4. 等待数秒，让系统建立安全加密信道',
     guideStep5: '5. 配对成功！开始运行 and 控制任务。',
+    lanEnabled: '允许移动设备连接 (LAN/Wi-Fi)',
+    lanEnabledDesc: '允许同一本地网络中的移动设备发现并连接到此电脑。',
   },
   dashboard: {
     title: '控制台',
@@ -201,14 +203,20 @@ export const zh: TranslationKeys = {
     sortByDownloads: '下载量最多',
     sortByRating: '评分最高',
     sortByNewest: '发布时间最新',
-    plugin_ghita_github_assistant_desc: '直接从聊天面板自动同步 git、推送 commit、管理 Pull Request 和问题跟踪器。',
-    plugin_ghita_docker_orchestrator_desc: '打包管理 Docker 容器、检查日志、构建镜像和安全管理卷的技能。',
+    plugin_ghita_github_assistant_desc:
+      '直接从聊天面板自动同步 git、推送 commit、管理 Pull Request 和问题跟踪器。',
+    plugin_ghita_docker_orchestrator_desc:
+      '打包管理 Docker 容器、检查日志、构建镜像和安全管理卷的技能。',
     skill_docker_list_desc: '列出正在运行的容器',
-    plugin_ghita_vercel_deployer_desc: '在 CI/CD 流程中关联项目，自动触发部署预览、生产部署和审计日志。',
-    plugin_ghita_db_client_desc: '与 PostgreSQL、MySQL、SQLite、MongoDB 数据库快速交互的技能。允许 AI 预览架构并优化查询。',
+    plugin_ghita_vercel_deployer_desc:
+      '在 CI/CD 流程中关联项目，自动触发部署预览、生产部署和审计日志。',
+    plugin_ghita_db_client_desc:
+      '与 PostgreSQL、MySQL、SQLite、MongoDB 数据库快速交互的技能。允许 AI 预览架构并优化查询。',
     skill_db_query_desc: '运行安全的 select 查询并分析架构',
-    plugin_ghita_jira_connector_desc: '读取和更新 Jira 工单、转换问题状态，并将 git 提交与相应的 story ID 相关联。',
-    plugin_ghita_vision_grounding_extra_desc: '本地视觉模型，用于提高在大屏幕上使用 Computer Use 时的坐标识别准确度。',
+    plugin_ghita_jira_connector_desc:
+      '读取和更新 Jira 工单、转换问题状态，并将 git 提交与相应的 story ID 相关联。',
+    plugin_ghita_vision_grounding_extra_desc:
+      '本地视觉模型，用于提高在大屏幕上使用 Computer Use 时的坐标识别准确度。',
   },
   workflow: {
     dragNodes: '拖拽动作节点',
@@ -273,7 +281,8 @@ export const zh: TranslationKeys = {
     demoMode: '演示模式 — 数据为模拟',
   },
   chat: {
-    welcomeMessage: '您好！我是 GHITA Assistant。作为您的 AI 开发助手，我可以帮助您编写与重构代码、直接运行系统命令、管理工作区文件并自动化执行复杂流水线。让我们现在开始吧！',
+    welcomeMessage:
+      '您好！我是 GHITA Assistant。作为您的 AI 开发助手，我可以帮助您编写与重构代码、直接运行系统命令、管理工作区文件并自动化执行复杂流水线。让我们现在开始吧！',
     notConnected: '未建立与后台服务的连接...',
     notConnectedHint: '未连接到后台服务。请输入任意文字以查看设置说明。',
     noProvider: '未配置 AI 服务商 (AI Provider)...',
@@ -305,7 +314,8 @@ export const zh: TranslationKeys = {
     featureDev: '生成与开发新功能',
     deployCheck: '运行部署前置校验 (Deploy Check)',
     summary: '总结当前会话上下文',
-    systemPrompt: '你是 GHITA Assistant，一个内置于 GHITA CODING AGENT 应用程序中的智能 AI 助手。\n\n核心能力：你可以直接在用户的机器上执行命令。当用户要求打开应用程序、运行命令或管理文件时——始终将命令包裹在使用 cmd 或 powershell 语言标签的代码块中。系统将自动执行该命令。绝不要说“我不能”或“我没有能力”。\n\n强制性规则：当需要运行命令时，始终使用以下格式：\n```cmd\n要运行的命令\n```\n或者：\n```powershell\n要运行的命令\n```\n\n打开 Microsoft Word 的示例：\n```cmd\nstart winword\n```\n\n打开记事本的示例：\n```cmd\nnotepad\n```\n\n你还支持：代码审查、重构、运行测试、格式化代码、静态分析、安全审计、生成文档。\n\n当被问及身份时，始终表明自己是 GHITA Assistant。保持直接和简明。',
+    systemPrompt:
+      '你是 GHITA Assistant，一个内置于 GHITA CODING AGENT 应用程序中的智能 AI 助手。\n\n核心能力：你可以直接在用户的机器上执行命令。当用户要求打开应用程序、运行命令或管理文件时——始终将命令包裹在使用 cmd 或 powershell 语言标签的代码块中。系统将自动执行该命令。绝不要说“我不能”或“我没有能力”。\n\n强制性规则：当需要运行命令时，始终使用以下格式：\n```cmd\n要运行的命令\n```\n或者：\n```powershell\n要运行的命令\n```\n\n打开 Microsoft Word 的示例：\n```cmd\nstart winword\n```\n\n打开记事本的示例：\n```cmd\nnotepad\n```\n\n你还支持：代码审查、重构、运行测试、格式化代码、静态分析、安全审计、生成文档。\n\n当被问及身份时，始终表明自己是 GHITA Assistant。保持直接和简明。',
     openclawEngine: 'GHITA Assistant',
     skillLearned: '技能自动学习：AI 智能体刚提议并成功习得了一项新技能...',
     runningAutomation: '正在执行屏幕图像模拟自动化步骤...',
@@ -325,7 +335,8 @@ export const zh: TranslationKeys = {
     runError: '错误',
     messagesCount: '已发送 {{count}} 条消息',
     compactSuccess: '已压缩上下文：仅保留本会话最近的消息。',
-    noWorkspace: '尚未打开工作目录。请先在资源管理器中打开项目/文件夹，然后再运行 Agent、Review、Feature 或 Ralph。',
+    noWorkspace:
+      '尚未打开工作目录。请先在资源管理器中打开项目/文件夹，然后再运行 Agent、Review、Feature 或 Ralph。',
     permissionCustom: '自定义：每条命令和文件编辑都需确认',
     permissionAuto: '自动：自由模式，仅询问危险命令（安装、下载...）',
     liveAgentEvents: '智能体实时事件',
@@ -442,6 +453,7 @@ export const zh: TranslationKeys = {
     totalRam: '总体 RAM 分配率',
     networkIo: '网络 I/O 实时流量',
     noContainers: '当前无任何沙箱隔离容器在运行',
-    noContainersDesc: '当 AI 智能体需要在此隔离沙箱中运行端到端 (E2E) 测试或高风险系统命令时，容器会自动创建启动。',
+    noContainersDesc:
+      '当 AI 智能体需要在此隔离沙箱中运行端到端 (E2E) 测试或高风险系统命令时，容器会自动创建启动。',
   },
 };

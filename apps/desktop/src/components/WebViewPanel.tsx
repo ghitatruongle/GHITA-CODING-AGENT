@@ -44,8 +44,6 @@ function normalizeUrl(raw: string): string {
   return trimmed;
 }
 
-
-
 export function WebViewPanel() {
   const [tabs, setTabs] = useState<BrowserTab[]>([DEFAULT_TAB()]);
   const [activeTabId, setActiveTabId] = useState(() => {
@@ -61,9 +59,11 @@ export function WebViewPanel() {
   const proxyPortRef = useRef(0);
 
   // Giữ ref đồng bộ
-  useEffect(() => { proxyPortRef.current = proxyPort; }, [proxyPort]);
+  useEffect(() => {
+    proxyPortRef.current = proxyPort;
+  }, [proxyPort]);
 
-  const activeTab = tabs.find(t => t.id === activeTabId) ?? tabs[0];
+  const activeTab = tabs.find((t) => t.id === activeTabId) ?? tabs[0];
 
   // ─── Khởi tạo và cập nhật proxy port ───────────────────────────────────
   const ensureProxy = useCallback(async (targetUrl: string): Promise<number> => {
@@ -88,53 +88,65 @@ export function WebViewPanel() {
   }, []);
 
   useEffect(() => {
-    invoke<ProxyStatus>('get_proxy_status').then(s => {
-      if (s.running) {
-        setProxyPort(s.port);
-        proxyPortRef.current = s.port;
-      }
-    }).catch(() => {});
+    invoke<ProxyStatus>('get_proxy_status')
+      .then((s) => {
+        if (s.running) {
+          setProxyPort(s.port);
+          proxyPortRef.current = s.port;
+        }
+      })
+      .catch(() => {});
   }, []);
 
   // ─── Điều hướng ───────────────────────────────────────────────────────
-  const navigateTo = useCallback(async (rawUrl: string) => {
-    const normalizedUrl = normalizeUrl(rawUrl);
-    if (!normalizedUrl) return;
+  const navigateTo = useCallback(
+    async (rawUrl: string) => {
+      const normalizedUrl = normalizeUrl(rawUrl);
+      if (!normalizedUrl) return;
 
-    setError(null);
-    setIsEditing(false);
+      setError(null);
+      setIsEditing(false);
 
-    // Cập nhật tab thành loading ngay lập tức
-    setTabs(prev => prev.map(t =>
-      t.id === activeTabId
-        ? { ...t, displayUrl: normalizedUrl, title: new URL(normalizedUrl).hostname || normalizedUrl, isLoading: true }
-        : t
-    ));
+      // Cập nhật tab thành loading ngay lập tức
+      setTabs((prev) =>
+        prev.map((t) =>
+          t.id === activeTabId
+            ? {
+                ...t,
+                displayUrl: normalizedUrl,
+                title: new URL(normalizedUrl).hostname || normalizedUrl,
+                isLoading: true,
+              }
+            : t,
+        ),
+      );
 
-    try {
-      const urlObj = new URL(normalizedUrl);
-      const domainRoot = `${urlObj.protocol}//${urlObj.host}/`;
-      const originalPath = urlObj.pathname + urlObj.search + urlObj.hash;
+      try {
+        const urlObj = new URL(normalizedUrl);
+        const domainRoot = `${urlObj.protocol}//${urlObj.host}/`;
+        const originalPath = urlObj.pathname + urlObj.search + urlObj.hash;
 
-      const port = await ensureProxy(domainRoot);
-      if (port === 0) return;
+        const port = await ensureProxy(domainRoot);
+        if (port === 0) return;
 
-      const proxyUrl = `http://127.0.0.1:${port}${originalPath}`;
+        const proxyUrl = `http://127.0.0.1:${port}${originalPath}`;
 
-      setTabs(prev => prev.map(t =>
-        t.id === activeTabId
-          ? { ...t, url: proxyUrl, displayUrl: normalizedUrl, isLoading: true }
-          : t
-      ));
-    } catch (e) {
-      setError(`Invalid URL: ${e}`);
-      setTabs(prev => prev.map(t =>
-        t.id === activeTabId ? { ...t, isLoading: false } : t
-      ));
-    }
+        setTabs((prev) =>
+          prev.map((t) =>
+            t.id === activeTabId
+              ? { ...t, url: proxyUrl, displayUrl: normalizedUrl, isLoading: true }
+              : t,
+          ),
+        );
+      } catch (e) {
+        setError(`Invalid URL: ${e}`);
+        setTabs((prev) => prev.map((t) => (t.id === activeTabId ? { ...t, isLoading: false } : t)));
+      }
 
-    setAddressInput(normalizedUrl);
-  }, [activeTabId, ensureProxy]);
+      setAddressInput(normalizedUrl);
+    },
+    [activeTabId, ensureProxy],
+  );
 
   const handleAddressSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -150,7 +162,7 @@ export function WebViewPanel() {
   // ─── Tabs management ──────────────────────────────────────────────────
   const addNewTab = () => {
     const newTab = DEFAULT_TAB();
-    setTabs(prev => [...prev, newTab]);
+    setTabs((prev) => [...prev, newTab]);
     setActiveTabId(newTab.id);
     setAddressInput('');
     setIsEditing(true);
@@ -166,8 +178,8 @@ export function WebViewPanel() {
       setAddressInput('');
       return;
     }
-    const idx = tabs.findIndex(t => t.id === tabId);
-    const newTabs = tabs.filter(t => t.id !== tabId);
+    const idx = tabs.findIndex((t) => t.id === tabId);
+    const newTabs = tabs.filter((t) => t.id !== tabId);
     setTabs(newTabs);
     if (activeTabId === tabId) {
       const nextTab = newTabs[Math.max(0, idx - 1)];
@@ -180,27 +192,29 @@ export function WebViewPanel() {
 
   const switchTab = (tabId: string) => {
     setActiveTabId(tabId);
-    const tab = tabs.find(t => t.id === tabId);
+    const tab = tabs.find((t) => t.id === tabId);
     setAddressInput(tab?.displayUrl || '');
     setIsEditing(false);
   };
 
   // ─── Iframe events ────────────────────────────────────────────────────
   const handleIframeLoad = () => {
-    setTabs(prev => prev.map(t => {
-      if (t.id !== activeTabId) return t;
-      let title = t.displayUrl;
-      try { title = new URL(t.displayUrl).hostname || t.displayUrl; } catch {}
-      return { ...t, isLoading: false, title };
-    }));
+    setTabs((prev) =>
+      prev.map((t) => {
+        if (t.id !== activeTabId) return t;
+        let title = t.displayUrl;
+        try {
+          title = new URL(t.displayUrl).hostname || t.displayUrl;
+        } catch {}
+        return { ...t, isLoading: false, title };
+      }),
+    );
   };
 
   const handleRefresh = () => {
     if (!activeTab?.url) return;
     // Force reload bằng cách set src lại
-    setTabs(prev => prev.map(t =>
-      t.id === activeTabId ? { ...t, isLoading: true } : t
-    ));
+    setTabs((prev) => prev.map((t) => (t.id === activeTabId ? { ...t, isLoading: true } : t)));
     if (iframeRef.current) {
       const currentSrc = iframeRef.current.src;
       iframeRef.current.src = '';
@@ -227,20 +241,29 @@ export function WebViewPanel() {
   const TEXT_MUTED = '#64748b';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: BG_PRIMARY, userSelect: 'none' }}>
-
-      {/* ── Tab Bar ── */}
-      <div style={{
+    <div
+      style={{
         display: 'flex',
-        alignItems: 'flex-end',
-        padding: '6px 8px 0',
-        background: BG_TAB_BAR,
-        borderBottom: `1px solid ${BORDER}`,
-        gap: '2px',
-        overflowX: 'auto',
-        flexShrink: 0,
-      }}>
-        {tabs.map(tab => {
+        flexDirection: 'column',
+        height: '100%',
+        background: BG_PRIMARY,
+        userSelect: 'none',
+      }}
+    >
+      {/* ── Tab Bar ── */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'flex-end',
+          padding: '6px 8px 0',
+          background: BG_TAB_BAR,
+          borderBottom: `1px solid ${BORDER}`,
+          gap: '2px',
+          overflowX: 'auto',
+          flexShrink: 0,
+        }}
+      >
+        {tabs.map((tab) => {
           const isActive = tab.id === activeTabId;
           return (
             <div
@@ -266,45 +289,65 @@ export function WebViewPanel() {
               {/* Favicon / loading spinner */}
               <div style={{ width: 14, height: 14, flexShrink: 0 }}>
                 {tab.isLoading ? (
-                  <div style={{
-                    width: 12, height: 12, borderRadius: '50%',
-                    border: `2px solid ${ACCENT}`,
-                    borderTopColor: 'transparent',
-                    animation: 'spin 0.7s linear infinite',
-                  }} />
+                  <div
+                    style={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: '50%',
+                      border: `2px solid ${ACCENT}`,
+                      borderTopColor: 'transparent',
+                      animation: 'spin 0.7s linear infinite',
+                    }}
+                  />
                 ) : tab.displayUrl ? (
                   <img
                     src={`https://www.google.com/s2/favicons?domain=${tab.displayUrl}&sz=16`}
                     style={{ width: 14, height: 14, borderRadius: 2 }}
-                    onError={e => (e.currentTarget.style.display = 'none')}
+                    onError={(e) => (e.currentTarget.style.display = 'none')}
                   />
                 ) : (
                   <span style={{ fontSize: 10 }}>🌐</span>
                 )}
               </div>
-              <span style={{
-                fontSize: '12px',
-                color: isActive ? TEXT_PRIMARY : TEXT_MUTED,
-                flex: 1,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                fontWeight: isActive ? 500 : 400,
-              }}>
+              <span
+                style={{
+                  fontSize: '12px',
+                  color: isActive ? TEXT_PRIMARY : TEXT_MUTED,
+                  flex: 1,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  fontWeight: isActive ? 500 : 400,
+                }}
+              >
                 {tab.title || 'New Tab'}
               </span>
               <button
-                onClick={ev => closeTab(tab.id, ev)}
+                onClick={(ev) => closeTab(tab.id, ev)}
                 title="Close tab"
                 style={{
-                  background: 'none', border: 'none', color: TEXT_MUTED,
-                  cursor: 'pointer', padding: '1px 3px', borderRadius: 4,
-                  fontSize: 11, lineHeight: 1, flexShrink: 0,
+                  background: 'none',
+                  border: 'none',
+                  color: TEXT_MUTED,
+                  cursor: 'pointer',
+                  padding: '1px 3px',
+                  borderRadius: 4,
+                  fontSize: 11,
+                  lineHeight: 1,
+                  flexShrink: 0,
                   transition: 'color 0.15s, background 0.15s',
                 }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = TEXT_MUTED; }}
-              >✕</button>
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                  e.currentTarget.style.color = '#fff';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'none';
+                  e.currentTarget.style.color = TEXT_MUTED;
+                }}
+              >
+                ✕
+              </button>
             </div>
           );
         })}
@@ -312,77 +355,138 @@ export function WebViewPanel() {
           onClick={addNewTab}
           title="New tab"
           style={{
-            padding: '4px 10px', background: 'transparent',
-            border: 'none', borderRadius: '6px 6px 0 0',
-            color: TEXT_MUTED, cursor: 'pointer', fontSize: 18, lineHeight: 1.2,
+            padding: '4px 10px',
+            background: 'transparent',
+            border: 'none',
+            borderRadius: '6px 6px 0 0',
+            color: TEXT_MUTED,
+            cursor: 'pointer',
+            fontSize: 18,
+            lineHeight: 1.2,
             transition: 'color 0.15s, background 0.15s',
           }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = '#fff'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = TEXT_MUTED; }}
-        >+</button>
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.07)';
+            e.currentTarget.style.color = '#fff';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent';
+            e.currentTarget.style.color = TEXT_MUTED;
+          }}
+        >
+          +
+        </button>
       </div>
 
       {/* ── Toolbar / Address Bar ── */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        padding: '7px 12px',
-        background: BG_TOOLBAR,
-        borderBottom: `1px solid ${BORDER}`,
-        flexShrink: 0,
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          padding: '7px 12px',
+          background: BG_TOOLBAR,
+          borderBottom: `1px solid ${BORDER}`,
+          flexShrink: 0,
+        }}
+      >
         {/* Navigation buttons */}
         {[
-          { label: '←', title: 'Go back', action: () => iframeRef.current?.contentWindow?.history.back() },
-          { label: '→', title: 'Go forward', action: () => iframeRef.current?.contentWindow?.history.forward() },
-        ].map(btn => (
+          {
+            label: '←',
+            title: 'Go back',
+            action: () => iframeRef.current?.contentWindow?.history.back(),
+          },
+          {
+            label: '→',
+            title: 'Go forward',
+            action: () => iframeRef.current?.contentWindow?.history.forward(),
+          },
+        ].map((btn) => (
           <button
             key={btn.label}
             title={btn.title}
             onClick={btn.action}
             style={{
-              width: 28, height: 28, padding: 0,
+              width: 28,
+              height: 28,
+              padding: 0,
               background: 'rgba(255,255,255,0.05)',
               border: `1px solid ${BORDER}`,
-              borderRadius: 6, color: TEXT_MUTED, cursor: 'pointer',
-              fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              borderRadius: 6,
+              color: TEXT_MUTED,
+              cursor: 'pointer',
+              fontSize: 14,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               transition: 'all 0.15s',
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; e.currentTarget.style.color = TEXT_PRIMARY; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = TEXT_MUTED; }}
-          >{btn.label}</button>
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.12)';
+              e.currentTarget.style.color = TEXT_PRIMARY;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+              e.currentTarget.style.color = TEXT_MUTED;
+            }}
+          >
+            {btn.label}
+          </button>
         ))}
         <button
           title="Refresh"
           onClick={handleRefresh}
           style={{
-            width: 28, height: 28, padding: 0,
+            width: 28,
+            height: 28,
+            padding: 0,
             background: 'rgba(255,255,255,0.05)',
             border: `1px solid ${BORDER}`,
-            borderRadius: 6, color: TEXT_MUTED, cursor: 'pointer',
-            fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            borderRadius: 6,
+            color: TEXT_MUTED,
+            cursor: 'pointer',
+            fontSize: 14,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             transition: 'all 0.15s',
           }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; e.currentTarget.style.color = TEXT_PRIMARY; }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = TEXT_MUTED; }}
-        >↻</button>
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.12)';
+            e.currentTarget.style.color = TEXT_PRIMARY;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+            e.currentTarget.style.color = TEXT_MUTED;
+          }}
+        >
+          ↻
+        </button>
 
         {/* Address Bar */}
         <form onSubmit={handleAddressSubmit} style={{ flex: 1, display: 'flex' }}>
           <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
             {/* Lock icon */}
             {activeTab?.displayUrl?.startsWith('https://') && !isEditing && (
-              <span style={{
-                position: 'absolute', left: 10, fontSize: 11,
-                color: '#22c55e', pointerEvents: 'none', zIndex: 1,
-              }}>🔒</span>
+              <span
+                style={{
+                  position: 'absolute',
+                  left: 10,
+                  fontSize: 11,
+                  color: '#22c55e',
+                  pointerEvents: 'none',
+                  zIndex: 1,
+                }}
+              >
+                🔒
+              </span>
             )}
             <input
               ref={inputRef}
               type="text"
-              value={isEditing ? addressInput : (activeTab?.displayUrl || '')}
-              onChange={e => setAddressInput(e.target.value)}
+              value={isEditing ? addressInput : activeTab?.displayUrl || ''}
+              onChange={(e) => setAddressInput(e.target.value)}
               onFocus={handleAddressClick}
               onBlur={() => {
                 // Khi blur mà không submit thì reset về URL hiện tại
@@ -395,8 +499,10 @@ export function WebViewPanel() {
               spellCheck={false}
               style={{
                 width: '100%',
-                padding: activeTab?.displayUrl?.startsWith('https://') && !isEditing
-                  ? '6px 12px 6px 28px' : '6px 12px',
+                padding:
+                  activeTab?.displayUrl?.startsWith('https://') && !isEditing
+                    ? '6px 12px 6px 28px'
+                    : '6px 12px',
                 background: isEditing ? 'rgba(59,130,246,0.08)' : 'rgba(255,255,255,0.05)',
                 border: `1px solid ${isEditing ? ACCENT : BORDER}`,
                 borderRadius: 20,
@@ -411,37 +517,63 @@ export function WebViewPanel() {
         </form>
 
         {/* Proxy status indicator */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 4,
-          padding: '3px 8px',
-          background: proxyPort > 0 ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
-          borderRadius: 20,
-          fontSize: '10px',
-          color: proxyPort > 0 ? '#22c55e' : '#ef4444',
-          fontWeight: 500,
-          whiteSpace: 'nowrap',
-          flexShrink: 0,
-          border: `1px solid ${proxyPort > 0 ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}`,
-        }}>
-          <div style={{
-            width: 5, height: 5, borderRadius: '50%',
-            background: proxyPort > 0 ? '#22c55e' : '#ef4444',
-            boxShadow: proxyPort > 0 ? '0 0 4px #22c55e' : 'none',
-          }} />
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            padding: '3px 8px',
+            background: proxyPort > 0 ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+            borderRadius: 20,
+            fontSize: '10px',
+            color: proxyPort > 0 ? '#22c55e' : '#ef4444',
+            fontWeight: 500,
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
+            border: `1px solid ${proxyPort > 0 ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}`,
+          }}
+        >
+          <div
+            style={{
+              width: 5,
+              height: 5,
+              borderRadius: '50%',
+              background: proxyPort > 0 ? '#22c55e' : '#ef4444',
+              boxShadow: proxyPort > 0 ? '0 0 4px #22c55e' : 'none',
+            }}
+          />
           {proxyPort > 0 ? `Proxy :${proxyPort}` : 'No proxy'}
         </div>
       </div>
 
       {/* ── Error banner ── */}
       {error && (
-        <div style={{
-          padding: '6px 14px', fontSize: 12,
-          background: 'rgba(239,68,68,0.1)',
-          borderBottom: '1px solid rgba(239,68,68,0.3)',
-          color: '#f87171', display: 'flex', alignItems: 'center', gap: 8,
-        }}>
+        <div
+          style={{
+            padding: '6px 14px',
+            fontSize: 12,
+            background: 'rgba(239,68,68,0.1)',
+            borderBottom: '1px solid rgba(239,68,68,0.3)',
+            color: '#f87171',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
           <span>⚠️</span> {error}
-          <button onClick={() => setError(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: 14 }}>✕</button>
+          <button
+            onClick={() => setError(null)}
+            style={{
+              marginLeft: 'auto',
+              background: 'none',
+              border: 'none',
+              color: '#f87171',
+              cursor: 'pointer',
+              fontSize: 14,
+            }}
+          >
+            ✕
+          </button>
         </div>
       )}
 
@@ -449,13 +581,19 @@ export function WebViewPanel() {
       <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
         {/* Loading bar */}
         {activeTab?.isLoading && (
-          <div style={{
-            position: 'absolute', top: 0, left: 0, right: 0,
-            height: 2, zIndex: 100,
-            background: `linear-gradient(90deg, ${ACCENT} 0%, #818cf8 50%, ${ACCENT} 100%)`,
-            backgroundSize: '200% 100%',
-            animation: 'loading-slide 1.2s ease infinite',
-          }} />
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 2,
+              zIndex: 100,
+              background: `linear-gradient(90deg, ${ACCENT} 0%, #818cf8 50%, ${ACCENT} 100%)`,
+              backgroundSize: '200% 100%',
+              animation: 'loading-slide 1.2s ease infinite',
+            }}
+          />
         )}
 
         {activeTab?.url ? (
@@ -469,15 +607,29 @@ export function WebViewPanel() {
           />
         ) : (
           /* ── New Tab page ── */
-          <div style={{
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center',
-            height: '100%', gap: 24, padding: 32,
-            background: `radial-gradient(ellipse at 50% 40%, rgba(59,130,246,0.06) 0%, transparent 70%), ${BG_PRIMARY}`,
-          }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              gap: 24,
+              padding: 32,
+              background: `radial-gradient(ellipse at 50% 40%, rgba(59,130,246,0.06) 0%, transparent 70%), ${BG_PRIMARY}`,
+            }}
+          >
             <div style={{ fontSize: 52 }}>🌐</div>
             <div>
-              <div style={{ fontSize: 22, fontWeight: 700, color: TEXT_PRIMARY, textAlign: 'center', marginBottom: 8 }}>
+              <div
+                style={{
+                  fontSize: 22,
+                  fontWeight: 700,
+                  color: TEXT_PRIMARY,
+                  textAlign: 'center',
+                  marginBottom: 8,
+                }}
+              >
                 Embedded Browser
               </div>
               <div style={{ fontSize: 13, color: TEXT_MUTED, textAlign: 'center', maxWidth: 320 }}>
@@ -486,28 +638,44 @@ export function WebViewPanel() {
             </div>
 
             {/* Quick access links */}
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', marginTop: 8 }}>
+            <div
+              style={{
+                display: 'flex',
+                gap: 12,
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+                marginTop: 8,
+              }}
+            >
               {[
                 { label: 'Google', url: 'https://google.com', icon: '🔍' },
                 { label: 'GitHub', url: 'https://github.com', icon: '🐙' },
                 { label: 'MDN Docs', url: 'https://developer.mozilla.org', icon: '📚' },
                 { label: 'Stack Overflow', url: 'https://stackoverflow.com', icon: '💡' },
-              ].map(site => (
+              ].map((site) => (
                 <button
                   key={site.url}
                   onClick={() => navigateTo(site.url)}
                   style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                    padding: '14px 18px', background: 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${BORDER}`, borderRadius: 12,
-                    color: TEXT_PRIMARY, cursor: 'pointer', fontSize: 12,
-                    transition: 'all 0.15s', minWidth: 90,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '14px 18px',
+                    background: 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${BORDER}`,
+                    borderRadius: 12,
+                    color: TEXT_PRIMARY,
+                    cursor: 'pointer',
+                    fontSize: 12,
+                    transition: 'all 0.15s',
+                    minWidth: 90,
                   }}
-                  onMouseEnter={e => {
+                  onMouseEnter={(e) => {
                     e.currentTarget.style.background = 'rgba(59,130,246,0.1)';
                     e.currentTarget.style.borderColor = 'rgba(59,130,246,0.3)';
                   }}
-                  onMouseLeave={e => {
+                  onMouseLeave={(e) => {
                     e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
                     e.currentTarget.style.borderColor = BORDER;
                   }}

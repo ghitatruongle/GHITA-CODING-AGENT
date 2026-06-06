@@ -20,8 +20,6 @@
         }
       ]
     },
-    "shell:allow-spawn",
-    "shell:allow-stdin-write",
     "shell:allow-open",
     "updater:default",
     "dialog:allow-open",
@@ -37,12 +35,8 @@
     {
       "identifier": "fs:scope",
       "allow": [
-        { "path": "$HOME/**" },
-        { "path": "$DESKTOP/**" },
-        { "path": "$DOCUMENT/**" },
-        { "path": "$DOWNLOAD/**" },
-        { "path": "$APPDATA/**" },
-        { "path": "$LOCALAPPDATA/**" }
+        { "path": "$APPDATA/ghita/**" },
+        { "path": "$DOCUMENT/ghita-workspace/**" }
       ]
     }
   ]

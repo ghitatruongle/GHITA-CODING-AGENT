@@ -115,7 +115,7 @@ export class CronScheduler {
 
     task.runCount++;
     task.lastRun = Date.now();
-    
+
     // Check loop limit cap if set
     if (task.config.maxIterations && task.runCount >= task.config.maxIterations) {
       task.status = 'completed';
@@ -125,7 +125,11 @@ export class CronScheduler {
     // Resolve which agent to assign
     const targetAgentId = task.config.agentId ?? this.agentManager.list()[0]?.id;
     if (targetAgentId) {
-      await this.agentManager.assignTask(targetAgentId, task.config.taskDescription, task.config.groupId);
+      await this.agentManager.assignTask(
+        targetAgentId,
+        task.config.taskDescription,
+        task.config.groupId,
+      );
     }
 
     // Estimate next run timestamp
@@ -138,7 +142,7 @@ export class CronScheduler {
    */
   private parseNaturalLanguageToMs(expr: string): number | null {
     const clean = expr.toLowerCase().trim();
-    
+
     // e.g. "every 10 seconds"
     let match = clean.match(/^every\s+(\d+)\s+seconds?$/);
     if (match && match[1]) return parseInt(match[1]) * 1000;
@@ -182,7 +186,7 @@ export class CronScheduler {
     const matchPart = (part: string | undefined, value: number): boolean => {
       if (!part) return false;
       if (part === '*') return true;
-      if (part.includes(',')) return part.split(',').some(p => matchPart(p, value));
+      if (part.includes(',')) return part.split(',').some((p) => matchPart(p, value));
       if (part.includes('/')) {
         const [left, right] = part.split('/');
         const start = left === '*' ? 0 : parseInt(left || '0');

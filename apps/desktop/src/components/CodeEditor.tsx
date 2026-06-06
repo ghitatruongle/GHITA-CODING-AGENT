@@ -1,10 +1,37 @@
 // ==============================================================================
-// GHITA CODING AGENT — Code Editor (Monaco)
+// GHITA CODING AGENT — Phase 18: Code Editor (Monaco + Diagnostics + Diff View)
+// ==============================================================================
+// Enhanced Monaco editor with:
+// - Diagnostic markers (error, warning, info, hint) with gutter icons
+// - Inline diff view (original vs modified) with syntax highlighting
+// - Problem panel showing all diagnostics with filtering
+// - Configurable theme and keybindings
 // ==============================================================================
 
-import { memo, useCallback, useEffect, useRef } from 'react';
-import Editor, { type OnMount } from '@monaco-editor/react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Editor, { DiffEditor, type OnMount, type DiffOnMount } from '@monaco-editor/react';
 import { useTranslation } from '../i18n';
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export interface Diagnostic {
+  /** Line number (1-based) */
+  line: number;
+  /** Start column (1-based) */
+  column: number;
+  /** End column (1-based) */
+  endColumn?: number;
+  /** Severity level */
+  severity: 'error' | 'warning' | 'info' | 'hint';
+  /** Diagnostic message */
+  message: string;
+  /** Source (e.g. ESLint, TypeScript) */
+  source?: string;
+  /** Diagnostic code */
+  code?: string;
+}
 
 interface CodeEditorProps {
   value: string;
@@ -13,7 +40,138 @@ interface CodeEditorProps {
   readOnly?: boolean;
   onSave?: () => void;
   onSaveAll?: () => void;
+  /** Diagnostics to display in the editor */
+  diagnostics?: Diagnostic[];
+  /** Original value for diff comparison (enables diff view when provided) */
+  originalValue?: string;
+  /** Diff view mode: inline or side-by-side (default: side-by-side) */
+  diffMode?: 'inline' | 'sideBySide';
+  /** Whether to show the problem panel */
+  showProblems?: boolean;
+  /** Callback when a diagnostic is clicked */
+  onDiagnosticClick?: (diagnostic: Diagnostic) => void;
 }
+
+// ---------------------------------------------------------------------------
+// Severity helpers
+// ---------------------------------------------------------------------------
+
+const SEVERITY_MAP = {
+  error: { monaco: 8, color: '#ef4444', icon: '✕', label: 'Error' },
+  warning: { monaco: 4, color: '#eab308', icon: '⚠', label: 'Warning' },
+  info: { monaco: 2, color: '#3b82f6', icon: 'ℹ', label: 'Info' },
+  hint: { monaco: 1, color: '#22c55e', icon: '💡', label: 'Hint' },
+} as const;
+
+// ---------------------------------------------------------------------------
+// Problem Panel Component
+// ---------------------------------------------------------------------------
+
+function ProblemPanel({
+  diagnostics,
+  onDiagnosticClick,
+}: {
+  diagnostics: Diagnostic[];
+  onDiagnosticClick?: (d: Diagnostic) => void;
+}) {
+  const [filter, setFilter] = useState<'all' | 'error' | 'warning' | 'info'>('all');
+
+  const filtered = useMemo(
+    () => (filter === 'all' ? diagnostics : diagnostics.filter((d) => d.severity === filter)),
+    [diagnostics, filter],
+  );
+
+  const counts = useMemo(() => {
+    const c = { error: 0, warning: 0, info: 0, hint: 0 };
+    for (const d of diagnostics) c[d.severity]++;
+    return c;
+  }, [diagnostics]);
+
+  if (diagnostics.length === 0) return null;
+
+  return (
+    <div
+      style={{
+        borderTop: '1px solid var(--border-subtle)',
+        background: 'var(--bg-tertiary)',
+        maxHeight: '180px',
+        overflow: 'auto',
+        fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
+        fontSize: '12px',
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          padding: '4px 12px',
+          gap: '8px',
+          borderBottom: '1px solid var(--border-subtle)',
+          position: 'sticky',
+          top: 0,
+          background: 'var(--bg-tertiary)',
+          zIndex: 1,
+        }}
+      >
+        <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Problems</span>
+        {(['all', 'error', 'warning', 'info'] as const).map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            style={{
+              background: filter === f ? 'rgba(167,139,250,0.2)' : 'transparent',
+              border: `1px solid ${filter === f ? 'rgba(167,139,250,0.4)' : 'transparent'}`,
+              borderRadius: '3px',
+              padding: '1px 8px',
+              color: 'var(--text-muted)',
+              fontSize: '11px',
+              cursor: 'pointer',
+            }}
+          >
+            {f === 'all' ? `All (${diagnostics.length})` : `${f} (${counts[f]})`}
+          </button>
+        ))}
+      </div>
+
+      {/* Diagnostic rows */}
+      {filtered.map((d, i) => {
+        const sev = SEVERITY_MAP[d.severity];
+        return (
+          <div
+            key={i}
+            onClick={() => onDiagnosticClick?.(d)}
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              padding: '3px 12px',
+              gap: '8px',
+              cursor: onDiagnosticClick ? 'pointer' : 'default',
+              borderBottom: '1px solid rgba(255,255,255,0.03)',
+            }}
+          >
+            <span style={{ color: sev.color, flexShrink: 0, width: '14px', textAlign: 'center' }}>
+              {sev.icon}
+            </span>
+            <span style={{ color: 'var(--text-primary)', flex: 1 }}>{d.message}</span>
+            {d.source && (
+              <span style={{ color: 'var(--text-muted)', fontSize: '11px', flexShrink: 0 }}>
+                {d.source}
+              </span>
+            )}
+            <span style={{ color: 'var(--text-muted)', fontSize: '11px', flexShrink: 0 }}>
+              Ln {d.line}, Col {d.column}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Code Editor Component
+// ---------------------------------------------------------------------------
 
 function CodeEditorInner({
   value,
@@ -21,20 +179,58 @@ function CodeEditorInner({
   onChange,
   readOnly = false,
   onSave,
-  onSaveAll
+  onSaveAll,
+  diagnostics = [],
+  originalValue,
+  diffMode = 'sideBySide',
+  showProblems = true,
+  onDiagnosticClick,
 }: CodeEditorProps) {
   const { t } = useTranslation();
 
   const onSaveRef = useRef(onSave);
   const onSaveAllRef = useRef(onSaveAll);
+  const editorRef = useRef<unknown>(null);
+  const monacoRef = useRef<unknown>(null);
 
   useEffect(() => {
     onSaveRef.current = onSave;
     onSaveAllRef.current = onSaveAll;
   }, [onSave, onSaveAll]);
 
+  // Apply diagnostics as Monaco model markers
+  useEffect(() => {
+    const monaco = monacoRef.current as {
+      editor?: { setModelMarkers: (model: unknown, owner: string, markers: unknown[]) => void };
+      MarkerSeverity?: Record<string, number>;
+    } | null;
+    const editor = editorRef.current as { getModel?: () => unknown } | null;
+    if (!monaco?.editor || !editor?.getModel) return;
+
+    const model = editor.getModel();
+    if (!model) return;
+
+    const markers = diagnostics.map((d) => ({
+      severity:
+        d.severity === 'error' ? 8 : d.severity === 'warning' ? 4 : d.severity === 'info' ? 2 : 1,
+      message: d.message,
+      source: d.source,
+      code: d.code,
+      startLineNumber: d.line,
+      startColumn: d.column,
+      endLineNumber: d.line,
+      endColumn: d.endColumn ?? d.column + 1,
+    }));
+
+    monaco.editor.setModelMarkers(model, 'ghita', markers);
+  }, [diagnostics, value]);
+
+  // Standard editor mount handler
   const handleMount: OnMount = useCallback((editor, monaco) => {
-    // Define custom GHITA dark theme
+    editorRef.current = editor;
+    monacoRef.current = monaco;
+
+    // GHITA dark theme
     monaco.editor.defineTheme('ghita-dark', {
       base: 'vs-dark',
       inherit: true,
@@ -62,62 +258,149 @@ function CodeEditorInner({
     });
     monaco.editor.setTheme('ghita-dark');
 
-    // Register save keybindings directly in Monaco
+    // Keybindings
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
       onSaveRef.current?.();
     });
-
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyS, () => {
       onSaveAllRef.current?.();
     });
 
-    // Focus editor
     editor.focus();
   }, []);
 
-  return (
-    <Editor
-      height="100%"
-      language={language}
-      value={value}
-      onChange={(v) => onChange?.(v ?? '')}
-      onMount={handleMount}
-      theme="ghita-dark"
-      options={{
-        readOnly,
-        minimap: { enabled: false },
-        fontSize: 14,
-        fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
-        fontLigatures: true,
-        scrollBeyondLastLine: false,
-        automaticLayout: true,
-        renderWhitespace: 'selection',
-        bracketPairColorization: { enabled: true },
-        padding: { top: 12 },
-        smoothScrolling: true,
-        cursorBlinking: 'smooth',
-        cursorSmoothCaretAnimation: 'on',
-        lineHeight: 22,
-        roundedSelection: true,
-        renderLineHighlightOnlyWhenFocus: true,
+  // Diff editor mount handler
+  const handleDiffMount: DiffOnMount = useCallback((diffEditor, monaco) => {
+    editorRef.current = diffEditor;
+    monacoRef.current = monaco;
+
+    monaco.editor.defineTheme('ghita-dark', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [
+        { token: 'comment', foreground: '606080', fontStyle: 'italic' },
+        { token: 'keyword', foreground: 'c084fc' },
+        { token: 'string', foreground: '22c55e' },
+      ],
+      colors: {
+        'editor.background': '#0a0a1a',
+        'diffEditor.insertedTextBackground': '#22c55e22',
+        'diffEditor.removedTextBackground': '#ef444422',
+        'diffEditor.insertedLineBackground': '#22c55e11',
+        'diffEditor.removedLineBackground': '#ef444411',
+      },
+    });
+    monaco.editor.setTheme('ghita-dark');
+  }, []);
+
+  const isLoading = (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+        color: 'var(--accent-primary)',
+        fontFamily: 'var(--font-sans)',
+        gap: '8px',
       }}
-      loading={
+    >
+      <span className="animate-pulse">⚡</span>
+      {t('codeEditor.loading')}
+    </div>
+  );
+
+  const editorOptions = {
+    readOnly,
+    minimap: { enabled: false },
+    fontSize: 14,
+    fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
+    fontLigatures: true,
+    scrollBeyondLastLine: false,
+    automaticLayout: true,
+    renderWhitespace: 'selection' as const,
+    bracketPairColorization: { enabled: true },
+    padding: { top: 12 },
+    smoothScrolling: true,
+    cursorBlinking: 'smooth' as const,
+    cursorSmoothCaretAnimation: 'on' as const,
+    lineHeight: 22,
+    roundedSelection: true,
+    renderLineHighlightOnlyWhenFocus: true,
+  };
+
+  // --- Diff View Mode ---
+  if (originalValue !== undefined) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        {/* Diff header */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            height: '100%',
-            color: 'var(--accent-primary)',
-            fontFamily: 'var(--font-sans)',
+            padding: '4px 12px',
             gap: '8px',
+            background: 'var(--bg-tertiary)',
+            borderBottom: '1px solid var(--border-subtle)',
+            fontSize: '12px',
+            color: 'var(--text-muted)',
           }}
         >
-          <span className="animate-pulse">⚡</span>
-          {t('codeEditor.loading')}
+          <span style={{ color: '#ef4444' }}>◀ Original</span>
+          <span>vs</span>
+          <span style={{ color: '#22c55e' }}>Modified ▶</span>
+          <span style={{ marginLeft: 'auto' }}>
+            {diffMode === 'inline' ? 'Inline' : 'Side-by-side'}
+          </span>
         </div>
-      }
-    />
+
+        <div style={{ flex: 1 }}>
+          <DiffEditor
+            height="100%"
+            language={language}
+            original={originalValue}
+            modified={value}
+            theme="ghita-dark"
+            onMount={handleDiffMount}
+            loading={isLoading}
+            options={{
+              readOnly: true,
+              automaticLayout: true,
+              fontSize: 14,
+              fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
+              renderSideBySide: diffMode === 'sideBySide',
+              originalEditable: false,
+            }}
+          />
+        </div>
+
+        {showProblems && diagnostics.length > 0 && (
+          <ProblemPanel diagnostics={diagnostics} onDiagnosticClick={onDiagnosticClick} />
+        )}
+      </div>
+    );
+  }
+
+  // --- Standard Editor Mode ---
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div style={{ flex: 1 }}>
+        <Editor
+          height="100%"
+          language={language}
+          value={value}
+          onChange={(v) => onChange?.(v ?? '')}
+          onMount={handleMount}
+          theme="ghita-dark"
+          options={editorOptions}
+          loading={isLoading}
+        />
+      </div>
+
+      {showProblems && diagnostics.length > 0 && (
+        <ProblemPanel diagnostics={diagnostics} onDiagnosticClick={onDiagnosticClick} />
+      )}
+    </div>
   );
 }
 

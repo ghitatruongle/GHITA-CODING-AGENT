@@ -54,12 +54,15 @@ export class ListOutputParser implements BaseOutputParser<string[]> {
     for (let line of lines) {
       line = line.trim();
       if (!line) continue;
-      
+
       const bulletMatch = line.match(/^(?:[-*+]\s*|\d+\.\s*)(.*)$/);
       if (bulletMatch?.[1]) {
         result.push(bulletMatch[1].trim());
       } else {
-        const parts = line.split(',').map((p) => p.trim()).filter(Boolean);
+        const parts = line
+          .split(',')
+          .map((p) => p.trim())
+          .filter(Boolean);
         result.push(...parts);
       }
     }
@@ -88,7 +91,7 @@ export class StructuredOutputParser<T> implements BaseOutputParser<T> {
         'Zod Schema',
         text,
         [err],
-        `Failed to parse JSON: ${err instanceof Error ? err.message : String(err)}`
+        `Failed to parse JSON: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
 
@@ -98,7 +101,7 @@ export class StructuredOutputParser<T> implements BaseOutputParser<T> {
         'Zod Schema',
         text,
         result.error.errors,
-        'Structured output validation failed'
+        'Structured output validation failed',
       );
     }
 

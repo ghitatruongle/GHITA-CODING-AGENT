@@ -19,7 +19,11 @@ export class EventStream {
   /**
    * Publish a new event to the stream
    */
-  public async emit(type: AgentEventType, payload: Record<string, unknown>, message?: string): Promise<AgentEvent> {
+  public async emit(
+    type: AgentEventType,
+    payload: Record<string, unknown>,
+    message?: string,
+  ): Promise<AgentEvent> {
     const event: AgentEvent = {
       id: `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       type,
@@ -38,8 +42,11 @@ export class EventStream {
     for (const subscriber of this.subscribers) {
       try {
         await subscriber(event);
- } catch (err: unknown) {
- logger.error(`[EventStream] Subscriber callback error: ${err instanceof Error ? err.message : String(err)}`, err);
+      } catch (err: unknown) {
+        logger.error(
+          `[EventStream] Subscriber callback error: ${err instanceof Error ? err.message : String(err)}`,
+          err,
+        );
       }
     }
 

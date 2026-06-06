@@ -39,7 +39,12 @@ describe('chat session storage', () => {
     });
 
     const { loadChatSessionState } = await import('./chatSessionStorage');
-    const result = await loadChatSessionState<{ id: string; title: string; messages: []; timestamp: number }>();
+    const result = await loadChatSessionState<{
+      id: string;
+      title: string;
+      messages: [];
+      timestamp: number;
+    }>();
 
     expect(result.sessions).toHaveLength(1);
     expect(result.activeSessionId).toBe('s1');

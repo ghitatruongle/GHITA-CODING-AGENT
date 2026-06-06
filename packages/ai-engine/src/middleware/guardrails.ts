@@ -60,11 +60,15 @@ export interface AuditEntry {
 
 // --- PII Patterns ---
 
-const PII_PATTERNS: Array<{ name: string; regex: RegExp; mask: (s: string, char: string) => string }> = [
+const PII_PATTERNS: Array<{
+  name: string;
+  regex: RegExp;
+  mask: (s: string, char: string) => string;
+}> = [
   {
     name: 'email',
     regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
-    mask: (s, c) => s.replace(/./g, (m, i) => i < 3 || i > s.length - 4 ? m : c),
+    mask: (s, c) => s.replace(/./g, (m, i) => (i < 3 || i > s.length - 4 ? m : c)),
   },
   {
     name: 'phone',
@@ -109,7 +113,10 @@ const DEFAULT_BLOCKED_PATTERNS: RegExp[] = [
 
 // --- Guards ---
 
-function filterContent(text: string, config: ContentFilterConfig): { blocked: boolean; reason?: string } {
+function filterContent(
+  text: string,
+  config: ContentFilterConfig,
+): { blocked: boolean; reason?: string } {
   if (!config.enabled) return { blocked: false };
   const patterns = config.blockedPatterns ?? DEFAULT_BLOCKED_PATTERNS;
   for (const pattern of patterns) {
@@ -137,7 +144,10 @@ function detectPII(text: string, config: PIIDetectorConfig): { detected: boolean
   return { detected, masked };
 }
 
-function detectSecrets(text: string, config: SecretDetectorConfig): { detected: boolean; names: string[] } {
+function detectSecrets(
+  text: string,
+  config: SecretDetectorConfig,
+): { detected: boolean; names: string[] } {
   if (!config.enabled) return { detected: false, names: [] };
   const names: string[] = [];
   for (const pattern of SECRET_PATTERNS) {

@@ -30,31 +30,31 @@ import type { Page } from 'playwright';
 export async function extractInteractiveElements(page: Page): Promise<InteractiveElement[]> {
   return await page.evaluate(() => {
     const elements: InteractiveElement[] = [];
-    
+
     // Helper to generate a CSS selector for an element
     function getSelector(el: HTMLElement): string {
       if (el.id) {
         return `#${el.id}`;
       }
-      
+
       const testId = el.getAttribute('data-testid') || el.getAttribute('data-test-id');
       if (testId) {
         return `[data-testid="${testId}"]`;
       }
-      
+
       const role = el.getAttribute('role');
       const name = el.getAttribute('name');
       if (role && name) {
         return `[role="${role}"][name="${name}"]`;
       }
-      
+
       // Fallback: build CSS path
       const path: string[] = [];
       let current: HTMLElement | null = el;
-      
+
       while (current && current.nodeType === Node.ELEMENT_NODE) {
         let selector = current.nodeName.toLowerCase();
-        
+
         if (current.id) {
           selector += `#${current.id}`;
           path.unshift(selector);
@@ -63,13 +63,13 @@ export async function extractInteractiveElements(page: Page): Promise<Interactiv
           // Add class if present
           if (current.className) {
             const classes = Array.from(current.classList)
-              .filter(c => !c.startsWith('hover:') && !c.startsWith('focus:'))
+              .filter((c) => !c.startsWith('hover:') && !c.startsWith('focus:'))
               .join('.');
             if (classes) {
               selector += `.${classes}`;
             }
           }
-          
+
           // Add child index if sibling of same tag exists
           let sibling = current.previousElementSibling;
           let index = 1;
@@ -83,17 +83,17 @@ export async function extractInteractiveElements(page: Page): Promise<Interactiv
             selector += `:nth-of-type(${index})`;
           }
         }
-        
+
         path.unshift(selector);
         current = current.parentElement;
-        
+
         // Stop if we reach body
         if (current && current.tagName === 'BODY') {
           path.unshift('body');
           break;
         }
       }
-      
+
       return path.join(' > ');
     }
 
@@ -101,12 +101,16 @@ export async function extractInteractiveElements(page: Page): Promise<Interactiv
     function isVisible(el: HTMLElement): boolean {
       const rect = el.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) return false;
-      
+
       const style = window.getComputedStyle(el);
-      if (style.display === 'none' || style.visibility === 'hidden' || parseFloat(style.opacity || '1') === 0) {
+      if (
+        style.display === 'none' ||
+        style.visibility === 'hidden' ||
+        parseFloat(style.opacity || '1') === 0
+      ) {
         return false;
       }
-      
+
       // Check parents visibility
       let parent = el.parentElement;
       while (parent) {
@@ -116,41 +120,58 @@ export async function extractInteractiveElements(page: Page): Promise<Interactiv
         }
         parent = parent.parentElement;
       }
-      
+
       return true;
     }
 
     // Helper to determine if an element is interactive
     function isInteractive(el: HTMLElement): boolean {
       const tag = el.tagName.toLowerCase();
-      
+
       // Direct form elements
       if (['button', 'input', 'select', 'textarea', 'a', 'details', 'summary'].includes(tag)) {
         return true;
       }
-      
+
       // Elements with tabIndex
       if (el.tabIndex >= 0) {
         return true;
       }
-      
+
       // Interactive ARIA roles
       const role = el.getAttribute('role');
-      if (role && ['button', 'link', 'checkbox', 'radio', 'tab', 'menuitem', 'combobox', 'option', 'textbox'].includes(role)) {
+      if (
+        role &&
+        [
+          'button',
+          'link',
+          'checkbox',
+          'radio',
+          'tab',
+          'menuitem',
+          'combobox',
+          'option',
+          'textbox',
+        ].includes(role)
+      ) {
         return true;
       }
-      
+
       // Inline click handler attributes
-      if (el.hasAttribute('onclick') || el.hasAttribute('@click') || el.hasAttribute('v-on:click')) {
+      if (
+        el.hasAttribute('onclick') ||
+        el.hasAttribute('@click') ||
+        el.hasAttribute('v-on:click')
+      ) {
         return true;
       }
-      
+
       // Check cursor style
       const style = window.getComputedStyle(el);
       if (style.cursor === 'pointer') {
         return true;
       }
-      
+
       return false;
     }
 
@@ -161,7 +182,7 @@ export async function extractInteractiveElements(page: Page): Promise<Interactiv
       const el = node as HTMLElement;
       if (isVisible(el) && isInteractive(el)) {
         const rect = el.getBoundingClientRect();
-        
+
         // Truncate text content
         let text = (el.innerText || el.textContent || '').trim().replace(/\s+/g, ' ');
         if (text.length > 80) {
@@ -197,7 +218,7 @@ export async function extractInteractiveElements(page: Page): Promise<Interactiv
             y: Math.round(rect.y),
             width: Math.round(rect.width),
             height: Math.round(rect.height),
-          }
+          },
         });
       }
     }
@@ -213,18 +234,20 @@ export function formatAccessibilityTree(elements: InteractiveElement[]): string 
   if (elements.length === 0) {
     return 'No interactive elements found on the current page.';
   }
-  
-  return elements.map(el => {
-    const details: string[] = [];
-    if (el.placeholder) details.push(`placeholder: "${el.placeholder}"`);
-    if (el.value) details.push(`value: "${el.value}"`);
-    if (el.ariaLabel) details.push(`aria-label: "${el.ariaLabel}"`);
-    if (el.name) details.push(`name: "${el.name}"`);
-    if (el.href) details.push(`href: "${el.href}"`);
-    
-    const detailsStr = details.length > 0 ? ` (${details.join(', ')})` : '';
-    const textPart = el.text ? ` "${el.text}"` : '';
-    
-    return `[${el.id}] <${el.role}>${textPart}${detailsStr} rect: [${el.rect.x}, ${el.rect.y}, ${el.rect.width}, ${el.rect.height}] selector: \`${el.selector}\``;
-  }).join('\n');
+
+  return elements
+    .map((el) => {
+      const details: string[] = [];
+      if (el.placeholder) details.push(`placeholder: "${el.placeholder}"`);
+      if (el.value) details.push(`value: "${el.value}"`);
+      if (el.ariaLabel) details.push(`aria-label: "${el.ariaLabel}"`);
+      if (el.name) details.push(`name: "${el.name}"`);
+      if (el.href) details.push(`href: "${el.href}"`);
+
+      const detailsStr = details.length > 0 ? ` (${details.join(', ')})` : '';
+      const textPart = el.text ? ` "${el.text}"` : '';
+
+      return `[${el.id}] <${el.role}>${textPart}${detailsStr} rect: [${el.rect.x}, ${el.rect.y}, ${el.rect.width}, ${el.rect.height}] selector: \`${el.selector}\``;
+    })
+    .join('\n');
 }

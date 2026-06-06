@@ -66,7 +66,7 @@ export class WasmParserDownloader {
     try {
       const nodeModulesWasm = path.resolve(
         __dirname,
-        '../../../../node_modules/web-tree-sitter/tree-sitter.wasm'
+        '../../../../node_modules/web-tree-sitter/tree-sitter.wasm',
       );
       if (fs.existsSync(nodeModulesWasm)) {
         fs.copyFileSync(nodeModulesWasm, targetPath);
@@ -96,7 +96,9 @@ export class WasmParserDownloader {
     }
 
     if (normalized === 'pascal') {
-      throw new Error('WASM parser for Pascal is not bundled; ASTExtractor will use its built-in Pascal fallback.');
+      throw new Error(
+        'WASM parser for Pascal is not bundled; ASTExtractor will use its built-in Pascal fallback.',
+      );
     }
 
     const url = `${CDN_BASE_URL}/${filename}`;

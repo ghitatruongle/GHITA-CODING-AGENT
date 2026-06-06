@@ -51,19 +51,25 @@ export const vi: TranslationKeys = {
     ],
     connectSuccess: 'Đã liên kết kết nối với {{deviceName}}',
     pairingCodeLengthErr: 'Vui lòng điền mã ghép đôi chính xác {{length}} ký tự',
-    pairErrNoComputer: 'Không tìm thấy máy tính tương ứng với mã PIN này. Hãy chắc chắn mã đã đúng và Máy chủ kết nối trên máy tính đang hoạt động.',
+    pairErrNoComputer:
+      'Không tìm thấy máy tính tương ứng với mã PIN này. Hãy chắc chắn mã đã đúng và Máy chủ kết nối trên máy tính đang hoạt động.',
     pairErrCloudFail: 'Dữ liệu Cloud Discovery bị lỗi hoặc phiên kết nối đã hết hạn.',
-    pairErrConnection: 'Không thể thiết lập kết nối tới địa chỉ IP đã điền. Vui lòng kiểm tra lại đường truyền mạng.',
+    pairErrConnection:
+      'Không thể thiết lập kết nối tới địa chỉ IP đã điền. Vui lòng kiểm tra lại đường truyền mạng.',
     pairErrSocket: 'Gặp sự cố khi kết nối Socket.io. Vui lòng thử lại.',
     pairErrBtPermission: 'Bạn chưa cấp quyền truy cập Bluetooth hoặc Định vị vị trí.',
     pairErrBtStart: 'Không thể khởi chạy quét Bluetooth. Vui lòng kiểm tra và bật Bluetooth.',
     pairErrInvalidName: 'Tên thiết bị không hợp lệ để thực hiện dò tìm tự động.',
-    pairErrNoIpCloud: 'Không tìm thấy địa chỉ IP của máy tính \'{{name}}\' trên dịch vụ Cloud Registry. Vui lòng kiểm tra Máy chủ đã bật trên máy tính.',
+    pairErrNoIpCloud:
+      "Không tìm thấy địa chỉ IP của máy tính '{{name}}' trên dịch vụ Cloud Registry. Vui lòng kiểm tra Máy chủ đã bật trên máy tính.",
     pairErrCloudPcFail: 'Dữ liệu Cloud Discovery của máy tính bị lỗi hoặc đã hết hạn.',
     pairErrLanPingFail: 'Không thể ping kết nối đến máy tính trong mạng Wi-Fi LAN nội bộ.',
     pairErrNoIp: 'Không thể lấy được địa chỉ kết nối hợp lệ của máy tính.',
     pairErrBtFail: 'Ghép đôi Bluetooth gặp sự cố. Vui lòng thực hiện lại.',
     pairErrBtFindFail: 'Không tìm thấy máy tính thông qua kết nối Bluetooth.',
+    pairErrApiKeyMissing:
+      'Chưa cấu hình API Key cho Cloud Discovery. Vui lòng nhập địa chỉ IP thủ công.',
+    noCodeFromServer: 'Không thể lấy mã ghép đôi từ máy chủ.',
   },
   remote: {
     disconnectTitle: 'Ngắt kết nối',
@@ -71,10 +77,11 @@ export const vi: TranslationKeys = {
     stay: 'Giữ kết nối',
     disconnectBtn: 'Ngắt kết nối',
     lostConnectionTitle: 'Đã mất kết nối',
-    lostConnectionDesc: 'Đường truyền tới máy tính đã bị ngắt. Quay lại màn hình thiết lập ghép đôi?',
+    lostConnectionDesc:
+      'Đường truyền tới máy tính đã bị ngắt. Quay lại màn hình thiết lập ghép đôi?',
     goBack: 'Quay lại',
     chatTimeoutTitle: 'Thời gian chờ chụp màn hình quá hạn',
-    chatTimeoutDesc: 'Không nhận được hình ảnh chụp màn hình từ desktop sau 15 giây.',
+    screenshotTimeoutDesc: 'Không nhận được hình ảnh chụp màn hình từ desktop sau 15 giây.',
     screenTitle: '🖥️ Màn hình Desktop',
     screenPreviewTitle: 'Xem trước màn hình',
     screenPreviewPlaceholder: 'Nhấp vào nút Chụp màn hình để xem',
@@ -101,6 +108,10 @@ export const vi: TranslationKeys = {
     securityApprovalDesc: 'Trợ lý AI đang yêu cầu thực thi câu lệnh terminal sau trên máy tính:',
     securityApproveBtn: 'Phê duyệt cho phép',
     securityRejectBtn: 'Từ chối thực thi',
+    skillsTitle: 'Kỹ năng',
+    skillsLoading: 'Đang tải kỹ năng...',
+    noSkills: 'Không có kỹ năng nào',
+    skillRunning: 'Đang chạy...',
   },
   settings: {
     title: 'Cài đặt',

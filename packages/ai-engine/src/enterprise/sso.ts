@@ -319,7 +319,7 @@ class EntraIDSSOProvider extends BaseSSOProvider {
               code_challenge_method: 'S256',
             }
           : {}),
-      }
+      },
     );
   }
 
@@ -340,7 +340,7 @@ class EntraIDSSOProvider extends BaseSSOProvider {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: body.toString(),
-      }
+      },
     );
 
     if (!resp.ok) throw new Error(`Entra ID token exchange failed: ${resp.status}`);
@@ -387,9 +387,7 @@ class WorkOSSSOProvider extends BaseSSOProvider {
       ...(this.config.extra?.connectionId
         ? { connection_id: this.config.extra.connectionId as string }
         : {}),
-      ...(this.config.extra?.domain
-        ? { domain_hint: this.config.extra.domain as string }
-        : {}),
+      ...(this.config.extra?.domain ? { domain_hint: this.config.extra.domain as string } : {}),
     });
   }
 
@@ -464,7 +462,10 @@ export class SSOManager {
   }
 
   /** Get authorization URL for a provider */
-  getAuthorizationUrl(provider: SSOProvider, usePKCE = true): {
+  getAuthorizationUrl(
+    provider: SSOProvider,
+    usePKCE = true,
+  ): {
     url: string;
     state: string;
   } {
@@ -474,13 +475,13 @@ export class SSOManager {
     const stateStr = generateRandomString(32);
     const codeVerifier = usePKCE ? generateRandomString(64) : undefined;
 
-  const ssoConfig = this.configs.get(provider);
-  if (!ssoConfig) throw new Error(`SSO config not found for provider: ${provider}`);
+    const ssoConfig = this.configs.get(provider);
+    if (!ssoConfig) throw new Error(`SSO config not found for provider: ${provider}`);
 
-  const state: SSOState = {
-    state: stateStr,
-    codeVerifier,
-    redirectUri: ssoConfig.redirectUri,
+    const state: SSOState = {
+      state: stateStr,
+      codeVerifier,
+      redirectUri: ssoConfig.redirectUri,
       createdAt: Date.now(),
     };
 
@@ -503,7 +504,7 @@ export class SSOManager {
   async handleCallback(
     provider: SSOProvider,
     code: string,
-    state: string
+    state: string,
   ): Promise<{ user: SSOUserInfo; token: SSOTokenResponse }> {
     const pendingState = this.pendingStates.get(state);
     if (!pendingState) {

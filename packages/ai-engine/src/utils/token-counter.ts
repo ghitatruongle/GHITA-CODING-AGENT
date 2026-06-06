@@ -9,11 +9,11 @@ import type { ChatMessage } from '../types.js';
 const CHARS_PER_TOKEN: Record<string, number> = {
   'gpt-4': 3.5,
   'gpt-3.5': 4,
-  'claude': 3.5,
-  'gemini': 4,
-  'llama': 4,
-  'mistral': 4,
-  'default': 4,
+  claude: 3.5,
+  gemini: 4,
+  llama: 4,
+  mistral: 4,
+  default: 4,
 };
 
 export interface TokenUsage {
@@ -61,7 +61,7 @@ export function fitsInContext(
   messages: ChatMessage[],
   maxContextTokens: number,
   reservedOutputTokens = 1024,
-  model?: string
+  model?: string,
 ): { fits: boolean; estimatedTokens: number; available: number } {
   const estimatedTokens = estimateMessagesTokens(messages, model);
   const available = maxContextTokens - reservedOutputTokens;
@@ -79,7 +79,7 @@ export function truncateToFit(
   messages: ChatMessage[],
   maxContextTokens: number,
   reservedOutputTokens = 1024,
-  model?: string
+  model?: string,
 ): ChatMessage[] {
   const available = maxContextTokens - reservedOutputTokens;
   const systemMessages = messages.filter((m) => m.role === 'system');
@@ -111,7 +111,7 @@ export function truncateToFit(
 export function getContextInfo(
   messages: ChatMessage[],
   maxContextTokens: number,
-  model?: string
+  model?: string,
 ): ContextWindow {
   const usedTokens = estimateMessagesTokens(messages, model);
   return {

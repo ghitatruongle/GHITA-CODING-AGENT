@@ -3,105 +3,705 @@
   "description": "Search Quality Loop Benchmark - 100 symbol queries for testing repomap precision/recall",
   "generatedAt": "2026-05-24",
   "queries": [
-    { "id": 1, "symbol": "PolyglotTagParser", "file": "packages/shared/src/parser/polyglotTags.ts", "expectedKind": "definition", "expectedType": "class" },
-    { "id": 2, "symbol": "extractSymbols", "file": "packages/shared/src/parser/polyglotTags.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 3, "symbol": "SymbolTag", "file": "packages/shared/src/parser/polyglotTags.ts", "expectedKind": "definition", "expectedType": "interface" },
-    { "id": 4, "symbol": "WasmParserDownloader", "file": "packages/shared/src/parser/wasmDownloader.ts", "expectedKind": "definition", "expectedType": "class" },
-    { "id": 5, "symbol": "PageRankRanker", "file": "packages/shared/src/parser/pageRankRanker.ts", "expectedKind": "definition", "expectedType": "class" },
-    { "id": 6, "symbol": "rankSymbols", "file": "packages/shared/src/parser/pageRankRanker.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 7, "symbol": "FileTags", "file": "packages/shared/src/parser/pageRankRanker.ts", "expectedKind": "definition", "expectedType": "interface" },
-    { "id": 8, "symbol": "SymbolCache", "file": "packages/shared/src/parser/symbolCache.ts", "expectedKind": "definition", "expectedType": "class" },
-    { "id": 9, "symbol": "getCachedSymbols", "file": "packages/shared/src/parser/symbolCache.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 10, "symbol": "saveCachedSymbols", "file": "packages/shared/src/parser/symbolCache.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 11, "symbol": "ASTExtractor", "file": "packages/shared/src/parser/astExtractor.ts", "expectedKind": "definition", "expectedType": "class" },
-    { "id": 12, "symbol": "TolerantParser", "file": "packages/shared/src/parser/astExtractor.ts", "expectedKind": "definition", "expectedType": "class" },
-    { "id": 13, "symbol": "ProjectConfigSniffer", "file": "packages/shared/src/parser/astExtractor.ts", "expectedKind": "definition", "expectedType": "class" },
-    { "id": 14, "symbol": "ASTNode", "file": "packages/shared/src/parser/astExtractor.ts", "expectedKind": "definition", "expectedType": "interface" },
-    { "id": 15, "symbol": "ASTLockEngine", "file": "packages/agents/src/checker/astLock.ts", "expectedKind": "definition", "expectedType": "class" },
-    { "id": 16, "symbol": "ASTLockLogger", "file": "packages/agents/src/checker/astLock.ts", "expectedKind": "definition", "expectedType": "class" },
-    { "id": 17, "symbol": "ASTLockMiddleware", "file": "packages/agents/src/checker/astLock.ts", "expectedKind": "definition", "expectedType": "class" },
-    { "id": 18, "symbol": "lockSymbol", "file": "packages/agents/src/checker/astLock.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 19, "symbol": "validate", "file": "packages/agents/src/checker/astLock.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 20, "symbol": "DebateEngine", "file": "packages/agents/src/orchestrator/debateEngine.ts", "expectedKind": "definition", "expectedType": "class" },
-    { "id": 21, "symbol": "runDebate", "file": "packages/agents/src/orchestrator/debateEngine.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 22, "symbol": "DocsGriller", "file": "packages/skills/src/engineering/docsGriller.ts", "expectedKind": "definition", "expectedType": "class" },
-    { "id": 23, "symbol": "scanLocalDocs", "file": "packages/skills/src/engineering/docsGriller.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 24, "symbol": "DynamicSkillGenerator", "file": "packages/skills/src/registry/dynamicGenerator.ts", "expectedKind": "definition", "expectedType": "class" },
-    { "id": 25, "symbol": "generateJsonSkill", "file": "packages/skills/src/registry/dynamicGenerator.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 26, "symbol": "AntiSlopFilter", "file": "packages/ai-engine/src/middleware/antiSlop.ts", "expectedKind": "definition", "expectedType": "class" },
-    { "id": 27, "symbol": "cleanAiSlop", "file": "packages/ai-engine/src/middleware/antiSlop.ts", "expectedKind": "definition", "expectedType": "function" },
-    { "id": 28, "symbol": "TokenSavingsTracker", "file": "packages/ai-engine/src/middleware/antiSlop.ts", "expectedKind": "definition", "expectedType": "class" },
-    { "id": 29, "symbol": "UnifiedRouter", "file": "packages/ai-engine/src/router/unifiedRouter.ts", "expectedKind": "definition", "expectedType": "class" },
-    { "id": 30, "symbol": "routeCall", "file": "packages/ai-engine/src/router/unifiedRouter.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 31, "symbol": "FallbackManager", "file": "packages/ai-engine/src/gateway/fallbackManager.ts", "expectedKind": "definition", "expectedType": "class" },
-    { "id": 32, "symbol": "executeWithFailover", "file": "packages/ai-engine/src/gateway/fallbackManager.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 33, "symbol": "DSOOrchestrator", "file": "packages/computer-use/src/sandbox/dsoOrchestrator.ts", "expectedKind": "definition", "expectedType": "class" },
-    { "id": 34, "symbol": "createMultiSandboxNetwork", "file": "packages/computer-use/src/sandbox/dsoOrchestrator.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 35, "symbol": "spawnServiceContainer", "file": "packages/computer-use/src/sandbox/dsoOrchestrator.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 36, "symbol": "SandboxSecurityFilter", "file": "packages/computer-use/src/guardrails/sandboxFilter.ts", "expectedKind": "definition", "expectedType": "class" },
-    { "id": 37, "symbol": "validateCommand", "file": "packages/computer-use/src/guardrails/sandboxFilter.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 38, "symbol": "HeadlessSearchScanner", "file": "packages/computer-use/src/scanner/headlessSearch.ts", "expectedKind": "definition", "expectedType": "class" },
-    { "id": 39, "symbol": "getSurroundingLines", "file": "packages/computer-use/src/scanner/headlessSearch.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 40, "symbol": "SCTIEngine", "file": "packages/ai-engine/src/middleware/sctiCalibrator.ts", "expectedKind": "definition", "expectedType": "class" },
-    { "id": 41, "symbol": "storeCorrection", "file": "packages/ai-engine/src/middleware/sctiCalibrator.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 42, "symbol": "getMatchingTrajectory", "file": "packages/ai-engine/src/middleware/sctiCalibrator.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 43, "symbol": "GitSafePointManager", "file": "packages/agents/src/git/workflow.ts", "expectedKind": "definition", "expectedType": "class" },
-    { "id": 44, "symbol": "createSafePoint", "file": "packages/agents/src/git/workflow.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 45, "symbol": "rollback", "file": "packages/agents/src/git/workflow.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 46, "symbol": "MarkdownRulesChecker", "file": "packages/agents/src/checker/markdownRules.ts", "expectedKind": "definition", "expectedType": "class" },
-    { "id": 47, "symbol": "compileRule", "file": "packages/agents/src/checker/markdownRules.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 48, "symbol": "TelepresencePortal", "file": "packages/communication/src/channels/telepresencePortal.ts", "expectedKind": "definition", "expectedType": "class" },
-    { "id": 49, "symbol": "streamFrame", "file": "packages/communication/src/channels/telepresencePortal.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 50, "symbol": "ComposioSkillAdapter", "file": "packages/skills/src/registry/composioAdapter.ts", "expectedKind": "definition", "expectedType": "class" },
-    { "id": 51, "symbol": "PerformanceProfiler", "file": "packages/skills/src/dotnet/performanceProfiler.ts", "expectedKind": "definition", "expectedType": "class" },
-    { "id": 52, "symbol": "injectProfiler", "file": "packages/skills/src/dotnet/performanceProfiler.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 53, "symbol": "generateHeatmapData", "file": "packages/skills/src/dotnet/performanceProfiler.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 54, "symbol": "normalizeLanguageName", "file": "packages/shared/src/parser/wasmDownloader.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 55, "symbol": "getLanguageWasm", "file": "packages/shared/src/parser/wasmDownloader.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 56, "symbol": "ensureRuntimeWasm", "file": "packages/shared/src/parser/wasmDownloader.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 57, "symbol": "calculateHash", "file": "packages/shared/src/parser/symbolCache.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 58, "symbol": "close", "file": "packages/shared/src/parser/symbolCache.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 59, "symbol": "extractSymbolTags", "file": "packages/shared/src/parser/astExtractor.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 60, "symbol": "buildHierarchy", "file": "packages/agents/src/checker/astLock.ts", "expectedKind": "definition", "expectedType": "function" },
-    { "id": 61, "symbol": "configLoader", "file": "packages/computer-use/src/guardrails/configLoader.ts", "expectedKind": "definition", "expectedType": "module" },
-    { "id": 62, "symbol": "parseSecurityYaml", "file": "packages/computer-use/src/guardrails/configLoader.ts", "expectedKind": "definition", "expectedType": "function" },
-    { "id": 63, "symbol": "SandboxLogger", "file": "packages/computer-use/src/sandbox/sandboxLogger.ts", "expectedKind": "definition", "expectedType": "class" },
-    { "id": 64, "symbol": "cleanupOrphans", "file": "packages/computer-use/src/sandbox/dsoOrchestrator.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 65, "symbol": "SecurityLogger", "file": "packages/computer-use/src/guardrails/securityLogger.ts", "expectedKind": "definition", "expectedType": "class" },
-    { "id": 66, "symbol": "GHITA_SANDBOX_LABEL", "file": "packages/computer-use/src/sandbox/types.ts", "expectedKind": "definition", "expectedType": "constant" },
-    { "id": 67, "symbol": "SandboxServiceConfig", "file": "packages/computer-use/src/sandbox/types.ts", "expectedKind": "definition", "expectedType": "interface" },
-    { "id": 68, "symbol": "ContainerInfo", "file": "packages/computer-use/src/sandbox/types.ts", "expectedKind": "definition", "expectedType": "interface" },
-    { "id": 69, "symbol": "ContainerStats", "file": "packages/computer-use/src/sandbox/types.ts", "expectedKind": "definition", "expectedType": "interface" },
-    { "id": 70, "symbol": "loadSecurityConfig", "file": "packages/computer-use/src/guardrails/configLoader.ts", "expectedKind": "definition", "expectedType": "function" },
-    { "id": 71, "symbol": "generateSampleConfig", "file": "packages/computer-use/src/guardrails/configLoader.ts", "expectedKind": "definition", "expectedType": "function" },
-    { "id": 72, "symbol": "isInsideCodeBlock", "file": "packages/ai-engine/src/middleware/antiSlop.ts", "expectedKind": "definition", "expectedType": "function" },
-    { "id": 73, "symbol": "loadSlopConfig", "file": "packages/ai-engine/src/middleware/antiSlop.ts", "expectedKind": "definition", "expectedType": "function" },
-    { "id": 74, "symbol": "createAntiSlopStreamMiddleware", "file": "packages/ai-engine/src/middleware/antiSlop.ts", "expectedKind": "definition", "expectedType": "function" },
-    { "id": 75, "symbol": "createAntiSlopMiddleware", "file": "packages/ai-engine/src/middleware/antiSlop.ts", "expectedKind": "definition", "expectedType": "function" },
-    { "id": 76, "symbol": "exportToSqlite", "file": "packages/ai-engine/src/middleware/antiSlop.ts", "expectedKind": "definition", "expectedType": "function" },
-    { "id": 77, "symbol": "CryptoHelper", "file": "packages/ai-engine/src/router/unifiedRouter.ts", "expectedKind": "definition", "expectedType": "class" },
-    { "id": 78, "symbol": "ProviderPromptAdapter", "file": "packages/ai-engine/src/router/unifiedRouter.ts", "expectedKind": "definition", "expectedType": "class" },
-    { "id": 79, "symbol": "removeCommentsAndHeaders", "file": "packages/computer-use/src/scanner/headlessSearch.ts", "expectedKind": "definition", "expectedType": "function" },
-    { "id": 80, "symbol": "setApprovalCallback", "file": "packages/computer-use/src/guardrails/sandboxFilter.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 81, "symbol": "validateAndMaybeApprove", "file": "packages/computer-use/src/guardrails/sandboxFilter.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 82, "symbol": "getThreatStats", "file": "packages/computer-use/src/guardrails/securityLogger.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 83, "symbol": "getBlockedCommands", "file": "packages/computer-use/src/guardrails/securityLogger.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 84, "symbol": "compareAnswer", "file": "packages/skills/src/engineering/docsGriller.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 85, "symbol": "detectContradictions", "file": "packages/skills/src/engineering/docsGriller.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 86, "symbol": "generateQuestions", "file": "packages/skills/src/engineering/docsGriller.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 87, "symbol": "buildVector", "file": "packages/skills/src/engineering/docsGriller.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 88, "symbol": "SkillHub", "file": "packages/skills/src/registry/dynamicGenerator.ts", "expectedKind": "definition", "expectedType": "class" },
-    { "id": 89, "symbol": "TaskTrajectory", "file": "packages/skills/src/registry/dynamicGenerator.ts", "expectedKind": "definition", "expectedType": "interface" },
-    { "id": 90, "symbol": "SkillTemplate", "file": "packages/skills/src/registry/dynamicGenerator.ts", "expectedKind": "definition", "expectedType": "interface" },
-    { "id": 91, "symbol": "AIStreamChunk", "file": "packages/ai-engine/src/middleware/antiSlop.ts", "expectedKind": "definition", "expectedType": "interface" },
-    { "id": 92, "symbol": "buildVolumeBinds", "file": "packages/computer-use/src/sandbox/dsoOrchestrator.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 93, "symbol": "buildPortBindings", "file": "packages/computer-use/src/sandbox/dsoOrchestrator.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 94, "symbol": "executeSaaSAction", "file": "packages/skills/src/registry/composioAdapter.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 95, "symbol": "routeRemoteCommand", "file": "packages/communication/src/channels/telepresencePortal.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 96, "symbol": "cleanOlderThan", "file": "packages/computer-use/src/guardrails/securityLogger.ts", "expectedKind": "definition", "expectedType": "method" },
-    { "id": 97, "symbol": "SparseMatrixPageRank", "file": "packages/shared/src/parser/pageRankRanker.ts", "expectedKind": "reference", "expectedType": "algorithm" },
-    { "id": 98, "symbol": "damping", "file": "packages/shared/src/parser/pageRankRanker.ts", "expectedKind": "reference", "expectedType": "parameter" },
-    { "id": 99, "symbol": "extractSymbols", "file": "packages/shared/src/parser/polyglotTags.ts", "expectedKind": "reference", "expectedType": "method" },
-    { "id": 100, "symbol": "SymbolTag", "file": "packages/shared/src/parser/pageRankRanker.ts", "expectedKind": "reference", "expectedType": "import" }
+    {
+      "id": 1,
+      "symbol": "PolyglotTagParser",
+      "file": "packages/shared/src/parser/polyglotTags.ts",
+      "expectedKind": "definition",
+      "expectedType": "class"
+    },
+    {
+      "id": 2,
+      "symbol": "extractSymbols",
+      "file": "packages/shared/src/parser/polyglotTags.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 3,
+      "symbol": "SymbolTag",
+      "file": "packages/shared/src/parser/polyglotTags.ts",
+      "expectedKind": "definition",
+      "expectedType": "interface"
+    },
+    {
+      "id": 4,
+      "symbol": "WasmParserDownloader",
+      "file": "packages/shared/src/parser/wasmDownloader.ts",
+      "expectedKind": "definition",
+      "expectedType": "class"
+    },
+    {
+      "id": 5,
+      "symbol": "PageRankRanker",
+      "file": "packages/shared/src/parser/pageRankRanker.ts",
+      "expectedKind": "definition",
+      "expectedType": "class"
+    },
+    {
+      "id": 6,
+      "symbol": "rankSymbols",
+      "file": "packages/shared/src/parser/pageRankRanker.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 7,
+      "symbol": "FileTags",
+      "file": "packages/shared/src/parser/pageRankRanker.ts",
+      "expectedKind": "definition",
+      "expectedType": "interface"
+    },
+    {
+      "id": 8,
+      "symbol": "SymbolCache",
+      "file": "packages/shared/src/parser/symbolCache.ts",
+      "expectedKind": "definition",
+      "expectedType": "class"
+    },
+    {
+      "id": 9,
+      "symbol": "getCachedSymbols",
+      "file": "packages/shared/src/parser/symbolCache.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 10,
+      "symbol": "saveCachedSymbols",
+      "file": "packages/shared/src/parser/symbolCache.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 11,
+      "symbol": "ASTExtractor",
+      "file": "packages/shared/src/parser/astExtractor.ts",
+      "expectedKind": "definition",
+      "expectedType": "class"
+    },
+    {
+      "id": 12,
+      "symbol": "TolerantParser",
+      "file": "packages/shared/src/parser/astExtractor.ts",
+      "expectedKind": "definition",
+      "expectedType": "class"
+    },
+    {
+      "id": 13,
+      "symbol": "ProjectConfigSniffer",
+      "file": "packages/shared/src/parser/astExtractor.ts",
+      "expectedKind": "definition",
+      "expectedType": "class"
+    },
+    {
+      "id": 14,
+      "symbol": "ASTNode",
+      "file": "packages/shared/src/parser/astExtractor.ts",
+      "expectedKind": "definition",
+      "expectedType": "interface"
+    },
+    {
+      "id": 15,
+      "symbol": "ASTLockEngine",
+      "file": "packages/agents/src/checker/astLock.ts",
+      "expectedKind": "definition",
+      "expectedType": "class"
+    },
+    {
+      "id": 16,
+      "symbol": "ASTLockLogger",
+      "file": "packages/agents/src/checker/astLock.ts",
+      "expectedKind": "definition",
+      "expectedType": "class"
+    },
+    {
+      "id": 17,
+      "symbol": "ASTLockMiddleware",
+      "file": "packages/agents/src/checker/astLock.ts",
+      "expectedKind": "definition",
+      "expectedType": "class"
+    },
+    {
+      "id": 18,
+      "symbol": "lockSymbol",
+      "file": "packages/agents/src/checker/astLock.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 19,
+      "symbol": "validate",
+      "file": "packages/agents/src/checker/astLock.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 20,
+      "symbol": "DebateEngine",
+      "file": "packages/agents/src/orchestrator/debateEngine.ts",
+      "expectedKind": "definition",
+      "expectedType": "class"
+    },
+    {
+      "id": 21,
+      "symbol": "runDebate",
+      "file": "packages/agents/src/orchestrator/debateEngine.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 22,
+      "symbol": "DocsGriller",
+      "file": "packages/skills/src/engineering/docsGriller.ts",
+      "expectedKind": "definition",
+      "expectedType": "class"
+    },
+    {
+      "id": 23,
+      "symbol": "scanLocalDocs",
+      "file": "packages/skills/src/engineering/docsGriller.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 24,
+      "symbol": "DynamicSkillGenerator",
+      "file": "packages/skills/src/registry/dynamicGenerator.ts",
+      "expectedKind": "definition",
+      "expectedType": "class"
+    },
+    {
+      "id": 25,
+      "symbol": "generateJsonSkill",
+      "file": "packages/skills/src/registry/dynamicGenerator.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 26,
+      "symbol": "AntiSlopFilter",
+      "file": "packages/ai-engine/src/middleware/antiSlop.ts",
+      "expectedKind": "definition",
+      "expectedType": "class"
+    },
+    {
+      "id": 27,
+      "symbol": "cleanAiSlop",
+      "file": "packages/ai-engine/src/middleware/antiSlop.ts",
+      "expectedKind": "definition",
+      "expectedType": "function"
+    },
+    {
+      "id": 28,
+      "symbol": "TokenSavingsTracker",
+      "file": "packages/ai-engine/src/middleware/antiSlop.ts",
+      "expectedKind": "definition",
+      "expectedType": "class"
+    },
+    {
+      "id": 29,
+      "symbol": "UnifiedRouter",
+      "file": "packages/ai-engine/src/router/unifiedRouter.ts",
+      "expectedKind": "definition",
+      "expectedType": "class"
+    },
+    {
+      "id": 30,
+      "symbol": "routeCall",
+      "file": "packages/ai-engine/src/router/unifiedRouter.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 31,
+      "symbol": "FallbackManager",
+      "file": "packages/ai-engine/src/gateway/fallbackManager.ts",
+      "expectedKind": "definition",
+      "expectedType": "class"
+    },
+    {
+      "id": 32,
+      "symbol": "executeWithFailover",
+      "file": "packages/ai-engine/src/gateway/fallbackManager.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 33,
+      "symbol": "DSOOrchestrator",
+      "file": "packages/computer-use/src/sandbox/dsoOrchestrator.ts",
+      "expectedKind": "definition",
+      "expectedType": "class"
+    },
+    {
+      "id": 34,
+      "symbol": "createMultiSandboxNetwork",
+      "file": "packages/computer-use/src/sandbox/dsoOrchestrator.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 35,
+      "symbol": "spawnServiceContainer",
+      "file": "packages/computer-use/src/sandbox/dsoOrchestrator.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 36,
+      "symbol": "SandboxSecurityFilter",
+      "file": "packages/computer-use/src/guardrails/sandboxFilter.ts",
+      "expectedKind": "definition",
+      "expectedType": "class"
+    },
+    {
+      "id": 37,
+      "symbol": "validateCommand",
+      "file": "packages/computer-use/src/guardrails/sandboxFilter.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 38,
+      "symbol": "HeadlessSearchScanner",
+      "file": "packages/computer-use/src/scanner/headlessSearch.ts",
+      "expectedKind": "definition",
+      "expectedType": "class"
+    },
+    {
+      "id": 39,
+      "symbol": "getSurroundingLines",
+      "file": "packages/computer-use/src/scanner/headlessSearch.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 40,
+      "symbol": "SCTIEngine",
+      "file": "packages/ai-engine/src/middleware/sctiCalibrator.ts",
+      "expectedKind": "definition",
+      "expectedType": "class"
+    },
+    {
+      "id": 41,
+      "symbol": "storeCorrection",
+      "file": "packages/ai-engine/src/middleware/sctiCalibrator.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 42,
+      "symbol": "getMatchingTrajectory",
+      "file": "packages/ai-engine/src/middleware/sctiCalibrator.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 43,
+      "symbol": "GitSafePointManager",
+      "file": "packages/agents/src/git/workflow.ts",
+      "expectedKind": "definition",
+      "expectedType": "class"
+    },
+    {
+      "id": 44,
+      "symbol": "createSafePoint",
+      "file": "packages/agents/src/git/workflow.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 45,
+      "symbol": "rollback",
+      "file": "packages/agents/src/git/workflow.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 46,
+      "symbol": "MarkdownRulesChecker",
+      "file": "packages/agents/src/checker/markdownRules.ts",
+      "expectedKind": "definition",
+      "expectedType": "class"
+    },
+    {
+      "id": 47,
+      "symbol": "compileRule",
+      "file": "packages/agents/src/checker/markdownRules.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 48,
+      "symbol": "TelepresencePortal",
+      "file": "packages/communication/src/channels/telepresencePortal.ts",
+      "expectedKind": "definition",
+      "expectedType": "class"
+    },
+    {
+      "id": 49,
+      "symbol": "streamFrame",
+      "file": "packages/communication/src/channels/telepresencePortal.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 50,
+      "symbol": "ComposioSkillAdapter",
+      "file": "packages/skills/src/registry/composioAdapter.ts",
+      "expectedKind": "definition",
+      "expectedType": "class"
+    },
+    {
+      "id": 51,
+      "symbol": "PerformanceProfiler",
+      "file": "packages/skills/src/dotnet/performanceProfiler.ts",
+      "expectedKind": "definition",
+      "expectedType": "class"
+    },
+    {
+      "id": 52,
+      "symbol": "injectProfiler",
+      "file": "packages/skills/src/dotnet/performanceProfiler.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 53,
+      "symbol": "generateHeatmapData",
+      "file": "packages/skills/src/dotnet/performanceProfiler.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 54,
+      "symbol": "normalizeLanguageName",
+      "file": "packages/shared/src/parser/wasmDownloader.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 55,
+      "symbol": "getLanguageWasm",
+      "file": "packages/shared/src/parser/wasmDownloader.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 56,
+      "symbol": "ensureRuntimeWasm",
+      "file": "packages/shared/src/parser/wasmDownloader.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 57,
+      "symbol": "calculateHash",
+      "file": "packages/shared/src/parser/symbolCache.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 58,
+      "symbol": "close",
+      "file": "packages/shared/src/parser/symbolCache.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 59,
+      "symbol": "extractSymbolTags",
+      "file": "packages/shared/src/parser/astExtractor.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 60,
+      "symbol": "buildHierarchy",
+      "file": "packages/agents/src/checker/astLock.ts",
+      "expectedKind": "definition",
+      "expectedType": "function"
+    },
+    {
+      "id": 61,
+      "symbol": "configLoader",
+      "file": "packages/computer-use/src/guardrails/configLoader.ts",
+      "expectedKind": "definition",
+      "expectedType": "module"
+    },
+    {
+      "id": 62,
+      "symbol": "parseSecurityYaml",
+      "file": "packages/computer-use/src/guardrails/configLoader.ts",
+      "expectedKind": "definition",
+      "expectedType": "function"
+    },
+    {
+      "id": 63,
+      "symbol": "SandboxLogger",
+      "file": "packages/computer-use/src/sandbox/sandboxLogger.ts",
+      "expectedKind": "definition",
+      "expectedType": "class"
+    },
+    {
+      "id": 64,
+      "symbol": "cleanupOrphans",
+      "file": "packages/computer-use/src/sandbox/dsoOrchestrator.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 65,
+      "symbol": "SecurityLogger",
+      "file": "packages/computer-use/src/guardrails/securityLogger.ts",
+      "expectedKind": "definition",
+      "expectedType": "class"
+    },
+    {
+      "id": 66,
+      "symbol": "GHITA_SANDBOX_LABEL",
+      "file": "packages/computer-use/src/sandbox/types.ts",
+      "expectedKind": "definition",
+      "expectedType": "constant"
+    },
+    {
+      "id": 67,
+      "symbol": "SandboxServiceConfig",
+      "file": "packages/computer-use/src/sandbox/types.ts",
+      "expectedKind": "definition",
+      "expectedType": "interface"
+    },
+    {
+      "id": 68,
+      "symbol": "ContainerInfo",
+      "file": "packages/computer-use/src/sandbox/types.ts",
+      "expectedKind": "definition",
+      "expectedType": "interface"
+    },
+    {
+      "id": 69,
+      "symbol": "ContainerStats",
+      "file": "packages/computer-use/src/sandbox/types.ts",
+      "expectedKind": "definition",
+      "expectedType": "interface"
+    },
+    {
+      "id": 70,
+      "symbol": "loadSecurityConfig",
+      "file": "packages/computer-use/src/guardrails/configLoader.ts",
+      "expectedKind": "definition",
+      "expectedType": "function"
+    },
+    {
+      "id": 71,
+      "symbol": "generateSampleConfig",
+      "file": "packages/computer-use/src/guardrails/configLoader.ts",
+      "expectedKind": "definition",
+      "expectedType": "function"
+    },
+    {
+      "id": 72,
+      "symbol": "isInsideCodeBlock",
+      "file": "packages/ai-engine/src/middleware/antiSlop.ts",
+      "expectedKind": "definition",
+      "expectedType": "function"
+    },
+    {
+      "id": 73,
+      "symbol": "loadSlopConfig",
+      "file": "packages/ai-engine/src/middleware/antiSlop.ts",
+      "expectedKind": "definition",
+      "expectedType": "function"
+    },
+    {
+      "id": 74,
+      "symbol": "createAntiSlopStreamMiddleware",
+      "file": "packages/ai-engine/src/middleware/antiSlop.ts",
+      "expectedKind": "definition",
+      "expectedType": "function"
+    },
+    {
+      "id": 75,
+      "symbol": "createAntiSlopMiddleware",
+      "file": "packages/ai-engine/src/middleware/antiSlop.ts",
+      "expectedKind": "definition",
+      "expectedType": "function"
+    },
+    {
+      "id": 76,
+      "symbol": "exportToSqlite",
+      "file": "packages/ai-engine/src/middleware/antiSlop.ts",
+      "expectedKind": "definition",
+      "expectedType": "function"
+    },
+    {
+      "id": 77,
+      "symbol": "CryptoHelper",
+      "file": "packages/ai-engine/src/router/unifiedRouter.ts",
+      "expectedKind": "definition",
+      "expectedType": "class"
+    },
+    {
+      "id": 78,
+      "symbol": "ProviderPromptAdapter",
+      "file": "packages/ai-engine/src/router/unifiedRouter.ts",
+      "expectedKind": "definition",
+      "expectedType": "class"
+    },
+    {
+      "id": 79,
+      "symbol": "removeCommentsAndHeaders",
+      "file": "packages/computer-use/src/scanner/headlessSearch.ts",
+      "expectedKind": "definition",
+      "expectedType": "function"
+    },
+    {
+      "id": 80,
+      "symbol": "setApprovalCallback",
+      "file": "packages/computer-use/src/guardrails/sandboxFilter.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 81,
+      "symbol": "validateAndMaybeApprove",
+      "file": "packages/computer-use/src/guardrails/sandboxFilter.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 82,
+      "symbol": "getThreatStats",
+      "file": "packages/computer-use/src/guardrails/securityLogger.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 83,
+      "symbol": "getBlockedCommands",
+      "file": "packages/computer-use/src/guardrails/securityLogger.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 84,
+      "symbol": "compareAnswer",
+      "file": "packages/skills/src/engineering/docsGriller.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 85,
+      "symbol": "detectContradictions",
+      "file": "packages/skills/src/engineering/docsGriller.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 86,
+      "symbol": "generateQuestions",
+      "file": "packages/skills/src/engineering/docsGriller.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 87,
+      "symbol": "buildVector",
+      "file": "packages/skills/src/engineering/docsGriller.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 88,
+      "symbol": "SkillHub",
+      "file": "packages/skills/src/registry/dynamicGenerator.ts",
+      "expectedKind": "definition",
+      "expectedType": "class"
+    },
+    {
+      "id": 89,
+      "symbol": "TaskTrajectory",
+      "file": "packages/skills/src/registry/dynamicGenerator.ts",
+      "expectedKind": "definition",
+      "expectedType": "interface"
+    },
+    {
+      "id": 90,
+      "symbol": "SkillTemplate",
+      "file": "packages/skills/src/registry/dynamicGenerator.ts",
+      "expectedKind": "definition",
+      "expectedType": "interface"
+    },
+    {
+      "id": 91,
+      "symbol": "AIStreamChunk",
+      "file": "packages/ai-engine/src/middleware/antiSlop.ts",
+      "expectedKind": "definition",
+      "expectedType": "interface"
+    },
+    {
+      "id": 92,
+      "symbol": "buildVolumeBinds",
+      "file": "packages/computer-use/src/sandbox/dsoOrchestrator.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 93,
+      "symbol": "buildPortBindings",
+      "file": "packages/computer-use/src/sandbox/dsoOrchestrator.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 94,
+      "symbol": "executeSaaSAction",
+      "file": "packages/skills/src/registry/composioAdapter.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 95,
+      "symbol": "routeRemoteCommand",
+      "file": "packages/communication/src/channels/telepresencePortal.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 96,
+      "symbol": "cleanOlderThan",
+      "file": "packages/computer-use/src/guardrails/securityLogger.ts",
+      "expectedKind": "definition",
+      "expectedType": "method"
+    },
+    {
+      "id": 97,
+      "symbol": "SparseMatrixPageRank",
+      "file": "packages/shared/src/parser/pageRankRanker.ts",
+      "expectedKind": "reference",
+      "expectedType": "algorithm"
+    },
+    {
+      "id": 98,
+      "symbol": "damping",
+      "file": "packages/shared/src/parser/pageRankRanker.ts",
+      "expectedKind": "reference",
+      "expectedType": "parameter"
+    },
+    {
+      "id": 99,
+      "symbol": "extractSymbols",
+      "file": "packages/shared/src/parser/polyglotTags.ts",
+      "expectedKind": "reference",
+      "expectedType": "method"
+    },
+    {
+      "id": 100,
+      "symbol": "SymbolTag",
+      "file": "packages/shared/src/parser/pageRankRanker.ts",
+      "expectedKind": "reference",
+      "expectedType": "import"
+    }
   ]
 }

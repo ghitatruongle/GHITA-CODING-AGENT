@@ -1,6 +1,6 @@
 {
   "name": "ghita-coding-agent",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "private": true,
   "type": "module",
   "description": "GHITA CODING AGENT - Desktop AI Agent với multi-provider, skills, computer use",
@@ -41,13 +41,6 @@
     "node": ">=20.0.0"
   },
   "packageManager": "pnpm@10.14.0",
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild",
-      "better-sqlite3",
-      "node-pty"
-    ]
-  },
   "dependencies": {
     "@nut-tree/nut-js": "npm:@nut-tree-fork/nut-js@^4.2.6"
   }

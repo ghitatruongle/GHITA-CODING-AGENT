@@ -63,8 +63,12 @@ export function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
           cursor: 'pointer',
           transition: 'opacity 150ms',
         }}
-        onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.opacity = '0.85';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.opacity = '1';
+        }}
       >
         {t('errorFallback.retry')}
       </button>

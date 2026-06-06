@@ -91,6 +91,10 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
         }
       },
       onPairConfirm: (deviceName) => {
+        if (checkIntervalRef.current) {
+          clearInterval(checkIntervalRef.current);
+          checkIntervalRef.current = null;
+        }
         clearTimers();
         setConnectionState('connected');
         connectionStateRef.current = 'connected';
@@ -133,10 +137,11 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
     const discoverAndConnect = async () => {
       let addressesToTry: string[] = [];
       let isManualAddress = false;
-
       if (!serverAddress.trim()) {
+        if (!CLOUD_DISCOVERY_API_KEY) {
+          throw new Error(t('pairing.pairErrApiKeyMissing'));
+        }
         try {
-          if (!CLOUD_DISCOVERY_API_KEY) throw new Error('Cloud discovery API key not configured');
           const res = await fetch(`${CLOUD_DISCOVERY_API_URL}/${CLOUD_DISCOVERY_API_KEY}/${code}`);
           const dataText = await res.text();
           const cleanedData = dataText.replace(/^"|"$/g, '').trim();
@@ -152,9 +157,19 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
 
           const port = parts[parts.length - 1];
           const rawIps = parts.slice(0, parts.length - 1);
-          addressesToTry = rawIps.map(ip => `http://${ip.replace(/-/g, '.')}:${port}`);
-} catch (e: unknown) {
-      console.info('Auto discovery fetch failed. Proceeding with fallback candidates.');
+          addressesToTry = rawIps
+            .map((ip) => ip.replace(/-/g, '.'))
+            .filter((ip) => ip !== '127.0.0.1' && ip !== 'localhost' && ip !== '::1')
+            .map((ip) => `http://${ip}:${port}`);
+        } catch (e: unknown) {
+          console.info('Auto discovery fetch failed. Proceeding with fallback candidates.');
+          const message = e instanceof Error ? e.message : String(e);
+          if (
+            message === t('pairing.pairErrNoComputer') ||
+            message === t('pairing.pairErrCloudFail')
+          ) {
+            throw e;
+          }
           addressesToTry = [];
         }
       } else {
@@ -177,28 +192,30 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
                 return { url, pairingCode: data.pairingCode || code };
               }
             }
-} catch (err) {
-        console.warn('[PairingScreen] Error:', err);
-      }
-      throw new Error('Failed');
-    });
+          } catch (err) {
+            console.warn('[PairingScreen] Error:', err);
+          }
+          throw new Error('Failed');
+        });
 
-    let firstSuccess;
+        let firstSuccess;
         try {
           if (pingPromises.length === 0) {
             throw new Error('No local IP addresses to try');
           }
-          firstSuccess = await new Promise<{ url: string; pairingCode: string }>((resolve, reject) => {
-            let rejectedCount = 0;
-            pingPromises.forEach((p) => {
-              p.then(resolve).catch(() => {
-                rejectedCount++;
-                if (rejectedCount === pingPromises.length) {
-                  reject(new Error('All local pings failed'));
-                }
+          firstSuccess = await new Promise<{ url: string; pairingCode: string }>(
+            (resolve, reject) => {
+              let rejectedCount = 0;
+              pingPromises.forEach((p) => {
+                p.then(resolve).catch(() => {
+                  rejectedCount++;
+                  if (rejectedCount === pingPromises.length) {
+                    reject(new Error('All local pings failed'));
+                  }
+                });
               });
-            });
-          });
+            },
+          );
         } catch (fallbackError) {
           if (isManualAddress) {
             throw new Error(t('pairing.pairErrConnection'));
@@ -242,16 +259,15 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
             }
           }
         }, 10000);
+      } catch (err: unknown) {
+        clearTimers();
+        setConnectionState('error');
+        setErrorMessage(err instanceof Error ? err.message : t('pairing.pairErrBtFindFail'));
+      }
+    };
 
-} catch (err: unknown) {
-      clearTimers();
-      setConnectionState('error');
-      setErrorMessage(err instanceof Error ? err.message : t('pairing.pairErrBtFindFail'));
-    }
-  };
-
-  void discoverAndConnect();
-}, [pairingCode, serverAddress, t, clearTimers]);
+    void discoverAndConnect();
+  }, [pairingCode, serverAddress, t, clearTimers]);
 
   // Bluetooth scanning flow
   const handleScanBluetooth = useCallback(async () => {
@@ -289,8 +305,8 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
         // Fallback: Virtual/Simulated Bluetooth scanner
         scanTimeoutRef.current = setTimeout(() => {
           const mockDevices: BluetoothDevice[] = [
-            { address: 'VIRTUAL-01', name: 'PC-GHITA (Tự động Bluetooth/Cloud)', bonded: true },
-            { address: 'VIRTUAL-02', name: 'DESKTOP-TAURI (Tự động Bluetooth/Cloud)', bonded: false },
+            { address: 'VIRTUAL-01', name: 'PC-GHITA (Auto Bluetooth/Cloud)', bonded: true },
+            { address: 'VIRTUAL-02', name: 'DESKTOP-TAURI (Auto Bluetooth/Cloud)', bonded: false },
           ];
           setBtDevices(mockDevices);
           setIsScanningBt(false);
@@ -304,144 +320,165 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
   }, [t]);
 
   // Connect to a Bluetooth device
-  const handleConnectBtDevice = useCallback(async (device: BluetoothDevice) => {
-    setErrorMessage(null);
-    clearTimers();
-    setConnectionState('connecting');
-    connectionStateRef.current = 'connecting';
-
-    try {
-      let resolvedAddress: string | null = null;
-      let remotePairingCode: string | null = null;
-
-      // 1. If it's a real Bluetooth device, try RFCOMM
-      if (bluetoothService.isModuleAvailable && !device.address.startsWith('VIRTUAL-')) {
-        resolvedAddress = await bluetoothService.connectToDevice(device);
-      }
-
-      // 2. Resolve via Hostname Cloud Registry
-      if (!resolvedAddress) {
-        const cleanName = device.name
-          .replace(/\s*\(Tự động Bluetooth\/Cloud\)/gi, '')
-          .trim()
-          .toUpperCase()
-          .replace(/[^A-Z0-9-]/g, '');
-
-        if (!cleanName) {
-          throw new Error(t('pairing.pairErrInvalidName'));
-        }
-
-        if (!CLOUD_DISCOVERY_API_KEY) throw new Error('Cloud discovery API key not configured');
-        const res = await fetch(`${CLOUD_DISCOVERY_API_URL}/${CLOUD_DISCOVERY_API_KEY}/${cleanName}`);
-        const dataText = await res.text();
-        const cleanedData = dataText.replace(/^"|"$/g, '').trim();
-
-        if (!cleanedData) {
-          throw new Error(t('pairing.pairErrNoIpCloud', { name: cleanName }));
-        }
-
-        const parts = cleanedData.split('_');
-        if (parts.length < 2) {
-          throw new Error(t('pairing.pairErrCloudPcFail'));
-        }
-
-        const port = parts[parts.length - 1];
-        const rawIps = parts.slice(0, parts.length - 1);
-        const addressesToTry = rawIps.map(ip => `http://${ip.replace(/-/g, '.')}:${port}`);
-
-        // Ping IP candidates
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 4000);
-
-        const pingPromises = addressesToTry.map(async (url) => {
-          try {
-            const res = await fetch(`${url}/health`, { signal: controller.signal });
-            if (res.status === 200) {
-              const data = await res.json();
-              if (data.status === 'ok') {
-                return { url, pairingCode: data.pairingCode };
-              }
-            }
- } catch (err) {
-        console.warn('[PairingScreen] Error:', err);
- }
-          throw new Error('Failed');
-        });
-
-        const successObj = await new Promise<{ url: string; pairingCode: string }>((resolve, reject) => {
-          let rejectedCount = 0;
-          pingPromises.forEach((p) => {
-            p.then(resolve).catch(() => {
-              rejectedCount++;
-              if (rejectedCount === pingPromises.length) {
-                reject(new Error(t('pairing.pairErrLanPingFail')));
-              }
-            });
-          });
-        });
-
-        clearTimeout(timeoutId);
-        resolvedAddress = successObj.url;
-        remotePairingCode = successObj.pairingCode;
-      }
-
-      if (!resolvedAddress) {
-        throw new Error(t('pairing.pairErrNoIp'));
-      }
-
-      if (!remotePairingCode) {
-        try {
-          const res = await fetch(`${resolvedAddress}/health`);
-          const data = await res.json();
-          remotePairingCode = data.pairingCode;
-        } catch {
-          // Ignore
-        }
-      }
-
-      const pairingCodeToUse = remotePairingCode || '000000';
-
-      const savedAddr = resolvedAddress.replace('http://', '');
-      setServerAddress(savedAddr);
-      activeAddressRef.current = savedAddr;
-
-      socketService.connect(resolvedAddress);
-
-      checkIntervalRef.current = setInterval(() => {
-        if (socketService.isSocketConnected) {
-          if (checkIntervalRef.current) {
-            clearInterval(checkIntervalRef.current);
-            checkIntervalRef.current = null;
-          }
-          void getDeviceId().then((dId) => {
-            socketService.sendPairingCode(pairingCodeToUse, dId || undefined);
-          });
-        }
-      }, 200);
-
-      timeoutRef.current = setTimeout(() => {
-        clearTimers();
-        if (
-          connectionStateRef.current === 'connecting' ||
-          connectionStateRef.current === 'pairing'
-        ) {
-          const wasSocketConnected = socketService.isSocketConnected;
-          socketService.disconnect();
-          setConnectionState('error');
-          if (wasSocketConnected) {
-            setErrorMessage(t('pairing.pairErrBtFail'));
-          } else {
-            setErrorMessage(t('pairing.pairErrSocket'));
-          }
-        }
-      }, 10000);
-
-    } catch (err: unknown) {
+  const handleConnectBtDevice = useCallback(
+    async (device: BluetoothDevice) => {
+      setErrorMessage(null);
       clearTimers();
-      setConnectionState('error');
-      setErrorMessage(err instanceof Error ? err.message : t('pairing.pairErrBtFindFail'));
-    }
-  }, [clearTimers, t]);
+      setConnectionState('connecting');
+      connectionStateRef.current = 'connecting';
+
+      // Stop UI and background scanning
+      setIsScanningBt(false);
+      if (scanTimeoutRef.current) {
+        clearTimeout(scanTimeoutRef.current);
+        scanTimeoutRef.current = null;
+      }
+      void bluetoothService.stopDiscovery();
+
+      try {
+        let resolvedAddress: string | null = null;
+        let remotePairingCode: string | null = null;
+
+        // 1. If it's a real Bluetooth device, try RFCOMM
+        if (bluetoothService.isModuleAvailable && !device.address.startsWith('VIRTUAL-')) {
+          resolvedAddress = await bluetoothService.connectToDevice(device);
+        }
+
+        // 2. Resolve via Hostname Cloud Registry
+        if (!resolvedAddress) {
+          const cleanName = device.name
+            .replace(/\s*\(.*?\)/g, '')
+            .trim()
+            .toUpperCase()
+            .replace(/[^A-Z0-9-]/g, '');
+
+          if (!cleanName) {
+            throw new Error(t('pairing.pairErrInvalidName'));
+          }
+
+          if (!CLOUD_DISCOVERY_API_KEY) throw new Error(t('pairing.pairErrApiKeyMissing'));
+          const res = await fetch(
+            `${CLOUD_DISCOVERY_API_URL}/${CLOUD_DISCOVERY_API_KEY}/${cleanName}`,
+          );
+          const dataText = await res.text();
+          const cleanedData = dataText.replace(/^"|"$/g, '').trim();
+
+          if (!cleanedData) {
+            throw new Error(t('pairing.pairErrNoIpCloud', { name: cleanName }));
+          }
+
+          const parts = cleanedData.split('_');
+          if (parts.length < 2) {
+            throw new Error(t('pairing.pairErrCloudPcFail'));
+          }
+
+          const port = parts[parts.length - 1];
+          const rawIps = parts.slice(0, parts.length - 1);
+          const addressesToTry = rawIps
+            .map((ip) => ip.replace(/-/g, '.'))
+            .filter((ip) => ip !== '127.0.0.1' && ip !== 'localhost' && ip !== '::1')
+            .map((ip) => `http://${ip}:${port}`);
+
+          // Ping IP candidates
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+          const pingPromises = addressesToTry.map(async (url) => {
+            try {
+              const res = await fetch(`${url}/health`, { signal: controller.signal });
+              if (res.status === 200) {
+                const data = await res.json();
+                if (data.status === 'ok') {
+                  return { url, pairingCode: data.pairingCode };
+                }
+              }
+            } catch (err) {
+              console.warn('[PairingScreen] Error:', err);
+            }
+            throw new Error('Failed');
+          });
+
+          const successObj = await new Promise<{ url: string; pairingCode: string }>(
+            (resolve, reject) => {
+              let rejectedCount = 0;
+              pingPromises.forEach((p) => {
+                p.then(resolve).catch(() => {
+                  rejectedCount++;
+                  if (rejectedCount === pingPromises.length) {
+                    reject(new Error(t('pairing.pairErrLanPingFail')));
+                  }
+                });
+              });
+            },
+          );
+
+          clearTimeout(timeoutId);
+          resolvedAddress = successObj.url;
+          remotePairingCode = successObj.pairingCode;
+        }
+
+        if (!resolvedAddress) {
+          throw new Error(t('pairing.pairErrNoIp'));
+        }
+
+        if (!remotePairingCode) {
+          try {
+            const res = await fetch(`${resolvedAddress}/health`);
+            const data = await res.json();
+            remotePairingCode = data.pairingCode;
+          } catch {
+            // Ignore
+          }
+        }
+
+        if (!remotePairingCode) {
+          throw new Error(t('pairing.noCodeFromServer'));
+        }
+
+        const pairingCodeToUse = remotePairingCode;
+
+        const savedAddr = resolvedAddress.replace('http://', '');
+        setServerAddress(savedAddr);
+        activeAddressRef.current = savedAddr;
+
+        socketService.connect(resolvedAddress);
+
+        checkIntervalRef.current = setInterval(() => {
+          if (socketService.isSocketConnected) {
+            if (checkIntervalRef.current) {
+              clearInterval(checkIntervalRef.current);
+              checkIntervalRef.current = null;
+            }
+            void getDeviceId().then((dId) => {
+              socketService.sendPairingCode(pairingCodeToUse, dId || undefined);
+            });
+          }
+        }, 200);
+
+        timeoutRef.current = setTimeout(() => {
+          clearTimers();
+          if (
+            connectionStateRef.current === 'connecting' ||
+            connectionStateRef.current === 'pairing'
+          ) {
+            const wasSocketConnected = socketService.isSocketConnected;
+            socketService.disconnect();
+            setConnectionState('error');
+            if (wasSocketConnected) {
+              setErrorMessage(t('pairing.pairErrBtFail'));
+            } else {
+              setErrorMessage(t('pairing.pairErrSocket'));
+            }
+          }
+        }, 10000);
+      } catch (err: unknown) {
+        clearTimers();
+        setConnectionState('error');
+        setErrorMessage(err instanceof Error ? err.message : t('pairing.pairErrBtFindFail'));
+      }
+    },
+    [clearTimers, t],
+  );
 
   // Connect using manual hostname input
   const handleConnectByManualName = useCallback(() => {
@@ -475,189 +512,211 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.content}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.logoText}>{t('pairing.title')}</Text>
-            <Text style={styles.subtitle}>{t('pairing.subtitle')}</Text>
-          </View>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.content}>
+            {/* Header */}
+            <View style={styles.header}>
+              <Text style={styles.logoText}>{t('pairing.title')}</Text>
+              <Text style={styles.subtitle}>{t('pairing.subtitle')}</Text>
+            </View>
 
-          <ConnectionStatus state={connectionState} />
+            <ConnectionStatus state={connectionState} />
 
-          {/* Tab Selector */}
-          <View style={styles.tabsContainer}>
-            <TouchableOpacity
-              style={[styles.tabButton, activeTab === 'wifi' && styles.tabButtonActive]}
-              onPress={() => setActiveTab('wifi')}
-              accessibilityLabel={t('pairing.wifiTab')}
-            >
-              <Text style={[styles.tabButtonText, activeTab === 'wifi' && styles.tabButtonTextActive]}>
-                {t('pairing.wifiTab')}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tabButton, activeTab === 'bluetooth' && styles.tabButtonActive]}
-              onPress={() => setActiveTab('bluetooth')}
-              accessibilityLabel={t('pairing.bluetoothTab')}
-            >
-              <Text style={[styles.tabButtonText, activeTab === 'bluetooth' && styles.tabButtonTextActive]}>
-                {t('pairing.bluetoothTab')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView style={styles.formContainer} keyboardShouldPersistTaps="handled">
-            {activeTab === 'wifi' ? (
-              <View style={styles.form}>
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>{t('pairing.ipLabel')}</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder={t('pairing.ipPlaceholder')}
-                    placeholderTextColor={Colors.textMuted}
-                    value={serverAddress}
-                    onChangeText={setServerAddress}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    keyboardType="url"
-                    returnKeyType="next"
-                  />
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>{t('pairing.codeLabel')}</Text>
-                  <TextInput
-                    style={[styles.input, styles.codeInput]}
-                    placeholder={t('pairing.codePlaceholder')}
-                    placeholderTextColor={Colors.textMuted}
-                    value={pairingCode}
-                    onChangeText={(val) => setPairingCode(val.toUpperCase().slice(0, PAIRING_CODE_LENGTH))}
-                    maxLength={PAIRING_CODE_LENGTH}
-                    autoCapitalize="characters"
-                    returnKeyType="go"
-                    onSubmitEditing={handleConnect}
-                  />
-                </View>
-
-                {errorMessage && (
-                  <View style={styles.errorContainer}>
-                    <Text style={styles.errorText}>{errorMessage}</Text>
-                  </View>
-                )}
-
-                <TouchableOpacity
-                  style={[styles.connectButton, isConnecting && styles.connectButtonDisabled]}
-                  onPress={handleConnect}
-                  disabled={isConnecting}
-                  accessibilityLabel={t('pairing.connectBtn')}
+            {/* Tab Selector */}
+            <View style={styles.tabsContainer}>
+              <TouchableOpacity
+                style={[styles.tabButton, activeTab === 'wifi' && styles.tabButtonActive]}
+                onPress={() => setActiveTab('wifi')}
+                accessibilityLabel={t('pairing.wifiTab')}
+              >
+                <Text
+                  style={[styles.tabButtonText, activeTab === 'wifi' && styles.tabButtonTextActive]}
                 >
-                  {isConnecting ? (
-                    <ActivityIndicator color={Colors.textPrimary} />
-                  ) : (
-                    <Text style={styles.connectButtonText}>{t('pairing.connectBtn')}</Text>
-                  )}
-                </TouchableOpacity>
+                  {t('pairing.wifiTab')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tabButton, activeTab === 'bluetooth' && styles.tabButtonActive]}
+                onPress={() => setActiveTab('bluetooth')}
+                accessibilityLabel={t('pairing.bluetoothTab')}
+              >
+                <Text
+                  style={[
+                    styles.tabButtonText,
+                    activeTab === 'bluetooth' && styles.tabButtonTextActive,
+                  ]}
+                >
+                  {t('pairing.bluetoothTab')}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-                {/* Instructions */}
-                <View style={styles.instructions}>
-                  <Text style={styles.instructionTitle}>{t('pairing.wifiInstructionsTitle')}</Text>
-                  {Array.isArray(wifiInstructions) && wifiInstructions.map((inst: string, index: number) => (
-                    <Text key={index} style={styles.instructionText}>{inst}</Text>
-                  ))}
-                </View>
-              </View>
-            ) : (
-              <View style={styles.form}>
-                {/* Manual PC Hostname Input */}
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>{t('pairing.manualNameLabel')}</Text>
-                  <View style={styles.manualNameRow}>
+            <ScrollView style={styles.formContainer} keyboardShouldPersistTaps="handled">
+              {activeTab === 'wifi' ? (
+                <View style={styles.form}>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>{t('pairing.ipLabel')}</Text>
                     <TextInput
-                      style={[styles.input, styles.manualNameInput]}
-                      placeholder={t('pairing.manualNamePlaceholder')}
+                      style={styles.input}
+                      placeholder={t('pairing.ipPlaceholder')}
                       placeholderTextColor={Colors.textMuted}
-                      value={manualPcName}
-                      onChangeText={setManualPcName}
-                      autoCapitalize="characters"
+                      value={serverAddress}
+                      onChangeText={setServerAddress}
+                      autoCapitalize="none"
                       autoCorrect={false}
-                      returnKeyType="done"
+                      keyboardType="url"
+                      returnKeyType="next"
                     />
-                    <TouchableOpacity
-                      style={styles.manualNameButton}
-                      onPress={handleConnectByManualName}
-                      disabled={isConnecting}
-                    >
-                      <Text style={styles.manualNameButtonText}>{t('pairing.connectBtn')}</Text>
-                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>{t('pairing.codeLabel')}</Text>
+                    <TextInput
+                      style={[styles.input, styles.codeInput]}
+                      placeholder={t('pairing.codePlaceholder')}
+                      placeholderTextColor={Colors.textMuted}
+                      value={pairingCode}
+                      onChangeText={(val) =>
+                        setPairingCode(val.toUpperCase().slice(0, PAIRING_CODE_LENGTH))
+                      }
+                      maxLength={PAIRING_CODE_LENGTH}
+                      autoCapitalize="characters"
+                      returnKeyType="go"
+                      onSubmitEditing={handleConnect}
+                    />
+                  </View>
+
+                  {errorMessage && (
+                    <View style={styles.errorContainer}>
+                      <Text style={styles.errorText}>{errorMessage}</Text>
+                    </View>
+                  )}
+
+                  <TouchableOpacity
+                    style={[styles.connectButton, isConnecting && styles.connectButtonDisabled]}
+                    onPress={handleConnect}
+                    disabled={isConnecting}
+                    accessibilityLabel={t('pairing.connectBtn')}
+                  >
+                    {isConnecting ? (
+                      <ActivityIndicator color={Colors.textPrimary} />
+                    ) : (
+                      <Text style={styles.connectButtonText}>{t('pairing.connectBtn')}</Text>
+                    )}
+                  </TouchableOpacity>
+
+                  {/* Instructions */}
+                  <View style={styles.instructions}>
+                    <Text style={styles.instructionTitle}>
+                      {t('pairing.wifiInstructionsTitle')}
+                    </Text>
+                    {Array.isArray(wifiInstructions) &&
+                      wifiInstructions.map((inst: string, index: number) => (
+                        <Text key={index} style={styles.instructionText}>
+                          {inst}
+                        </Text>
+                      ))}
                   </View>
                 </View>
-
-                {/* Bluetooth Device List */}
-                <View style={styles.deviceListContainer}>
-                  <View style={styles.deviceListHeader}>
-                    <Text style={styles.label}>{t('pairing.btDevicesHeader')}</Text>
-                    {isScanningBt ? (
-                      <ActivityIndicator size="small" color={Colors.accent} />
-                    ) : (
+              ) : (
+                <View style={styles.form}>
+                  {/* Manual PC Hostname Input */}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>{t('pairing.manualNameLabel')}</Text>
+                    <View style={styles.manualNameRow}>
+                      <TextInput
+                        style={[styles.input, styles.manualNameInput]}
+                        placeholder={t('pairing.manualNamePlaceholder')}
+                        placeholderTextColor={Colors.textMuted}
+                        value={manualPcName}
+                        onChangeText={setManualPcName}
+                        autoCapitalize="characters"
+                        autoCorrect={false}
+                        returnKeyType="done"
+                      />
                       <TouchableOpacity
-                        onPress={handleScanBluetooth}
-                        style={styles.rescanBtn}
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        activeOpacity={0.7}
+                        style={styles.manualNameButton}
+                        onPress={handleConnectByManualName}
+                        disabled={isConnecting}
                       >
-                        <Text style={styles.scanActionText}>{t('pairing.btRescan')}</Text>
+                        <Text style={styles.manualNameButtonText}>{t('pairing.connectBtn')}</Text>
                       </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {/* Bluetooth Device List */}
+                  <View style={styles.deviceListContainer}>
+                    <View style={styles.deviceListHeader}>
+                      <Text style={styles.label}>{t('pairing.btDevicesHeader')}</Text>
+                      {isScanningBt ? (
+                        <ActivityIndicator size="small" color={Colors.accent} />
+                      ) : (
+                        <TouchableOpacity
+                          onPress={handleScanBluetooth}
+                          style={styles.rescanBtn}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={styles.scanActionText}>{t('pairing.btRescan')}</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+
+                    {btDevices.length === 0 ? (
+                      <View style={styles.emptyDeviceContainer}>
+                        <Text style={styles.emptyDeviceText}>
+                          {isScanningBt
+                            ? t('pairing.btNoDevicesScanning')
+                            : t('pairing.btNoDevicesRescan')}
+                        </Text>
+                      </View>
+                    ) : (
+                      <FlatList
+                        data={btDevices}
+                        keyExtractor={(item, index) => `${item.address}-${index}`}
+                        renderItem={({ item }) => (
+                          <TouchableOpacity
+                            style={styles.deviceItem}
+                            onPress={() => handleConnectBtDevice(item)}
+                            disabled={isConnecting}
+                          >
+                            <View style={styles.deviceInfo}>
+                              <Text style={styles.deviceName}>{item.name}</Text>
+                              <Text style={styles.deviceAddress}>
+                                {item.bonded ? t('pairing.btBonded') : t('pairing.btNewDevice')} •{' '}
+                                {item.address}
+                              </Text>
+                            </View>
+                            <Text style={styles.connectDeviceAction}>
+                              {t('pairing.connectBtn')}
+                            </Text>
+                          </TouchableOpacity>
+                        )}
+                      />
                     )}
                   </View>
 
-                  {btDevices.length === 0 ? (
-                    <View style={styles.emptyDeviceContainer}>
-                      <Text style={styles.emptyDeviceText}>
-                        {isScanningBt ? t('pairing.btNoDevicesScanning') : t('pairing.btNoDevicesRescan')}
-                      </Text>
+                  {errorMessage && (
+                    <View style={styles.errorContainer}>
+                      <Text style={styles.errorText}>{errorMessage}</Text>
                     </View>
-                  ) : (
-                    <FlatList
-                      data={btDevices}
-                      keyExtractor={(item, index) => `${item.address}-${index}`}
-                      renderItem={({ item }) => (
-                        <TouchableOpacity
-                          style={styles.deviceItem}
-                          onPress={() => handleConnectBtDevice(item)}
-                          disabled={isConnecting}
-                        >
-                          <View style={styles.deviceInfo}>
-                            <Text style={styles.deviceName}>{item.name}</Text>
-                            <Text style={styles.deviceAddress}>
-                              {item.bonded ? t('pairing.btBonded') : t('pairing.btNewDevice')} • {item.address}
-                            </Text>
-                          </View>
-                          <Text style={styles.connectDeviceAction}>{t('pairing.connectBtn')}</Text>
-                        </TouchableOpacity>
-                      )}
-                    />
                   )}
-                </View>
 
-                {errorMessage && (
-                  <View style={styles.errorContainer}>
-                    <Text style={styles.errorText}>{errorMessage}</Text>
+                  {/* Instructions */}
+                  <View style={styles.instructions}>
+                    <Text style={styles.instructionTitle}>{t('pairing.btInstructionsTitle')}</Text>
+                    {Array.isArray(btInstructions) &&
+                      btInstructions.map((inst: string, index: number) => (
+                        <Text key={index} style={styles.instructionText}>
+                          {inst}
+                        </Text>
+                      ))}
                   </View>
-                )}
-
-                {/* Instructions */}
-                <View style={styles.instructions}>
-                  <Text style={styles.instructionTitle}>{t('pairing.btInstructionsTitle')}</Text>
-                  {Array.isArray(btInstructions) && btInstructions.map((inst: string, index: number) => (
-                    <Text key={index} style={styles.instructionText}>{inst}</Text>
-                  ))}
                 </View>
-              </View>
-            )}
-          </ScrollView>
-        </View>
-      </TouchableWithoutFeedback>
+              )}
+            </ScrollView>
+          </View>
+        </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -667,7 +726,12 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { flex: 1, paddingHorizontal: Spacing.lg, paddingTop: Spacing.xl },
   header: { alignItems: 'center', marginBottom: Spacing.xl },
-  logoText: { fontSize: FontSize.title, fontWeight: '800', color: Colors.textPrimary, letterSpacing: 4 },
+  logoText: {
+    fontSize: FontSize.title,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+    letterSpacing: 4,
+  },
   subtitle: { fontSize: FontSize.md, color: Colors.textMuted, marginTop: Spacing.sm },
   tabsContainer: {
     flexDirection: 'row',
@@ -699,18 +763,56 @@ const styles = StyleSheet.create({
   formContainer: { flex: 1 },
   form: { marginBottom: Spacing.xl },
   inputGroup: { marginBottom: Spacing.md },
-  label: { fontSize: FontSize.sm, color: Colors.textSecondary, marginBottom: Spacing.xs, fontWeight: '600' },
-  input: { backgroundColor: Colors.backgroundTertiary, borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md, paddingHorizontal: Spacing.md, paddingVertical: 12, fontSize: FontSize.md, color: Colors.textPrimary },
+  label: {
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.xs,
+    fontWeight: '600',
+  },
+  input: {
+    backgroundColor: Colors.backgroundTertiary,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 12,
+    fontSize: FontSize.md,
+    color: Colors.textPrimary,
+  },
   codeInput: { fontSize: FontSize.xl, letterSpacing: 4, textAlign: 'center', fontWeight: '700' },
-  errorContainer: { backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: Radius.sm, padding: Spacing.sm, marginBottom: Spacing.md, borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)' },
+  errorContainer: {
+    backgroundColor: 'rgba(239,68,68,0.1)',
+    borderRadius: Radius.sm,
+    padding: Spacing.sm,
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.3)',
+  },
   errorText: { color: '#ef4444', fontSize: FontSize.sm },
-  connectButton: { backgroundColor: Colors.accent, borderRadius: Radius.md, paddingVertical: 14, alignItems: 'center', marginTop: Spacing.sm, marginBottom: Spacing.md },
+  connectButton: {
+    backgroundColor: Colors.accent,
+    borderRadius: Radius.md,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
   connectButtonDisabled: { opacity: 0.6 },
   connectButtonText: { color: Colors.textPrimary, fontSize: FontSize.lg, fontWeight: '700' },
-  instructions: { backgroundColor: Colors.backgroundSecondary, borderRadius: Radius.md, padding: Spacing.md, marginTop: Spacing.sm },
-  instructionTitle: { color: Colors.textSecondary, fontSize: FontSize.sm, fontWeight: '600', marginBottom: Spacing.xs },
+  instructions: {
+    backgroundColor: Colors.backgroundSecondary,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    marginTop: Spacing.sm,
+  },
+  instructionTitle: {
+    color: Colors.textSecondary,
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+    marginBottom: Spacing.xs,
+  },
   instructionText: { color: Colors.textMuted, fontSize: FontSize.sm, lineHeight: 20 },
-  
+
   // Bluetooth specific styles
   manualNameRow: {
     flexDirection: 'row',

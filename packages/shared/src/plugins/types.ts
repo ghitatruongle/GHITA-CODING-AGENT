@@ -30,8 +30,17 @@ export interface McpServerConfig {
 export interface PluginHooks {
   onLoad?: () => Promise<void> | void;
   onUnload?: () => Promise<void> | void;
-  preTool?: (toolName: string, input: unknown) => Promise<{ allowed: boolean; reason?: string; modifiedInput?: unknown }> | { allowed: boolean; reason?: string; modifiedInput?: unknown };
-  postTool?: (toolName: string, input: unknown, result: SkillResult) => Promise<SkillResult | void> | SkillResult | void;
+  preTool?: (
+    toolName: string,
+    input: unknown,
+  ) =>
+    | Promise<{ allowed: boolean; reason?: string; modifiedInput?: unknown }>
+    | { allowed: boolean; reason?: string; modifiedInput?: unknown };
+  postTool?: (
+    toolName: string,
+    input: unknown,
+    result: SkillResult,
+  ) => Promise<SkillResult | void> | SkillResult | void;
 }
 
 export interface GhitaPlugin {

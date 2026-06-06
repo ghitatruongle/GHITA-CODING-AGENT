@@ -1,1 +1,0 @@
-Bash scripting for session lifecycle management; JSON for role configuration; Plain text files for inter-agent communication.

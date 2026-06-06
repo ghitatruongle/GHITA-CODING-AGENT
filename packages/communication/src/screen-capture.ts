@@ -36,7 +36,8 @@ export class ScreenCapture {
         return imgBuffer.toString('base64');
       }
       // Browser-safe: Uint8Array → base64 via btoa
-      const bytes = imgBuffer instanceof Uint8Array ? imgBuffer : new Uint8Array(imgBuffer as ArrayBuffer);
+      const bytes =
+        imgBuffer instanceof Uint8Array ? imgBuffer : new Uint8Array(imgBuffer as ArrayBuffer);
       let binary = '';
       for (let i = 0; i < bytes.length; i++) {
         binary += String.fromCharCode(bytes[i] as number);

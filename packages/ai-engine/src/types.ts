@@ -38,10 +38,16 @@ export interface AIProvider {
   embedMany(texts: string[], options?: { model?: string }): Promise<EmbeddingManyResponse>;
 
   /** Sinh ảnh từ văn bản */
-  generateImage?(prompt: string, options?: Record<string, unknown>): Promise<{ url: string; b64?: string }>;
+  generateImage?(
+    prompt: string,
+    options?: Record<string, unknown>,
+  ): Promise<{ url: string; b64?: string }>;
 
   /** Chuyển văn bản thành giọng nói */
-  generateSpeech?(text: string, options?: Record<string, unknown>): Promise<{ audio: Buffer; contentType: string }>;
+  generateSpeech?(
+    text: string,
+    options?: Record<string, unknown>,
+  ): Promise<{ audio: Buffer; contentType: string }>;
 
   /** Sinh video từ văn bản */
   generateVideo?(prompt: string, options?: Record<string, unknown>): Promise<{ url: string }>;

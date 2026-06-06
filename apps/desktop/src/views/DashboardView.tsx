@@ -35,7 +35,15 @@ function StatCard({
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <span style={{ fontSize: '28px' }}>{icon}</span>
-        <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        <span
+          style={{
+            fontSize: '13px',
+            color: 'var(--text-muted)',
+            fontWeight: 600,
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+          }}
+        >
           {title}
         </span>
       </div>
@@ -56,7 +64,14 @@ export function DashboardView() {
 
   return (
     <div style={{ height: '100%', overflow: 'auto', padding: '32px' }}>
-      <h2 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px' }}>
+      <h2
+        style={{
+          fontSize: '24px',
+          fontWeight: 700,
+          color: 'var(--text-primary)',
+          marginBottom: '8px',
+        }}
+      >
         {t('dashboard.title')}
       </h2>
       <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '32px' }}>
@@ -103,25 +118,67 @@ export function DashboardView() {
       </div>
 
       {/* Status Sections */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '20px' }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
+          gap: '20px',
+        }}
+      >
         {/* Server Status */}
-        <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '24px', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div
+          style={{
+            background: 'var(--bg-card)',
+            borderRadius: '16px',
+            padding: '24px',
+            border: '1px solid rgba(255,255,255,0.05)',
+          }}
+        >
+          <h3
+            style={{
+              fontSize: '16px',
+              fontWeight: 600,
+              color: 'var(--text-primary)',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
             {t('dashboard.serverAndDevices')}
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
               <span style={{ color: 'var(--text-muted)' }}>{t('dashboard.socketServer')}</span>
-              <span style={{ color: serverStatus === 'listening' ? 'var(--success)' : 'var(--error)', fontWeight: 600 }}>
-                {serverStatus === 'listening' ? `● ${t('dashboard.listening')}` : serverStatus === 'error' ? `● ${t('dashboard.error')}` : `● ${t('dashboard.offline')}`}
+              <span
+                style={{
+                  color: serverStatus === 'listening' ? 'var(--success)' : 'var(--error)',
+                  fontWeight: 600,
+                }}
+              >
+                {serverStatus === 'listening'
+                  ? `● ${t('dashboard.listening')}`
+                  : serverStatus === 'error'
+                    ? `● ${t('dashboard.error')}`
+                    : `● ${t('dashboard.offline')}`}
               </span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
               <span style={{ color: 'var(--text-muted)' }}>{t('dashboard.connectedDevices')}</span>
-              <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{connectedDevices.length}</span>
+              <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                {connectedDevices.length}
+              </span>
             </div>
             {connectedDevices.map((d) => (
-              <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', paddingLeft: '12px' }}>
+              <div
+                key={d.id}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: '12px',
+                  paddingLeft: '12px',
+                }}
+              >
                 <span style={{ color: 'var(--text-muted)' }}>{d.name}</span>
                 <span style={{ color: d.connected ? 'var(--success)' : 'var(--text-muted)' }}>
                   {d.connected ? '● Online' : '○ Offline'}
@@ -132,18 +189,47 @@ export function DashboardView() {
         </div>
 
         {/* MCP Servers */}
-        <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '24px', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div
+          style={{
+            background: 'var(--bg-card)',
+            borderRadius: '16px',
+            padding: '24px',
+            border: '1px solid rgba(255,255,255,0.05)',
+          }}
+        >
+          <h3
+            style={{
+              fontSize: '16px',
+              fontWeight: 600,
+              color: 'var(--text-primary)',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
             {t('dashboard.mcpServers')}
           </h3>
           {mcpServers.length === 0 ? (
-            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{t('dashboard.mcpEmpty')}</p>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+              {t('dashboard.mcpEmpty')}
+            </p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {mcpServers.map((s) => (
-                <div key={s.name} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>{s.name} ({s.transport})</span>
-                  <span style={{ color: s.connected ? 'var(--success)' : 'var(--text-muted)', fontWeight: 600 }}>
+                <div
+                  key={s.name}
+                  style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}
+                >
+                  <span style={{ color: 'var(--text-muted)' }}>
+                    {s.name} ({s.transport})
+                  </span>
+                  <span
+                    style={{
+                      color: s.connected ? 'var(--success)' : 'var(--text-muted)',
+                      fontWeight: 600,
+                    }}
+                  >
                     {s.connected ? '● Connected' : s.enabled ? '○ Enabled' : '○ Disabled'}
                   </span>
                 </div>
@@ -153,18 +239,47 @@ export function DashboardView() {
         </div>
 
         {/* Hooks */}
-        <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '24px', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div
+          style={{
+            background: 'var(--bg-card)',
+            borderRadius: '16px',
+            padding: '24px',
+            border: '1px solid rgba(255,255,255,0.05)',
+          }}
+        >
+          <h3
+            style={{
+              fontSize: '16px',
+              fontWeight: 600,
+              color: 'var(--text-primary)',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
             {t('dashboard.hooks')}
           </h3>
           {hooks.length === 0 ? (
-            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{t('dashboard.hooksEmpty')}</p>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+              {t('dashboard.hooksEmpty')}
+            </p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {hooks.map((h, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>{h.event} → {h.tool}</span>
-                  <span style={{ color: h.enabled ? 'var(--success)' : 'var(--text-muted)', fontWeight: 600 }}>
+                <div
+                  key={i}
+                  style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}
+                >
+                  <span style={{ color: 'var(--text-muted)' }}>
+                    {h.event} → {h.tool}
+                  </span>
+                  <span
+                    style={{
+                      color: h.enabled ? 'var(--success)' : 'var(--text-muted)',
+                      fontWeight: 600,
+                    }}
+                  >
                     {h.enabled ? '● Active' : '○ Disabled'}
                   </span>
                 </div>
@@ -174,23 +289,59 @@ export function DashboardView() {
         </div>
 
         {/* Context Usage */}
-        <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '24px', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div
+          style={{
+            background: 'var(--bg-card)',
+            borderRadius: '16px',
+            padding: '24px',
+            border: '1px solid rgba(255,255,255,0.05)',
+          }}
+        >
+          <h3
+            style={{
+              fontSize: '16px',
+              fontWeight: 600,
+              color: 'var(--text-primary)',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
             {t('dashboard.contextWindow')}
           </h3>
           <div style={{ marginBottom: '12px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '8px' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                fontSize: '13px',
+                marginBottom: '8px',
+              }}
+            >
               <span style={{ color: 'var(--text-muted)' }}>{t('dashboard.tokenUsage')}</span>
               <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
                 {contextUsage.used.toLocaleString()} / {contextUsage.max.toLocaleString()}
               </span>
             </div>
-            <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+            <div
+              style={{
+                height: '8px',
+                background: 'rgba(255,255,255,0.05)',
+                borderRadius: '4px',
+                overflow: 'hidden',
+              }}
+            >
               <div
                 style={{
                   height: '100%',
                   width: `${Math.min(100, contextUsage.percentage)}%`,
-                  background: contextUsage.percentage > 80 ? 'var(--error)' : contextUsage.percentage > 60 ? 'var(--warning)' : 'var(--success)',
+                  background:
+                    contextUsage.percentage > 80
+                      ? 'var(--error)'
+                      : contextUsage.percentage > 60
+                        ? 'var(--warning)'
+                        : 'var(--success)',
                   borderRadius: '4px',
                   transition: 'width 0.3s',
                 }}

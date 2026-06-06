@@ -63,17 +63,18 @@ export class GHITAProfilerRegistry {
 
 // Global registry attachment to share profiler state across module boundaries
 if (!(globalThis as Record<string, unknown>).__ghita_profiler) {
- (globalThis as Record<string, unknown>).__ghita_profiler = new GHITAProfilerRegistry();
+  (globalThis as Record<string, unknown>).__ghita_profiler = new GHITAProfilerRegistry();
 }
-export const ghitaProfiler: GHITAProfilerRegistry = (globalThis as Record<string, unknown>).__ghita_profiler as GHITAProfilerRegistry;
+export const ghitaProfiler: GHITAProfilerRegistry = (globalThis as Record<string, unknown>)
+  .__ghita_profiler as GHITAProfilerRegistry;
 
 /**
  * Categorizes the performance of a function into heatmap colors.
  */
 export function getHeatmapColor(record: ProfilerRecord): 'red' | 'orange' | 'green' {
-  if (record.averageTimeMs >= 100) return 'red';     // >100ms: Critical bottleneck
-  if (record.averageTimeMs >= 10) return 'orange';   // 10ms-100ms: Warning
-  return 'green';                                    // <10ms: Healthy / fast
+  if (record.averageTimeMs >= 100) return 'red'; // >100ms: Critical bottleneck
+  if (record.averageTimeMs >= 10) return 'orange'; // 10ms-100ms: Warning
+  return 'green'; // <10ms: Healthy / fast
 }
 
 /**
@@ -82,20 +83,32 @@ export function getHeatmapColor(record: ProfilerRecord): 'red' | 'orange' | 'gre
  */
 export function instrumentCode(code: string, fileName = 'file.js'): string {
   const reservedKeywords = new Set([
-    'if', 'for', 'while', 'catch', 'switch', 'return',
-    'with', 'function', 'class', 'import', 'export',
-    'default', 'try', 'constructor'
+    'if',
+    'for',
+    'while',
+    'catch',
+    'switch',
+    'return',
+    'with',
+    'function',
+    'class',
+    'import',
+    'export',
+    'default',
+    'try',
+    'constructor',
   ]);
 
   // Regex to match function declarations and class methods
-  const funcRegex = /(?:(async\s+)?function\s+([a-zA-Z0-9_$]+)\s*\(([^)]*)\)\s*\{)|(?:(async\s+)?(?:(public|private|protected|get|set)\s+)?([a-zA-Z0-9_$]+)\s*\(([^)]*)\)\s*\{)/g;
-  
+  const funcRegex =
+    /(?:(async\s+)?function\s+([a-zA-Z0-9_$]+)\s*\(([^)]*)\)\s*\{)|(?:(async\s+)?(?:(public|private|protected|get|set)\s+)?([a-zA-Z0-9_$]+)\s*\(([^)]*)\)\s*\{)/g;
+
   const matches: Array<{ name: string; openBraceIndex: number }> = [];
   let match;
 
   while ((match = funcRegex.exec(code)) !== null) {
     const isStandardFunc = match[2] !== undefined;
-      const funcName = isStandardFunc ? (match[2] as string) : (match[6] as string);
+    const funcName = isStandardFunc ? (match[2] as string) : (match[6] as string);
 
     if (reservedKeywords.has(funcName)) {
       continue;
@@ -109,7 +122,7 @@ export function instrumentCode(code: string, fileName = 'file.js'): string {
   let instrumentedCode = code;
   for (let i = matches.length - 1; i >= 0; i--) {
     const m = matches[i];
-      if (!m) continue;
+    if (!m) continue;
     const closeBraceIndex = findClosingBrace(instrumentedCode, m.openBraceIndex);
     if (closeBraceIndex !== -1) {
       const originalBody = instrumentedCode.substring(m.openBraceIndex + 1, closeBraceIndex);
@@ -117,10 +130,10 @@ export function instrumentCode(code: string, fileName = 'file.js'): string {
       if (originalBody.includes('__ghita_perf_id')) {
         continue;
       }
-      
+
       const wrappedBody = `\n  const __ghita_perf_id = globalThis.__ghita_profiler.enter("${m.name}");\n  try {\n    ${originalBody}\n  } finally {\n    globalThis.__ghita_profiler.exit(__ghita_perf_id);\n  }\n`;
-      
-      instrumentedCode = 
+
+      instrumentedCode =
         instrumentedCode.substring(0, m.openBraceIndex + 1) +
         wrappedBody +
         instrumentedCode.substring(closeBraceIndex);
@@ -137,7 +150,7 @@ export function instrumentCode(code: string, fileName = 'file.js'): string {
 function findClosingBrace(code: string, startIndex: number): number {
   let braceCount = 1;
   let i = startIndex + 1;
-  
+
   while (i < code.length) {
     const char = code[i];
     const nextChar = code[i + 1];
@@ -188,17 +201,14 @@ function findClosingBrace(code: string, startIndex: number): number {
     }
     i++;
   }
-  
+
   return -1;
 }
 
 /**
  * Programmatically wraps a function for profiling (ideal for arrow functions or runtime hooks).
  */
-export function profileFunction<T extends (...args: unknown[]) => unknown>(
-  name: string,
-  fn: T
-): T {
+export function profileFunction<T extends (...args: unknown[]) => unknown>(name: string, fn: T): T {
   return function (this: unknown, ...args: unknown[]) {
     const id = ghitaProfiler.enter(name);
     try {
@@ -212,7 +222,7 @@ export function profileFunction<T extends (...args: unknown[]) => unknown>(
           (err) => {
             ghitaProfiler.exit(id);
             throw err;
-          }
+          },
         ) as unknown;
       }
       ghitaProfiler.exit(id);
@@ -229,7 +239,7 @@ export function profileFunction<T extends (...args: unknown[]) => unknown>(
  */
 export async function profileExecution(
   filePath: string,
-  executeFn: () => Promise<void>
+  executeFn: () => Promise<void>,
 ): Promise<ProfilerRecord[]> {
   const resolvedPath = path.resolve(filePath);
   const originalContent = fs.readFileSync(resolvedPath, 'utf8');

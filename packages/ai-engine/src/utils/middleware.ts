@@ -2,19 +2,26 @@
 // GHITA CODING AGENT - Middleware Pipeline Pattern
 // ==============================================================================
 
-import type { AIProvider, ChatMessage, ChatOptions, ChatResponse, EmbeddingManyResponse, EmbeddingResponse } from '../types.js';
+import type {
+  AIProvider,
+  ChatMessage,
+  ChatOptions,
+  ChatResponse,
+  EmbeddingManyResponse,
+  EmbeddingResponse,
+} from '../types.js';
 import type { AIStreamChunk } from '@ghita/shared';
 
 export type MiddlewareNext<T> = (messages?: ChatMessage[], options?: ChatOptions) => Promise<T>;
 
 export type ChatMiddleware = (
   params: { messages: ChatMessage[]; options?: ChatOptions; provider: AIProvider },
-  next: MiddlewareNext<ChatResponse>
+  next: MiddlewareNext<ChatResponse>,
 ) => Promise<ChatResponse>;
 
 export type ChatStreamMiddleware = (
   params: { messages: ChatMessage[]; options?: ChatOptions; provider: AIProvider },
-  next: MiddlewareNext<AsyncGenerator<AIStreamChunk>>
+  next: MiddlewareNext<AsyncGenerator<AIStreamChunk>>,
 ) => Promise<AsyncGenerator<AIStreamChunk>>;
 
 export interface IMiddlewareChain {
@@ -26,18 +33,23 @@ export interface IMiddlewareChain {
  * Creates a proxy wrapped around a provider that intercepts chat() and chatStream()
  * calls through composed middleware chains.
  */
-export function wrapLanguageModel(
-  provider: AIProvider,
-  middlewares: IMiddlewareChain
-): AIProvider {
+export function wrapLanguageModel(provider: AIProvider, middlewares: IMiddlewareChain): AIProvider {
   return {
     ...provider,
 
     // Proxy getters
-    get type() { return provider.type; },
-    get name() { return provider.name; },
-    get defaultModel() { return provider.defaultModel; },
-    get models() { return provider.models; },
+    get type() {
+      return provider.type;
+    },
+    get name() {
+      return provider.name;
+    },
+    get defaultModel() {
+      return provider.defaultModel;
+    },
+    get models() {
+      return provider.models;
+    },
 
     // Proxy other methods
     isReady: () => provider.isReady(),
@@ -47,19 +59,19 @@ export function wrapLanguageModel(
 
     chat: async (messages: ChatMessage[], options?: ChatOptions): Promise<ChatResponse> => {
       let index = 0;
-      
+
       const executeNext = async (
         currentMessages: ChatMessage[],
-        currentOptions?: ChatOptions
+        currentOptions?: ChatOptions,
       ): Promise<ChatResponse> => {
         if (index < middlewares.chat.length) {
           const mw = middlewares.chat[index];
-      if (!mw) return provider.chat(currentMessages, currentOptions);
-      index++;
+          if (!mw) return provider.chat(currentMessages, currentOptions);
+          index++;
           return mw(
             { messages: currentMessages, options: currentOptions, provider },
             (nextMessages, nextOptions) =>
-              executeNext(nextMessages ?? currentMessages, nextOptions ?? currentOptions)
+              executeNext(nextMessages ?? currentMessages, nextOptions ?? currentOptions),
           );
         }
         return provider.chat(currentMessages, currentOptions);
@@ -73,16 +85,16 @@ export function wrapLanguageModel(
 
       const executeNext = async (
         currentMessages: ChatMessage[],
-        currentOptions?: ChatOptions
+        currentOptions?: ChatOptions,
       ): Promise<AsyncGenerator<AIStreamChunk>> => {
-  if (index < middlewares.chatStream.length) {
-    const mw = middlewares.chatStream[index];
-    if (!mw) return provider.chatStream(currentMessages, currentOptions);
-    index++;
+        if (index < middlewares.chatStream.length) {
+          const mw = middlewares.chatStream[index];
+          if (!mw) return provider.chatStream(currentMessages, currentOptions);
+          index++;
           return mw(
             { messages: currentMessages, options: currentOptions, provider },
             (nextMessages, nextOptions) =>
-              executeNext(nextMessages ?? currentMessages, nextOptions ?? currentOptions)
+              executeNext(nextMessages ?? currentMessages, nextOptions ?? currentOptions),
           );
         }
         return provider.chatStream(currentMessages, currentOptions);
@@ -96,7 +108,7 @@ export function wrapLanguageModel(
           yield chunk;
         }
       })();
-    }
+    },
   };
 }
 
@@ -104,8 +116,13 @@ export function wrapLanguageModel(
  * Helper to dynamically compose arrays of middlewares into a single execution function.
  */
 export function composeMiddlewares<T>(
-  middlewares: Array<(params: Record<string, unknown>, next: (params?: Record<string, unknown>) => Promise<T>) => Promise<T>>,
-  baseCall: (params: Record<string, unknown>) => Promise<T>
+  middlewares: Array<
+    (
+      params: Record<string, unknown>,
+      next: (params?: Record<string, unknown>) => Promise<T>,
+    ) => Promise<T>
+  >,
+  baseCall: (params: Record<string, unknown>) => Promise<T>,
 ): (params: Record<string, unknown>) => Promise<T> {
   return (params: Record<string, unknown>) => {
     let index = 0;
@@ -113,9 +130,9 @@ export function composeMiddlewares<T>(
     const next = async (currentParams: Record<string, unknown> = params): Promise<T> => {
       if (index < middlewares.length) {
         const mw = middlewares[index];
-if (!mw) return baseCall(currentParams);
-      index++;
-      return mw(currentParams, (nextParams) => next(nextParams ?? currentParams));
+        if (!mw) return baseCall(currentParams);
+        index++;
+        return mw(currentParams, (nextParams) => next(nextParams ?? currentParams));
       }
       return baseCall(currentParams);
     };
@@ -130,17 +147,17 @@ if (!mw) return baseCall(currentParams);
 
 export type EmbeddingMiddleware = (
   params: { text: string; options?: { model?: string }; provider: AIProvider },
-  next: (text?: string, options?: { model?: string }) => Promise<EmbeddingResponse>
+  next: (text?: string, options?: { model?: string }) => Promise<EmbeddingResponse>,
 ) => Promise<EmbeddingResponse>;
 
 export type EmbeddingManyMiddleware = (
   params: { texts: string[]; options?: { model?: string }; provider: AIProvider },
-  next: (texts?: string[], options?: { model?: string }) => Promise<EmbeddingManyResponse>
+  next: (texts?: string[], options?: { model?: string }) => Promise<EmbeddingManyResponse>,
 ) => Promise<EmbeddingManyResponse>;
 
 export type ImageMiddleware = (
   params: { prompt: string; options?: Record<string, unknown>; provider: Record<string, unknown> },
-  next: (prompt?: string, options?: Record<string, unknown>) => Promise<Record<string, unknown>>
+  next: (prompt?: string, options?: Record<string, unknown>) => Promise<Record<string, unknown>>,
 ) => Promise<Record<string, unknown>>;
 
 /**
@@ -151,7 +168,7 @@ export function wrapEmbeddingModel(
   middlewares: {
     embed?: EmbeddingMiddleware[];
     embedMany?: EmbeddingManyMiddleware[];
-  }
+  },
 ): AIProvider {
   return {
     ...provider,
@@ -160,14 +177,18 @@ export function wrapEmbeddingModel(
       const embedMws = middlewares.embed || [];
       let index = 0;
 
-      const executeNext = async (currentText: string, currentOptions?: { model?: string }): Promise<EmbeddingResponse> => {
-  if (index < embedMws.length) {
-    const mw = embedMws[index];
-    if (!mw) return provider.embed(currentText, currentOptions);
-    index++;
+      const executeNext = async (
+        currentText: string,
+        currentOptions?: { model?: string },
+      ): Promise<EmbeddingResponse> => {
+        if (index < embedMws.length) {
+          const mw = embedMws[index];
+          if (!mw) return provider.embed(currentText, currentOptions);
+          index++;
           return mw(
             { text: currentText, options: currentOptions, provider },
-            (nextText, nextOptions) => executeNext(nextText ?? currentText, nextOptions ?? currentOptions)
+            (nextText, nextOptions) =>
+              executeNext(nextText ?? currentText, nextOptions ?? currentOptions),
           );
         }
         return provider.embed(currentText, currentOptions);
@@ -176,25 +197,32 @@ export function wrapEmbeddingModel(
       return executeNext(text, options);
     },
 
-    embedMany: async (texts: string[], options?: { model?: string }): Promise<EmbeddingManyResponse> => {
+    embedMany: async (
+      texts: string[],
+      options?: { model?: string },
+    ): Promise<EmbeddingManyResponse> => {
       const embedManyMws = middlewares.embedMany || [];
       let index = 0;
 
-      const executeNext = async (currentTexts: string[], currentOptions?: { model?: string }): Promise<EmbeddingManyResponse> => {
-  if (index < embedManyMws.length) {
-    const mw = embedManyMws[index];
-    if (!mw) return provider.embedMany(currentTexts, currentOptions);
-    index++;
+      const executeNext = async (
+        currentTexts: string[],
+        currentOptions?: { model?: string },
+      ): Promise<EmbeddingManyResponse> => {
+        if (index < embedManyMws.length) {
+          const mw = embedManyMws[index];
+          if (!mw) return provider.embedMany(currentTexts, currentOptions);
+          index++;
           return mw(
             { texts: currentTexts, options: currentOptions, provider },
-            (nextTexts, nextOptions) => executeNext(nextTexts ?? currentTexts, nextOptions ?? currentOptions)
+            (nextTexts, nextOptions) =>
+              executeNext(nextTexts ?? currentTexts, nextOptions ?? currentOptions),
           );
         }
         return provider.embedMany(currentTexts, currentOptions);
       };
 
       return executeNext(texts, options);
-    }
+    },
   };
 }
 
@@ -202,30 +230,43 @@ export function wrapEmbeddingModel(
  * Wraps an image model (generateImage) with image middleware chains.
  */
 export function wrapImageModel(
-  imageModel: { generateImage: (prompt: string, options?: Record<string, unknown>) => Promise<Record<string, unknown>>; [key: string]: unknown },
-  middlewares: ImageMiddleware[]
+  imageModel: {
+    generateImage: (
+      prompt: string,
+      options?: Record<string, unknown>,
+    ) => Promise<Record<string, unknown>>;
+    [key: string]: unknown;
+  },
+  middlewares: ImageMiddleware[],
 ): Record<string, unknown> {
   return {
     ...imageModel,
 
-    generateImage: async (prompt: string, options?: Record<string, unknown>): Promise<Record<string, unknown>> => {
+    generateImage: async (
+      prompt: string,
+      options?: Record<string, unknown>,
+    ): Promise<Record<string, unknown>> => {
       let index = 0;
 
-      const executeNext = async (currentPrompt: string, currentOptions?: Record<string, unknown>): Promise<Record<string, unknown>> => {
-  if (index < middlewares.length) {
-    const mw = middlewares[index];
-    if (!mw) return imageModel.generateImage(currentPrompt, currentOptions);
-    index++;
+      const executeNext = async (
+        currentPrompt: string,
+        currentOptions?: Record<string, unknown>,
+      ): Promise<Record<string, unknown>> => {
+        if (index < middlewares.length) {
+          const mw = middlewares[index];
+          if (!mw) return imageModel.generateImage(currentPrompt, currentOptions);
+          index++;
           return mw(
             { prompt: currentPrompt, options: currentOptions, provider: imageModel },
-            (nextPrompt, nextOptions) => executeNext(nextPrompt ?? currentPrompt, nextOptions ?? currentOptions)
+            (nextPrompt, nextOptions) =>
+              executeNext(nextPrompt ?? currentPrompt, nextOptions ?? currentOptions),
           );
         }
         return imageModel.generateImage(currentPrompt, currentOptions);
       };
 
       return executeNext(prompt, options);
-    }
+    },
   };
 }
 
@@ -244,28 +285,25 @@ export interface IProviderMiddlewares {
 /**
  * Higher-level wrapper to apply middleware across all features of a provider.
  */
-export function wrapProvider(
-  provider: AIProvider,
-  middlewares: IProviderMiddlewares
-): AIProvider {
+export function wrapProvider(provider: AIProvider, middlewares: IProviderMiddlewares): AIProvider {
   // Wrap chat & chatStream
   let wrapped = wrapLanguageModel(provider, {
     chat: middlewares.chat || [],
-    chatStream: middlewares.chatStream || []
+    chatStream: middlewares.chatStream || [],
   });
 
   // Wrap embedding
   wrapped = wrapEmbeddingModel(wrapped, {
     embed: middlewares.embed || [],
-    embedMany: middlewares.embedMany || []
+    embedMany: middlewares.embedMany || [],
   });
 
-// Future proof: if the provider has a generateImage method, wrap it
-const providerRecord = provider as unknown as Record<string, unknown>;
-if (typeof providerRecord.generateImage === 'function') {
-  const imageModel = provider as unknown as Parameters<typeof wrapImageModel>[0];
-  const wrappedImage = wrapImageModel(imageModel, middlewares.image || []);
-  (wrapped as unknown as Record<string, unknown>).generateImage = wrappedImage.generateImage;
+  // Future proof: if the provider has a generateImage method, wrap it
+  const providerRecord = provider as unknown as Record<string, unknown>;
+  if (typeof providerRecord.generateImage === 'function') {
+    const imageModel = provider as unknown as Parameters<typeof wrapImageModel>[0];
+    const wrappedImage = wrapImageModel(imageModel, middlewares.image || []);
+    (wrapped as unknown as Record<string, unknown>).generateImage = wrappedImage.generateImage;
   }
 
   return wrapped;

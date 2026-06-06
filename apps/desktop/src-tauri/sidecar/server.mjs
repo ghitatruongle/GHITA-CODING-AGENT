@@ -703,7 +703,7 @@ function activeApiProviderConfigs() {
     if (!entry || typeof entry !== 'object' || entry.active !== true) continue;
 
     const apiKeys = normalizeApiKeys(entry);
-    if (type !== 'ollama' && type !== 'opengateway' && apiKeys.length === 0) continue;
+    if (type !== 'ollama' && type !== 'opencode-zen' && apiKeys.length === 0) continue;
 
     configs.push({
       type,

@@ -10,7 +10,11 @@ export class SkillImprover {
    * Nếu lần chạy mới hiệu quả hơn (nhanh hơn, ít lỗi hơn hoặc thành công),
    * đề xuất cải tiến tham số hoặc cấu trúc các bước.
    */
-  compareOutcomes(original: TaskTrajectory, rerun: TaskTrajectory, skillId: string): SkillImprovement | null {
+  compareOutcomes(
+    original: TaskTrajectory,
+    rerun: TaskTrajectory,
+    skillId: string,
+  ): SkillImprovement | null {
     if (!original.success && rerun.success) {
       return {
         skillId,
@@ -44,40 +48,45 @@ export class SkillImprover {
    * Phân tích nhiều lần sử dụng một skill để phát hiện các cơ hội cải tiến,
    * chẳng hạn như phát hiện tham số tĩnh nào nên được biến đổi thành tham số động.
    */
-  suggestImprovement(skill: SkillTemplate, trajectories: TaskTrajectory[]): SkillImprovement | null {
+  suggestImprovement(
+    skill: SkillTemplate,
+    trajectories: TaskTrajectory[],
+  ): SkillImprovement | null {
     if (trajectories.length < 2) return null;
 
-    const successfulRuns = trajectories.filter(t => t.success);
+    const successfulRuns = trajectories.filter((t) => t.success);
     if (successfulRuns.length === 0) return null;
 
     // Phân tích input của các bước qua nhiều lần chạy để phát hiện hằng số khác nhau
     // Nếu có một giá trị hardcoded trong stepTemplate mà lại thay đổi ở các lần chạy thực tế,
     // đề xuất chuyển nó thành parameter.
     const paramSuggestions: string[] = [];
-    
-    // Giả lập phân tích tĩnh
-  const firstRun = successfulRuns[0];
-  if (!firstRun) return null;
-  const otherRuns = successfulRuns.slice(1);
 
-  for (let stepIndex = 0; stepIndex < skill.steps.length; stepIndex++) {
-    const step = skill.steps[stepIndex];
-    if (!step) continue;
+    // Giả lập phân tích tĩnh
+    const firstRun = successfulRuns[0];
+    if (!firstRun) return null;
+    const otherRuns = successfulRuns.slice(1);
+
+    for (let stepIndex = 0; stepIndex < skill.steps.length; stepIndex++) {
+      const step = skill.steps[stepIndex];
+      if (!step) continue;
       const actualInputFirst = firstRun.steps[stepIndex]?.input;
-      
+
       if (!actualInputFirst) continue;
 
       for (const [key, val] of Object.entries(step.inputTemplate)) {
         // Nếu trường này chưa phải là parameter động {{param}}
         if (typeof val === 'string' && !val.startsWith('{{')) {
           // So sánh với các lần chạy khác
-          const isDifferentInOtherRuns = otherRuns.some(run => {
+          const isDifferentInOtherRuns = otherRuns.some((run) => {
             const actualVal = run.steps[stepIndex]?.input[key];
             return actualVal !== undefined && actualVal !== val;
           });
 
           if (isDifferentInOtherRuns) {
-            paramSuggestions.push(`Trường "${key}" trong bước ${stepIndex + 1} ("${step.toolName}") thay đổi giữa các phiên chạy. Đề xuất biến đổi thành tham số động.`);
+            paramSuggestions.push(
+              `Trường "${key}" trong bước ${stepIndex + 1} ("${step.toolName}") thay đổi giữa các phiên chạy. Đề xuất biến đổi thành tham số động.`,
+            );
           }
         }
       }
@@ -127,7 +136,7 @@ export class SkillImprover {
           type: 'string',
           description: 'Tham số động được thêm tự động qua phân tích sử dụng',
           required: false,
-        }
+        },
       };
     }
 

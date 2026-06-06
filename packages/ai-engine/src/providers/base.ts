@@ -14,6 +14,7 @@ import type {
 } from '../types.js';
 import { AIUnsupportedFeatureError } from '../errors/index.js';
 import { KeyManager } from '../key-manager.js';
+import type { ProviderCapabilities } from './types.js';
 
 export abstract class BaseProvider implements AIProvider {
   abstract readonly type: AIProviderType;
@@ -27,11 +28,12 @@ export abstract class BaseProvider implements AIProvider {
   constructor(config: ProviderConfig) {
     this.config = config;
     // Phase 1.1: Initialize multi-key manager
-    const keys = config.apiKeys && config.apiKeys.length > 0
-      ? config.apiKeys
-      : config.apiKey
-        ? [config.apiKey]
-        : [];
+    const keys =
+      config.apiKeys && config.apiKeys.length > 0
+        ? config.apiKeys
+        : config.apiKey
+          ? [config.apiKey]
+          : [];
     this.keyManager = new KeyManager(keys, config.rotationStrategy ?? 'failover');
   }
 
@@ -68,6 +70,10 @@ export abstract class BaseProvider implements AIProvider {
   protected getApiKey(): string {
     const key = this.keyManager.getNextKey();
     if (!key) {
+      const needsNoKey = this.type === 'ollama' || this.type === 'opencode-zen';
+      if (needsNoKey) {
+        return '';
+      }
       throw new Error(`${this.name}: No healthy API key available`);
     }
     return key;
@@ -98,19 +104,46 @@ export abstract class BaseProvider implements AIProvider {
     throw new AIUnsupportedFeatureError(this.name, 'embedMany');
   }
 
-  async generateImage(_prompt: string, _options?: Record<string, unknown>): Promise<{ url: string; b64?: string }> {
+  async generateImage(
+    _prompt: string,
+    _options?: Record<string, unknown>,
+  ): Promise<{ url: string; b64?: string }> {
     throw new AIUnsupportedFeatureError(this.name, 'generateImage');
   }
 
-  async generateSpeech(_text: string, _options?: Record<string, unknown>): Promise<{ audio: Buffer; contentType: string }> {
+  async generateSpeech(
+    _text: string,
+    _options?: Record<string, unknown>,
+  ): Promise<{ audio: Buffer; contentType: string }> {
     throw new AIUnsupportedFeatureError(this.name, 'generateSpeech');
   }
 
-  async generateVideo(_prompt: string, _options?: Record<string, unknown>): Promise<{ url: string }> {
+  async generateVideo(
+    _prompt: string,
+    _options?: Record<string, unknown>,
+  ): Promise<{ url: string }> {
     throw new AIUnsupportedFeatureError(this.name, 'generateVideo');
   }
 
   async transcribe(_audio: Buffer, _options?: Record<string, unknown>): Promise<{ text: string }> {
     throw new AIUnsupportedFeatureError(this.name, 'transcribe');
+  }
+
+  /**
+   * Returns the capabilities of this provider.
+   * Subclasses should override this with accurate capability info.
+   */
+  getCapabilities(): ProviderCapabilities {
+    return {
+      streaming: true,
+      embeddings: false,
+      imageGeneration: false,
+      speechSynthesis: false,
+      speechRecognition: false,
+      videoGeneration: false,
+      functionCalling: false,
+      visionInput: false,
+      reasoningTokens: false,
+    };
   }
 }

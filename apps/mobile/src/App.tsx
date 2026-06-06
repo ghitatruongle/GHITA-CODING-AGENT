@@ -40,10 +40,7 @@ interface ErrorBoundaryState {
   error: Error | null;
 }
 
-class AppErrorBoundary extends Component<
-  { children: React.ReactNode },
-  ErrorBoundaryState
-> {
+class AppErrorBoundary extends Component<{ children: React.ReactNode }, ErrorBoundaryState> {
   constructor(props: { children: React.ReactNode }) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -63,12 +60,7 @@ class AppErrorBoundary extends Component<
 
   render(): React.ReactNode {
     if (this.state.hasError && this.state.error) {
-      return (
-        <ErrorFallback
-          error={this.state.error}
-          resetError={this.handleReset}
-        />
-      );
+      return <ErrorFallback error={this.state.error} resetError={this.handleReset} />;
     }
     return this.props.children;
   }

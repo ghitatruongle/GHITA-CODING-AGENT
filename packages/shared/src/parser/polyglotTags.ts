@@ -26,7 +26,7 @@ export interface SymbolTag {
   kind: 'definition' | 'reference';
   type: string;
   startLine: number; // 1-indexed
-  endLine: number;   // 1-indexed
+  endLine: number; // 1-indexed
   nodeText?: string;
 }
 
@@ -34,7 +34,7 @@ export class PolyglotTagParser {
   private downloader: WasmParserDownloader;
   private tagsDir: string;
   private isInitialized = false;
-  
+
   // Cache các parser và language để tối ưu hóa hiệu năng
   private parserCache: Map<string, { parser: Parser; language: Parser.Language }> = new Map();
 
@@ -48,10 +48,10 @@ export class PolyglotTagParser {
    */
   private async ensureInitialized() {
     if (this.isInitialized) return;
-    
+
     const runtimeWasmPath = await this.downloader.ensureRuntimeWasm();
     await Parser.init({
-      locateFile: () => runtimeWasmPath
+      locateFile: () => runtimeWasmPath,
     });
     this.isInitialized = true;
   }
@@ -59,7 +59,9 @@ export class PolyglotTagParser {
   /**
    * Lấy parser và language instance đã được cấu hình cho ngôn ngữ đó
    */
-  private async getParserForLanguage(lang: string): Promise<{ parser: Parser; language: Parser.Language }> {
+  private async getParserForLanguage(
+    lang: string,
+  ): Promise<{ parser: Parser; language: Parser.Language }> {
     await this.ensureInitialized();
     const normalized = this.downloader.normalizeLanguageName(lang);
 
@@ -68,7 +70,7 @@ export class PolyglotTagParser {
 
     const wasmPath = await this.downloader.getLanguageWasm(normalized);
     const language = await Parser.Language.load(wasmPath);
-    
+
     const parser = new Parser();
     parser.setLanguage(language);
 
@@ -98,7 +100,7 @@ export class PolyglotTagParser {
    */
   public async extractSymbols(code: string, lang: string): Promise<SymbolTag[]> {
     const normalized = this.downloader.normalizeLanguageName(lang);
-    
+
     try {
       const { parser, language } = await this.getParserForLanguage(normalized);
       const queryScm = this.getQueryScmContent(normalized);
@@ -142,7 +144,7 @@ export class PolyglotTagParser {
             type,
             startLine: anchorNode.startPosition.row + 1,
             endLine: anchorNode.endPosition.row + 1,
-            nodeText: anchorNode.text
+            nodeText: anchorNode.text,
           });
         }
       }

@@ -244,7 +244,12 @@ class MockBrowserAgent extends EventEmitter {
         role: 'main',
         name: 'Content Area',
         children: [
-          { role: 'textbox', name: 'Chat Input', id: 'chat-input', attributes: { placeholder: 'Ask GHITA...' } },
+          {
+            role: 'textbox',
+            name: 'Chat Input',
+            id: 'chat-input',
+            attributes: { placeholder: 'Ask GHITA...' },
+          },
           { role: 'button', name: 'Send Message', id: 'btn-send' },
           { role: 'list', name: 'Message History', id: 'message-list' },
         ],
@@ -287,14 +292,21 @@ class MockBrowserAgent extends EventEmitter {
   }
 
   /** Act: Click/type on a discovered element with self-healing */
-  async act(action: 'click' | 'type', selector: string, value?: string): Promise<{ success: boolean; element: A11yNode | null; healed: boolean }> {
+  async act(
+    action: 'click' | 'type',
+    selector: string,
+    value?: string,
+  ): Promise<{ success: boolean; element: A11yNode | null; healed: boolean }> {
     let element = this.findElement(selector);
     let healed = false;
 
     // Self-healing: try fuzzy match if exact not found
     if (!element && selector.startsWith('#')) {
       const idPart = selector.slice(1).split('-').pop() ?? '';
-      element = this.findElement(`[role="button"][name="${idPart.charAt(0).toUpperCase() + idPart.slice(1)}"]`) ?? null;
+      element =
+        this.findElement(
+          `[role="button"][name="${idPart.charAt(0).toUpperCase() + idPart.slice(1)}"]`,
+        ) ?? null;
       if (element) healed = true;
     }
 
@@ -316,7 +328,7 @@ class MockBrowserAgent extends EventEmitter {
 // TEST SUITES
 // ===========================================================================
 
-describe('Phase 10: E2E Integration & Load Test Suite', () => {
+describe('10: E2E Integration & Load Test Suite', () => {
   let wss: MockWebSocketServer;
   let monacoModel: MockMonacoEditorModel;
   let browser: MockBrowserAgent;
@@ -351,7 +363,11 @@ describe('Phase 10: E2E Integration & Load Test Suite', () => {
       client1.on(SOCKET_EVENTS.VSCODE_FILE_CHANGE, (d) => received1.push(d));
       client2.on(SOCKET_EVENTS.VSCODE_FILE_CHANGE, (d) => received2.push(d));
 
-      const changePayload = { filePath: 'src/index.ts', changeType: 'modified', timestamp: Date.now() };
+      const changePayload = {
+        filePath: 'src/index.ts',
+        changeType: 'modified',
+        timestamp: Date.now(),
+      };
       wss.broadcast(SOCKET_EVENTS.VSCODE_FILE_CHANGE, changePayload);
 
       // Wait a tick
@@ -405,16 +421,21 @@ describe('Phase 10: E2E Integration & Load Test Suite', () => {
   // 2. Agent Router: File Type → Provider Resolution
   // ─────────────────────────────────────────────────────────────────────────
   describe('Agent Router: Provider Resolution', () => {
-    const routingMatrix: Array<{ file: string; expectedProvider: string; expectedAction: string }> = [
-      { file: 'src/app.ts', expectedProvider: 'openai', expectedAction: 'lint-and-suggest' },
-      { file: 'src/App.tsx', expectedProvider: 'openai', expectedAction: 'lint-and-suggest' },
-      { file: 'utils/helper.js', expectedProvider: 'openai', expectedAction: 'lint-and-suggest' },
-      { file: 'scripts/build.py', expectedProvider: 'anthropic', expectedAction: 'type-check' },
-      { file: 'src/main.rs', expectedProvider: 'google', expectedAction: 'borrow-check' },
-      { file: 'config.json', expectedProvider: 'ollama', expectedAction: 'schema-validate' },
-      { file: 'docker-compose.yaml', expectedProvider: 'ollama', expectedAction: 'schema-validate' },
-      { file: 'Cargo.toml', expectedProvider: 'ollama', expectedAction: 'schema-validate' },
-    ];
+    const routingMatrix: Array<{ file: string; expectedProvider: string; expectedAction: string }> =
+      [
+        { file: 'src/app.ts', expectedProvider: 'openai', expectedAction: 'lint-and-suggest' },
+        { file: 'src/App.tsx', expectedProvider: 'openai', expectedAction: 'lint-and-suggest' },
+        { file: 'utils/helper.js', expectedProvider: 'openai', expectedAction: 'lint-and-suggest' },
+        { file: 'scripts/build.py', expectedProvider: 'anthropic', expectedAction: 'type-check' },
+        { file: 'src/main.rs', expectedProvider: 'google', expectedAction: 'borrow-check' },
+        { file: 'config.json', expectedProvider: 'ollama', expectedAction: 'schema-validate' },
+        {
+          file: 'docker-compose.yaml',
+          expectedProvider: 'ollama',
+          expectedAction: 'schema-validate',
+        },
+        { file: 'Cargo.toml', expectedProvider: 'ollama', expectedAction: 'schema-validate' },
+      ];
 
     for (const { file, expectedProvider, expectedAction } of routingMatrix) {
       it(`should route ${file} → ${expectedProvider}/${expectedAction}`, () => {
@@ -439,8 +460,24 @@ describe('Phase 10: E2E Integration & Load Test Suite', () => {
     it('should set and retrieve error markers correctly', () => {
       const resource = 'file:///src/index.ts';
       const markers: MonacoMarker[] = [
-        { severity: 'error', message: "Cannot find name 'foo'", startLine: 5, endLine: 5, startColumn: 10, endColumn: 13, source: 'tsc' },
-        { severity: 'warning', message: 'Unused variable x', startLine: 12, endLine: 12, startColumn: 6, endColumn: 7, source: 'eslint' },
+        {
+          severity: 'error',
+          message: "Cannot find name 'foo'",
+          startLine: 5,
+          endLine: 5,
+          startColumn: 10,
+          endColumn: 13,
+          source: 'tsc',
+        },
+        {
+          severity: 'warning',
+          message: 'Unused variable x',
+          startLine: 12,
+          endLine: 12,
+          startColumn: 6,
+          endColumn: 7,
+          source: 'eslint',
+        },
       ];
 
       monacoModel.setMarkers(resource, markers);
@@ -454,7 +491,14 @@ describe('Phase 10: E2E Integration & Load Test Suite', () => {
     it('should clear markers when file is saved without errors', () => {
       const resource = 'file:///src/index.ts';
       monacoModel.setMarkers(resource, [
-        { severity: 'error', message: 'Syntax error', startLine: 1, endLine: 1, startColumn: 0, endColumn: 5 },
+        {
+          severity: 'error',
+          message: 'Syntax error',
+          startLine: 1,
+          endLine: 1,
+          startColumn: 0,
+          endColumn: 5,
+        },
       ]);
 
       // Simulate save — clear markers
@@ -468,10 +512,24 @@ describe('Phase 10: E2E Integration & Load Test Suite', () => {
       const file2 = 'file:///src/b.ts';
 
       monacoModel.setMarkers(file1, [
-        { severity: 'error', message: 'Error in A', startLine: 1, endLine: 1, startColumn: 0, endColumn: 5 },
+        {
+          severity: 'error',
+          message: 'Error in A',
+          startLine: 1,
+          endLine: 1,
+          startColumn: 0,
+          endColumn: 5,
+        },
       ]);
       monacoModel.setMarkers(file2, [
-        { severity: 'warning', message: 'Warning in B', startLine: 3, endLine: 3, startColumn: 0, endColumn: 10 },
+        {
+          severity: 'warning',
+          message: 'Warning in B',
+          startLine: 3,
+          endLine: 3,
+          startColumn: 0,
+          endColumn: 10,
+        },
       ]);
 
       expect(monacoModel.getErrorCount(file1)).toBe(1);
@@ -482,13 +540,34 @@ describe('Phase 10: E2E Integration & Load Test Suite', () => {
     it('should update markers atomically (replace, not append)', () => {
       const resource = 'file:///src/component.tsx';
       monacoModel.setMarkers(resource, [
-        { severity: 'error', message: 'Old error 1', startLine: 1, endLine: 1, startColumn: 0, endColumn: 5 },
-        { severity: 'error', message: 'Old error 2', startLine: 2, endLine: 2, startColumn: 0, endColumn: 5 },
+        {
+          severity: 'error',
+          message: 'Old error 1',
+          startLine: 1,
+          endLine: 1,
+          startColumn: 0,
+          endColumn: 5,
+        },
+        {
+          severity: 'error',
+          message: 'Old error 2',
+          startLine: 2,
+          endLine: 2,
+          startColumn: 0,
+          endColumn: 5,
+        },
       ]);
 
       // Second set should replace, not append
       monacoModel.setMarkers(resource, [
-        { severity: 'warning', message: 'New warning', startLine: 10, endLine: 10, startColumn: 0, endColumn: 5 },
+        {
+          severity: 'warning',
+          message: 'New warning',
+          startLine: 10,
+          endLine: 10,
+          startColumn: 0,
+          endColumn: 5,
+        },
       ]);
 
       expect(monacoModel.getErrorCount(resource)).toBe(0);
@@ -657,7 +736,14 @@ describe('Phase 10: E2E Integration & Load Test Suite', () => {
             const resource = `file:///${filePath}`;
             if (routing.action === 'lint-and-suggest') {
               monacoModel.setMarkers(resource, [
-                { severity: 'info', message: `[${routing.provider}] No issues found`, startLine: 1, endLine: 1, startColumn: 0, endColumn: 5 },
+                {
+                  severity: 'info',
+                  message: `[${routing.provider}] No issues found`,
+                  startLine: 1,
+                  endLine: 1,
+                  startColumn: 0,
+                  endColumn: 5,
+                },
               ]);
               markerUpdates.push(resource);
             }
@@ -684,7 +770,6 @@ describe('Phase 10: E2E Integration & Load Test Suite', () => {
       expect(markers[0].message).toContain('No issues found');
     });
   });
-
 
   // ─────────────────────────────────────────────────────────────────────────
   // 7. Load Test: 30 Concurrent WebSocket Streams
@@ -756,8 +841,8 @@ describe('Phase 10: E2E Integration & Load Test Suite', () => {
 
       const results = await Promise.all(
         files.map((f) =>
-          Promise.resolve(mockAgentRouter(f)).then((r) => ({ file: f.filePath, ...r }))
-        )
+          Promise.resolve(mockAgentRouter(f)).then((r) => ({ file: f.filePath, ...r })),
+        ),
       );
 
       expect(results.length).toBe(30);
@@ -773,9 +858,7 @@ describe('Phase 10: E2E Integration & Load Test Suite', () => {
     it('should run 30 PTY terminal commands concurrently and track exit codes', async () => {
       const ptys = Array.from({ length: CLIENT_COUNT }, () => new MockPtyTerminal());
 
-      const results = await Promise.all(
-        ptys.map((pty, i) => pty.execute(`echo "load-test-${i}"`))
-      );
+      const results = await Promise.all(ptys.map((pty, i) => pty.execute(`echo "load-test-${i}"`)));
 
       expect(results.length).toBe(CLIENT_COUNT);
 
@@ -843,13 +926,30 @@ describe('Phase 10: E2E Integration & Load Test Suite', () => {
   describe('SOCKET_EVENTS: Constants Integrity', () => {
     it('should export all required socket event names', () => {
       const requiredEvents: Array<keyof typeof SOCKET_EVENTS> = [
-        'CONNECT', 'DISCONNECT', 'PAIR', 'PAIR_CONFIRM',
-        'COMMAND', 'SCREENSHOT', 'STATUS', 'APPROVE', 'REJECT',
-        'CHAT', 'SCREEN_STREAM', 'PING', 'PONG', 'ERROR',
-        'REQUIRE_APPROVAL', 'APPROVE_COMMAND', 'REJECT_COMMAND',
-        'COST_TELEMETRY', 'SYNC_LANGUAGE',
-        'FILE_CHANGE', 'VSCODE_FILE_CHANGE',
-        'MOBILE_TOUCH', 'MOBILE_TYPE', 'MOBILE_KEY',
+        'CONNECT',
+        'DISCONNECT',
+        'PAIR',
+        'PAIR_CONFIRM',
+        'COMMAND',
+        'SCREENSHOT',
+        'STATUS',
+        'APPROVE',
+        'REJECT',
+        'CHAT',
+        'SCREEN_STREAM',
+        'PING',
+        'PONG',
+        'ERROR',
+        'REQUIRE_APPROVAL',
+        'APPROVE_COMMAND',
+        'REJECT_COMMAND',
+        'COST_TELEMETRY',
+        'SYNC_LANGUAGE',
+        'FILE_CHANGE',
+        'VSCODE_FILE_CHANGE',
+        'MOBILE_TOUCH',
+        'MOBILE_TYPE',
+        'MOBILE_KEY',
       ];
 
       for (const eventKey of requiredEvents) {

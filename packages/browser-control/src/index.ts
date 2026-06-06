@@ -131,7 +131,9 @@ function toSkillResult(result: BrowserResult) {
   };
 }
 
-export function createBrowserControlSkills(controller = new BrowserController()): SkillDefinition[] {
+export function createBrowserControlSkills(
+  controller = new BrowserController(),
+): SkillDefinition[] {
   return [
     {
       id: 'browser.open',
@@ -174,7 +176,8 @@ export function createBrowserControlSkills(controller = new BrowserController())
       parameters: {
         selector: { type: 'string', description: 'Optional CSS selector', required: false },
       },
-      run: async ({ input }) => toSkillResult(await controller.extract(readString(input, 'selector'))),
+      run: async ({ input }) =>
+        toSkillResult(await controller.extract(readString(input, 'selector'))),
     },
     {
       id: 'browser.fill',
@@ -192,7 +195,8 @@ export function createBrowserControlSkills(controller = new BrowserController())
       run: async ({ input }) => {
         const selector = readString(input, 'selector');
         const value = readString(input, 'value');
-        if (!selector || value === undefined) return { success: false, error: 'Missing selector or value' };
+        if (!selector || value === undefined)
+          return { success: false, error: 'Missing selector or value' };
         return toSkillResult(await controller.fill(selector, value));
       },
     },

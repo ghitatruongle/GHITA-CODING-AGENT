@@ -81,7 +81,12 @@ describe('DocsGriller — scanLocalDocs', () => {
   it('should filter files by extension', async () => {
     const { existsSync, readdirSync, readFileSync, statSync } = await import('fs');
     vi.mocked(existsSync).mockReturnValue(true);
-    vi.mocked(readdirSync).mockReturnValue(['readme.md', 'data.json', 'notes.txt', 'image.png'] as any);
+    vi.mocked(readdirSync).mockReturnValue([
+      'readme.md',
+      'data.json',
+      'notes.txt',
+      'image.png',
+    ] as any);
     vi.mocked(readFileSync).mockReturnValue('content');
     vi.mocked(statSync).mockReturnValue({ mtimeMs: 1000 } as any);
 
@@ -231,10 +236,18 @@ describe('DocsGriller — recordAnswer', () => {
   it('should record answer without throwing', () => {
     const g = new DocsGriller();
     const session: GrillSession = {
-      id: 'test', timestamp: '2026-05-24', docsPath: 'docs/', docsScanned: 1,
+      id: 'test',
+      timestamp: '2026-05-24',
+      docsPath: 'docs/',
+      docsScanned: 1,
       mode: 'deep',
-      questions: [{ question: 'Which auth?', sourceDocs: ['a.md'], sourceCodeFiles: [], severity: 'warning' }],
-      contradictions: [], docCodeContradictions: [], userAnswers: {}, designDecisions: [],
+      questions: [
+        { question: 'Which auth?', sourceDocs: ['a.md'], sourceCodeFiles: [], severity: 'warning' },
+      ],
+      contradictions: [],
+      docCodeContradictions: [],
+      userAnswers: {},
+      designDecisions: [],
     };
     const updated = g.recordAnswer(session, 0, 'OAuth2');
     expect(updated.userAnswers['Which auth?']).toBe('OAuth2');
@@ -243,13 +256,19 @@ describe('DocsGriller — recordAnswer', () => {
   it('should record multiple answers', () => {
     const g = new DocsGriller();
     const session: GrillSession = {
-      id: 'test', timestamp: '2026-05-24', docsPath: 'docs/', docsScanned: 1,
+      id: 'test',
+      timestamp: '2026-05-24',
+      docsPath: 'docs/',
+      docsScanned: 1,
       mode: 'deep',
       questions: [
         { question: 'Which auth?', sourceDocs: ['a.md'], sourceCodeFiles: [], severity: 'warning' },
         { question: 'Which DB?', sourceDocs: ['b.md'], sourceCodeFiles: [], severity: 'info' },
       ],
-      contradictions: [], docCodeContradictions: [], userAnswers: {}, designDecisions: [],
+      contradictions: [],
+      docCodeContradictions: [],
+      userAnswers: {},
+      designDecisions: [],
     };
     g.recordAnswer(session, 0, 'OAuth2');
     g.recordAnswer(session, 1, 'PostgreSQL');
@@ -266,8 +285,15 @@ describe('DocsGriller — designDecisions (via formatReport)', () => {
   it('should render design decisions in report', () => {
     const g = new DocsGriller();
     const report = g.formatReport({
-      id: 'test-dd', timestamp: '2026-05-24', docsPath: 'docs/', docsScanned: 1, mode: 'deep',
-      questions: [], contradictions: [], docCodeContradictions: [], userAnswers: {},
+      id: 'test-dd',
+      timestamp: '2026-05-24',
+      docsPath: 'docs/',
+      docsScanned: 1,
+      mode: 'deep',
+      questions: [],
+      contradictions: [],
+      docCodeContradictions: [],
+      userAnswers: {},
       designDecisions: ['Use OAuth2 for auth', 'Use PostgreSQL for DB'],
     });
     expect(report).toContain('OAuth2');
@@ -277,8 +303,16 @@ describe('DocsGriller — designDecisions (via formatReport)', () => {
   it('should handle empty design decisions', () => {
     const g = new DocsGriller();
     const report = g.formatReport({
-      id: 'test-dd2', timestamp: '2026-05-24', docsPath: 'docs/', docsScanned: 1, mode: 'deep',
-      questions: [], contradictions: [], docCodeContradictions: [], userAnswers: {}, designDecisions: [],
+      id: 'test-dd2',
+      timestamp: '2026-05-24',
+      docsPath: 'docs/',
+      docsScanned: 1,
+      mode: 'deep',
+      questions: [],
+      contradictions: [],
+      docCodeContradictions: [],
+      userAnswers: {},
+      designDecisions: [],
     });
     expect(report).toBeDefined();
   });
@@ -315,7 +349,12 @@ describe('DocsGriller — formatReport', () => {
       docsScanned: 3,
       mode: 'deep',
       questions: [
-        { question: 'Which auth?', sourceDocs: ['a.md', 'b.md'], sourceCodeFiles: [], severity: 'contradiction' },
+        {
+          question: 'Which auth?',
+          sourceDocs: ['a.md', 'b.md'],
+          sourceCodeFiles: [],
+          severity: 'contradiction',
+        },
       ],
       contradictions: [
         {
@@ -345,8 +384,18 @@ describe('DocsGriller — formatReport', () => {
       docsScanned: 2,
       mode: 'deep',
       questions: [
-        { question: 'Which database?', sourceDocs: ['arch.md'], sourceCodeFiles: [], severity: 'warning' },
-        { question: 'API versioning?', sourceDocs: ['api.md'], sourceCodeFiles: [], severity: 'info' },
+        {
+          question: 'Which database?',
+          sourceDocs: ['arch.md'],
+          sourceCodeFiles: [],
+          severity: 'warning',
+        },
+        {
+          question: 'API versioning?',
+          sourceDocs: ['api.md'],
+          sourceCodeFiles: [],
+          severity: 'info',
+        },
       ],
       contradictions: [],
       docCodeContradictions: [],
@@ -368,7 +417,7 @@ describe('DocsGriller — formatReport', () => {
       questions: [],
       contradictions: [],
       docCodeContradictions: [],
-      userAnswers: { 'q1': 'OAuth2' },
+      userAnswers: { q1: 'OAuth2' },
       designDecisions: ['Use OAuth2 for authentication', 'Use PostgreSQL for database'],
     });
     expect(report).toContain('OAuth2');
@@ -385,9 +434,27 @@ describe('DocsGriller — formatReport', () => {
       mode: 'deep',
       questions: [],
       contradictions: [
-        { topic: 'a', docA: { file: 'a.md', excerpt: 'x' }, docB: { file: 'b.md', excerpt: 'y' }, severity: 'minor', recommendation: 'Use b.md' },
-        { topic: 'b', docA: { file: 'a.md', excerpt: 'x' }, docB: { file: 'b.md', excerpt: 'y' }, severity: 'major', recommendation: 'Use b.md' },
-        { topic: 'c', docA: { file: 'a.md', excerpt: 'x' }, docB: { file: 'b.md', excerpt: 'y' }, severity: 'critical', recommendation: 'Use b.md' },
+        {
+          topic: 'a',
+          docA: { file: 'a.md', excerpt: 'x' },
+          docB: { file: 'b.md', excerpt: 'y' },
+          severity: 'minor',
+          recommendation: 'Use b.md',
+        },
+        {
+          topic: 'b',
+          docA: { file: 'a.md', excerpt: 'x' },
+          docB: { file: 'b.md', excerpt: 'y' },
+          severity: 'major',
+          recommendation: 'Use b.md',
+        },
+        {
+          topic: 'c',
+          docA: { file: 'a.md', excerpt: 'x' },
+          docB: { file: 'b.md', excerpt: 'y' },
+          severity: 'critical',
+          recommendation: 'Use b.md',
+        },
       ],
       docCodeContradictions: [],
       userAnswers: {},
@@ -407,7 +474,12 @@ describe('DocsGriller — formatReport', () => {
       docsScanned: 1,
       mode: 'deep',
       questions: [
-        { question: 'Chọn phương thức xác thực nào?', sourceDocs: ['auth.md'], sourceCodeFiles: [], severity: 'warning' },
+        {
+          question: 'Chọn phương thức xác thực nào?',
+          sourceDocs: ['auth.md'],
+          sourceCodeFiles: [],
+          severity: 'warning',
+        },
       ],
       contradictions: [],
       docCodeContradictions: [],
@@ -546,7 +618,9 @@ describe('DocsGriller — edge cases', () => {
     const { existsSync, readdirSync, readFileSync } = await import('fs');
     vi.mocked(existsSync).mockReturnValue(true);
     vi.mocked(readdirSync).mockReturnValue(['tieng-viet.md'] as any);
-    vi.mocked(readFileSync).mockReturnValue('Tài liệu về xác thực và phân quyền người dùng trong hệ thống');
+    vi.mocked(readFileSync).mockReturnValue(
+      'Tài liệu về xác thực và phân quyền người dùng trong hệ thống',
+    );
 
     const g = new DocsGriller({ docsPath: 'docs/' });
     const docs = await g.scanLocalDocs();
@@ -555,7 +629,9 @@ describe('DocsGriller — edge cases', () => {
 
   it('should handle git command failure gracefully', async () => {
     const { execSync } = await import('child_process');
-    vi.mocked(execSync).mockImplementation(() => { throw new Error('not a git repo'); });
+    vi.mocked(execSync).mockImplementation(() => {
+      throw new Error('not a git repo');
+    });
 
     const { existsSync, readdirSync, readFileSync, statSync } = await import('fs');
     vi.mocked(existsSync).mockReturnValue(true);
@@ -572,7 +648,9 @@ describe('DocsGriller — edge cases', () => {
     const { existsSync, readdirSync, readFileSync } = await import('fs');
     vi.mocked(existsSync).mockReturnValue(true);
     vi.mocked(readdirSync).mockReturnValue(['unreadable.md'] as any);
-    vi.mocked(readFileSync).mockImplementation(() => { throw new Error('permission denied'); });
+    vi.mocked(readFileSync).mockImplementation(() => {
+      throw new Error('permission denied');
+    });
 
     const g = new DocsGriller({ docsPath: 'docs/' });
     const docs = await g.scanLocalDocs();
@@ -586,7 +664,10 @@ describe('DocsGriller — edge cases', () => {
       topic: `topic-${i}`,
       docA: { file: `a-${i}.md`, excerpt: `excerpt-a-${i}` },
       docB: { file: `b-${i}.md`, excerpt: `excerpt-b-${i}` },
-      severity: (i % 3 === 0 ? 'critical' : i % 3 === 1 ? 'major' : 'minor') as 'critical' | 'major' | 'minor',
+      severity: (i % 3 === 0 ? 'critical' : i % 3 === 1 ? 'major' : 'minor') as
+        | 'critical'
+        | 'major'
+        | 'minor',
       recommendation: `Use b-${i}.md`,
     }));
 

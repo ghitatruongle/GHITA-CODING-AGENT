@@ -84,9 +84,7 @@ SERVEREOF
     mkdir -p /app && node /app/server.js
     `,
   ],
-  ports: [
-    { containerPort: 3000 },
-  ],
+  ports: [{ containerPort: 3000 }],
   limits: { cpuCores: 1, memoryMb: 256 },
   startupTimeoutMs: 8_000,
 };
@@ -114,16 +112,12 @@ describe.skip('DSO Integration: React + Postgres (requires Docker)', () => {
 
     // Bước 3: Khởi chạy Postgres container
     const pgContainer = await dso.spawnContainer(POSTGRES_CONFIG);
-    postgresPort = pgContainer.ports[0]?.hostPort
-      ? Number(pgContainer.ports[0].hostPort)
-      : 5432;
+    postgresPort = pgContainer.ports[0]?.hostPort ? Number(pgContainer.ports[0].hostPort) : 5432;
     console.log(`[DSO Test] Postgres running on host port ${postgresPort}`);
 
     // Bước 4: Khởi chạy Web Server container (kết nối Postgres qua Docker DNS)
     const webContainer = await dso.spawnContainer(NODE_SERVER_CONFIG);
-    webserverPort = webContainer.ports[0]?.hostPort
-      ? Number(webContainer.ports[0].hostPort)
-      : 3000;
+    webserverPort = webContainer.ports[0]?.hostPort ? Number(webContainer.ports[0].hostPort) : 3000;
     console.log(`[DSO Test] Web server running on host port ${webserverPort}`);
   }, 120_000); // Timeout 2 phút cho setup
 
@@ -234,7 +228,9 @@ describe.skip('DSO Integration: React + Postgres (requires Docker)', () => {
         expect(body.service).toBe('ghita-dso-test');
       } catch (err: unknown) {
         // Nếu port không accessible (Docker có thể map khác port), skip
-        console.warn(`[DSO Test] HTTP test skipped: ${err instanceof Error ? err.message : String(err)}`);
+        console.warn(
+          `[DSO Test] HTTP test skipped: ${err instanceof Error ? err.message : String(err)}`,
+        );
       }
     });
 
@@ -247,7 +243,9 @@ describe.skip('DSO Integration: React + Postgres (requires Docker)', () => {
 
         expect(body.db).toBe('connected');
       } catch (err: unknown) {
-        console.warn(`[DSO Test] DB connection test skipped: ${err instanceof Error ? err.message : String(err)}`);
+        console.warn(
+          `[DSO Test] DB connection test skipped: ${err instanceof Error ? err.message : String(err)}`,
+        );
       }
     });
   });

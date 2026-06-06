@@ -1,8 +1,0 @@
-schema_version: 1
-module_path: test_suites
-title: Test Infrastructure & Quality Assurance
-scope:
-    - tests/
-source_files: []
-depends_on: []
-related_to: []

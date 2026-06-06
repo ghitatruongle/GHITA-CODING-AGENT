@@ -31,7 +31,12 @@ export type AIProviderType =
   | 'voyage'
   | 'ai21'
   | 'sambanova'
-  | 'novita';
+  | 'novita'
+  | 'opencode-zen'
+  | 'nvidia-nim'
+  // Phase 6: New vendors via defineVendor
+  | 'kimi'
+  | 'minimax';
 
 export interface AIProviderConfig {
   type: AIProviderType;

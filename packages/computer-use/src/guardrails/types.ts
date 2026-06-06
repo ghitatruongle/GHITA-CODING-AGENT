@@ -12,14 +12,14 @@ export type ThreatSeverity = 'low' | 'medium' | 'high' | 'critical';
  * Loại mối đe dọa bảo mật
  */
 export type ThreatType =
-  | 'destructive-command'      // rm -rf, mkfs, dd
-  | 'fork-bomb'                // :(){ :|:& };:
-  | 'remote-execution'         // curl|sh, wget|sh
-  | 'obfuscated-command'       // base64 encoded, hex encoded
-  | 'binary-execution'         // chmod +x unknown binary, ./unknown
-  | 'privilege-escalation'     // sudo su, chmod 777 /
-  | 'network-exfiltration'     // nc -l, reverse shells
-  | 'custom-blacklist';        // User-defined in YAML
+  | 'destructive-command' // rm -rf, mkfs, dd
+  | 'fork-bomb' // :(){ :|:& };:
+  | 'remote-execution' // curl|sh, wget|sh
+  | 'obfuscated-command' // base64 encoded, hex encoded
+  | 'binary-execution' // chmod +x unknown binary, ./unknown
+  | 'privilege-escalation' // sudo su, chmod 777 /
+  | 'network-exfiltration' // nc -l, reverse shells
+  | 'custom-blacklist'; // User-defined in YAML
 
 /**
  * Kết quả kiểm tra bảo mật cho một lệnh terminal
@@ -85,6 +85,8 @@ export interface SecurityBlacklistConfig {
   detectBinaryExecution: boolean;
   /** Yêu cầu phê duyệt cho lệnh medium/high */
   requireApprovalForHigh: boolean;
+  /** Chế độ thực thi terminal (dev: luôn hỏi, auto: tự động trừ khi lệnh nguy hiểm) */
+  executionMode?: 'dev' | 'auto';
 }
 
 /**
@@ -118,6 +120,7 @@ export const DEFAULT_SECURITY_CONFIG: SecurityBlacklistConfig = {
   detectBase64: true,
   detectBinaryExecution: true,
   requireApprovalForHigh: true,
+  executionMode: 'auto',
 };
 
 /**

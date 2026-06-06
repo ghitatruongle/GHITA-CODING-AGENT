@@ -17,7 +17,7 @@ const __dirname = path.dirname(__filename);
 const TEMP_TEST_DIR = path.resolve(__dirname, '../../resources/test-ast-temp');
 const TEMP_DB_PATH = path.join(TEMP_TEST_DIR, 'test-ast-cache.db');
 
-describe('Phase 2: AST Multi-Language Extractor Tests', () => {
+describe('2: AST Multi-Language Extractor Tests', () => {
   let extractor: ASTExtractor;
   let cache: SymbolCache;
 
@@ -126,20 +126,20 @@ fun processData(data: List<String>): Int {
 `;
 
       const nodes = await extractor.extractAST(kotlinCode, 'kotlin');
-      const defs = nodes.filter(n => n.kind === 'definition' && !n.isBroken);
+      const defs = nodes.filter((n) => n.kind === 'definition' && !n.isBroken);
 
       expect(defs.length).toBeGreaterThan(0);
 
-      const classDef = defs.find(n => n.name === 'UserService' && n.type === 'class');
+      const classDef = defs.find((n) => n.name === 'UserService' && n.type === 'class');
       expect(classDef).toBeDefined();
 
-      const funcDef = defs.find(n => n.name === 'getUser' && n.type === 'function');
+      const funcDef = defs.find((n) => n.name === 'getUser' && n.type === 'function');
       expect(funcDef).toBeDefined();
 
-      const objectDef = defs.find(n => n.name === 'AppConfig' && n.type === 'object');
+      const objectDef = defs.find((n) => n.name === 'AppConfig' && n.type === 'object');
       expect(objectDef).toBeDefined();
 
-      const topFunc = defs.find(n => n.name === 'processData' && n.type === 'function');
+      const topFunc = defs.find((n) => n.name === 'processData' && n.type === 'function');
       expect(topFunc).toBeDefined();
     }, 30000);
 
@@ -156,7 +156,7 @@ fun main() {
 `;
 
       const nodes = await extractor.extractAST(kotlinCode, 'kotlin');
-      const refs = nodes.filter(n => n.kind === 'reference' && !n.isBroken);
+      const refs = nodes.filter((n) => n.kind === 'reference' && !n.isBroken);
       expect(refs.length).toBeGreaterThan(0);
     }, 30000);
 
@@ -266,8 +266,8 @@ class OuterClass {
 `;
 
       const nodes = await extractor.extractAST(kotlinCode, 'kotlin');
-      const classDef = nodes.find(n => n.name === 'OuterClass' && n.kind === 'definition');
-      const methodDef = nodes.find(n => n.name === 'innerMethod' && n.kind === 'definition');
+      const classDef = nodes.find((n) => n.name === 'OuterClass' && n.kind === 'definition');
+      const methodDef = nodes.find((n) => n.name === 'innerMethod' && n.kind === 'definition');
 
       if (classDef && methodDef) {
         // Method scope should contain parent class name
@@ -348,11 +348,11 @@ class OuterClass {
 }
 `;
       const nodes = await extractor.extractAST(kotlinCode, 'kotlin');
-      const defs = nodes.filter(n => n.kind === 'definition' && !n.isBroken);
+      const defs = nodes.filter((n) => n.kind === 'definition' && !n.isBroken);
 
-      defs.find(n => n.name === 'OuterClass'); // verify it exists
-      const middle = defs.find(n => n.name === 'middleMethod');
-      const inner = defs.find(n => n.name === 'innerFunction');
+      defs.find((n) => n.name === 'OuterClass'); // verify it exists
+      const middle = defs.find((n) => n.name === 'middleMethod');
+      const inner = defs.find((n) => n.name === 'innerFunction');
 
       if (inner && middle) {
         // inner should be child of middle (immediate parent), not OuterClass
@@ -376,10 +376,10 @@ class Calculator {
 }
 `;
       const nodes = await extractor.extractAST(kotlinCode, 'kotlin');
-      const refs = nodes.filter(n => n.kind === 'reference' && !n.isBroken);
+      const refs = nodes.filter((n) => n.kind === 'reference' && !n.isBroken);
 
       // References inside compute() should have scope containing 'compute', not just 'Calculator'
-      const processRef = refs.find(n => n.name === 'processData');
+      const processRef = refs.find((n) => n.name === 'processData');
       if (processRef) {
         expect(processRef.scope).toContain('compute');
       }

@@ -72,8 +72,8 @@ export interface SkillVersion {
 /** Cấu hình hệ thống tự tạo và tối ưu hóa Skill */
 export interface AutoCreateConfig {
   minConfidence: number; // Ngưỡng confidence tối thiểu (ví dụ: 0.6)
-  minSteps: number;      // Số bước tối thiểu (ví dụ: 3)
-  maxSteps: number;      // Số bước tối đa (ví dụ: 20)
+  minSteps: number; // Số bước tối thiểu (ví dụ: 3)
+  maxSteps: number; // Số bước tối đa (ví dụ: 20)
   autoSaveThreshold: number; // Tự động lưu không cần hỏi nếu confidence >= ngưỡng này (ví dụ: 0.85)
   enabledCategories: SkillCategory[];
 }

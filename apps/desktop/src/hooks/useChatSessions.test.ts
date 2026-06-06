@@ -97,14 +97,16 @@ describe('useChatSessions', () => {
     loadChatSessionStateMock.mockResolvedValue({
       sessions: [
         {
-          id: 's1', title: 'Session 1', messages: [
-            { id: 'm1', role: 'user', content: 'Hello', timestamp: 100 },
-          ], timestamp: 200,
+          id: 's1',
+          title: 'Session 1',
+          messages: [{ id: 'm1', role: 'user', content: 'Hello', timestamp: 100 }],
+          timestamp: 200,
         },
         {
-          id: 's2', title: 'Session 2', messages: [
-            { id: 'm2', role: 'assistant', content: 'Hi', timestamp: 300 },
-          ], timestamp: 400,
+          id: 's2',
+          title: 'Session 2',
+          messages: [{ id: 'm2', role: 'assistant', content: 'Hi', timestamp: 300 }],
+          timestamp: 400,
         },
       ],
       activeSessionId: 's1',
@@ -162,14 +164,20 @@ describe('useChatSessions', () => {
         // Corrupted: missing title
         { id: 'corrupt-1', messages: [], timestamp: 200 } as unknown as ChatSession,
         // Corrupted: messages is not an array
-        { id: 'corrupt-2', title: 'Bad', messages: 'not-an-array', timestamp: 300 } as unknown as ChatSession,
+        {
+          id: 'corrupt-2',
+          title: 'Bad',
+          messages: 'not-an-array',
+          timestamp: 300,
+        } as unknown as ChatSession,
         // Corrupted: missing id
         { title: 'No ID', messages: [], timestamp: 400 } as unknown as ChatSession,
         // Corrupted: message with invalid role
         {
-          id: 'corrupt-3', title: 'Bad Msg', messages: [
-            { id: 'x', role: 'unknown-role', content: 'test', timestamp: 500 },
-          ], timestamp: 600,
+          id: 'corrupt-3',
+          title: 'Bad Msg',
+          messages: [{ id: 'x', role: 'unknown-role', content: 'test', timestamp: 500 }],
+          timestamp: 600,
         } as unknown as ChatSession,
       ],
       activeSessionId: 'valid-1',
@@ -217,7 +225,12 @@ describe('useChatSessions', () => {
     // Add a user message
     act(() => {
       result.current.setMessages([
-        { id: 'msg1', role: 'user' as const, content: 'Hello world from AI', timestamp: Date.now() },
+        {
+          id: 'msg1',
+          role: 'user' as const,
+          content: 'Hello world from AI',
+          timestamp: Date.now(),
+        },
       ]);
     });
 

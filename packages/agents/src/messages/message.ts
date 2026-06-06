@@ -2,13 +2,7 @@
 // GHITA CODING AGENT - Message Classes
 // ==============================================================================
 
-import type {
-  MessageRole,
-  ContentPart,
-  ToolCall,
-  MessageMetadata,
-  MessageData,
-} from './types.js';
+import type { MessageRole, ContentPart, ToolCall, MessageMetadata, MessageData } from './types.js';
 
 function generateMessageId(): string {
   return `msg_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;

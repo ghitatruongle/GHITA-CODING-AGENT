@@ -86,3 +86,26 @@ export interface KnowledgeSearchResult {
 }
 
 export type EmbeddingFunction = (text: string) => Promise<number[]>;
+
+// --- Phase 15: Knowledge Graph RAG ---
+
+export interface GraphNode {
+  id: string;
+  label: string; // e.g., 'Person', 'Organization', 'Concept'
+  name: string;
+  properties?: Record<string, unknown>;
+}
+
+export interface GraphEdge {
+  id: string;
+  sourceId: string;
+  targetId: string;
+  relation: string; // e.g., 'WORKS_FOR', 'DEPENDS_ON'
+  weight?: number;
+  properties?: Record<string, unknown>;
+}
+
+export interface EntityExtractionProvider {
+  /** Given a text chunk, extract entities and relations */
+  extract(text: string): Promise<{ nodes: GraphNode[]; edges: GraphEdge[] }>;
+}

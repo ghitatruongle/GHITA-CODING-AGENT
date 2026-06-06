@@ -17,7 +17,7 @@ export class CryptoHelper {
     const key = this.normalizeKey(secretKey);
     const iv = crypto.randomBytes(IV_LENGTH);
     const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
-    
+
     // Thêm prefix "GHITA_V1:" để xác thực tính toàn vẹn khi giải mã
     const prefixedText = `GHITA_V1:${text}`;
     let encrypted = cipher.update(prefixedText, 'utf8', 'hex');
@@ -61,13 +61,14 @@ export class CryptoHelper {
       throw new Error('Dữ liệu mã hóa không hợp lệ. Phải chứa IV:authTag:ciphertext.');
     }
 
-  const ivPart = parts[0];
-  const authTagPart = parts[1];
-  const encryptedPart = parts[2];
-  if (!ivPart || !authTagPart || !encryptedPart) throw new Error('Invalid encrypted data format.');
-  const iv = Buffer.from(ivPart, 'hex');
-  const authTag = Buffer.from(authTagPart, 'hex');
-  const encryptedText = Buffer.from(encryptedPart, 'hex');
+    const ivPart = parts[0];
+    const authTagPart = parts[1];
+    const encryptedPart = parts[2];
+    if (!ivPart || !authTagPart || !encryptedPart)
+      throw new Error('Invalid encrypted data format.');
+    const iv = Buffer.from(ivPart, 'hex');
+    const authTag = Buffer.from(authTagPart, 'hex');
+    const encryptedText = Buffer.from(encryptedPart, 'hex');
     const key = this.normalizeKey(secretKey);
 
     let decryptedText = '';

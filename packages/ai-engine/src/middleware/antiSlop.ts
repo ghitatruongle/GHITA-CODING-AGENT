@@ -49,14 +49,41 @@ interface Runnable {
 
 const DEFAULT_SLOP_PATTERNS: SlopPattern[] = [
   // Longer / more specific patterns first to avoid partial matches
-  { regex: /^(?:Let me know\s+if\s+you\s+(?:need|have)\s+(?:any(?:thing)?\s+)?(?:else|more)[.!]*\s*)/i, description: 'Let me know if...' },
-  { regex: /^(?:Is there\s+anything\s+else\s+(?:I\s+can\s+help\s*(?:with)?|you(?:'d)?\s+(?:like|need))[.!?\s]*)/i, description: 'Is there anything else...' },
-  { regex: /^(?:I(?:'d)?\s+(?:can|would\s+(?:be\s+)?(?:happy\s+to|glad\s+to)|(?:am|'m)\s+(?:happy|glad)\s+to|be\s+happy\s+to)\s+help\s+(?:you\s+)?with\s+that[.!]*\s*)/i, description: 'I can help with that' },
-  { regex: /^(?:Here(?:'s| is)\s+(?:the\s+)?(?:updated|modified|new|revised)\s+\w+[:.!]*\s*)/i, description: 'Here is the updated...' },
-  { regex: /^(?:Here are\s+(?:the\s+)?(?:steps|some|a few)[.!]*\s*)/i, description: 'Here are the steps...' },
-  { regex: /^(?:I hope\s+(?:this|that)\s+(?:helps|is helpful|answers your question)[.!]*\s*)/i, description: 'I hope this helps' },
-  { regex: /^(?:I(?:'ll| will)\s+(?:now\s+)?(?:help|assist)\s+you[.!]*\s*)/i, description: "I'll help you" },
-  { regex: /^(?:Let me\s+(?:help\s+you\s+)?(?:with\s+that)[.!]*\s*)/i, description: 'Let me help...' },
+  {
+    regex:
+      /^(?:Let me know\s+if\s+you\s+(?:need|have)\s+(?:any(?:thing)?\s+)?(?:else|more)[.!]*\s*)/i,
+    description: 'Let me know if...',
+  },
+  {
+    regex:
+      /^(?:Is there\s+anything\s+else\s+(?:I\s+can\s+help\s*(?:with)?|you(?:'d)?\s+(?:like|need))[.!?\s]*)/i,
+    description: 'Is there anything else...',
+  },
+  {
+    regex:
+      /^(?:I(?:'d)?\s+(?:can|would\s+(?:be\s+)?(?:happy\s+to|glad\s+to)|(?:am|'m)\s+(?:happy|glad)\s+to|be\s+happy\s+to)\s+help\s+(?:you\s+)?with\s+that[.!]*\s*)/i,
+    description: 'I can help with that',
+  },
+  {
+    regex: /^(?:Here(?:'s| is)\s+(?:the\s+)?(?:updated|modified|new|revised)\s+\w+[:.!]*\s*)/i,
+    description: 'Here is the updated...',
+  },
+  {
+    regex: /^(?:Here are\s+(?:the\s+)?(?:steps|some|a few)[.!]*\s*)/i,
+    description: 'Here are the steps...',
+  },
+  {
+    regex: /^(?:I hope\s+(?:this|that)\s+(?:helps|is helpful|answers your question)[.!]*\s*)/i,
+    description: 'I hope this helps',
+  },
+  {
+    regex: /^(?:I(?:'ll| will)\s+(?:now\s+)?(?:help|assist)\s+you[.!]*\s*)/i,
+    description: "I'll help you",
+  },
+  {
+    regex: /^(?:Let me\s+(?:help\s+you\s+)?(?:with\s+that)[.!]*\s*)/i,
+    description: 'Let me help...',
+  },
   { regex: /^(?:Hope\s+(?:this|that)\s+helps[.!]*\s*)/i, description: 'Hope this helps' },
   { regex: /^(?:Feel free\s+to\s+ask[.!]*\s*)/i, description: 'Feel free to ask' },
   { regex: /^(?:Happy\s+to\s+help[.!]*\s*)/i, description: 'Happy to help' },
@@ -126,9 +153,9 @@ class AhoCorasick {
     }
 
     while (queue.length > 0) {
-    const current = queue.shift();
-    if (current === undefined) break;
-    const currentGoto = gotoFn[current] || new Map();
+      const current = queue.shift();
+      if (current === undefined) break;
+      const currentGoto = gotoFn[current] || new Map();
 
       for (const [char, nextState] of currentGoto) {
         queue.push(nextState);
@@ -137,10 +164,13 @@ class AhoCorasick {
           fail = failFn[fail] ?? 0;
         }
         const failTarget = (gotoFn[fail] ?? new Map()).get(char);
-        failFn[nextState] = (failTarget !== undefined && failTarget !== nextState) ? failTarget : 0;
+        failFn[nextState] = failTarget !== undefined && failTarget !== nextState ? failTarget : 0;
 
         // Merge output
-        outputFn[nextState] = [...(outputFn[nextState] ?? []), ...(outputFn[failFn[nextState] ?? 0] ?? [])];
+        outputFn[nextState] = [
+          ...(outputFn[nextState] ?? []),
+          ...(outputFn[failFn[nextState] ?? 0] ?? []),
+        ];
       }
     }
 
@@ -160,7 +190,7 @@ class AhoCorasick {
 
     for (let i = 0; i < lower.length; i++) {
       const char = lower[i];
-    if (char === undefined) continue;
+      if (char === undefined) continue;
       while (!(this.gotoFn[currentState] || new Map()).has(char) && currentState !== 0) {
         currentState = this.failFn[currentState] ?? 0;
       }
@@ -205,7 +235,7 @@ function isInsideCodeBlock(state: CodeBlockState, line: string): boolean {
   if (backtickMatch || tildeMatch) {
     const match = backtickMatch || tildeMatch;
     if (!match || !match[1]) return state.inCodeBlock;
-    const fence = (match[1][0] as '`' | '~');
+    const fence = match[1][0] as '`' | '~';
     const count = match[1].length;
 
     if (!state.inCodeBlock) {
@@ -243,9 +273,9 @@ function loadSlopConfig(configPath: string): string[] {
       if (!trimmed || trimmed.startsWith('#')) continue;
 
       // Format: - pattern: "regex here"
-    const match = trimmed.match(/^-\s*(?:pattern:\s*)?["'](.+)["']/);
-    if (match && match[1]) {
-      patterns.push(match[1]);
+      const match = trimmed.match(/^-\s*(?:pattern:\s*)?["'](.+)["']/);
+      if (match && match[1]) {
+        patterns.push(match[1]);
       } else if (trimmed.startsWith('- ')) {
         // Simple list format: - Certainly!
         patterns.push(trimmed.slice(2).replace(/["']/g, ''));
@@ -299,9 +329,9 @@ class TokenSavingsTracker {
         INSERT INTO anti_slop_savings (timestamp, tokens_saved, patterns_matched, total_input_tokens)
         VALUES (@timestamp, @tokensSaved, @patternsMatched, @totalInputTokens)
       `) as Runnable;
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.warn(`[AntiSlop] SQLite unavailable (${message}), using in-memory only`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`[AntiSlop] SQLite unavailable (${message}), using in-memory only`);
       this.db = null;
       this.insertStmt = null;
     }
@@ -319,9 +349,9 @@ class TokenSavingsTracker {
           patternsMatched: JSON.stringify(entry.patternsMatched),
           totalInputTokens: entry.totalInputTokens,
         });
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.warn(`[AntiSlop] SQLite insert failed: ${message}`);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.warn(`[AntiSlop] SQLite insert failed: ${message}`);
       }
     }
   }
@@ -338,7 +368,9 @@ class TokenSavingsTracker {
 
     // Async SQLite export (fire-and-forget, non-blocking)
     if (this.dbPath) {
-      this.exportToSqlite(entry).catch(() => { /* swallow */ });
+      this.exportToSqlite(entry).catch(() => {
+        /* swallow */
+      });
     }
   }
 
@@ -393,7 +425,10 @@ export class AntiSlopFilter {
     // Add custom patterns from config
     for (const p of this.config.customPatterns) {
       try {
-        this.patterns.push({ regex: new RegExp(`^(?:${p}[.!]*\\s*)`, 'i'), description: p.toLowerCase() });
+        this.patterns.push({
+          regex: new RegExp(`^(?:${p}[.!]*\\s*)`, 'i'),
+          description: p.toLowerCase(),
+        });
       } catch {
         // Invalid regex, skip
       }
@@ -403,7 +438,10 @@ export class AntiSlopFilter {
     const yamlPatterns = loadSlopConfig(this.config.slopConfigPath);
     for (const p of yamlPatterns) {
       try {
-        this.patterns.push({ regex: new RegExp(`^(?:${p}[.!]*\\s*)`, 'i'), description: p.toLowerCase() });
+        this.patterns.push({
+          regex: new RegExp(`^(?:${p}[.!]*\\s*)`, 'i'),
+          description: p.toLowerCase(),
+        });
       } catch {
         // Invalid regex, skip
       }
@@ -472,7 +510,11 @@ export class AntiSlopFilter {
   }
 
   /** Clean accumulated text with code block awareness */
-  cleanWithCodeBlockAwareness(text: string): { cleaned: string; charsRemoved: number; matchedPatterns: string[] } {
+  cleanWithCodeBlockAwareness(text: string): {
+    cleaned: string;
+    charsRemoved: number;
+    matchedPatterns: string[];
+  } {
     const lines = text.split('\n');
     const cleanedLines: string[] = [];
     let totalRemoved = 0;
@@ -555,7 +597,9 @@ export function createAntiSlopStreamMiddleware(config?: AntiSlopConfig): ChatStr
           // Track savings
           if (config?.trackSavings !== false && result.charsRemoved > 0) {
             const approxTokensSaved = Math.ceil(result.charsRemoved / 4);
-            filter.getSavingsTracker().record(approxTokensSaved, result.matchedPatterns, text.length);
+            filter
+              .getSavingsTracker()
+              .record(approxTokensSaved, result.matchedPatterns, text.length);
           }
 
           if (result.cleaned) {
@@ -611,7 +655,9 @@ export function createAntiSlopMiddleware(config?: AntiSlopConfig): ChatMiddlewar
 
       if (config?.trackSavings !== false && result.charsRemoved > 0) {
         const approxTokensSaved = Math.ceil(result.charsRemoved / 4);
-        filter.getSavingsTracker().record(approxTokensSaved, result.matchedPatterns, response.content.length);
+        filter
+          .getSavingsTracker()
+          .record(approxTokensSaved, result.matchedPatterns, response.content.length);
       }
 
       return {

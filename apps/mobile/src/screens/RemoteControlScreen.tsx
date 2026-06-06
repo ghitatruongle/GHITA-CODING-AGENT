@@ -34,7 +34,9 @@ import { useTranslation } from '../i18n/context';
 const MAX_CHAT_MESSAGES = 50;
 const SCREENSHOT_TIMEOUT_MS = 15000;
 // Intentionally module-level to persist across re-renders for unique message ID generation
-let msgCounter = 0;
+const generateMessageId = () => {
+  return `user_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+};
 
 interface SkillItem {
   id: string;
@@ -60,7 +62,9 @@ export function RemoteControlScreen({
   const screenshotTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Phase 8 States
-  const [activeApproval, setActiveApproval] = useState<{ id: string; command: string } | null>(null);
+  const [activeApproval, setActiveApproval] = useState<{ id: string; command: string } | null>(
+    null,
+  );
   const [costTelemetry, setCostTelemetry] = useState<{
     inputTokens: number;
     outputTokens: number;
@@ -83,19 +87,32 @@ export function RemoteControlScreen({
   const [skillsLoading, setSkillsLoading] = useState(false);
   const [skillRunning, setSkillRunning] = useState<string | null>(null);
 
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   const loadSkills = useCallback(async () => {
     setSkillsLoading(true);
     try {
       const result = await socketService.listSkills();
+      if (!mountedRef.current) return;
       if (result.success && result.skills) {
         setSkillsList(result.skills.filter((s) => s.enabled));
       } else {
         Alert.alert('Error', result.error || 'Failed to load skills');
       }
     } catch {
-      Alert.alert('Error', 'Failed to load skills');
+      if (mountedRef.current) {
+        Alert.alert('Error', 'Failed to load skills');
+      }
     } finally {
-      setSkillsLoading(false);
+      if (mountedRef.current) {
+        setSkillsLoading(false);
+      }
     }
   }, []);
 
@@ -103,15 +120,20 @@ export function RemoteControlScreen({
     setSkillRunning(skillId);
     try {
       const result = await socketService.runSkill(skillId);
+      if (!mountedRef.current) return;
       if (result.success) {
         Alert.alert('Success', `Skill "${skillId}" completed`);
       } else {
         Alert.alert('Error', result.error || 'Skill execution failed');
       }
     } catch {
-      Alert.alert('Error', 'Skill execution failed');
+      if (mountedRef.current) {
+        Alert.alert('Error', 'Skill execution failed');
+      }
     } finally {
-      setSkillRunning(null);
+      if (mountedRef.current) {
+        setSkillRunning(null);
+      }
     }
   }, []);
 
@@ -135,20 +157,16 @@ export function RemoteControlScreen({
           }
         } catch {}
         if (state === 'error') {
-          Alert.alert(
-            t('remote.lostConnectionTitle'),
-            t('remote.lostConnectionDesc'),
-            [
-              { text: t('remote.stay'), style: 'cancel' },
-              {
-                text: t('remote.goBack'),
-                onPress: () => {
-                  socketService.disconnect();
-                  navigation.replace('Pairing');
-                },
+          Alert.alert(t('remote.lostConnectionTitle'), t('remote.lostConnectionDesc'), [
+            { text: t('remote.stay'), style: 'cancel' },
+            {
+              text: t('remote.goBack'),
+              onPress: () => {
+                socketService.disconnect();
+                navigation.replace('Pairing');
               },
-            ],
-          );
+            },
+          ]);
         }
       },
       onScreenshot: (imageBase64) => {
@@ -185,25 +203,21 @@ export function RemoteControlScreen({
       onError: (error) => {
         clearScreenshotTimeout();
         setScreenshotLoading(false);
-        Alert.alert(
-          t('common.error'),
-          error,
-          [
-            {
-              text: t('common.ok'),
-              onPress: () => {
-                if (
-                  error.includes('Session expired') ||
-                  error.includes('re-pair') ||
-                  error.includes('Unauthorized')
-                ) {
-                  socketService.disconnect();
-                  navigation.replace('Pairing');
-                }
-              },
+        Alert.alert(t('common.error'), error, [
+          {
+            text: t('common.ok'),
+            onPress: () => {
+              if (
+                error.includes('Session expired') ||
+                error.includes('re-pair') ||
+                error.includes('Unauthorized')
+              ) {
+                socketService.disconnect();
+                navigation.replace('Pairing');
+              }
             },
-          ]
-        );
+          },
+        ]);
       },
     });
 
@@ -231,40 +245,43 @@ export function RemoteControlScreen({
   }, []);
 
   // Handle quick action
-  const handleQuickAction = useCallback((type: QuickAction['type']) => {
-    switch (type) {
-      case 'screenshot':
-        if (!isConnected) return;
-        clearScreenshotTimeout();
-        setScreenshotLoading(true);
-        screenshotTimeoutRef.current = setTimeout(() => {
-          screenshotTimeoutRef.current = null;
-          setScreenshotLoading(false);
-          Alert.alert(t('remote.chatTimeoutTitle'), t('remote.chatTimeoutDesc'));
-        }, SCREENSHOT_TIMEOUT_MS);
-        socketService.requestScreenshot();
-        break;
-      case 'approve':
-        socketService.sendApprove();
-        break;
-      case 'reject':
-        socketService.sendReject();
-        break;
-      case 'cancel':
-        socketService.sendCommand('cancel');
-        break;
-      case 'skills':
-        if (!isConnected) return;
-        setShowSkills(true);
-        loadSkills();
-        break;
-    }
-  }, [clearScreenshotTimeout, isConnected, t, loadSkills]);
+  const handleQuickAction = useCallback(
+    (type: QuickAction['type']) => {
+      switch (type) {
+        case 'screenshot':
+          if (!isConnected) return;
+          clearScreenshotTimeout();
+          setScreenshotLoading(true);
+          screenshotTimeoutRef.current = setTimeout(() => {
+            screenshotTimeoutRef.current = null;
+            setScreenshotLoading(false);
+            Alert.alert(t('remote.chatTimeoutTitle'), t('remote.screenshotTimeoutDesc'));
+          }, SCREENSHOT_TIMEOUT_MS);
+          socketService.requestScreenshot();
+          break;
+        case 'approve':
+          socketService.sendApprove();
+          break;
+        case 'reject':
+          socketService.sendReject();
+          break;
+        case 'cancel':
+          socketService.sendCommand('cancel');
+          break;
+        case 'skills':
+          if (!isConnected) return;
+          setShowSkills(true);
+          loadSkills();
+          break;
+      }
+    },
+    [clearScreenshotTimeout, isConnected, t, loadSkills],
+  );
 
   // Handle chat send
   const handleChatSend = useCallback((text: string) => {
     const userMessage: ChatMessage = {
-      id: `user_${Date.now()}_${++msgCounter}`,
+      id: generateMessageId(),
       text,
       sender: 'user',
       timestamp: Date.now(),
@@ -273,23 +290,28 @@ export function RemoteControlScreen({
     socketService.sendChatMessage(text);
   }, []);
 
+  // Handle screen touch (for remote control interaction)
+  const handleScreenTouch = useCallback(
+    (rx: number, ry: number) => {
+      if (!isConnected) return;
+      socketService.sendTouch(rx, ry, 'left', 'click');
+    },
+    [isConnected],
+  );
+
   // Handle disconnect
   const handleDisconnect = useCallback(() => {
-    Alert.alert(
-      t('remote.disconnectTitle'),
-      t('remote.disconnectDesc'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('remote.disconnectBtn'),
-          style: 'destructive',
-          onPress: () => {
-            socketService.disconnect();
-            navigation.replace('Pairing');
-          },
+    Alert.alert(t('remote.disconnectTitle'), t('remote.disconnectDesc'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('remote.disconnectBtn'),
+        style: 'destructive',
+        onPress: () => {
+          socketService.disconnect();
+          navigation.replace('Pairing');
         },
-      ],
-    );
+      },
+    ]);
   }, [navigation, t]);
 
   return (
@@ -300,201 +322,222 @@ export function RemoteControlScreen({
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.deviceIcon}>🖥️</Text>
-          <View>
-            <Text style={styles.deviceName}>{deviceName}</Text>
-            <View style={styles.connectionRow}>
-              <ConnectionStatus state={connectionState} compact />
-              {connectionState === 'connected' && (
-                <Text style={styles.connectionTypeText}>
-                  {socketService.connectionType === 'local' ? t('status.lanConnection') : t('status.cloudConnection')}
-                </Text>
-              )}
-            </View>
-          </View>
-        </View>
-        <View style={styles.headerRight}>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Settings')}
-            style={styles.settingsBtnTouchable}
-            accessibilityLabel="Settings"
-          >
-            <Text style={styles.settingsBtnText}>&#9881;</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleDisconnect} style={styles.disconnectBtnTouchable} accessibilityLabel="Disconnect">
-            <Text style={styles.disconnectBtnText}>&#10005;</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={styles.contentInner}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Security Command Approval Request (Phase 8 Human-in-the-loop) */}
-        {activeApproval && (
-          <View style={[styles.section, styles.approvalSection]}>
-            <Text style={styles.approvalHeader}>{t('remote.securityApprovalTitle')}</Text>
-            <Text style={styles.approvalDesc}>{t('remote.securityApprovalDesc')}</Text>
-            <View style={styles.commandCodeBlock}>
-              <Text style={styles.commandCodeText}>{activeApproval.command}</Text>
-            </View>
-            <View style={styles.approvalButtonsRow}>
-              <TouchableOpacity
-                style={[styles.approvalBtn, styles.rejectBtn]}
-                onPress={() => {
-                  socketService.sendRejectCommand(activeApproval.id);
-                  setActiveApproval(null);
-                }}
-              >
-                <Text style={styles.approvalBtnText}>{t('remote.securityRejectBtn')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.approvalBtn, styles.approveBtn]}
-                onPress={() => {
-                  socketService.sendApproveCommand(activeApproval.id);
-                  setActiveApproval(null);
-                }}
-              >
-                <Text style={styles.approvalBtnText}>{t('remote.securityApproveBtn')}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {/* Screen Preview */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>{t('remote.screenTitle')}</Text>
-          <ScreenPreview
-            imageBase64={screenshotBase64}
-            loading={screenshotLoading}
-            connected={isConnected}
-          />
-        </View>
-
-        {/* Cost & Telemetry Resources (Phase 8 Cost Telemetry) */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>{t('remote.costTitle')}</Text>
-          <View style={styles.costContainer}>
-            <View style={styles.costRow}>
-              <View>
-                <Text style={styles.costLabel}>{t('remote.costSpent')}</Text>
-                <Text style={styles.costValue}>${costTelemetry.costUsd.toFixed(4)}</Text>
-              </View>
-              <View style={styles.costLimitContainer}>
-                <Text style={styles.costLabel}>{t('remote.costSessionLimit')}</Text>
-                <Text style={styles.costLimit}>${costTelemetry.limitUsd.toFixed(2)}</Text>
-              </View>
-            </View>
-
-            {/* Budget Progress Bar */}
-            <View style={styles.progressBarBg}>
-              <View
-                style={[
-                  styles.progressBarFill,
-                  {
-                    width: `${Math.min(
-                      (costTelemetry.costUsd / Math.max(costTelemetry.limitUsd, 0.01)) * 100,
-                      100
-                    )}%`,
-                    backgroundColor:
-                      costTelemetry.costUsd >= costTelemetry.limitUsd * 0.9
-                        ? Colors.error
-                        : Colors.success,
-                  },
-                ]}
-              />
-            </View>
-
-            <View style={styles.tokenRow}>
-              <Text style={styles.tokenText}>{t('remote.tokensIn')}: {costTelemetry.inputTokens.toLocaleString()}</Text>
-              <Text style={styles.tokenText}>{t('remote.tokensOut')}: {costTelemetry.outputTokens.toLocaleString()}</Text>
-              <Text style={styles.tokenText}>{t('remote.tokensTotal')}: {costTelemetry.totalTokens.toLocaleString()}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Chat Messages (latest 20) */}
-        {chatMessages.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>{t('remote.chatTitle')}</Text>
-            <FlatList
-              data={chatMessages.slice(-20)}
-              keyExtractor={(item) => item.id}
-              style={styles.messageListScroll}
-              nestedScrollEnabled
-              renderItem={({ item }) => (
-                <View
-                  style={[
-                    styles.messageBubble,
-                    item.sender === 'user' ? styles.userBubble : styles.aiBubble,
-                  ]}
-                >
-                  <Text style={styles.messageText}>{item.text}</Text>
-                  <Text style={styles.messageTimestamp}>
-                    {new Date(item.timestamp).toLocaleTimeString()}
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.deviceIcon}>🖥️</Text>
+            <View>
+              <Text style={styles.deviceName}>{deviceName}</Text>
+              <View style={styles.connectionRow}>
+                <ConnectionStatus state={connectionState} compact />
+                {connectionState === 'connected' && (
+                  <Text style={styles.connectionTypeText}>
+                    {socketService.connectionType === 'local'
+                      ? t('status.lanConnection')
+                      : t('status.cloudConnection')}
                   </Text>
-                </View>
-              )}
+                )}
+              </View>
+            </View>
+          </View>
+          <View style={styles.headerRight}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Settings')}
+              style={styles.settingsBtnTouchable}
+              accessibilityLabel="Settings"
+            >
+              <Text style={styles.settingsBtnText}>&#9881;</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleDisconnect}
+              style={styles.disconnectBtnTouchable}
+              accessibilityLabel="Disconnect"
+            >
+              <Text style={styles.disconnectBtnText}>&#10005;</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.contentInner}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Security Command Approval Request (Phase 8 Human-in-the-loop) */}
+          {activeApproval && (
+            <View style={[styles.section, styles.approvalSection]}>
+              <Text style={styles.approvalHeader}>{t('remote.securityApprovalTitle')}</Text>
+              <Text style={styles.approvalDesc}>{t('remote.securityApprovalDesc')}</Text>
+              <View style={styles.commandCodeBlock}>
+                <Text style={styles.commandCodeText}>{activeApproval.command}</Text>
+              </View>
+              <View style={styles.approvalButtonsRow}>
+                <TouchableOpacity
+                  style={[styles.approvalBtn, styles.rejectBtn]}
+                  onPress={() => {
+                    socketService.sendRejectCommand(activeApproval.id);
+                    setActiveApproval(null);
+                  }}
+                >
+                  <Text style={styles.approvalBtnText}>{t('remote.securityRejectBtn')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.approvalBtn, styles.approveBtn]}
+                  onPress={() => {
+                    socketService.sendApproveCommand(activeApproval.id);
+                    setActiveApproval(null);
+                  }}
+                >
+                  <Text style={styles.approvalBtnText}>{t('remote.securityApproveBtn')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {/* Screen Preview */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>{t('remote.screenTitle')}</Text>
+            <ScreenPreview
+              imageBase64={screenshotBase64}
+              loading={screenshotLoading}
+              connected={isConnected}
+              onScreenTouch={handleScreenTouch}
             />
           </View>
-        )}
 
-        {/* Chat Input */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>{t('remote.chatInputLabel')}</Text>
-          <ChatInput disabled={!isConnected} onSend={handleChatSend} placeholder={t('remote.chatInputPlaceholder')} />
-        </View>
-
-        {/* Quick Actions */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>{t('remote.quickActionsTitle')}</Text>
-          <QuickActions disabled={!isConnected} onAction={handleQuickAction} />
-        </View>
-
-        {/* Skills Panel */}
-        {showSkills && (
+          {/* Cost & Telemetry Resources (Phase 8 Cost Telemetry) */}
           <View style={styles.section}>
-            <View style={styles.skillsHeader}>
-              <Text style={styles.sectionLabel}>Skills</Text>
-              <TouchableOpacity onPress={() => setShowSkills(false)} style={styles.skillsCloseBtn}>
-                <Text style={styles.skillsCloseText}>✕</Text>
-              </TouchableOpacity>
+            <Text style={styles.sectionLabel}>{t('remote.costTitle')}</Text>
+            <View style={styles.costContainer}>
+              <View style={styles.costRow}>
+                <View>
+                  <Text style={styles.costLabel}>{t('remote.costSpent')}</Text>
+                  <Text style={styles.costValue}>${costTelemetry.costUsd.toFixed(4)}</Text>
+                </View>
+                <View style={styles.costLimitContainer}>
+                  <Text style={styles.costLabel}>{t('remote.costSessionLimit')}</Text>
+                  <Text style={styles.costLimit}>${costTelemetry.limitUsd.toFixed(2)}</Text>
+                </View>
+              </View>
+
+              {/* Budget Progress Bar */}
+              <View style={styles.progressBarBg}>
+                <View
+                  style={[
+                    styles.progressBarFill,
+                    {
+                      width: `${Math.min(
+                        (costTelemetry.costUsd / Math.max(costTelemetry.limitUsd, 0.01)) * 100,
+                        100,
+                      )}%`,
+                      backgroundColor:
+                        costTelemetry.costUsd >= costTelemetry.limitUsd * 0.9
+                          ? Colors.error
+                          : Colors.success,
+                    },
+                  ]}
+                />
+              </View>
+
+              <View style={styles.tokenRow}>
+                <Text style={styles.tokenText}>
+                  {t('remote.tokensIn')}: {costTelemetry.inputTokens.toLocaleString()}
+                </Text>
+                <Text style={styles.tokenText}>
+                  {t('remote.tokensOut')}: {costTelemetry.outputTokens.toLocaleString()}
+                </Text>
+                <Text style={styles.tokenText}>
+                  {t('remote.tokensTotal')}: {costTelemetry.totalTokens.toLocaleString()}
+                </Text>
+              </View>
             </View>
-            {skillsLoading ? (
-              <Text style={styles.skillsStatusText}>Loading skills...</Text>
-            ) : skillsList.length === 0 ? (
-              <Text style={styles.skillsStatusText}>No skills available</Text>
-            ) : (
-              skillsList.map((skill) => (
-                <TouchableOpacity
-                  key={skill.id}
-                  style={[styles.skillItem, skillRunning === skill.id && styles.skillItemRunning]}
-                  onPress={() => runSkill(skill.id)}
-                  disabled={skillRunning !== null}
-                >
-                  <View style={styles.skillItemHeader}>
-                    <Text style={styles.skillName}>{skill.name}</Text>
-                    <Text style={styles.skillCategory}>{skill.category}</Text>
-                  </View>
-                  {skill.description ? (
-                    <Text style={styles.skillDesc} numberOfLines={2}>{skill.description}</Text>
-                  ) : null}
-                  {skillRunning === skill.id && (
-                    <Text style={styles.skillRunningText}>Running...</Text>
-                  )}
-                </TouchableOpacity>
-              ))
-            )}
           </View>
-        )}
-      </ScrollView>
+
+          {/* Chat Messages (latest 20) */}
+          {chatMessages.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>{t('remote.chatTitle')}</Text>
+              <FlatList
+                data={chatMessages.slice(-20)}
+                keyExtractor={(item) => item.id}
+                style={styles.messageListScroll}
+                nestedScrollEnabled
+                renderItem={({ item }) => (
+                  <View
+                    style={[
+                      styles.messageBubble,
+                      item.sender === 'user' ? styles.userBubble : styles.aiBubble,
+                    ]}
+                  >
+                    <Text style={styles.messageText}>{item.text}</Text>
+                    <Text style={styles.messageTimestamp}>
+                      {new Date(item.timestamp).toLocaleTimeString()}
+                    </Text>
+                  </View>
+                )}
+              />
+            </View>
+          )}
+
+          {/* Chat Input */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>{t('remote.chatInputLabel')}</Text>
+            <ChatInput
+              disabled={!isConnected}
+              onSend={handleChatSend}
+              placeholder={t('remote.chatInputPlaceholder')}
+            />
+          </View>
+
+          {/* Quick Actions */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>{t('remote.quickActionsTitle')}</Text>
+            <QuickActions disabled={!isConnected} onAction={handleQuickAction} />
+          </View>
+
+          {/* Skills Panel */}
+          {showSkills && (
+            <View style={styles.section}>
+              <View style={styles.skillsHeader}>
+                <Text style={styles.sectionLabel}>{t('remote.skillsTitle')}</Text>
+                <TouchableOpacity
+                  onPress={() => setShowSkills(false)}
+                  style={styles.skillsCloseBtn}
+                >
+                  <Text style={styles.skillsCloseText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              {skillsLoading ? (
+                <Text style={styles.skillsStatusText}>{t('remote.skillsLoading')}</Text>
+              ) : skillsList.length === 0 ? (
+                <Text style={styles.skillsStatusText}>{t('remote.noSkills')}</Text>
+              ) : (
+                skillsList.map((skill) => (
+                  <TouchableOpacity
+                    key={skill.id}
+                    style={[styles.skillItem, skillRunning === skill.id && styles.skillItemRunning]}
+                    onPress={() => runSkill(skill.id)}
+                    disabled={skillRunning !== null}
+                  >
+                    <View style={styles.skillItemHeader}>
+                      <Text style={styles.skillName}>{skill.name}</Text>
+                      <Text style={styles.skillCategory}>{skill.category}</Text>
+                    </View>
+                    {skill.description ? (
+                      <Text style={styles.skillDesc} numberOfLines={2}>
+                        {skill.description}
+                      </Text>
+                    ) : null}
+                    {skillRunning === skill.id && (
+                      <Text style={styles.skillRunningText}>{t('remote.skillRunning')}</Text>
+                    )}
+                  </TouchableOpacity>
+                ))
+              )}
+            </View>
+          )}
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

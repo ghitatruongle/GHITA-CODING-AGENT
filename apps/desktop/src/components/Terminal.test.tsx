@@ -18,6 +18,9 @@ vi.mock('@tauri-apps/plugin-shell', () => ({
   },
 }));
 
+vi.mock('@xterm/xterm', () => ({}));
+vi.mock('@xterm/addon-fit', () => ({}));
+
 vi.mock('../stores/appStore', () => ({
   useAppStore: (selector: (s: Record<string, unknown>) => unknown) => {
     const state = {
@@ -56,7 +59,9 @@ describe('Terminal', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (Command.create as any).mockImplementation((_cmd: string, args: string[]) => {
       if (args.includes('echo %USERPROFILE%') || args.includes('$env:USERPROFILE')) {
-        return { execute: () => Promise.resolve({ stdout: 'C:\\Users\\Test', stderr: '', code: 0 }) };
+        return {
+          execute: () => Promise.resolve({ stdout: 'C:\\Users\\Test', stderr: '', code: 0 }),
+        };
       }
       return { execute: mockExecute };
     });
@@ -190,7 +195,7 @@ describe('Terminal', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const executeCalls = (Command.create as any).mock.calls.filter(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (call: any[]) => !(call[1] as string[])?.some((arg: string) => arg.includes('USERPROFILE'))
+        (call: any[]) => !(call[1] as string[])?.some((arg: string) => arg.includes('USERPROFILE')),
       );
       expect(executeCalls).toHaveLength(0);
     });
@@ -203,11 +208,15 @@ describe('Terminal', () => {
   describe('cd command', () => {
     it('changes directory and syncs to store', async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (Command.create as any).mockImplementation((_cmd: string, args: string[]) => {
+      (Command.create as any).mockImplementation((_cmd: string, args: string[]) => {
         if (args.some((a: string) => a.includes('Test-Path') || a.includes('cd /d'))) {
-          return { execute: () => Promise.resolve({ stdout: 'C:\\Projects\\MyApp', stderr: '', code: 0 }) };
+          return {
+            execute: () => Promise.resolve({ stdout: 'C:\\Projects\\MyApp', stderr: '', code: 0 }),
+          };
         }
-        return { execute: () => Promise.resolve({ stdout: 'C:\\Users\\Test', stderr: '', code: 0 }) };
+        return {
+          execute: () => Promise.resolve({ stdout: 'C:\\Users\\Test', stderr: '', code: 0 }),
+        };
       });
 
       render(<Terminal />);
@@ -226,11 +235,13 @@ describe('Terminal', () => {
 
     it('shows error for non-existent path', async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (Command.create as any).mockImplementation((_cmd: string, args: string[]) => {
+      (Command.create as any).mockImplementation((_cmd: string, args: string[]) => {
         if (args.some((a: string) => a.includes('Test-Path') || a.includes('cd /d'))) {
           return { execute: () => Promise.resolve({ stdout: '', stderr: 'not found', code: 1 }) };
         }
-        return { execute: () => Promise.resolve({ stdout: 'C:\\Users\\Test', stderr: '', code: 0 }) };
+        return {
+          execute: () => Promise.resolve({ stdout: 'C:\\Users\\Test', stderr: '', code: 0 }),
+        };
       });
 
       render(<Terminal />);

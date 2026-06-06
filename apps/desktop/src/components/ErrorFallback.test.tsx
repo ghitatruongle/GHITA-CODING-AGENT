@@ -33,44 +33,22 @@ describe('ErrorFallback', () => {
   });
 
   it('renders the error alert role', () => {
-    render(
-      <ErrorFallback
-        error={testError}
-        resetErrorBoundary={mockResetErrorBoundary}
-      />,
-    );
+    render(<ErrorFallback error={testError} resetErrorBoundary={mockResetErrorBoundary} />);
     expect(screen.getByRole('alert')).toBeInTheDocument();
   });
 
   it('displays the error message', () => {
-    render(
-      <ErrorFallback
-        error={testError}
-        resetErrorBoundary={mockResetErrorBoundary}
-      />,
-    );
+    render(<ErrorFallback error={testError} resetErrorBoundary={mockResetErrorBoundary} />);
     expect(screen.getByText('Test error message')).toBeInTheDocument();
   });
 
   it('displays the fallback title', () => {
-    render(
-      <ErrorFallback
-        error={testError}
-        resetErrorBoundary={mockResetErrorBoundary}
-      />,
-    );
-    expect(
-      screen.getByText('An unexpected application error occurred'),
-    ).toBeInTheDocument();
+    render(<ErrorFallback error={testError} resetErrorBoundary={mockResetErrorBoundary} />);
+    expect(screen.getByText('An unexpected application error occurred')).toBeInTheDocument();
   });
 
   it('renders a retry button that calls resetErrorBoundary on click', () => {
-    render(
-      <ErrorFallback
-        error={testError}
-        resetErrorBoundary={mockResetErrorBoundary}
-      />,
-    );
+    render(<ErrorFallback error={testError} resetErrorBoundary={mockResetErrorBoundary} />);
 
     const retryButton = screen.getByText('Reload User Interface');
     expect(retryButton).toBeInTheDocument();
@@ -82,10 +60,7 @@ describe('ErrorFallback', () => {
 
   it('renders with correct structure', () => {
     const { container } = render(
-      <ErrorFallback
-        error={testError}
-        resetErrorBoundary={mockResetErrorBoundary}
-      />,
+      <ErrorFallback error={testError} resetErrorBoundary={mockResetErrorBoundary} />,
     );
 
     // Should have the warning emoji

@@ -57,7 +57,7 @@ export class WebSearchTool {
       for (const topic of relatedTopics.slice(0, maxResults)) {
         if (topic.Text && topic.FirstURL) {
           results.push({
-            title: ((topic.Text as string).split(' - ')[0]?.substring(0, 80)) || '',
+            title: (topic.Text as string).split(' - ')[0]?.substring(0, 80) || '',
             url: topic.FirstURL as string,
             snippet: topic.Text as string,
           });

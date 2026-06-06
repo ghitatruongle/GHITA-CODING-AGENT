@@ -1,3 +1,0 @@
-- ES modules (.mjs) use import.meta.url to resolve the workspace root directory relative to the script location.
-- Node.js scripts implement top-level async/await patterns with centralized .catch() blocks for error handling.
-- Image processing scripts consistently use transparent backgrounds (alpha: 0) when resizing logos for icon generation.

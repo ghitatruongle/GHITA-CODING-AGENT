@@ -25,11 +25,7 @@ export class LLMEvaluator {
   /**
    * Đánh giá câu trả lời của LLM bằng phương pháp LLM-as-a-Judge
    */
-  async evaluate(
-    input: string,
-    output: string,
-    reference?: string
-  ): Promise<EvalResult> {
+  async evaluate(input: string, output: string, reference?: string): Promise<EvalResult> {
     const prompt = `Bạn là một chuyên gia đánh giá độc lập (LLM Judge). Hãy đánh giá chất lượng câu trả lời của trợ lý dựa trên câu hỏi đầu vào và câu trả lời tham chiếu (nếu có).
 
 [Câu hỏi]
@@ -52,25 +48,34 @@ Hãy trả về kết quả dưới định dạng JSON duy nhất như sau:
 }`;
 
     try {
-      const response = await this.orchestrator.chat([
-        { role: 'system', content: 'You are an objective AI evaluator judge. Output ONLY valid JSON.' },
-        { role: 'user', content: prompt }
-      ], {
-        temperature: 0.1
-      });
+      const response = await this.orchestrator.chat(
+        [
+          {
+            role: 'system',
+            content: 'You are an objective AI evaluator judge. Output ONLY valid JSON.',
+          },
+          { role: 'user', content: prompt },
+        ],
+        {
+          temperature: 0.1,
+        },
+      );
 
-      const cleanContent = response.content.replace(/```json/g, '').replace(/```/g, '').trim();
+      const cleanContent = response.content
+        .replace(/```json/g, '')
+        .replace(/```/g, '')
+        .trim();
       const parsed = JSON.parse(cleanContent);
       return {
         score: parsed.score ?? 3.5,
         reasoning: parsed.reasoning ?? 'No reasoning provided',
-        metrics: parsed.metrics ?? {}
+        metrics: parsed.metrics ?? {},
       };
     } catch (e) {
       return {
         score: 4.0,
         reasoning: 'Đánh giá tự động fallback do lỗi parse JSON từ Judge',
-        metrics: { correctness: 4.0, relevancy: 4.0 }
+        metrics: { correctness: 4.0, relevancy: 4.0 },
       };
     }
   }
@@ -103,7 +108,9 @@ export class IntegratedSearchClient {
           }),
         });
         if (response.ok) {
-          const data = (await response.json()) as { results: Array<{ title: string; url: string; content: string }> };
+          const data = (await response.json()) as {
+            results: Array<{ title: string; url: string; content: string }>;
+          };
           return data.results.map((r) => ({
             title: r.title,
             url: r.url,
@@ -120,7 +127,9 @@ export class IntegratedSearchClient {
         const url = `https://www.googleapis.com/customsearch/v1?key=${this.googleApiKey}&cx=${this.googleCx}&q=${encodeURIComponent(query)}`;
         const response = await fetch(url);
         if (response.ok) {
-          const data = (await response.json()) as { items?: Array<{ title: string; link: string; snippet: string }> };
+          const data = (await response.json()) as {
+            items?: Array<{ title: string; link: string; snippet: string }>;
+          };
           return (data.items || []).map((item) => ({
             title: item.title,
             url: item.link,

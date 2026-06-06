@@ -24,7 +24,7 @@ export interface APIKeyConfig {
 export interface APIKeyEntry {
   keyId: string;
   keyHash: string;
-  keyPrefix: string;       // First 8 chars for identification
+  keyPrefix: string; // First 8 chars for identification
   name: string;
   userId: string;
   teamId?: string;
@@ -49,10 +49,10 @@ export type AuthScope =
   | '*';
 
 export interface JWTClaims {
-  sub: string;           // user ID
-  iss: string;           // issuer
-  iat: number;           // issued at
-  exp: number;           // expiry
+  sub: string; // user ID
+  iss: string; // issuer
+  iat: number; // issued at
+  exp: number; // expiry
   scope?: AuthScope[];
   teamId?: string;
   metadata?: Record<string, unknown>;
@@ -109,18 +109,18 @@ function verifyJWT(token: string, secret: string): JWTClaims | null {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
 
-  const [header, payload, signature] = parts;
-  if (!header || !payload || !signature) return null;
+    const [header, payload, signature] = parts;
+    if (!header || !payload || !signature) return null;
 
-  const expectedSig = createHash('sha256')
-    .update(`${header}.${payload}.${secret}`)
-    .digest('base64url');
+    const expectedSig = createHash('sha256')
+      .update(`${header}.${payload}.${secret}`)
+      .digest('base64url');
 
-  if (!timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSig))) {
-    return null;
-  }
+    if (!timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSig))) {
+      return null;
+    }
 
-  const claims: JWTClaims = JSON.parse(base64UrlDecode(payload));
+    const claims: JWTClaims = JSON.parse(base64UrlDecode(payload));
 
     // Check expiry
     if (claims.exp && claims.exp < Math.floor(Date.now() / 1000)) {
@@ -185,9 +185,7 @@ export class APIKeyManager {
       scopes: options.scopes ?? ['chat:read', 'chat:write'],
       rateLimitTier: options.rateLimitTier,
       maxBudget: options.maxBudget,
-      expiresAt: options.expiresIn
-        ? new Date(Date.now() + options.expiresIn * 1000)
-        : undefined,
+      expiresAt: options.expiresIn ? new Date(Date.now() + options.expiresIn * 1000) : undefined,
       createdAt: new Date(),
       isActive: true,
       metadata: options.metadata,
@@ -348,9 +346,9 @@ export class APIKeyManager {
 
   /** Check if auth result has required scopes */
   checkScopes(auth: AuthResult, required: AuthScope[]): boolean {
-  if (!auth.authenticated || !auth.scopes) return false;
-  if (auth.scopes.includes('*')) return true;
-  return required.every((s) => auth.scopes?.includes(s));
+    if (!auth.authenticated || !auth.scopes) return false;
+    if (auth.scopes.includes('*')) return true;
+    return required.every((s) => auth.scopes?.includes(s));
   }
 
   /** Get stats */

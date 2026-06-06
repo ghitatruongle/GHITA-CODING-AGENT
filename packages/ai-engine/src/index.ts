@@ -16,17 +16,31 @@ export type {
   KeyRotationStrategy,
 } from './types.js';
 
+// --- Errors ---
+export * from './errors/index.js';
+
 // --- Phase 1.1: Multi-Key Manager ---
 export { KeyManager } from './key-manager.js';
 export type { KeyEntry, KeyHealthStatus, KeyUsageStats } from './key-manager.js';
 
 // --- Phase 1.3: Model Discovery ---
-export { ModelDiscovery, parseOpenAICompat, parseOllamaTags, parseGoogleModels, parseReplicateModels } from './discovery/model-discovery.js';
+export {
+  ModelDiscovery,
+  parseOpenAICompat,
+  parseOllamaTags,
+  parseGoogleModels,
+  parseReplicateModels,
+} from './discovery/model-discovery.js';
 export type { ModelInfo, DiscoveryResult, DiscoveryConfig } from './discovery/types.js';
 
 // --- Phase 1.4: Smart Router ---
 export { SmartRouter } from './routing/smart-router.js';
-export type { RoutingStrategy, RoutingDecision, RoutingConfig, ProviderMetrics } from './routing/types.js';
+export type {
+  RoutingStrategy,
+  RoutingDecision,
+  RoutingConfig,
+  ProviderMetrics,
+} from './routing/types.js';
 
 // --- Providers ---
 export { BaseProvider } from './providers/base.js';
@@ -35,6 +49,28 @@ export { AnthropicProvider } from './providers/anthropic.js';
 export { GoogleProvider } from './providers/google.js';
 export { OllamaProvider } from './providers/ollama.js';
 export { CustomProvider } from './providers/custom.js';
+// Phase 1: Dedicated Groq & Mistral providers
+export { GroqProvider } from './providers/groq.js';
+export { MistralProvider } from './providers/mistral.js';
+
+// --- Phase 1: Unified LLMProvider Interface & SSE Streaming ---
+export type {
+  LLMProvider,
+  ProviderCapabilities,
+  SSEEventType,
+  SSEStreamEvent,
+  ResponseBufferState,
+  ProviderYAMLConfig,
+  ProvidersYAMLRoot,
+} from './providers/types.js';
+export { yamlToProviderConfig } from './providers/types.js';
+export { SSEEncoder, SSEDecoder, ResponseBuffer, toSSEStream } from './providers/sse-stream.js';
+export {
+  ProviderYAMLConfigSchema,
+  ProvidersYAMLRootSchema,
+  ProviderConfigLoader,
+  parseSimpleYAML,
+} from './providers/config-schema.js';
 
 // --- Registry & Orchestrator ---
 export { ProviderRegistry } from './registry.js';
@@ -58,14 +94,40 @@ export { CryptoHelper } from './utils/crypto.js';
 export { RalphLoopManager } from './utils/ralph.js';
 export type { RalphLoopConfig, RalphLoopState } from './utils/ralph.js';
 
+// --- Reasoning & Thinking ---
+export { extractReasoning, ReasoningStreamExtractor } from './utils/reasoning.js';
+export type { ExtractedReasoning, ReasoningStreamResult } from './utils/reasoning.js';
+
 // --- MCP (Model Context Protocol) ---
 export { MCPClient } from './mcp/client.js';
 export { StdioTransport, SSETransport, createTransport } from './mcp/transport.js';
-export type { MCPServerConfig, MCPTool, MCPToolResult, MCPServerStatus, MCPConfig, MCPTransportType } from './mcp/types.js';
+export type {
+  MCPServerConfig,
+  MCPTool,
+  MCPToolResult,
+  MCPServerStatus,
+  MCPConfig,
+  MCPTransportType,
+} from './mcp/types.js';
 
-// --- Hooks ---
+// --- Hooks (Phase 12 Enhanced) ---
 export { HookRunner } from './hooks/runner.js';
-export type { HookConfig, HookEvent, HookResult, HookRunnerConfig, HookMatcher } from './hooks/types.js';
+export { SecurityChecker } from './hooks/security-checkers.js';
+export type {
+  HookConfig,
+  HookEvent,
+  HookResult,
+  HookRunnerConfig,
+  HookMatcher,
+  HookErrorStrategy,
+  SecurityRiskLevel,
+  HookHandler,
+  CompositeHookResult,
+  HookAuditEntry,
+  HookStats,
+  SecurityAnalysis,
+  SecurityProfile,
+} from './hooks/types.js';
 
 // --- Built-in Tools ---
 export { WebSearchTool, WebFetchTool, createBuiltInTools } from './tools/index.js';
@@ -77,15 +139,19 @@ export type { BuiltInTool } from './tools/index.js';
 export { ContextManager } from './context/manager.js';
 export type { ContextConfig } from './context/manager.js';
 export { TrajectoryCompressor } from './context/compressor.js';
-export type { CompressionResult, CompressorConfig, MessageAnalysis, MessageImportance } from './context/compressor.js';
+export type {
+  CompressionResult,
+  CompressorConfig,
+  MessageAnalysis,
+  MessageImportance,
+} from './context/compressor.js';
 
 // --- Permission Manager ---
 export { PermissionManager } from './security/permissions.js';
 export type { PermissionLevel, ToolPermission } from './security/permissions.js';
 
-// --- Security Checkers & Safety Hooks ---
-export { SecurityChecker } from './hooks/security-checkers.js';
-export type { SecurityAnalysis, SecurityRiskLevel } from './hooks/security-checkers.js';
+// --- Security Checkers & Safety Hooks (Phase 12 Enhanced) ---
+// SecurityChecker and security types are exported above in the Hooks section
 
 // --- Errors ---
 export {
@@ -108,11 +174,22 @@ export { InMemoryCache, RedisCache, SemanticCache } from './utils/cache.js';
 export type { BaseCache, SemanticCacheOptions } from './utils/cache.js';
 
 // --- Phase 3.2: Token Counter ---
-export { estimateTokens, estimateMessagesTokens, fitsInContext, truncateToFit, getContextInfo } from './utils/token-counter.js';
+export {
+  estimateTokens,
+  estimateMessagesTokens,
+  fitsInContext,
+  truncateToFit,
+  getContextInfo,
+} from './utils/token-counter.js';
 export type { ContextWindow } from './utils/token-counter.js';
 
 // --- Cost & Budget ---
-export { CostTracker, BudgetManager, DEFAULT_PRICING_TABLE, getModelPricing } from './utils/cost.js';
+export {
+  CostTracker,
+  BudgetManager,
+  DEFAULT_PRICING_TABLE,
+  getModelPricing,
+} from './utils/cost.js';
 export type { ModelPricing, BudgetOptions } from './utils/cost.js';
 
 // --- Prompt System ---
@@ -125,6 +202,22 @@ export {
   renderTemplate,
 } from './utils/prompt.js';
 export type { ChatMessageTemplate, FewShotPromptOptions } from './utils/prompt.js';
+
+// --- 12-Factor Prompts as Code (Phase 3) ---
+export { parseYaml } from './prompts/yaml-parser.js';
+export { validateInput, validateOutput, PromptValidationError } from './prompts/validator.js';
+export { PromptRegistry } from './prompts/registry.js';
+export type {
+  PromptInputType,
+  PromptInputSpec,
+  PromptConfig,
+  PromptLengthValidator,
+  PromptFormatValidator,
+  PromptSafetyValidator,
+  PromptValidator,
+  PromptDefinition,
+  ValidationResult,
+} from './prompts/types.js';
 
 // --- Middleware Pipeline ---
 export {
@@ -150,6 +243,38 @@ export type { UniversalChatModelOptions } from './utils/universal.js';
 // --- Unified Chat Model Router (Phase 15) ---
 export { UnifiedRouter } from './router/unifiedRouter.js';
 export type { UnifiedRouterOptions, LatencyMetric } from './router/unifiedRouter.js';
+
+// --- Phase 2: Adaptive Router ---
+export { AdaptiveRouter } from './router/adaptive.js';
+export type {
+  AdaptiveRouterConfig,
+  ComplexityTier,
+  ComplexityAnalysis,
+  ComplexityFactors,
+  ModelClass,
+} from './router/adaptive.js';
+
+// --- Phase 2: Provider Recommendation System ---
+export { ProviderRecommendationSystem } from './router/recommend.js';
+export type {
+  TaskType,
+  ProviderRecommendation,
+  RecommendationResult,
+  RecommendationConfig,
+} from './router/recommend.js';
+
+// --- Phase 2: Dynamic Fallback Router ---
+export { DynamicFallbackRouter } from './router/fallback.js';
+export type {
+  DynamicFallbackConfig,
+  FallbackTarget,
+  FallbackResult,
+  AttemptRecord,
+  CircuitState,
+  CircuitBreakerStatus,
+  CircuitBreakerConfig,
+  RetryPolicy,
+} from './router/fallback.js';
 
 // --- API Cost Tracker & Usage Failover Manager (Phase 16) ---
 export { FallbackManager, MODEL_PRICING } from './gateway/fallbackManager.js';
@@ -331,3 +456,35 @@ export type { DashboardStats } from './platform/dashboard-controller.js';
 /** @deprecated Unused export. Reserved for future deployment config generation. */
 export { DeployConfigGenerator } from './platform/prometheus.js';
 
+// --- Phase 26: Response Caching Layer ---
+export {
+  LRUCache,
+  SemanticDedup,
+  CacheWarmer,
+  ResponseCacheEngine,
+} from './cache/index.js';
+export type {
+  CacheEntry,
+  EvictionPolicy,
+  CacheInvalidationEvent,
+  CacheEventListener,
+  LRUCacheConfig,
+  SemanticDedupConfig,
+  CacheWarmerConfig,
+  ResponseCacheConfig,
+  CacheStats,
+  EmbeddingProvider,
+  WarmSource,
+} from './cache/index.js';
+
+// --- Phase 13: MCP Servers ---
+export { MCPServersFactory } from './mcp/servers.js';
+
+// --- Phase 16: GUI Control (ACTION_SPACES + StatusEnum) ---
+export * from './gui-agent/index.js';
+
+// --- Phase 27: Request Batching ---
+export * from './batch/index.js';
+
+// --- Phase 28: Load Balancer cho Providers ---
+export * from './loadbalancer/index.js';

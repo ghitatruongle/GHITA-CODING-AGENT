@@ -36,8 +36,18 @@ export function extractErrorCode(text: string): string | null {
  * Thuật toán Jaccard Similarity đo khoảng cách từ vựng giữa hai lỗi (Tác vụ 3)
  */
 export function getJaccardSimilarity(textA: string, textB: string): number {
-  const wordsA = new Set(textA.toLowerCase().split(/\W+/).filter((w) => w.length >= 3));
-  const wordsB = new Set(textB.toLowerCase().split(/\W+/).filter((w) => w.length >= 3));
+  const wordsA = new Set(
+    textA
+      .toLowerCase()
+      .split(/\W+/)
+      .filter((w) => w.length >= 3),
+  );
+  const wordsB = new Set(
+    textB
+      .toLowerCase()
+      .split(/\W+/)
+      .filter((w) => w.length >= 3),
+  );
 
   if (wordsA.size === 0 || wordsB.size === 0) return 0;
 
@@ -136,9 +146,9 @@ export class SCTIEngine {
           timestamp: row.timestamp,
         });
       }
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.warn(`[SCTIEngine] SQLite unavailable (${message}), fallback to in-memory`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`[SCTIEngine] SQLite unavailable (${message}), fallback to in-memory`);
       this.db = null;
       this.insertStmt = null;
     }
@@ -150,7 +160,7 @@ export class SCTIEngine {
   public async storeCorrection(
     errorSnippet: string,
     solutionDiff: string,
-    errorCodeOverride?: string
+    errorCodeOverride?: string,
   ): Promise<void> {
     await this.ensureDb();
 
@@ -177,9 +187,9 @@ export class SCTIEngine {
           solutionDiff: compressed,
           timestamp,
         });
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.warn(`[SCTIEngine] SQLite insert failed: ${message}`);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.warn(`[SCTIEngine] SQLite insert failed: ${message}`);
       }
     }
   }
@@ -191,7 +201,7 @@ export class SCTIEngine {
     await this.ensureDb();
 
     const currentCode = extractErrorCode(errorText);
-    
+
     // 1. Ưu tiên đối sánh khớp hoàn toàn mã lỗi trước
     if (currentCode && currentCode !== 'UNKNOWN') {
       const match = this.inMemoryCache.find((t) => t.errorCode === currentCode);
@@ -222,18 +232,20 @@ export class SCTIEngine {
 
     // Lọc cache bộ nhớ trong
     this.inMemoryCache = this.inMemoryCache.filter(
-      (t) => new Date(t.timestamp).getTime() > thirtyDaysAgo
+      (t) => new Date(t.timestamp).getTime() > thirtyDaysAgo,
     );
 
     // Dọn dẹp SQLite
     if (this.db) {
       try {
         const timeLimit = new Date(thirtyDaysAgo).toISOString();
-        const res = this.db.prepare('DELETE FROM scti_corrections WHERE timestamp < ?').run(timeLimit) as { changes: number };
+        const res = this.db
+          .prepare('DELETE FROM scti_corrections WHERE timestamp < ?')
+          .run(timeLimit) as { changes: number };
         return res.changes;
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.warn(`[SCTIEngine] Clean failed: ${message}`);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.warn(`[SCTIEngine] Clean failed: ${message}`);
       }
     }
     return 0;
@@ -261,17 +273,19 @@ export class SCTIEngine {
 
 export async function injectSctiTrajectories(
   messages: ChatMessage[],
-  engine: SCTIEngine
+  engine: SCTIEngine,
 ): Promise<ChatMessage[]> {
   // 1. Tìm tin nhắn lỗi gần nhất trong lịch sử hội thoại
-  const lastErrorMsg = [...messages].reverse().find(
-    (m) =>
-      m.role === 'user' &&
-      (m.content.toLowerCase().includes('error') ||
-        m.content.toLowerCase().includes('failed') ||
-        m.content.toLowerCase().includes('crashed') ||
-        m.content.toLowerCase().includes('fail'))
-  );
+  const lastErrorMsg = [...messages]
+    .reverse()
+    .find(
+      (m) =>
+        m.role === 'user' &&
+        (m.content.toLowerCase().includes('error') ||
+          m.content.toLowerCase().includes('failed') ||
+          m.content.toLowerCase().includes('crashed') ||
+          m.content.toLowerCase().includes('fail')),
+    );
 
   if (!lastErrorMsg || !lastErrorMsg.content) return messages;
 

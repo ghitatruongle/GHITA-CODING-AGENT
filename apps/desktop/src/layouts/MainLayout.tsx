@@ -9,18 +9,42 @@ import { useTranslation } from '../i18n';
 import { isWindows, isLinux } from '@ghita/shared';
 import { TabBar } from '../components/TabBar';
 
-const Terminal = lazy(() => import('../components/Terminal').then((module) => ({ default: module.Terminal })));
-const ChatPanel = lazy(() => import('../components/ChatPanel').then((module) => ({ default: module.ChatPanel })));
-const CodeView = lazy(() => import('../views/CodeView').then((module) => ({ default: module.CodeView })));
-const ApiView = lazy(() => import('../views/ApiView').then((module) => ({ default: module.ApiView })));
-const SkillsView = lazy(() => import('../views/SkillsView').then((module) => ({ default: module.SkillsView })));
-const AgentsView = lazy(() => import('../views/AgentsView').then((module) => ({ default: module.AgentsView })));
-const DevicesView = lazy(() => import('../views/DevicesView').then((module) => ({ default: module.DevicesView })));
-const DashboardView = lazy(() => import('../views/DashboardView').then((module) => ({ default: module.DashboardView })));
-const SettingsView = lazy(() => import('../views/SettingsView').then((module) => ({ default: module.SettingsView })));
-const MarketplaceView = lazy(() => import('../views/MarketplaceView').then((module) => ({ default: module.MarketplaceView })));
-const WorkflowView = lazy(() => import('../views/WorkflowView').then((module) => ({ default: module.WorkflowView })));
-const EcosystemView = lazy(() => import('../views/EcosystemView').then((module) => ({ default: module.EcosystemView })));
+const Terminal = lazy(() =>
+  import('../components/Terminal').then((module) => ({ default: module.Terminal })),
+);
+const ChatPanel = lazy(() =>
+  import('../components/ChatPanel').then((module) => ({ default: module.ChatPanel })),
+);
+const CodeView = lazy(() =>
+  import('../views/CodeView').then((module) => ({ default: module.CodeView })),
+);
+const ApiView = lazy(() =>
+  import('../views/ApiView').then((module) => ({ default: module.ApiView })),
+);
+const SkillsView = lazy(() =>
+  import('../views/SkillsView').then((module) => ({ default: module.SkillsView })),
+);
+const AgentsView = lazy(() =>
+  import('../views/AgentsView').then((module) => ({ default: module.AgentsView })),
+);
+const DevicesView = lazy(() =>
+  import('../views/DevicesView').then((module) => ({ default: module.DevicesView })),
+);
+const DashboardView = lazy(() =>
+  import('../views/DashboardView').then((module) => ({ default: module.DashboardView })),
+);
+const SettingsView = lazy(() =>
+  import('../views/SettingsView').then((module) => ({ default: module.SettingsView })),
+);
+const MarketplaceView = lazy(() =>
+  import('../views/MarketplaceView').then((module) => ({ default: module.MarketplaceView })),
+);
+const WorkflowView = lazy(() =>
+  import('../views/WorkflowView').then((module) => ({ default: module.WorkflowView })),
+);
+const EcosystemView = lazy(() =>
+  import('../views/EcosystemView').then((module) => ({ default: module.EcosystemView })),
+);
 
 function LoadingPanel() {
   return (
@@ -48,7 +72,19 @@ function LoadingPanel() {
 }
 
 // --- Per-view Error Boundary ---
-function ViewErrorBoundaryInner({ children, t, hasError, error, onReset }: { children: ReactNode; t: (key: string) => string; hasError: boolean; error: Error | null; onReset: () => void }) {
+function ViewErrorBoundaryInner({
+  children,
+  t,
+  hasError,
+  error,
+  onReset,
+}: {
+  children: ReactNode;
+  t: (key: string) => string;
+  hasError: boolean;
+  error: Error | null;
+  onReset: () => void;
+}) {
   if (hasError && error) {
     return (
       <div style={{ padding: 24, color: 'var(--error)' }}>
@@ -131,9 +167,7 @@ function ActiveView() {
   return (
     <Suspense fallback={<LoadingPanel />}>
       <div style={{ height: '100%', width: '100%' }}>
-        <ViewErrorBoundary t={t}>
-          {TABS[activeTab]}
-        </ViewErrorBoundary>
+        <ViewErrorBoundary t={t}>{TABS[activeTab]}</ViewErrorBoundary>
       </div>
     </Suspense>
   );
@@ -280,10 +314,7 @@ export function MainLayout() {
           {isTerminalOpen && (
             <>
               {/* Drag handle */}
-              <div
-                onMouseDown={onDragStart}
-                className="drag-handle"
-              />
+              <div onMouseDown={onDragStart} className="drag-handle" />
               <div style={{ height: terminalHeight, flexShrink: 0 }}>
                 <Suspense fallback={<LoadingPanel />}>
                   <Terminal />
@@ -329,14 +360,33 @@ export function MainLayout() {
       >
         <div style={{ display: 'flex', gap: '12px', minWidth: 0, overflow: 'hidden' }}>
           <span>🤖 GHITA {t('app.version')}</span>
-          <span>{isWindows() ? `🖥️ ${t('settings.windows')}` : isLinux() ? `🖥️ ${t('settings.linux')}` : `🖥️ ${t('mainLayout.unknown')}`}</span>
+          <span>
+            {isWindows()
+              ? `🖥️ ${t('settings.windows')}`
+              : isLinux()
+                ? `🖥️ ${t('settings.linux')}`
+                : `🖥️ ${t('mainLayout.unknown')}`}
+          </span>
         </div>
-        <div style={{ display: 'flex', gap: '12px', minWidth: 0, overflow: 'hidden', justifyContent: 'flex-end' }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: '12px',
+            minWidth: 0,
+            overflow: 'hidden',
+            justifyContent: 'flex-end',
+          }}
+        >
           <span style={{ color: serverStatus === 'listening' ? 'var(--success)' : undefined }}>
-            📡 {connectedDevices.length > 0
-              ? t('mainLayout.devices', { count: connectedDevices.length, s: connectedDevices.length > 1 ? 's' : '' })
-              : serverStatus === 'listening' ? t('mainLayout.listening') : t('mainLayout.noDevices')
-            }
+            📡{' '}
+            {connectedDevices.length > 0
+              ? t('mainLayout.devices', {
+                  count: connectedDevices.length,
+                  s: connectedDevices.length > 1 ? 's' : '',
+                })
+              : serverStatus === 'listening'
+                ? t('mainLayout.listening')
+                : t('mainLayout.noDevices')}
           </span>
           <span>TypeScript</span>
           <span>UTF-8</span>

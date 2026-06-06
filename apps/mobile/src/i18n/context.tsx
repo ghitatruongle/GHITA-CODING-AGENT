@@ -2,18 +2,26 @@
 // GHITA CODING AGENT — i18n Context & Hook for React Native
 // ==============================================================================
 
-import React, { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useMemo,
+  type ReactNode,
+} from 'react';
 import { loadSettings, saveSettings } from '../services/storageService';
 import { socketService } from '../services/socketService';
 import { vi } from './vi';
 import { en } from './en';
 import { zh } from './zh';
+import { ru } from './ru';
 import type { TranslationKeys } from './types';
 
 type Translations = TranslationKeys;
 type TFunction = (key: string, params?: Record<string, string | number>) => string;
 
-const translations: Record<string, Translations> = { vi, en, zh };
+const translations: Record<string, Translations> = { vi, en, zh, ru };
 
 interface I18nContextProps {
   t: TFunction;
@@ -59,7 +67,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     setLang(newLang);
     const settings = await loadSettings();
     await saveSettings({ ...settings, language: newLang });
-    
+
     // Broadcast via socket if connected
     if (socketService.isConnected) {
       socketService.sendSyncLanguage(newLang);
@@ -69,27 +77,27 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const value = useMemo(() => {
     const dict = translations[lang] || translations.vi;
 
-  const t: TFunction = (key, params) => {
-    const parts = key.split('.');
-    let result: unknown = dict as unknown;
-    for (const part of parts) {
-      if (result != null && typeof result === 'object') {
-        result = (result as Record<string, unknown>)[part];
-      } else {
-        return key;
+    const t: TFunction = (key, params) => {
+      const parts = key.split('.');
+      let result: unknown = dict as unknown;
+      for (const part of parts) {
+        if (result != null && typeof result === 'object') {
+          result = (result as Record<string, unknown>)[part];
+        } else {
+          return key;
+        }
       }
-    }
-    if (Array.isArray(result)) return key;
-    if (typeof result !== 'string') return key;
+      if (Array.isArray(result)) return key;
+      if (typeof result !== 'string') return key;
 
-    if (params) {
-      return Object.entries(params).reduce(
-        (str, [k, v]) => str.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), String(v)),
-        result,
-      );
-    }
-    return result;
-  };
+      if (params) {
+        return Object.entries(params).reduce(
+          (str, [k, v]) => str.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), String(v)),
+          result,
+        );
+      }
+      return result;
+    };
 
     return { t, lang, changeLanguage };
   }, [lang]);
