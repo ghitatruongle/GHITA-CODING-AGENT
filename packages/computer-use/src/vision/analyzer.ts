@@ -36,14 +36,18 @@ export class VisionScreenshotAnalyzer {
       const config = JSON.parse(raw) as LocalConfig;
 
       // Determine model based on UI routing or fallbacks
-      const activeModelKey = config.agentRouting?.UI || config.agentRouting?.default || 'openai-gpt-4o';
+      const activeModelKey =
+        config.agentRouting?.UI || config.agentRouting?.default || 'openai-gpt-4o';
       const meta = config.agentModels[activeModelKey];
 
       if (meta && meta.api_key) {
         return {
           apiKey: meta.api_key,
-          baseUrl: meta.base_url || (meta.type === 'openai' ? 'https://api.openai.com/v1' : 'https://api.anthropic.com/v1'),
-          model: meta.default_model || (meta.type === 'openai' ? 'gpt-4o' : 'claude-3-5-sonnet-latest'),
+          baseUrl:
+            meta.base_url ||
+            (meta.type === 'openai' ? 'https://api.openai.com/v1' : 'https://api.anthropic.com/v1'),
+          model:
+            meta.default_model || (meta.type === 'openai' ? 'gpt-4o' : 'claude-3-5-sonnet-latest'),
           type: meta.type,
         };
       }
@@ -53,7 +57,11 @@ export class VisionScreenshotAnalyzer {
         if (provider.api_key) {
           return {
             apiKey: provider.api_key,
-            baseUrl: provider.base_url || (provider.type === 'openai' ? 'https://api.openai.com/v1' : 'https://api.anthropic.com/v1'),
+            baseUrl:
+              provider.base_url ||
+              (provider.type === 'openai'
+                ? 'https://api.openai.com/v1'
+                : 'https://api.anthropic.com/v1'),
             model: provider.default_model || key,
             type: provider.type,
           };
@@ -71,7 +79,9 @@ export class VisionScreenshotAnalyzer {
   async analyze(screenshotBase64: string): Promise<VisionAnalyzerResult> {
     const apiConfig = this.loadConfig();
     if (!apiConfig) {
-      throw new Error('No API Key configured. Please configure OpenAI or Anthropic in the API Manager.');
+      throw new Error(
+        'No API Key configured. Please configure OpenAI or Anthropic in the API Manager.',
+      );
     }
 
     const prompt = `Analyze this GUI screenshot. Identify all interactive elements (buttons, links, inputs, icons, dropdowns) and return them as a JSON list.
@@ -102,7 +112,9 @@ Note: All coordinates in "box" must be normalized from 0 to 1000 based on the sc
   async ground(screenshotBase64: string, description: string): Promise<string> {
     const apiConfig = this.loadConfig();
     if (!apiConfig) {
-      throw new Error('No API Key configured. Please configure OpenAI or Anthropic in the API Manager.');
+      throw new Error(
+        'No API Key configured. Please configure OpenAI or Anthropic in the API Manager.',
+      );
     }
 
     const prompt = `You are a GUI grounding assistant. Look at the screenshot and find the coordinate box or point of the target element described as: "${description}".
@@ -163,7 +175,9 @@ Only output the Action. Do not write any HTML tags, explainers or other text.`;
         throw new Error(`OpenAI Vision API Error (${response.status}): ${errorText}`);
       }
 
-      const res = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
+      const res = (await response.json()) as {
+        choices?: Array<{ message?: { content?: string } }>;
+      };
       return res.choices?.[0]?.message?.content || '';
     } else if (config.type === 'anthropic') {
       const response = await fetch(url + 'messages', {
@@ -201,7 +215,7 @@ Only output the Action. Do not write any HTML tags, explainers or other text.`;
         throw new Error(`Anthropic Vision API Error (${response.status}): ${errorText}`);
       }
 
-      const res = await response.json() as { content?: Array<{ text?: string }> };
+      const res = (await response.json()) as { content?: Array<{ text?: string }> };
       return res.content?.[0]?.text || '';
     } else {
       throw new Error(`Multimodal provider type not supported: ${config.type}`);
@@ -210,8 +224,9 @@ Only output the Action. Do not write any HTML tags, explainers or other text.`;
 
   private parseJsonBlock<T>(text: string, defaultValue: T): T {
     try {
-      const match = text.match(/```json\s*([\s\S]+?)\s*```/) || text.match(/```\s*([\s\S]+?)\s*```/);
-      const jsonStr = (match && match[1]) ? match[1] : text;
+      const match =
+        text.match(/```json\s*([\s\S]+?)\s*```/) || text.match(/```\s*([\s\S]+?)\s*```/);
+      const jsonStr = match && match[1] ? match[1] : text;
       return JSON.parse(jsonStr.trim()) as T;
     } catch {
       return defaultValue;

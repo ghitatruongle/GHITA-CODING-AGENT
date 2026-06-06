@@ -1,1 +1,25 @@
-{"rustc":8891013984288978370,"features":"[]","declared_features":"[\"backtrace\", \"deadlock_detection\", \"nightly\", \"petgraph\"]","target":12558056885032795287,"profile":2225463790103693989,"path":1543621318892822398,"deps":[[3666196340704888985,"smallvec",false,18163730446452654958],[6545091685033313457,"build_script_build",false,288448207241569614],[6959378045035346538,"windows_link",false,17182439757681151709],[7667230146095136825,"cfg_if",false,6296203083482735689]],"local":[{"CheckDepInfo":{"dep_info":"debug\\.fingerprint\\parking_lot_core-bb78e853863f82ee\\dep-lib-parking_lot_core","checksum":false}}],"rustflags":[],"config":8247474407144887393,"compile_kind":0}
+{
+  "rustc": 8891013984288978370,
+  "features": "[]",
+  "declared_features": "[\"backtrace\", \"deadlock_detection\", \"nightly\", \"petgraph\"]",
+  "target": 12558056885032795287,
+  "profile": 2225463790103693989,
+  "path": 1543621318892822398,
+  "deps": [
+    [3666196340704888985, "smallvec", false, 18163730446452654958],
+    [6545091685033313457, "build_script_build", false, 288448207241569614],
+    [6959378045035346538, "windows_link", false, 17182439757681151709],
+    [7667230146095136825, "cfg_if", false, 6296203083482735689]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "debug\\.fingerprint\\parking_lot_core-bb78e853863f82ee\\dep-lib-parking_lot_core",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 8247474407144887393,
+  "compile_kind": 0
+}

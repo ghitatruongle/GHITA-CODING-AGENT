@@ -1,3 +1,0 @@
-- All messages must follow the strict format `[HH:MM:SS] Agent Name | Role: Content` followed by a `---` separator.
-- Directors issue commands using the `>>> LENH: [Target Agent]` prefix, while agents confirm receipt using `<<< XAC NHAN:`.
-- Each agent is restricted to writing only in their assigned file (defined in `agents.json`) but must read all other files to understand context.

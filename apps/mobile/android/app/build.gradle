@@ -19,6 +19,10 @@ react {
  * Set this to true to Run Proguard on Release builds to minify the Java bytecode.
  */
 def enableProguardInReleaseBuilds = true
+def isReleaseTaskRequested = gradle.startParameter.taskNames.any { taskName ->
+    def normalizedTaskName = taskName.toLowerCase()
+    normalizedTaskName.contains("release") || normalizedTaskName.contains("bundle")
+}
 
 /**
  * The preferred build flavor of JavaScriptCore (JSC)
@@ -39,6 +43,13 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
 
     namespace "com.ghitamobile"
+
+    externalNativeBuild {
+        cmake {
+            path "src/main/jni/CMakeLists.txt"
+        }
+    }
+
     defaultConfig {
         applicationId "com.ghitamobile"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -65,16 +76,10 @@ android {
                 storePassword releaseKeystorePassword
                 keyAlias releaseKeyAlias
                 keyPassword releaseKeyPassword
-            } else {
-                // Fail the build instead of silently using debug keystore
+            } else if (isReleaseTaskRequested) {
                 throw new GradleException(
-                    "Release signing credentials not configured!\n" +
-                    "Set these environment variables or gradle.properties:\n" +
-                    "  GHITA_RELEASE_KEYSTORE_PATH\n" +
-                    "  GHITA_RELEASE_KEYSTORE_PASSWORD\n" +
-                    "  GHITA_RELEASE_KEY_ALIAS\n" +
-                    "  GHITA_RELEASE_KEY_PASSWORD\n" +
-                    "For local dev, use: ./gradlew assembleDebug"
+                    "Release signing requires GHITA_RELEASE_KEYSTORE_PATH, GHITA_RELEASE_KEYSTORE_PASSWORD, " +
+                    "GHITA_RELEASE_KEY_ALIAS, GHITA_RELEASE_KEY_PASSWORD env vars to be set."
                 )
             }
         }

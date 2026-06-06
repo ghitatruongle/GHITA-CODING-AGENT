@@ -145,36 +145,38 @@ function checkAndKillIdle(session: PtySession, maxIdleMs: number): boolean {
     return true;
   }
   return false;
-}  // ── Tests ─────────────────────────────────────────────────────────────────
+} // ── Tests ─────────────────────────────────────────────────────────────────
 
-  describe('PTY Terminal Integration (real node-pty)', () => {
-    let sessions: Map<string, PtySession>;
+describe('PTY Terminal Integration (real node-pty)', () => {
+  let sessions: Map<string, PtySession>;
 
-    const TEST_SOCKET_ID = 'test_socket_integration';
+  const TEST_SOCKET_ID = 'test_socket_integration';
 
-    beforeEach(() => {
-      sessions = new Map();
-    });
+  beforeEach(() => {
+    sessions = new Map();
+  });
 
-    afterEach(() => {
-      // Cleanup all sessions — mirrors server disconnect cleanup
-      for (const [, session] of sessions.entries()) {
-        try {
-          session.ptyProcess.kill();
-        } catch {
-          // ignore
-        }
+  afterEach(() => {
+    // Cleanup all sessions — mirrors server disconnect cleanup
+    for (const [, session] of sessions.entries()) {
+      try {
+        session.ptyProcess.kill();
+      } catch {
+        // ignore
       }
-      sessions.clear();
-    });
+    }
+    sessions.clear();
+  });
 
-    afterAll(() => {
-      // Safety net: kill any remaining zombie sessions
-      for (const [, session] of sessions) {
-        try { session.ptyProcess.kill(); } catch {}
-      }
-      sessions.clear();
-    });
+  afterAll(() => {
+    // Safety net: kill any remaining zombie sessions
+    for (const [, session] of sessions) {
+      try {
+        session.ptyProcess.kill();
+      } catch {}
+    }
+    sessions.clear();
+  });
 
   // ─────────────────────────────────────────────────────────────────────────
   // Test 1: Create a real PTY session, execute a command, read output
@@ -418,15 +420,11 @@ function checkAndKillIdle(session: PtySession, maxIdleMs: number): boolean {
       return 'bash';
     };
 
-    expect(shellForPlatform('cmd')).toBe(
-      process.platform === 'win32' ? 'cmd.exe' : 'bash',
-    );
+    expect(shellForPlatform('cmd')).toBe(process.platform === 'win32' ? 'cmd.exe' : 'bash');
     expect(shellForPlatform('powershell')).toBe(
       process.platform === 'win32' ? 'powershell.exe' : 'bash',
     );
-    expect(shellForPlatform()).toBe(
-      process.platform === 'win32' ? 'cmd.exe' : 'bash',
-    );
+    expect(shellForPlatform()).toBe(process.platform === 'win32' ? 'cmd.exe' : 'bash');
   });
 
   // ─────────────────────────────────────────────────────────────────────────

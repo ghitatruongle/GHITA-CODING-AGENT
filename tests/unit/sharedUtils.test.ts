@@ -47,9 +47,7 @@ describe('generateUUID()', () => {
 
   it('should return a UUID v4 formatted string', () => {
     const id = generateUUID();
-    expect(id).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-    );
+    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
   });
 
   it('should return unique values on successive calls', () => {
@@ -60,19 +58,17 @@ describe('generateUUID()', () => {
   it('should use the fallback when crypto.randomUUID is not available', () => {
     vi.stubGlobal('crypto', {});
     const id = generateUUID();
-    expect(id).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-    );
+    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
   });
 
   it('should use the fallback when crypto.randomUUID throws', () => {
     vi.stubGlobal('crypto', {
-      randomUUID: () => { throw new Error('Not available'); },
+      randomUUID: () => {
+        throw new Error('Not available');
+      },
     });
     const id = generateUUID();
-    expect(id).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-    );
+    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
   });
 
   it('should use the crypto.randomUUID when available', () => {
@@ -442,7 +438,11 @@ describe('randomInt()', () => {
 describe('chunk()', () => {
   it('should split array into chunks of given size', () => {
     const result = chunk([1, 2, 3, 4, 5, 6], 2);
-    expect(result).toEqual([[1, 2], [3, 4], [5, 6]]);
+    expect(result).toEqual([
+      [1, 2],
+      [3, 4],
+      [5, 6],
+    ]);
   });
 
   it('should handle last incomplete chunk', () => {
@@ -510,7 +510,10 @@ describe('groupBy()', () => {
     ];
     const result = groupBy(items, (item) => item.type);
     expect(result).toEqual({
-      fruit: [{ type: 'fruit', name: 'apple' }, { type: 'fruit', name: 'banana' }],
+      fruit: [
+        { type: 'fruit', name: 'apple' },
+        { type: 'fruit', name: 'banana' },
+      ],
       veg: [{ type: 'veg', name: 'carrot' }],
     });
   });
@@ -600,7 +603,9 @@ describe('sleep()', () => {
 
   it('should not resolve before the delay', async () => {
     let resolved = false;
-    const promise = sleep(1000).then(() => { resolved = true; });
+    const promise = sleep(1000).then(() => {
+      resolved = true;
+    });
     vi.advanceTimersByTime(500);
     await vi.waitUntil(() => Promise.resolve(false), { timeout: 100 }).catch(() => {});
     expect(resolved).toBe(false);
@@ -633,9 +638,7 @@ describe('retry()', () => {
   });
 
   it('should retry on failure and succeed on retry', async () => {
-    const fn = vi.fn()
-      .mockRejectedValueOnce(new Error('fail'))
-      .mockResolvedValueOnce('success');
+    const fn = vi.fn().mockRejectedValueOnce(new Error('fail')).mockResolvedValueOnce('success');
     const promise = retry(fn, 3, 100).catch(() => {}); // prevent unhandled rejection
     await vi.runAllTimersAsync();
     const result = await promise;
@@ -655,7 +658,8 @@ describe('retry()', () => {
 
   it('should apply exponential backoff (delay * attempt)', async () => {
     vi.useRealTimers();
-    const fn = vi.fn()
+    const fn = vi
+      .fn()
       .mockRejectedValueOnce(new Error('fail'))
       .mockRejectedValueOnce(new Error('fail'))
       .mockResolvedValueOnce('ok');

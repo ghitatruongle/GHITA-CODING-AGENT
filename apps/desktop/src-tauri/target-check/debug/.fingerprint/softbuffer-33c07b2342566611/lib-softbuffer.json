@@ -1,1 +1,24 @@
-{"rustc":8891013984288978370,"features":"[]","declared_features":"[\"as-raw-xcb-connection\", \"bytemuck\", \"default\", \"drm\", \"fastrand\", \"kms\", \"memmap2\", \"rustix\", \"tiny-xlib\", \"wayland\", \"wayland-backend\", \"wayland-client\", \"wayland-dlopen\", \"wayland-sys\", \"x11\", \"x11-dlopen\", \"x11rb\"]","target":9174284484934603102,"profile":2241668132362809309,"path":10547678426028282648,"deps":[[4143744114649553716,"raw_window_handle",false,2256604580440552848],[6568467691589961976,"windows_sys",false,3717114043027373770],[14757622794040968908,"tracing",false,1338817948762634808]],"local":[{"CheckDepInfo":{"dep_info":"debug\\.fingerprint\\softbuffer-33c07b2342566611\\dep-lib-softbuffer","checksum":false}}],"rustflags":[],"config":8247474407144887393,"compile_kind":0}
+{
+  "rustc": 8891013984288978370,
+  "features": "[]",
+  "declared_features": "[\"as-raw-xcb-connection\", \"bytemuck\", \"default\", \"drm\", \"fastrand\", \"kms\", \"memmap2\", \"rustix\", \"tiny-xlib\", \"wayland\", \"wayland-backend\", \"wayland-client\", \"wayland-dlopen\", \"wayland-sys\", \"x11\", \"x11-dlopen\", \"x11rb\"]",
+  "target": 9174284484934603102,
+  "profile": 2241668132362809309,
+  "path": 10547678426028282648,
+  "deps": [
+    [4143744114649553716, "raw_window_handle", false, 2256604580440552848],
+    [6568467691589961976, "windows_sys", false, 3717114043027373770],
+    [14757622794040968908, "tracing", false, 1338817948762634808]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "debug\\.fingerprint\\softbuffer-33c07b2342566611\\dep-lib-softbuffer",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 8247474407144887393,
+  "compile_kind": 0
+}

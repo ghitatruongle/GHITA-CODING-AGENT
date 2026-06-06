@@ -43,16 +43,12 @@ export interface QualityMetrics {
 
 export function calculateConfusion(
   query: BenchmarkQuery,
-  results: SearchResult[]
+  results: SearchResult[],
 ): ConfusionMetrics {
-  const matchingResults = results.filter(
-    r => r.symbol === query.symbol && r.file === query.file
-  );
+  const matchingResults = results.filter((r) => r.symbol === query.symbol && r.file === query.file);
 
   const tp = matchingResults.length > 0 ? 1 : 0;
-  const fp = results.filter(
-    r => !(r.symbol === query.symbol && r.file === query.file)
-  ).length;
+  const fp = results.filter((r) => !(r.symbol === query.symbol && r.file === query.file)).length;
   const fn = tp === 0 ? 1 : 0;
 
   return { tp, fp, fn };
@@ -72,7 +68,7 @@ export function calculateF1(precision: number, recall: number): number {
 
 export function calculateQualityMetrics(
   queries: BenchmarkQuery[],
-  searchFn: (query: BenchmarkQuery) => SearchResult[]
+  searchFn: (query: BenchmarkQuery) => SearchResult[],
 ): QualityMetrics {
   let totalTP = 0;
   let totalFP = 0;
@@ -138,7 +134,7 @@ export class MockLLMSearchEngine {
     const results = this.symbolIndex.get(key);
     if (!results) return [];
     // To achieve perfect metrics in deterministic test, filter results to match the specific query's file and expectedKind
-    return results.filter(r => r.file === query.file && r.kind === query.expectedKind);
+    return results.filter((r) => r.file === query.file && r.kind === query.expectedKind);
   }
 
   /**
@@ -188,9 +184,9 @@ export function generateQualityReport(
   metrics: QualityMetrics,
   searchFn: (query: BenchmarkQuery) => SearchResult[],
   damping: number,
-  existingTrend: TrendDataPoint[] = []
+  existingTrend: TrendDataPoint[] = [],
 ): QualityReport {
-  const perQueryResults = queries.map(q => {
+  const perQueryResults = queries.map((q) => {
     const results = searchFn(q);
     const { tp, fp, fn } = calculateConfusion(q, results);
     return {
@@ -274,7 +270,7 @@ export function generateVisTrendData(report: QualityReport): VisTrendGraph {
       x: index * 100,
       y: -(point.f1Score * 100),
       color,
-      size: 20 + (point.f1Score * 30),
+      size: 20 + point.f1Score * 30,
     });
 
     if (index > 0) {
@@ -301,18 +297,15 @@ export interface ThresholdResult {
   message: string;
 }
 
-export function checkF1Threshold(
-  metrics: QualityMetrics,
-  threshold = 0.80
-): ThresholdResult {
+export function checkF1Threshold(metrics: QualityMetrics, threshold = 0.8): ThresholdResult {
   const passed = metrics.f1Score >= threshold;
   return {
     passed,
     f1Score: metrics.f1Score,
     threshold,
     message: passed
-      ? `PASS: F1-Score ${(metrics.f1Score * 100).toFixed(1)}% >= ${(threshold * 100)}% threshold`
-      : `FAIL: F1-Score ${(metrics.f1Score * 100).toFixed(1)}% < ${(threshold * 100)}% threshold — commit blocked`,
+      ? `PASS: F1-Score ${(metrics.f1Score * 100).toFixed(1)}% >= ${threshold * 100}% threshold`
+      : `FAIL: F1-Score ${(metrics.f1Score * 100).toFixed(1)}% < ${threshold * 100}% threshold — commit blocked`,
   };
 }
 
@@ -327,7 +320,7 @@ export interface ComparisonResult {
 export function compareSearchMethods(
   queries: BenchmarkQuery[],
   pageRankFn: (query: BenchmarkQuery) => SearchResult[],
-  regexFn: (query: BenchmarkQuery) => SearchResult[]
+  regexFn: (query: BenchmarkQuery) => SearchResult[],
 ): ComparisonResult[] {
   const results: ComparisonResult[] = [];
 
@@ -351,9 +344,9 @@ export function compareSearchMethods(
 export function optimizeDampingParameter(
   queries: BenchmarkQuery[],
   evaluateFn: (damping: number) => QualityMetrics,
-  minDamping = 0.50,
+  minDamping = 0.5,
   maxDamping = 0.95,
-  step = 0.05
+  step = 0.05,
 ): { optimalDamping: number; bestF1: number; results: Array<{ damping: number; f1: number }> } {
   const results: Array<{ damping: number; f1: number }> = [];
   const defaultMetrics = evaluateFn(0.85);

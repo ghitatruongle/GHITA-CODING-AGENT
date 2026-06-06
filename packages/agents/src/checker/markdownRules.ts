@@ -48,7 +48,7 @@ export class MarkdownRulesChecker {
     if (!fs.existsSync(dir)) return;
 
     try {
-      const files = fs.readdirSync(dir).filter(f => f.endsWith('.md'));
+      const files = fs.readdirSync(dir).filter((f) => f.endsWith('.md'));
       for (const file of files) {
         const fullPath = path.join(dir, file);
         const content = fs.readFileSync(fullPath, 'utf8');
@@ -57,8 +57,10 @@ export class MarkdownRulesChecker {
           this.rules.push(rule);
         }
       }
- } catch (err: unknown) {
- console.warn(`[MarkdownRulesChecker] Failed to load rules: ${err instanceof Error ? err.message : String(err)}`);
+    } catch (err: unknown) {
+      console.warn(
+        `[MarkdownRulesChecker] Failed to load rules: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
   }
 
@@ -82,7 +84,11 @@ export class MarkdownRulesChecker {
         const val = trimmed.replace('Severity:', '').trim().toLowerCase();
         severity = val === 'warning' ? 'warning' : 'error';
       } else if (trimmed.startsWith('Files:')) {
-        files = trimmed.replace('Files:', '').trim().split(',').map(f => f.trim());
+        files = trimmed
+          .replace('Files:', '')
+          .trim()
+          .split(',')
+          .map((f) => f.trim());
       } else if (trimmed.startsWith('ASTCheck:')) {
         const val = trimmed.replace('ASTCheck:', '').trim();
         if (val === 'any-keyword') astCheck = 'any-keyword';
@@ -103,7 +109,7 @@ export class MarkdownRulesChecker {
       files,
       description: description || 'No description provided.',
       astCheck,
-      pattern
+      pattern,
     };
   }
 
@@ -112,10 +118,10 @@ export class MarkdownRulesChecker {
    */
   private matchFilePattern(filePath: string, patterns: string[]): boolean {
     const normalized = filePath.replace(/\\/g, '/');
-    return patterns.some(pattern => {
+    return patterns.some((pattern) => {
       const cleanPattern = pattern.trim().replace(/\\/g, '/');
       if (cleanPattern === '**/*' || cleanPattern === '*') return true;
-      
+
       // Mẫu đuôi extension như **/*.ts
       if (cleanPattern.startsWith('**/')) {
         const suffix = cleanPattern.substring(2); // e.g. "/*.ts"
@@ -138,13 +144,11 @@ export class MarkdownRulesChecker {
       if (!this.matchFilePattern(filePath, rule.files)) continue;
 
       // 1. Quét AST nếu cấu hình astCheck
-      if (rule.astCheck === 'any-keyword' && (filePath.endsWith('.ts') || filePath.endsWith('.tsx'))) {
-        const sourceFile = ts.createSourceFile(
-          filePath,
-          content,
-          ts.ScriptTarget.Latest,
-          true
-        );
+      if (
+        rule.astCheck === 'any-keyword' &&
+        (filePath.endsWith('.ts') || filePath.endsWith('.tsx'))
+      ) {
+        const sourceFile = ts.createSourceFile(filePath, content, ts.ScriptTarget.Latest, true);
 
         const visitor = (node: ts.Node) => {
           if (node.kind === ts.SyntaxKind.AnyKeyword) {
@@ -155,7 +159,7 @@ export class MarkdownRulesChecker {
               filePath,
               line: line + 1, // 1-indexed
               column: character + 1, // 1-indexed
-              message: rule.description
+              message: rule.description,
             });
           }
           ts.forEachChild(node, visitor);
@@ -182,11 +186,13 @@ export class MarkdownRulesChecker {
               filePath,
               line,
               column,
-              message: rule.description
+              message: rule.description,
             });
           }
- } catch (err: unknown) {
- console.warn(`[MarkdownRulesChecker] Pattern regex error: ${err instanceof Error ? err.message : String(err)}`);
+        } catch (err: unknown) {
+          console.warn(
+            `[MarkdownRulesChecker] Pattern regex error: ${err instanceof Error ? err.message : String(err)}`,
+          );
         }
       }
     }
@@ -211,7 +217,7 @@ export class MarkdownRulesChecker {
         replacements.push({
           start: node.getStart(),
           end: node.getEnd(),
-          text: 'unknown'
+          text: 'unknown',
         });
       }
       ts.forEachChild(node, visitor);
@@ -235,7 +241,7 @@ export class MarkdownRulesChecker {
     const originalLines = original.split('\n');
     const fixedLines = fixed.split('\n');
     const diff: string[] = [];
-    
+
     for (let i = 0; i < Math.max(originalLines.length, fixedLines.length); i++) {
       const orig = originalLines[i];
       const fix = fixedLines[i];
@@ -269,30 +275,42 @@ export class MarkdownChecksMiddleware implements AgentMiddleware {
   async preTool(
     toolName: string,
     args: Record<string, unknown>,
-    _context: MiddlewareContext
+    _context: MiddlewareContext,
   ): Promise<{ proceed: boolean; reason?: string } | void> {
-    const writeTools = ['writeFile', 'write_to_file', 'replace_file_content', 'multi_replace_file_content'];
+    const writeTools = [
+      'writeFile',
+      'write_to_file',
+      'replace_file_content',
+      'multi_replace_file_content',
+    ];
     if (!writeTools.includes(toolName)) return;
 
-    const targetPath = (args.TargetFile || args.targetFile || args.filePath || args.targetPath) as string;
-    const newContent = (args.CodeContent || args.codeContent || args.ReplacementContent || args.replacementContent || args.content) as string;
+    const targetPath = (args.TargetFile ||
+      args.targetFile ||
+      args.filePath ||
+      args.targetPath) as string;
+    const newContent = (args.CodeContent ||
+      args.codeContent ||
+      args.ReplacementContent ||
+      args.replacementContent ||
+      args.content) as string;
 
     if (!targetPath || !newContent) return;
 
     // Chuyển relative sang absolute path nếu cần
     const resolvedPath = path.isAbsolute(targetPath) ? targetPath : path.resolve(targetPath);
-    
+
     // Nạp lại rules để phản ánh thay đổi mới nhất
     this.checker.loadRules(this.rulesDir);
     const issues = this.checker.checkFile(resolvedPath, newContent);
 
-    const errors = issues.filter(i => i.severity === 'error');
+    const errors = issues.filter((i) => i.severity === 'error');
     if (errors.length > 0) {
       // Ghi nhận log vi phạm (Tác vụ 7)
       this.logViolations(resolvedPath, errors);
 
       const errorDetail = errors
-        .map(e => `- [Dòng ${e.line}, Cột ${e.column}] Lỗi [${e.ruleId}]: ${e.message}`)
+        .map((e) => `- [Dòng ${e.line}, Cột ${e.column}] Lỗi [${e.ruleId}]: ${e.message}`)
         .join('\n');
 
       // Tự động sinh diff đề xuất sửa đổi chuẩn cú pháp (Tác vụ 5)
@@ -304,7 +322,7 @@ export class MarkdownChecksMiddleware implements AgentMiddleware {
 
       return {
         proceed: false,
-        reason: `[CI CHECK GATE BLOCKED (AST-RULE-001)]\nLưu tệp tin bị từ chối do vi phạm quy chuẩn code sạch được định nghĩa trong '.ghita/checks/'.\nChi tiết vi phạm:\n${errorDetail}${diffSection}\nVui lòng sửa đổi lại code để tiếp tục.`
+        reason: `[CI CHECK GATE BLOCKED (AST-RULE-001)]\nLưu tệp tin bị từ chối do vi phạm quy chuẩn code sạch được định nghĩa trong '.ghita/checks/'.\nChi tiết vi phạm:\n${errorDetail}${diffSection}\nVui lòng sửa đổi lại code để tiếp tục.`,
       };
     }
     return { proceed: true };

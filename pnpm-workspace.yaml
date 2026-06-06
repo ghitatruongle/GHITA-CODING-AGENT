@@ -1,7 +1,14 @@
 packages:
   - packages/*
   - apps/*
+  - docs
+  - docs
 
 onlyBuiltDependencies:
   - esbuild
   - better-sqlite3
+  - node-pty
+  - cpu-features
+  - protobufjs
+  - sharp
+  - ssh2

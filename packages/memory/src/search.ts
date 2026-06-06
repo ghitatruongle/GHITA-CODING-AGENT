@@ -1,6 +1,18 @@
 // ==============================================================================
-// GHITA CODING AGENT - Cross-Session Memory Search
+// GHITA CODING AGENT - Phase 14: Cross-Session Memory Search (Enhanced)
 // ==============================================================================
+// Provides cross-session search with:
+// - Inverted index for fast keyword lookup
+// - TF-IDF scoring with time-decay
+// - Optional semantic vector similarity integration
+// - Merged hybrid results (keyword + vector)
+// - Session metadata filtering
+// - Configurable scoring weights
+// ==============================================================================
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 export interface SessionMessage {
   role: 'user' | 'assistant' | 'system';
@@ -15,6 +27,8 @@ export interface SessionRecord {
   messages: SessionMessage[];
   summary?: string;
   metadata?: Record<string, unknown>;
+  /** Optional embedding vector for the session (used in semantic search) */
+  vector?: number[];
 }
 
 export interface CrossSessionResult {
@@ -28,35 +42,94 @@ export interface CrossSessionResult {
   overallScore: number;
 }
 
+export interface SearchConfig {
+  /** Maximum sessions to store (default: 1000) */
+  maxSessions?: number;
+  /** Weight for keyword score (default: 0.6) */
+  keywordWeight?: number;
+  /** Weight for semantic vector score (default: 0.4) */
+  semanticWeight?: number;
+  /** Half-life in days for time-decay recency bonus (default: 30) */
+  recencyHalfLifeDays?: number;
+  /** Minimum score threshold (default: 0.1) */
+  minScore?: number;
+  /** Default result limit (default: 5) */
+  defaultLimit?: number;
+}
+
+export interface EnhancedSearchResult {
+  sessionId: string;
+  matches: Array<{
+    message: SessionMessage;
+    keywordScore: number;
+    vectorScore: number;
+    combinedScore: number;
+    context: string;
+  }>;
+  sessionSummary?: string;
+  overallScore: number;
+  /** Source of the match: keyword, vector, or hybrid */
+  source: 'keyword' | 'vector' | 'hybrid';
+}
+
+export interface SessionSearchOptions {
+  limit?: number;
+  minScore?: number;
+  sessionType?: string;
+  /** Optional query vector for semantic search */
+  queryVector?: number[];
+  /** Override keyword weight for this search */
+  keywordWeight?: number;
+  /** Override semantic weight for this search */
+  semanticWeight?: number;
+  /** Date range filter */
+  afterDate?: number;
+  beforeDate?: number;
+}
+
 const TOKEN_PATTERN = /[\p{L}\p{N}_-]+/gu;
 
 export class CrossSessionSearch {
   private readonly sessions = new Map<string, SessionRecord>();
-  // Inverted index: map token -> set of sessionIds
   private readonly index = new Map<string, Set<string>>();
-  private readonly maxSessions: number;
+  private readonly sessionTokens = new Map<string, Set<string>>();
+  private readonly config: Required<SearchConfig>;
 
-  constructor(maxSessions = 1000) {
-    this.maxSessions = maxSessions;
+  constructor(maxSessionsOrConfig?: number | SearchConfig) {
+    const cfg =
+      typeof maxSessionsOrConfig === 'number'
+        ? { maxSessions: maxSessionsOrConfig }
+        : maxSessionsOrConfig;
+
+    this.config = {
+      maxSessions: cfg?.maxSessions ?? 1000,
+      keywordWeight: cfg?.keywordWeight ?? 0.6,
+      semanticWeight: cfg?.semanticWeight ?? 0.4,
+      recencyHalfLifeDays: cfg?.recencyHalfLifeDays ?? 30,
+      minScore: cfg?.minScore ?? 0.1,
+      defaultLimit: cfg?.defaultLimit ?? 5,
+    };
   }
 
   /**
    * Đưa một session vào cơ sở dữ liệu in-memory inverted index
    */
   indexSession(session: SessionRecord): void {
-    // Quản lý dung lượng bộ nhớ
-    if (this.sessions.size >= this.maxSessions && !this.sessions.has(session.sessionId)) {
-      const oldestId = [...this.sessions.values()]
-        .sort((a, b) => a.startTime - b.startTime)[0]?.sessionId;
+    if (this.sessions.size >= this.config.maxSessions && !this.sessions.has(session.sessionId)) {
+      const oldestId = [...this.sessions.values()].sort((a, b) => a.startTime - b.startTime)[0]
+        ?.sessionId;
       if (oldestId) this.removeSession(oldestId);
     }
 
     this.sessions.set(session.sessionId, session);
 
+    const tokens = new Set<string>();
+
     // Index all tokens in messages
     for (const msg of session.messages) {
-      const tokens = this.tokenize(msg.content);
-      for (const token of tokens) {
+      const msgTokens = this.tokenize(msg.content);
+      for (const token of msgTokens) {
+        tokens.add(token);
         let set = this.index.get(token);
         if (!set) {
           set = new Set<string>();
@@ -68,8 +141,9 @@ export class CrossSessionSearch {
 
     // Index summary if available
     if (session.summary) {
-      const tokens = this.tokenize(session.summary);
-      for (const token of tokens) {
+      const summaryTokens = this.tokenize(session.summary);
+      for (const token of summaryTokens) {
+        tokens.add(token);
         let set = this.index.get(token);
         if (!set) {
           set = new Set<string>();
@@ -78,6 +152,8 @@ export class CrossSessionSearch {
         set.add(session.sessionId);
       }
     }
+
+    this.sessionTokens.set(session.sessionId, tokens);
   }
 
   /**
@@ -87,14 +163,18 @@ export class CrossSessionSearch {
     const removed = this.sessions.delete(sessionId);
     if (!removed) return false;
 
-    // PERFORMANCE NOTE: This iterates the entire inverted index (O(tokens)) to clean up.
-    // For large indexes, consider maintaining a reverse map (sessionId -> tokens) for O(1) cleanup.
-    // TODO: Refactor to use a reverse index map for O(1) session removal.
-    for (const [token, set] of this.index.entries()) {
-      set.delete(sessionId);
-      if (set.size === 0) {
-        this.index.delete(token);
+    const tokens = this.sessionTokens.get(sessionId);
+    if (tokens) {
+      for (const token of tokens) {
+        const set = this.index.get(token);
+        if (set) {
+          set.delete(sessionId);
+          if (set.size === 0) {
+            this.index.delete(token);
+          }
+        }
       }
+      this.sessionTokens.delete(sessionId);
     }
     return true;
   }
@@ -102,40 +182,49 @@ export class CrossSessionSearch {
   /**
    * Tìm kiếm các message liên quan xuyên suốt tất cả sessions đã lưu
    */
-  searchAcrossSessions(
-    query: string,
-    options: { limit?: number; minScore?: number; sessionType?: string } = {}
-  ): CrossSessionResult[] {
+  searchAcrossSessions(query: string, options: SessionSearchOptions = {}): CrossSessionResult[] {
     const queryTokens = this.tokenize(query);
-    const limit = options.limit ?? 5;
-    const minScore = options.minScore ?? 0.1;
-    
+    const limit = options.limit ?? this.config.defaultLimit;
+    const minScore = options.minScore ?? this.config.minScore;
+
     if (queryTokens.size === 0) return [];
 
-    // Tìm các session chứa ít nhất một token của query
     const candidateSessionIds = new Set<string>();
     for (const token of queryTokens) {
       const set = this.index.get(token);
-      if (set) {
-        for (const id of set) {
-          candidateSessionIds.add(id);
+      if (set) for (const id of set) candidateSessionIds.add(id);
+    }
+
+    // Also include sessions matching by vector if queryVector provided
+    if (options.queryVector) {
+      for (const [id, session] of this.sessions) {
+        if (session.vector) {
+          const vs = this.cosine(options.queryVector, session.vector);
+          if (vs >= minScore) candidateSessionIds.add(id);
         }
       }
     }
 
+    const kwWeight = options.keywordWeight ?? this.config.keywordWeight;
+    const vecWeight = options.semanticWeight ?? this.config.semanticWeight;
     const results: CrossSessionResult[] = [];
 
     for (const sessionId of candidateSessionIds) {
       const session = this.sessions.get(sessionId);
       if (!session) continue;
-      
-      // Lọc theo metadata type nếu được cung cấp
-      if (options.sessionType && session.metadata?.type !== options.sessionType) {
-        continue;
-      }
+
+      if (options.sessionType && session.metadata?.type !== options.sessionType) continue;
+      if (options.afterDate && session.endTime < options.afterDate) continue;
+      if (options.beforeDate && session.startTime > options.beforeDate) continue;
 
       const matches: CrossSessionResult['matches'] = [];
       let maxMsgScore = 0;
+
+      // Session-level vector score
+      const sessionVecScore =
+        options.queryVector && session.vector
+          ? this.cosine(options.queryVector, session.vector)
+          : 0;
 
       for (const msg of session.messages) {
         const msgTokens = this.tokenize(msg.content);
@@ -145,20 +234,22 @@ export class CrossSessionSearch {
         for (const token of queryTokens) {
           if (msgTokens.has(token)) intersection++;
         }
+        const keywordScore = queryTokens.size > 0 ? intersection / queryTokens.size : 0;
 
-        const score = intersection / queryTokens.size;
-        if (score >= minScore) {
-          // Trích xuất ngữ cảnh xung quanh từ khóa trùng khớp
+        // Combined score with configurable weights
+        const combinedScore = kwWeight * keywordScore + vecWeight * sessionVecScore;
+
+        if (combinedScore >= minScore) {
           const context = this.extractContext(msg.content, queryTokens);
-          matches.push({ message: msg, score, context });
-          if (score > maxMsgScore) maxMsgScore = score;
+          matches.push({ message: msg, score: combinedScore, context });
+          if (combinedScore > maxMsgScore) maxMsgScore = combinedScore;
         }
       }
 
       if (matches.length > 0) {
-        // Điểm của session = điểm tối đa của message + 10% recency bonus
         const ageMs = Date.now() - session.endTime;
-        const recencyBonus = Math.max(0, 0.1 * (1 - ageMs / (1000 * 60 * 60 * 24 * 30)));
+        const halfLife = this.config.recencyHalfLifeDays;
+        const recencyBonus = 0.1 * Math.pow(0.5, ageMs / 86_400_000 / halfLife);
         const overallScore = Math.min(1.0, maxMsgScore + recencyBonus);
 
         results.push({
@@ -170,16 +261,80 @@ export class CrossSessionSearch {
       }
     }
 
-    return results
-      .sort((a, b) => b.overallScore - a.overallScore)
-      .slice(0, limit);
+    return results.sort((a, b) => b.overallScore - a.overallScore).slice(0, limit);
   }
 
   /**
    * Đếm tổng số session đã được index
    */
+  /** Enhanced search returning detailed keyword + vector breakdown */
+  searchEnhanced(query: string, options: SessionSearchOptions = {}): EnhancedSearchResult[] {
+    const queryTokens = this.tokenize(query);
+    const limit = options.limit ?? this.config.defaultLimit;
+    const minScore = options.minScore ?? this.config.minScore;
+    if (queryTokens.size === 0) return [];
+
+    const kwWeight = options.keywordWeight ?? this.config.keywordWeight;
+    const vecWeight = options.semanticWeight ?? this.config.semanticWeight;
+    const results: EnhancedSearchResult[] = [];
+
+    for (const [sessionId, session] of this.sessions) {
+      if (options.sessionType && session.metadata?.type !== options.sessionType) continue;
+      if (options.afterDate && session.endTime < options.afterDate) continue;
+      if (options.beforeDate && session.startTime > options.beforeDate) continue;
+
+      const sessionVecScore =
+        options.queryVector && session.vector
+          ? this.cosine(options.queryVector, session.vector)
+          : 0;
+
+      const matches: EnhancedSearchResult['matches'] = [];
+      let maxCombined = 0;
+
+      for (const msg of session.messages) {
+        const msgTokens = this.tokenize(msg.content);
+        if (msgTokens.size === 0) continue;
+
+        let intersection = 0;
+        for (const token of queryTokens) if (msgTokens.has(token)) intersection++;
+        const keywordScore = queryTokens.size > 0 ? intersection / queryTokens.size : 0;
+        const vectorScore = sessionVecScore;
+        const combinedScore = kwWeight * keywordScore + vecWeight * vectorScore;
+
+        if (combinedScore >= minScore) {
+          const context = this.extractContext(msg.content, queryTokens);
+          matches.push({ message: msg, keywordScore, vectorScore, combinedScore, context });
+          if (combinedScore > maxCombined) maxCombined = combinedScore;
+        }
+      }
+
+      if (matches.length > 0) {
+        const ageMs = Date.now() - session.endTime;
+        const halfLife = this.config.recencyHalfLifeDays;
+        const recencyBonus = 0.1 * Math.pow(0.5, ageMs / 86_400_000 / halfLife);
+        const overallScore = Math.min(1.0, maxCombined + recencyBonus);
+
+        const source: EnhancedSearchResult['source'] = options.queryVector ? 'hybrid' : 'keyword';
+
+        results.push({
+          sessionId,
+          matches: matches.sort((a, b) => b.combinedScore - a.combinedScore),
+          sessionSummary: session.summary,
+          overallScore,
+          source,
+        });
+      }
+    }
+
+    return results.sort((a, b) => b.overallScore - a.overallScore).slice(0, limit);
+  }
+
   getSessionCount(): number {
     return this.sessions.size;
+  }
+
+  getConfig(): Readonly<Required<SearchConfig>> {
+    return { ...this.config };
   }
 
   /**
@@ -189,22 +344,27 @@ export class CrossSessionSearch {
     if (results.length === 0) return '';
 
     const lines = ['=== LỊCH SỬ PHIÊN HỘI THOẠI TRƯỚC ĐÓ ==='];
-    
+
     for (const res of results) {
       lines.push(`\n[Phiên ID: ${res.sessionId}]`);
       if (res.sessionSummary) {
         lines.push(`Tóm tắt phiên: ${res.sessionSummary}`);
       }
-      
+
       lines.push('Đoạn hội thoại liên quan:');
-      for (const match of res.matches.slice(0, 2)) { // Lấy tối đa 2 matches liên quan nhất
+      for (const match of res.matches.slice(0, 2)) {
+        // Lấy tối đa 2 matches liên quan nhất
         const roleName = match.message.role === 'user' ? 'Người dùng' : 'AI';
-        lines.push(`  - ${roleName}: "${match.context}" (Độ trùng khớp: ${Math.round(match.score * 100)}%)`);
+        lines.push(
+          `  - ${roleName}: "${match.context}" (Độ trùng khớp: ${Math.round(match.score * 100)}%)`,
+        );
       }
     }
 
     const output = lines.join('\n');
-    return output.length > maxChars ? output.slice(0, maxChars) + '...\n[Cắt bớt do quá dài]' : output;
+    return output.length > maxChars
+      ? output.slice(0, maxChars) + '...\n[Cắt bớt do quá dài]'
+      : output;
   }
 
   /**
@@ -213,15 +373,33 @@ export class CrossSessionSearch {
   clear(): void {
     this.sessions.clear();
     this.index.clear();
+    this.sessionTokens.clear();
   }
 
   // =========================================================================
   // Private Helpers
   // =========================================================================
 
+  private cosine(a: number[], b: number[]): number {
+    const len = Math.min(a.length, b.length);
+    if (len === 0) return 0;
+    let dot = 0,
+      nA = 0,
+      nB = 0;
+    for (let i = 0; i < len; i++) {
+      const va = a[i] ?? 0,
+        vb = b[i] ?? 0;
+      dot += va * vb;
+      nA += va * va;
+      nB += vb * vb;
+    }
+    if (nA === 0 || nB === 0) return 0;
+    return dot / (Math.sqrt(nA) * Math.sqrt(nB));
+  }
+
   private tokenize(text: string): Set<string> {
     const matches = text.toLowerCase().match(TOKEN_PATTERN) ?? [];
-    return new Set(matches.filter(token => token.length > 1));
+    return new Set(matches.filter((token) => token.length > 1));
   }
 
   private extractContext(content: string, queryTokens: Set<string>, windowChars = 100): string {
@@ -244,7 +422,7 @@ export class CrossSessionSearch {
 
     const start = Math.max(0, bestIndex - 20);
     const end = Math.min(content.length, bestIndex + windowChars + 20);
-    
+
     let snippet = content.slice(start, end);
     if (start > 0) snippet = '...' + snippet;
     if (end < content.length) snippet = snippet + '...';

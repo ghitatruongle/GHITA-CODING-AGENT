@@ -1,1 +1,20 @@
-{"rustc":8891013984288978370,"features":"[\"default\", \"std\"]","declared_features":"[\"default\", \"nightly\", \"rand\", \"std\"]","target":9398104387793270977,"profile":2225463790103693989,"path":18056376487734733506,"deps":[],"local":[{"CheckDepInfo":{"dep_info":"debug\\.fingerprint\\rustc-hash-272513efcd132e00\\dep-lib-rustc_hash","checksum":false}}],"rustflags":[],"config":8247474407144887393,"compile_kind":0}
+{
+  "rustc": 8891013984288978370,
+  "features": "[\"default\", \"std\"]",
+  "declared_features": "[\"default\", \"nightly\", \"rand\", \"std\"]",
+  "target": 9398104387793270977,
+  "profile": 2225463790103693989,
+  "path": 18056376487734733506,
+  "deps": [],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "debug\\.fingerprint\\rustc-hash-272513efcd132e00\\dep-lib-rustc_hash",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 8247474407144887393,
+  "compile_kind": 0
+}

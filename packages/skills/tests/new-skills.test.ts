@@ -5,11 +5,21 @@ describe('New Built-in Skills', () => {
   const registry = createDefaultSkillRegistry();
 
   const newSkillIds = [
-    'git.status', 'git.commit', 'git.diff', 'git.branch',
-    'docker.run', 'docker.build', 'docker.ps',
-    'db.query', 'http.request',
-    'code.format', 'code.lint', 'test.run',
-    'search.codebase', 'compress.zip', 'deploy.check',
+    'git.status',
+    'git.commit',
+    'git.diff',
+    'git.branch',
+    'docker.run',
+    'docker.build',
+    'docker.ps',
+    'db.query',
+    'http.request',
+    'code.format',
+    'code.lint',
+    'test.run',
+    'search.codebase',
+    'compress.zip',
+    'deploy.check',
   ];
 
   describe('Registration', () => {
@@ -39,9 +49,13 @@ describe('New Built-in Skills', () => {
 
   describe('Enabled by default', () => {
     const enabledByDefault = [
-      'git.status', 'git.diff', 'git.branch',
-      'docker.ps', 'http.request',
-      'search.codebase', 'deploy.check',
+      'git.status',
+      'git.diff',
+      'git.branch',
+      'docker.ps',
+      'http.request',
+      'search.codebase',
+      'deploy.check',
     ];
 
     for (const id of enabledByDefault) {
@@ -55,8 +69,14 @@ describe('New Built-in Skills', () => {
 
   describe('Disabled by default', () => {
     const disabledByDefault = [
-      'git.commit', 'docker.run', 'docker.build',
-      'db.query', 'code.format', 'code.lint', 'test.run', 'compress.zip',
+      'git.commit',
+      'docker.run',
+      'docker.build',
+      'db.query',
+      'code.format',
+      'code.lint',
+      'test.run',
+      'compress.zip',
     ];
 
     for (const id of disabledByDefault) {
@@ -92,10 +112,7 @@ describe('New Built-in Skills', () => {
   describe('Missing adapter handling', () => {
     it('should return missing adapter error when no terminal adapter', async () => {
       const skill = registry.get('git.status')!;
-      const result = await skill.run(
-        {},
-        { registry, now: () => Date.now(), adapters: {} as any },
-      );
+      const result = await skill.run({}, { registry, now: () => Date.now(), adapters: {} as any });
       expect(result.success).toBe(false);
       expect(result.error).toContain('adapter');
     });

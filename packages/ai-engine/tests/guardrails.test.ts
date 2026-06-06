@@ -25,8 +25,16 @@ function mockProvider() {
     chatStream: async function* () {
       yield { content: 'Hello', done: false, provider: 'openai' as const, model: 'gpt-4o' };
     },
-    embed: async () => ({ embedding: [0.1], model: 'text-embedding-3-small', provider: 'openai' as const }),
-    embedMany: async () => ({ embeddings: [[0.1]], model: 'text-embedding-3-small', provider: 'openai' as const }),
+    embed: async () => ({
+      embedding: [0.1],
+      model: 'text-embedding-3-small',
+      provider: 'openai' as const,
+    }),
+    embedMany: async () => ({
+      embeddings: [[0.1]],
+      model: 'text-embedding-3-small',
+      provider: 'openai' as const,
+    }),
   };
 }
 
@@ -37,7 +45,13 @@ describe('Guardrails Middleware', () => {
       const provider = mockProvider();
       const result = await middleware(
         { messages: [{ role: 'user', content: 'Hello world' }], provider },
-        async () => ({ content: 'Hi', model: 'test', provider: 'test' as any, usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 }, finishReason: 'stop' }),
+        async () => ({
+          content: 'Hi',
+          model: 'test',
+          provider: 'test' as any,
+          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+          finishReason: 'stop',
+        }),
       );
       expect(result.content).toBe('Hi');
     });
@@ -47,7 +61,13 @@ describe('Guardrails Middleware', () => {
       const provider = mockProvider();
       const result = await middleware(
         { messages: [{ role: 'user', content: 'how to hack into system' }], provider },
-        async () => ({ content: 'Hi', model: 'test', provider: 'test' as any, usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 }, finishReason: 'stop' }),
+        async () => ({
+          content: 'Hi',
+          model: 'test',
+          provider: 'test' as any,
+          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+          finishReason: 'stop',
+        }),
       );
       expect(result.content).toContain('BLOCKED');
     });
@@ -62,7 +82,13 @@ describe('Guardrails Middleware', () => {
         { messages: [{ role: 'user', content: 'Contact me at user@example.com' }], provider },
         async (msgs) => {
           capturedMessages = msgs as any[];
-          return { content: 'OK', model: 'test', provider: 'test' as any, usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 }, finishReason: 'stop' };
+          return {
+            content: 'OK',
+            model: 'test',
+            provider: 'test' as any,
+            usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+            finishReason: 'stop',
+          };
         },
       );
       expect(capturedMessages[0]!.content).not.toContain('user@example.com');
@@ -77,7 +103,13 @@ describe('Guardrails Middleware', () => {
         { messages: [{ role: 'user', content: 'Contact me at user@example.com' }], provider },
         async (msgs) => {
           capturedMessages = msgs as any[];
-          return { content: 'OK', model: 'test', provider: 'test' as any, usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 }, finishReason: 'stop' };
+          return {
+            content: 'OK',
+            model: 'test',
+            provider: 'test' as any,
+            usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+            finishReason: 'stop',
+          };
         },
       );
       expect(capturedMessages[0]!.content).toContain('user@example.com');
@@ -90,7 +122,13 @@ describe('Guardrails Middleware', () => {
       const provider = mockProvider();
       const result = await middleware(
         { messages: [{ role: 'user', content: 'Use key sk-abcdefghijklmnopqrstuvwx' }], provider },
-        async () => ({ content: 'OK', model: 'test', provider: 'test' as any, usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 }, finishReason: 'stop' }),
+        async () => ({
+          content: 'OK',
+          model: 'test',
+          provider: 'test' as any,
+          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+          finishReason: 'stop',
+        }),
       );
       expect(result.content).toContain('BLOCKED');
     });
@@ -100,7 +138,13 @@ describe('Guardrails Middleware', () => {
       const provider = mockProvider();
       const result = await middleware(
         { messages: [{ role: 'user', content: 'Hello world' }], provider },
-        async () => ({ content: 'OK', model: 'test', provider: 'test' as any, usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 }, finishReason: 'stop' }),
+        async () => ({
+          content: 'OK',
+          model: 'test',
+          provider: 'test' as any,
+          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+          finishReason: 'stop',
+        }),
       );
       expect(result.content).toBe('OK');
     });
@@ -112,7 +156,13 @@ describe('Guardrails Middleware', () => {
       const provider = mockProvider();
       const result = await middleware(
         { messages: [{ role: 'user', content: 'Hello' }], provider },
-        async () => ({ content: 'OK', model: 'test', provider: 'test' as any, usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 }, finishReason: 'stop' }),
+        async () => ({
+          content: 'OK',
+          model: 'test',
+          provider: 'test' as any,
+          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+          finishReason: 'stop',
+        }),
       );
       expect(result.content).toBe('OK');
     });
@@ -121,14 +171,23 @@ describe('Guardrails Middleware', () => {
       const middleware = createRateLimiterMiddleware({ enabled: true, maxRequestsPerMinute: 1 });
       const provider = mockProvider();
       // First request should pass
-      await middleware(
-        { messages: [{ role: 'user', content: 'Hello' }], provider },
-        async () => ({ content: 'OK', model: 'test', provider: 'test' as any, usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 }, finishReason: 'stop' }),
-      );
+      await middleware({ messages: [{ role: 'user', content: 'Hello' }], provider }, async () => ({
+        content: 'OK',
+        model: 'test',
+        provider: 'test' as any,
+        usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+        finishReason: 'stop',
+      }));
       // Second request should be rate limited
       const result = await middleware(
         { messages: [{ role: 'user', content: 'Hello again' }], provider },
-        async () => ({ content: 'OK', model: 'test', provider: 'test' as any, usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 }, finishReason: 'stop' }),
+        async () => ({
+          content: 'OK',
+          model: 'test',
+          provider: 'test' as any,
+          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+          finishReason: 'stop',
+        }),
       );
       expect(result.content).toContain('RATE LIMITED');
     });

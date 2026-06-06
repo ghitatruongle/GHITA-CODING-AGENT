@@ -3,6 +3,8 @@
 // ==============================================================================
 
 import type { MCPServerConfig } from './types.js';
+import { spawn, type ChildProcess } from 'node:child_process';
+import * as readline from 'node:readline';
 
 export interface MCPTransport {
   connect(): Promise<void>;
@@ -17,6 +19,12 @@ export interface MCPTransport {
 export class StdioTransport implements MCPTransport {
   private connected = false;
   private requestId = 0;
+  private process?: ChildProcess;
+  private rl?: readline.Interface;
+  private pendingRequests = new Map<
+    number,
+    { resolve: (res: Record<string, unknown>) => void; reject: (err: Error) => void }
+  >();
 
   constructor(private config: MCPServerConfig) {}
 
@@ -24,21 +32,79 @@ export class StdioTransport implements MCPTransport {
     if (!this.config.command) {
       throw new Error(`MCP server "${this.config.name}": command is required for stdio transport`);
     }
+
+    this.process = spawn(this.config.command, this.config.args ?? [], {
+      env: { ...process.env, ...this.config.env },
+      stdio: ['pipe', 'pipe', 'inherit'],
+    });
+
+    this.process.on('error', (err) => {
+      this.disconnect();
+      for (const req of this.pendingRequests.values()) req.reject(err);
+      this.pendingRequests.clear();
+    });
+
+    this.process.on('exit', () => {
+      this.disconnect();
+      const err = new Error(`MCP server "${this.config.name}" process exited unexpectedly`);
+      for (const req of this.pendingRequests.values()) req.reject(err);
+      this.pendingRequests.clear();
+    });
+
+    if (this.process.stdout) {
+      this.rl = readline.createInterface({ input: this.process.stdout });
+      this.rl.on('line', (line) => {
+        try {
+          const message = JSON.parse(line) as Record<string, unknown>;
+          if (message.id !== undefined && typeof message.id === 'number') {
+            const req = this.pendingRequests.get(message.id);
+            if (req) {
+              this.pendingRequests.delete(message.id);
+              if (message.error) {
+                req.reject(new Error(JSON.stringify(message.error)));
+              } else {
+                req.resolve(message);
+              }
+            }
+          }
+        } catch (e) {
+          // Ignore parse errors (might be debug output)
+        }
+      });
+    }
+
     this.connected = true;
   }
 
   async disconnect(): Promise<void> {
     this.connected = false;
+    if (this.rl) {
+      this.rl.close();
+      this.rl = undefined;
+    }
+    if (this.process) {
+      this.process.kill();
+      this.process = undefined;
+    }
   }
 
-  async send(_request: Record<string, unknown>): Promise<Record<string, unknown>> {
-    if (!this.connected) {
+  async send(request: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const stdin = this.process?.stdin;
+    if (!this.connected || !stdin) {
       throw new Error(`MCP server "${this.config.name}" is not connected`);
     }
     const id = ++this.requestId;
-    // In real implementation, this would write to stdin and read from stdout
-    // For now, return a mock response structure
-    return { jsonrpc: '2.0', id, result: {} };
+    const jsonRpc = { jsonrpc: '2.0', id, ...request };
+
+    return new Promise((resolve, reject) => {
+      this.pendingRequests.set(id, { resolve, reject });
+      stdin.write(JSON.stringify(jsonRpc) + '\n', (err) => {
+        if (err) {
+          this.pendingRequests.delete(id);
+          reject(err);
+        }
+      });
+    });
   }
 
   isConnected(): boolean {

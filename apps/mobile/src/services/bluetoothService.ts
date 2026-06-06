@@ -12,21 +12,34 @@ interface RNBluetoothClassicModule {
   getBondedDevices?: () => Promise<Array<{ address: string; name: string }>>;
   startDiscovery?: () => Promise<boolean>;
   cancelDiscovery?: () => Promise<void>;
-  onDeviceDiscovered?: (callback: (device: { address: string; name: string; rssi?: number; bonded?: boolean }) => void) => void;
+  onDeviceDiscovered?: (
+    callback: (device: { address: string; name: string; rssi?: number; bonded?: boolean }) => void,
+  ) => void;
   removeAllListeners?: (eventName: string) => void;
-  connectToDevice?: (address: string, options: { delimiter: string; charset: string }) => Promise<{
+  connectToDevice?: (
+    address: string,
+    options: { delimiter: string; charset: string },
+  ) => Promise<{
     write: (data: string) => Promise<void>;
     disconnect: () => void;
-    onDataReceived: (callback: (data: string | { data: string }) => void) => void;
+    onDataReceived: (
+      callback: (data: string | { data: string }) => void,
+    ) => { remove?: () => void } | void;
   }>;
 }
 
 let RNBluetoothClassic: RNBluetoothClassicModule | null = null;
-try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  RNBluetoothClassic = require('react-native-bluetooth-classic').default;
-} catch {
-  // Module not available
+// @ts-expect-error - mockBluetoothClassic is defined globally in tests
+if (typeof globalThis.mockBluetoothClassic !== 'undefined') {
+  // @ts-expect-error - mockBluetoothClassic is defined globally in tests
+  RNBluetoothClassic = globalThis.mockBluetoothClassic;
+} else {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    RNBluetoothClassic = require('react-native-bluetooth-classic').default;
+  } catch {
+    // Module not available
+  }
 }
 
 export interface BluetoothDevice {
@@ -47,7 +60,8 @@ class BluetoothService {
    * Check if Bluetooth is available and enabled
    */
   async isAvailable(): Promise<boolean> {
-    if (!RNBluetoothClassic?.isBluetoothAvailable || !RNBluetoothClassic?.isBluetoothEnabled) return false;
+    if (!RNBluetoothClassic?.isBluetoothAvailable || !RNBluetoothClassic?.isBluetoothEnabled)
+      return false;
     try {
       const available = await RNBluetoothClassic.isBluetoothAvailable();
       const enabled = await RNBluetoothClassic.isBluetoothEnabled();
@@ -155,13 +169,24 @@ class BluetoothService {
    * Stop discovery
    */
   async stopDiscovery(): Promise<void> {
-    if (!RNBluetoothClassic?.cancelDiscovery || !this.isDiscovering) return;
+    this.isDiscovering = false;
+    if (!RNBluetoothClassic) return;
+
+    // Remove listeners first to prevent duplicates/leaks
+    if (RNBluetoothClassic.removeAllListeners) {
+      try {
+        RNBluetoothClassic.removeAllListeners('onDeviceDiscovered');
+      } catch (err) {
+        console.error('[Bluetooth] Failed to remove discover listeners:', err);
+      }
+    }
+
+    if (!RNBluetoothClassic.cancelDiscovery) return;
     try {
       await RNBluetoothClassic.cancelDiscovery();
     } catch {
       // Ignore
     }
-    this.isDiscovering = false;
   }
 
   /**
@@ -172,6 +197,9 @@ class BluetoothService {
     if (!RNBluetoothClassic) return null;
 
     try {
+      // Stop discovery before establishing RFCOMM connection
+      await this.stopDiscovery();
+
       // Try to connect to the device via RFCOMM
       if (!RNBluetoothClassic.connectToDevice) return null;
       const connection = await RNBluetoothClassic.connectToDevice(device.address, {
@@ -185,10 +213,18 @@ class BluetoothService {
       // Read response with timeout
       return new Promise((resolve) => {
         let isResolved = false;
+        let subscription: { remove?: () => void } | null | void = null;
 
         const timeout = setTimeout(() => {
           if (!isResolved) {
             isResolved = true;
+            if (subscription && typeof subscription.remove === 'function') {
+              try {
+                subscription.remove();
+              } catch (e) {
+                console.error('[Bluetooth] Failed to remove subscription on timeout:', e);
+              }
+            }
             try {
               void connection.disconnect();
             } catch (err) {
@@ -198,23 +234,42 @@ class BluetoothService {
           }
         }, 5000);
 
-        connection.onDataReceived((data) => {
-          if (isResolved) return;
-          const message = typeof data === 'string' ? data : data?.data;
+        try {
+          subscription = connection.onDataReceived((data) => {
+            if (isResolved) return;
+            const message = typeof data === 'string' ? data : data?.data;
 
-          // Expected format: "GHITA_SERVER|ip:port"
-          if (message && message.includes('GHITA_SERVER|')) {
-            isResolved = true;
-            clearTimeout(timeout);
-            try {
-              void connection.disconnect();
-            } catch (err) {
-              console.error('[Bluetooth] Disconnect error on success:', err);
+            // Expected format: "GHITA_SERVER|ip:port"
+            if (message && message.includes('GHITA_SERVER|')) {
+              isResolved = true;
+              clearTimeout(timeout);
+              if (subscription && typeof subscription.remove === 'function') {
+                try {
+                  subscription.remove();
+                } catch (e) {
+                  console.error('[Bluetooth] Failed to remove subscription on success:', e);
+                }
+              }
+              try {
+                void connection.disconnect();
+              } catch (err) {
+                console.error('[Bluetooth] Disconnect error on success:', err);
+              }
+              const cleanMessage = message.substring(message.indexOf('GHITA_SERVER|'));
+              resolve(cleanMessage.replace('GHITA_SERVER|', '').trim());
             }
-            const cleanMessage = message.substring(message.indexOf('GHITA_SERVER|'));
-            resolve(cleanMessage.replace('GHITA_SERVER|', '').trim());
+          });
+        } catch (err) {
+          console.error('[Bluetooth] Failed to subscribe to data:', err);
+          isResolved = true;
+          clearTimeout(timeout);
+          try {
+            void connection.disconnect();
+          } catch (disconnectErr) {
+            console.error('[Bluetooth] Disconnect error on sub fail:', disconnectErr);
           }
-        });
+          resolve(null);
+        }
       });
     } catch (e) {
       console.error('[Bluetooth] Connection failed:', e);

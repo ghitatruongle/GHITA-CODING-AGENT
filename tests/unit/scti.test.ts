@@ -1,17 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { 
-  SCTIEngine, 
-  extractErrorCode, 
-  getJaccardSimilarity, 
+import {
+  SCTIEngine,
+  extractErrorCode,
+  getJaccardSimilarity,
   compressDiff,
   injectSctiTrajectories,
   createSctiMiddleware,
-  createSctiStreamMiddleware
+  createSctiStreamMiddleware,
 } from '../../packages/ai-engine/src/middleware/sctiCalibrator.js';
 import type { ChatMessage } from '../../packages/ai-engine/src/types.js';
 
-describe('Phase 9: SCTI Unit Tests', () => {
-
+describe('9: SCTI Unit Tests', () => {
   describe('1. Text Helper Algorithms', () => {
     it('should extract error codes correctly', () => {
       expect(extractErrorCode('Error: AST-LOCK-001 occurred')).toBe('AST-LOCK-001');
@@ -65,7 +64,9 @@ describe('Phase 9: SCTI Unit Tests', () => {
 
       await engine.storeCorrection(errorSnippet, diff, 'COMPILATION_ERROR');
 
-      const match = await engine.getMatchingTrajectory('TypeScript Compilation Failed with exit status 1');
+      const match = await engine.getMatchingTrajectory(
+        'TypeScript Compilation Failed with exit status 1',
+      );
       expect(match).not.toBeNull();
       expect(match!.errorCode).toBe('COMPILATION_ERROR');
     });
@@ -93,13 +94,17 @@ describe('Phase 9: SCTI Unit Tests', () => {
 
     beforeEach(async () => {
       engine = new SCTIEngine();
-      await engine.storeCorrection('Vitest Failed: 2 tests crashed', '  + export function run() {}', 'VITEST_ERROR');
+      await engine.storeCorrection(
+        'Vitest Failed: 2 tests crashed',
+        '  + export function run() {}',
+        'VITEST_ERROR',
+      );
     });
 
     it('should inject few-shot into System Message if error logs are found in user chat history', async () => {
       const messages: ChatMessage[] = [
         { role: 'system', content: 'You are a coder.' },
-        { role: 'user', content: 'Help! Vitest Failed: 2 tests crashed on my machine.' }
+        { role: 'user', content: 'Help! Vitest Failed: 2 tests crashed on my machine.' },
       ];
 
       const updated = await injectSctiTrajectories(messages, engine);
@@ -111,7 +116,7 @@ describe('Phase 9: SCTI Unit Tests', () => {
     it('should NOT inject few-shot if no error logs are detected in user message', async () => {
       const messages: ChatMessage[] = [
         { role: 'system', content: 'You are a coder.' },
-        { role: 'user', content: 'How do I add a new route to NextJS?' }
+        { role: 'user', content: 'How do I add a new route to NextJS?' },
       ];
 
       const updated = await injectSctiTrajectories(messages, engine);
@@ -124,14 +129,14 @@ describe('Phase 9: SCTI Unit Tests', () => {
 
       const messages: ChatMessage[] = [
         { role: 'system', content: 'You are a coder.' },
-        { role: 'user', content: 'Vitest Failed: 2 tests crashed' }
+        { role: 'user', content: 'Vitest Failed: 2 tests crashed' },
       ];
 
       const nextMock = vi.fn().mockResolvedValue({ content: 'Mocked response' });
 
       await mw({ messages, provider: {} as any }, nextMock);
       expect(nextMock).toHaveBeenCalled();
-      
+
       const firstArg = nextMock.mock.calls[0]![0]!;
       expect(firstArg[0]!.content).toContain('[SCTI FEW-SHOT VÁ LỖI TỰ ĐỘNG]');
     });

@@ -34,7 +34,9 @@ function saveLegacyState<TSession>(state: PersistedChatSessionState<TSession>): 
   }
 }
 
-export async function loadChatSessionState<TSession>(): Promise<PersistedChatSessionState<TSession>> {
+export async function loadChatSessionState<TSession>(): Promise<
+  PersistedChatSessionState<TSession>
+> {
   try {
     const state = await invoke<PersistedChatSessionState<TSession>>('load_chat_sessions');
     if (state && Array.isArray(state.sessions)) {

@@ -6,7 +6,17 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { DeviceInfo, PluginManifest } from '@ghita/shared';
 
-export type TabId = 'code' | 'api' | 'skills' | 'agents' | 'devices' | 'dashboard' | 'settings' | 'marketplace' | 'workflow' | 'ecosystem';
+export type TabId =
+  | 'code'
+  | 'api'
+  | 'skills'
+  | 'agents'
+  | 'devices'
+  | 'dashboard'
+  | 'settings'
+  | 'marketplace'
+  | 'workflow'
+  | 'ecosystem';
 
 export type ThemeMode = 'dark' | 'light';
 
@@ -49,11 +59,15 @@ interface AppState {
 
   // Phase 5: MCP Servers
   mcpServers: Array<{ name: string; transport: string; enabled: boolean; connected: boolean }>;
-  setMcpServers: (servers: Array<{ name: string; transport: string; enabled: boolean; connected: boolean }>) => void;
+  setMcpServers: (
+    servers: Array<{ name: string; transport: string; enabled: boolean; connected: boolean }>,
+  ) => void;
 
   // Phase 5: Hooks
   hooks: Array<{ event: string; tool: string; command: string; enabled: boolean }>;
-  setHooks: (hooks: Array<{ event: string; tool: string; command: string; enabled: boolean }>) => void;
+  setHooks: (
+    hooks: Array<{ event: string; tool: string; command: string; enabled: boolean }>,
+  ) => void;
 
   // Phase 6: Context usage
   contextUsage: { used: number; max: number; percentage: number };
@@ -64,8 +78,18 @@ interface AppState {
   setPermissionMode: (mode: 'custom' | 'auto') => void;
 
   // Phase 7: Dashboard stats
-  dashboardStats: { totalTokens: number; totalCost: number; activeAgents: number; mcpConnections: number };
-  setDashboardStats: (stats: { totalTokens: number; totalCost: number; activeAgents: number; mcpConnections: number }) => void;
+  dashboardStats: {
+    totalTokens: number;
+    totalCost: number;
+    activeAgents: number;
+    mcpConnections: number;
+  };
+  setDashboardStats: (stats: {
+    totalTokens: number;
+    totalCost: number;
+    activeAgents: number;
+    mcpConnections: number;
+  }) => void;
 
   // Phase 3: Plugins
   plugins: Array<{ manifest: PluginManifest; enabled: boolean }>;
@@ -118,7 +142,12 @@ export const useAppStore = create<AppState>()(
       setConnectedDevices: (devices) => set({ connectedDevices: devices }),
 
       // Phase 5: MCP Servers
-      mcpServers: [] as Array<{ name: string; transport: string; enabled: boolean; connected: boolean }>,
+      mcpServers: [] as Array<{
+        name: string;
+        transport: string;
+        enabled: boolean;
+        connected: boolean;
+      }>,
       setMcpServers: (servers) => set({ mcpServers: servers }),
 
       // Phase 5: Hooks
@@ -140,16 +169,19 @@ export const useAppStore = create<AppState>()(
       // Phase 3: Plugins
       plugins: [] as Array<{ manifest: PluginManifest; enabled: boolean }>,
       setPlugins: (plugins) => set({ plugins }),
-      togglePlugin: (id, enabled) => set((s) => ({
-        plugins: s.plugins.map((p) => p.manifest.id === id ? { ...p, enabled } : p)
-      })),
-      installPlugin: (manifest) => set((s) => {
-        if (s.plugins.some((p) => p.manifest.id === manifest.id)) return {};
-        return { plugins: [...s.plugins, { manifest, enabled: true }] };
-      }),
-      uninstallPlugin: (id) => set((s) => ({
-        plugins: s.plugins.filter((p) => p.manifest.id !== id)
-      })),
+      togglePlugin: (id, enabled) =>
+        set((s) => ({
+          plugins: s.plugins.map((p) => (p.manifest.id === id ? { ...p, enabled } : p)),
+        })),
+      installPlugin: (manifest) =>
+        set((s) => {
+          if (s.plugins.some((p) => p.manifest.id === manifest.id)) return {};
+          return { plugins: [...s.plugins, { manifest, enabled: true }] };
+        }),
+      uninstallPlugin: (id) =>
+        set((s) => ({
+          plugins: s.plugins.filter((p) => p.manifest.id !== id),
+        })),
     }),
     {
       name: 'ghita-app-storage',

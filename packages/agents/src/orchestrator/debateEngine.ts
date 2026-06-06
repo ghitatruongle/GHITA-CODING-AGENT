@@ -43,9 +43,13 @@ export class DebateEngine {
   async runDebate(
     topic: string,
     docsContext: string,
-    callbacks?: DebateCallbacks
+    callbacks?: DebateCallbacks,
   ): Promise<DebateResult> {
-    const debateHistory: Array<{ role: 'Innovator' | 'DevilAdvocate'; turn: number; content: string }> = [];
+    const debateHistory: Array<{
+      role: 'Innovator' | 'DevilAdvocate';
+      turn: number;
+      content: string;
+    }> = [];
     let currentSpec = `Draft specification for topic: ${topic}`;
 
     // --- LƯỢT TRANH BIỆN (Turn Budget = 3) ---
@@ -58,7 +62,13 @@ export class DebateEngine {
 
       // 2. DEVIL'S ADVOCATE PHẢN BIỆN KHỐC LIỆT
       callbacks?.onTurnStart?.('DevilAdvocate', turn);
-      const critique = await this.callDevilsAdvocate(topic, docsContext, currentSpec, debateHistory, turn);
+      const critique = await this.callDevilsAdvocate(
+        topic,
+        docsContext,
+        currentSpec,
+        debateHistory,
+        turn,
+      );
       debateHistory.push({ role: 'DevilAdvocate', turn, content: critique });
       callbacks?.onTurnEnd?.('DevilAdvocate', turn, critique);
     }
@@ -76,7 +86,10 @@ export class DebateEngine {
 
     // Tạo log tranh luận dạng chuỗi để lưu vết
     const debateLog = debateHistory
-      .map(entry => `[Lượt ${entry.turn} - ${entry.role}]:\n${entry.content}\n-----------------------`)
+      .map(
+        (entry) =>
+          `[Lượt ${entry.turn} - ${entry.role}]:\n${entry.content}\n-----------------------`,
+      )
       .join('\n\n');
 
     return {
@@ -95,7 +108,7 @@ export class DebateEngine {
     docs: string,
     currentSpec: string,
     history: Array<{ role: string; turn: number; content: string }>,
-    turn: number
+    turn: number,
   ): Promise<string> {
     const systemPrompt = `You are the Lead Innovator Software Architect.
 Your goal is to propose a modern, highly functional, and beautiful technical specification for: "${topic}".
@@ -111,21 +124,23 @@ Provide your specification in clean, detailed markdown. Focus on:
 3. Security & Anti-injection guardrails
 4. Backward Compatibility & Migrations`;
 
-    const messages: BaseMessage[] = [
-      new SystemMessage(systemPrompt)
-    ];
+    const messages: BaseMessage[] = [new SystemMessage(systemPrompt)];
 
     if (turn === 1) {
-      messages.push(new HumanMessage(`Propose the initial technical specification for the topic: "${topic}".`));
+      messages.push(
+        new HumanMessage(`Propose the initial technical specification for the topic: "${topic}".`),
+      );
     } else {
       const lastCritique = history[history.length - 1]?.content || '';
-      messages.push(new HumanMessage(`Here is the current draft specification:
+      messages.push(
+        new HumanMessage(`Here is the current draft specification:
 ${currentSpec}
 
 Here is the Devil's Advocate critique:
 ${lastCritique}
 
-Please revise and improve the specification to address these critiques.`));
+Please revise and improve the specification to address these critiques.`),
+      );
     }
 
     const response = await this.llmCall(messages, { model: this.model });
@@ -140,7 +155,7 @@ Please revise and improve the specification to address these critiques.`));
     docs: string,
     currentSpec: string,
     _history: Array<{ role: string; turn: number; content: string }>,
-    _turn: number
+    _turn: number,
   ): Promise<string> {
     const systemPrompt = `You are the Devil's Advocate Technical Reviewer.
 Your sole job is to aggressively critique the proposed technical specification.
@@ -158,7 +173,7 @@ ${docs}`;
     const messages: BaseMessage[] = [
       new SystemMessage(systemPrompt),
       new HumanMessage(`Please critique the following draft specification:
-${currentSpec}`)
+${currentSpec}`),
     ];
 
     const response = await this.llmCall(messages, { model: this.model });
@@ -171,7 +186,7 @@ ${currentSpec}`)
   private async callEditorInChief(
     _topic: string,
     docs: string,
-    history: Array<{ role: string; turn: number; content: string }>
+    history: Array<{ role: string; turn: number; content: string }>,
   ): Promise<{ spec: string; consensusScore: number }> {
     const systemPrompt = `You are the Editor-in-Chief of the Architectural Review Panel.
 Review the complete debate between the Innovator and the Devil's Advocate.
@@ -188,7 +203,7 @@ Your output MUST be a JSON object conforming strictly to this format:
 }`;
 
     const debateLog = history
-      .map(entry => `[Turn ${entry.turn} - ${entry.role}]:\n${entry.content}`)
+      .map((entry) => `[Turn ${entry.turn} - ${entry.role}]:\n${entry.content}`)
       .join('\n\n');
 
     const messages: BaseMessage[] = [
@@ -199,19 +214,39 @@ ${docs}
 Here is the complete debate history:
 ${debateLog}
 
-Please output the JSON object containing consensusScore and the finalized spec.`)
+Please output the JSON object containing consensusScore and the finalized spec.`),
     ];
 
     const response = await this.llmCall(messages, { model: this.model });
     const text = response.getText();
 
+    function extractFirstJSON(str: string): { spec?: string; consensusScore?: number } | null {
+      let depth = 0;
+      let start = -1;
+      for (let i = 0; i < str.length; i++) {
+        if (str[i] === '{') {
+          if (start === -1) start = i;
+          depth++;
+        } else if (str[i] === '}') {
+          depth--;
+          if (depth === 0 && start !== -1) {
+            try {
+              return JSON.parse(str.substring(start, i + 1)) as { spec?: string; consensusScore?: number };
+            } catch {
+              return null;
+            }
+          }
+        }
+      }
+      return null;
+    }
+
     try {
-      const match = text.match(/\{[\s\S]*\}/);
-      if (match) {
-        const parsed = JSON.parse(match[0]);
+      const parsed = extractFirstJSON(text);
+      if (parsed && typeof parsed === 'object') {
         return {
-          spec: parsed.spec || text,
-          consensusScore: parsed.consensusScore || 7,
+          spec: parsed.spec ?? text,
+          consensusScore: parsed.consensusScore ?? 7,
         };
       }
       return { spec: text, consensusScore: 7 };

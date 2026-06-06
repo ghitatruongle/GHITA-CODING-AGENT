@@ -30,10 +30,12 @@ impl Default for ProxyState {
 
 fn strip_frame_headers(response: Response<Full<Bytes>>) -> Response<Full<Bytes>> {
     let mut res = response;
-    // Only strip frame-ancestors to allow embedding; keep CSP and security headers
-    res.headers_mut().remove("x-frame-options");
-    res.headers_mut().remove("frame-ancestors");
-    // Keep x-content-type-options and content-security-policy for security
+    // Respect upstream X-Frame-Options; chỉ override CSP với app's own policy
+    res.headers_mut().remove("content-security-policy");
+    res.headers_mut().insert(
+        http::header::CONTENT_SECURITY_POLICY,
+        http::HeaderValue::from_static("frame-ancestors 'self' tauri://localhost"),
+    );
     res
 }
 
@@ -323,16 +325,18 @@ mod tests {
         response
             .headers_mut()
             .insert("content-security-policy", "default-src 'self'".parse().unwrap());
-        response
-            .headers_mut()
-            .insert("frame-ancestors", "'none'".parse().unwrap());
 
         let result = strip_frame_headers(response);
 
-        assert!(!result.headers().contains_key("x-frame-options"));
+        // Respect upstream X-Frame-Options
+        assert!(result.headers().contains_key("x-frame-options"));
+        assert_eq!(result.headers().get("x-frame-options").unwrap(), "DENY");
         assert!(result.headers().contains_key("x-content-type-options"));
-        assert!(result.headers().contains_key("content-security-policy"));
-        assert!(!result.headers().contains_key("frame-ancestors"));
+        // CSP overrides with app's own policy
+        assert_eq!(
+            result.headers().get("content-security-policy").unwrap(),
+            "frame-ancestors 'self' tauri://localhost"
+        );
     }
 
     #[test]
@@ -364,7 +368,9 @@ mod tests {
 
         let result = strip_frame_headers(response);
 
-        assert!(!result.headers().contains_key("x-frame-options"));
+        // Respect upstream X-Frame-Options
+        assert!(result.headers().contains_key("x-frame-options"));
+        assert_eq!(result.headers().get("x-frame-options").unwrap(), "SAMEORIGIN");
         assert_eq!(
             result.headers().get("cache-control").unwrap(),
             "no-cache"

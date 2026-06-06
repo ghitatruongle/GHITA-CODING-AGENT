@@ -1,4 +1,0 @@
-- Clone references: `bash scripts/clone-refer.sh`
-- Fix pnpm store: `node scripts/fix-store.mjs`
-- Generate icons: `node scripts/generate-icons.mjs`
-- Fix ICO format: `node scripts/fix-ico.mjs`

@@ -16,7 +16,9 @@ export interface DashboardStats {
 export class DashboardController {
   private gateway: AIGatewayServer;
   private apiKeys: string[] = (() => {
-    const key = process.env.GHITA_ADMIN_API_KEY || (process.env.NODE_ENV === 'test' ? 'mock-admin-key' : undefined);
+    const key =
+      process.env.GHITA_ADMIN_API_KEY ||
+      (process.env.NODE_ENV === 'test' ? 'mock-admin-key' : undefined);
     if (!key) throw new Error('GHITA_ADMIN_API_KEY environment variable is required');
     return [key];
   })();
@@ -31,7 +33,7 @@ export class DashboardController {
     const logs = this.gateway.getAuditLogs();
 
     const tokenUsageChart = logs.map((log: Record<string, unknown>) => ({
-      date: new Date(log.timestamp as number | string ?? Date.now()).toLocaleTimeString(),
+      date: new Date((log.timestamp as number | string) ?? Date.now()).toLocaleTimeString(),
       prompt: Math.floor(Number(log.tokens) * 0.4),
       completion: Math.floor(Number(log.tokens) * 0.6),
     }));

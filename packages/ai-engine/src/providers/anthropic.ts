@@ -32,7 +32,8 @@ export class AnthropicProvider extends BaseProvider {
     const model = this.getModel(options);
 
     // Tách system message ra khỏi messages
-    const systemMsg = messages.find((m) => m.role === 'system');
+    const systemMsgs = messages.filter((m) => m.role === 'system');
+    const systemContent = systemMsgs.map((m) => m.content).join('\n\n');
     const chatMsgs = messages.filter((m) => m.role !== 'system');
 
     const body: Record<string, unknown> = {
@@ -41,8 +42,8 @@ export class AnthropicProvider extends BaseProvider {
       messages: chatMsgs.map((m) => ({ role: m.role, content: m.content })),
     };
 
-    if (systemMsg) {
-      body['system'] = systemMsg.content;
+    if (systemContent) {
+      body['system'] = systemContent;
     }
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -89,14 +90,12 @@ export class AnthropicProvider extends BaseProvider {
     };
   }
 
-  async *chatStream(
-    messages: ChatMessage[],
-    options?: ChatOptions,
-  ): AsyncGenerator<AIStreamChunk> {
+  async *chatStream(messages: ChatMessage[], options?: ChatOptions): AsyncGenerator<AIStreamChunk> {
     const apiKey = this.getApiKey();
     const model = this.getModel(options);
 
-    const systemMsg = messages.find((m) => m.role === 'system');
+    const systemMsgs = messages.filter((m) => m.role === 'system');
+    const systemContent = systemMsgs.map((m) => m.content).join('\n\n');
     const chatMsgs = messages.filter((m) => m.role !== 'system');
 
     const body: Record<string, unknown> = {
@@ -106,8 +105,8 @@ export class AnthropicProvider extends BaseProvider {
       stream: true,
     };
 
-    if (systemMsg) {
-      body['system'] = systemMsg.content;
+    if (systemContent) {
+      body['system'] = systemContent;
     }
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -185,15 +184,17 @@ export class AnthropicProvider extends BaseProvider {
     }
   }
 
-  private mapFinishReason(
-    reason: string | undefined,
-  ): 'stop' | 'length' | 'error' | 'aborted' {
+  private mapFinishReason(reason: string | undefined): 'stop' | 'length' | 'error' | 'aborted' {
     switch (reason) {
       case 'end_turn':
       case 'stop_sequence':
+      case 'tool_use':
+      case 'pause_turn':
         return 'stop';
       case 'max_tokens':
         return 'length';
+      case 'refusal':
+        return 'error';
       default:
         return 'stop';
     }

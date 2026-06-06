@@ -30,7 +30,7 @@
     "clean": "node -e \"const fs=require('fs'); fs.rmSync('dist',{recursive:true,force:true}); fs.readdirSync('.').filter(f=>f.endsWith('.tsbuildinfo')).forEach(f=>fs.rmSync(f,{force:true}))\""
   },
   "dependencies": {
-    "better-sqlite3": "^11.8.0",
+    "better-sqlite3": "^12.10.0",
     "web-tree-sitter": "^0.22.4"
   },
   "devDependencies": {

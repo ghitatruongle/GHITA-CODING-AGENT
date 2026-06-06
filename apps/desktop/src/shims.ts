@@ -1,6 +1,44 @@
+/* eslint-disable */
 // Shims for Node.js modules in the browser/WebView environment
 
 class MockClass {}
+
+export class EventEmitter {
+  private listeners: Record<string, Function[]> = {};
+  on(event: string, fn: Function) {
+    if (!this.listeners[event]) this.listeners[event] = [];
+    this.listeners[event].push(fn);
+    return this;
+  }
+  once(event: string, fn: Function) {
+    const wrapped = (...args: any[]) => {
+      this.off(event, wrapped);
+      fn(...args);
+    };
+    return this.on(event, wrapped);
+  }
+  off(event: string, fn: Function) {
+    if (!this.listeners[event]) return this;
+    this.listeners[event] = this.listeners[event].filter((f) => f !== fn);
+    return this;
+  }
+  emit(event: string, ...args: any[]) {
+    if (!this.listeners[event]) return false;
+    this.listeners[event].forEach((f) => f(...args));
+    return true;
+  }
+  removeAllListeners(event?: string) {
+    if (event) delete this.listeners[event];
+    else this.listeners = {};
+    return this;
+  }
+}
+
+export const createInterface = () => ({
+  on: () => {},
+  close: () => {},
+  write: () => {},
+});
 
 // fs exports
 export const existsSync = () => false;
@@ -23,6 +61,7 @@ export const unlinkSync = () => {};
 export const rmdirSync = () => {};
 export const copyFileSync = () => {};
 export const renameSync = () => {};
+export const watch = () => ({ close: () => {} });
 
 export const promises = {
   readFile: async () => '',
@@ -78,7 +117,10 @@ export const exec = (_cmd: string, cb: (err: null, stdout: string, stderr: strin
 export const execSync = () => '';
 
 // util exports
-export const promisify = (fn: (...args: unknown[]) => unknown) => (...args: unknown[]) => Promise.resolve(fn(...args));
+export const promisify =
+  (fn: (...args: unknown[]) => unknown) =>
+  (...args: unknown[]) =>
+    Promise.resolve(fn(...args));
 export const inspect = (val: unknown) => String(val);
 
 // crypto exports
@@ -94,6 +136,32 @@ export const randomUUID = () =>
         const r = (Math.random() * 16) | 0;
         return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
       });
+export const randomBytes = (size: number) => {
+  const arr = new Uint8Array(size);
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    crypto.getRandomValues(arr);
+  } else {
+    for (let i = 0; i < size; i++) arr[i] = Math.floor(Math.random() * 256);
+  }
+  return {
+    toString: (encoding?: string) => {
+      if (encoding === 'hex') {
+        return Array.from(arr)
+          .map((b) => b.toString(16).padStart(2, '0'))
+          .join('');
+      }
+      return String.fromCharCode(...arr);
+    },
+  };
+};
+export const timingSafeEqual = (a: any, b: any) => {
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a[i] ^ b[i];
+  }
+  return result === 0;
+};
 
 // url exports
 export const fileURLToPath = (url: string) => url;
@@ -114,6 +182,30 @@ export const format = () => '';
 // better-sqlite3
 export const Database = MockClass;
 
+// @grpc/proto-loader mocks
+export const loadSync = () => ({});
+export const load = async () => ({});
+export const fromJSON = () => ({});
+export const IdempotencyLevel = {};
+export const isAnyExtension = () => false;
+export const Long = {};
+export const loadFileDescriptorSetFromBuffer = () => ({});
+export const loadFileDescriptorSetFromObject = () => ({});
+
+// @grpc/grpc-js mocks
+export const Server = MockClass;
+export const ServerCredentials = {
+  createInsecure: () => ({}),
+  createSsl: () => ({}),
+};
+export const loadPackageDefinition = () => ({});
+export const credentials = {
+  createInsecure: () => ({}),
+  createSsl: () => ({}),
+};
+export const status = {};
+export const Metadata = MockClass;
+
 const defaultMock = {
   existsSync,
   readFileSync,
@@ -130,6 +222,7 @@ const defaultMock = {
   rmdirSync,
   copyFileSync,
   renameSync,
+  watch,
   promises,
   dirname,
   resolve,
@@ -145,6 +238,8 @@ const defaultMock = {
   inspect,
   createHash,
   randomUUID,
+  randomBytes,
+  timingSafeEqual,
   fileURLToPath,
   pathToFileURL,
   homedir,
@@ -156,6 +251,22 @@ const defaultMock = {
   parse,
   format,
   Database,
+  EventEmitter,
+  createInterface,
+  loadSync,
+  load,
+  fromJSON,
+  IdempotencyLevel,
+  isAnyExtension,
+  Long,
+  loadFileDescriptorSetFromBuffer,
+  loadFileDescriptorSetFromObject,
+  Server,
+  ServerCredentials,
+  loadPackageDefinition,
+  credentials,
+  status,
+  Metadata,
 };
 
 export default defaultMock;

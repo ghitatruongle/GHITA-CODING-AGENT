@@ -32,7 +32,7 @@ export class SkillAutoCreator {
     if (steps.length < this.config.minSteps || steps.length > this.config.maxSteps) return null;
 
     // Lấy category phổ biến nhất trong các bước làm category chính cho Skill
-    const categories = steps.map(s => this.resolveToolCategory(s.toolName));
+    const categories = steps.map((s) => this.resolveToolCategory(s.toolName));
     const mainCategory = this.getMostFrequent(categories) || 'terminal';
 
     if (!this.config.enabledCategories.includes(mainCategory)) return null;
@@ -88,14 +88,14 @@ export class SkillAutoCreator {
     // - Số lượng bước (steps.length)
     // - Mức độ thành công của các bước
     // - Sự lặp lại/tương tự cấu trúc tham số
-    const stepSuccessRate = steps.filter(s => s.success).length / steps.length;
+    const stepSuccessRate = steps.filter((s) => s.success).length / steps.length;
     const parameterRatio = Object.keys(parameters).length / steps.length;
-    
+
     // Heuristic formula: 50% success rate, 30% step density, 20% parameterized level
     const densityScore = Math.min(1.0, steps.length / 8);
     const paramDensityScore = parameterRatio > 0 ? Math.min(1.0, 1.0 / parameterRatio) : 0.5;
-    
-    const confidence = (stepSuccessRate * 0.5) + (densityScore * 0.3) + (paramDensityScore * 0.2);
+
+    const confidence = stepSuccessRate * 0.5 + densityScore * 0.3 + paramDensityScore * 0.2;
 
     if (confidence < this.config.minConfidence) return null;
 
@@ -145,16 +145,16 @@ export class SkillAutoCreator {
    */
   findSimilarSkills(candidate: SkillCandidate, existingSkills: SkillTemplate[]): SkillTemplate[] {
     const queryTokens = this.tokenize(candidate.name + ' ' + candidate.description);
-    
-    return existingSkills.filter(skill => {
+
+    return existingSkills.filter((skill) => {
       if (skill.category !== candidate.category) return false;
       const skillTokens = this.tokenize(skill.name + ' ' + skill.description);
-      
+
       let matchCount = 0;
       for (const token of queryTokens) {
         if (skillTokens.has(token)) matchCount++;
       }
-      
+
       const similarity = matchCount / Math.max(queryTokens.size, skillTokens.size);
       return similarity > 0.4; // Ngưỡng tương tự 40%
     });
@@ -167,7 +167,13 @@ export class SkillAutoCreator {
   private resolveToolCategory(toolName: string): SkillCategory {
     const name = toolName.toLowerCase();
     if (name.startsWith('file.') || name.includes('file')) return 'file';
-    if (name.startsWith('terminal.') || name.includes('run_command') || name.includes('cmd') || name.includes('shell')) return 'terminal';
+    if (
+      name.startsWith('terminal.') ||
+      name.includes('run_command') ||
+      name.includes('cmd') ||
+      name.includes('shell')
+    )
+      return 'terminal';
     if (name.includes('browser') || name.includes('url')) return 'browser';
     if (name.includes('screenshot') || name.includes('screen')) return 'screenshot';
     if (name.includes('app') || name.includes('open')) return 'app';
@@ -198,6 +204,6 @@ export class SkillAutoCreator {
 
   private tokenize(str: string): Set<string> {
     const matches = str.toLowerCase().match(/[\p{L}\p{N}_-]+/gu) ?? [];
-    return new Set(matches.filter(t => t.length > 2));
+    return new Set(matches.filter((t) => t.length > 2));
   }
 }

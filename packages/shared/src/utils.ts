@@ -191,11 +191,7 @@ export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function retry<T>(
-  fn: () => Promise<T>,
-  maxAttempts = 3,
-  delayMs = 1000,
-): Promise<T> {
+export async function retry<T>(fn: () => Promise<T>, maxAttempts = 3, delayMs = 1000): Promise<T> {
   if (maxAttempts < 1) {
     throw new Error('maxAttempts must be at least 1');
   }

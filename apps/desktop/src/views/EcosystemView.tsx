@@ -15,11 +15,46 @@ interface RouterRoute {
 }
 
 const INITIAL_ROUTER_ROUTES: RouterRoute[] = [
-  { provider: 'ollama', model: 'llama3:8b (Local)', complexity: 'simple', costPer1kToken: 0.0000, latencyMs: 80, status: 'active' },
-  { provider: 'google', model: 'gemini-1.5-flash', complexity: 'simple', costPer1kToken: 0.000075, latencyMs: 220, status: 'active' },
-  { provider: 'openai', model: 'gpt-4o-mini', complexity: 'medium', costPer1kToken: 0.00015, latencyMs: 380, status: 'active' },
-  { provider: 'anthropic', model: 'claude-3-5-sonnet', complexity: 'high', costPer1kToken: 0.0030, latencyMs: 740, status: 'active' },
-  { provider: 'openai', model: 'gpt-4o', complexity: 'high', costPer1kToken: 0.0050, latencyMs: 690, status: 'backup' },
+  {
+    provider: 'ollama',
+    model: 'llama3:8b (Local)',
+    complexity: 'simple',
+    costPer1kToken: 0.0,
+    latencyMs: 80,
+    status: 'active',
+  },
+  {
+    provider: 'google',
+    model: 'gemini-1.5-flash',
+    complexity: 'simple',
+    costPer1kToken: 0.000075,
+    latencyMs: 220,
+    status: 'active',
+  },
+  {
+    provider: 'openai',
+    model: 'gpt-4o-mini',
+    complexity: 'medium',
+    costPer1kToken: 0.00015,
+    latencyMs: 380,
+    status: 'active',
+  },
+  {
+    provider: 'anthropic',
+    model: 'claude-3-5-sonnet',
+    complexity: 'high',
+    costPer1kToken: 0.003,
+    latencyMs: 740,
+    status: 'active',
+  },
+  {
+    provider: 'openai',
+    model: 'gpt-4o',
+    complexity: 'high',
+    costPer1kToken: 0.005,
+    latencyMs: 690,
+    status: 'backup',
+  },
 ];
 
 export function EcosystemView() {
@@ -38,10 +73,24 @@ export function EcosystemView() {
   // Agent Protocol states
   const [apActive, setApActive] = useState(true);
   const [apPort, setApPort] = useState(8000);
-  const [apRequests, setApRequests] = useState<Array<{ id: string; method: string; path: string; status: number; time: string }>>([
+  const [apRequests, setApRequests] = useState<
+    Array<{ id: string; method: string; path: string; status: number; time: string }>
+  >([
     { id: 'ap-req-1', method: 'POST', path: '/api/v1/agent/tasks', status: 201, time: '17:40:12' },
-    { id: 'ap-req-2', method: 'GET', path: '/api/v1/agent/tasks/task-9382', status: 200, time: '17:40:15' },
-    { id: 'ap-req-3', method: 'POST', path: '/api/v1/agent/tasks/task-9382/steps', status: 200, time: '17:41:02' },
+    {
+      id: 'ap-req-2',
+      method: 'GET',
+      path: '/api/v1/agent/tasks/task-9382',
+      status: 200,
+      time: '17:40:15',
+    },
+    {
+      id: 'ap-req-3',
+      method: 'POST',
+      path: '/api/v1/agent/tasks/task-9382/steps',
+      status: 200,
+      time: '17:41:02',
+    },
   ]);
 
   // Dynamic Router settings
@@ -61,7 +110,10 @@ export function EcosystemView() {
           `[gRPC] Stream channel heartbeats processed.`,
         ];
         const randomLog = logTemplates[Math.floor(Math.random() * logTemplates.length)] ?? '';
-        setGrpcLogs((prev) => [...prev.slice(-30), `[${new Date().toLocaleTimeString()}] ${randomLog}`]);
+        setGrpcLogs((prev) => [
+          ...prev.slice(-30),
+          `[${new Date().toLocaleTimeString()}] ${randomLog}`,
+        ]);
       }
 
       if (apActive && Math.random() > 0.6) {
@@ -100,7 +152,7 @@ export function EcosystemView() {
         const nextStatus: RouterRoute['status'] =
           r.status === 'active' ? 'backup' : r.status === 'backup' ? 'disabled' : 'active';
         return { ...r, status: nextStatus };
-      })
+      }),
     );
   };
 
@@ -182,7 +234,16 @@ export function EcosystemView() {
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-accent)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span
+              style={{
+                fontSize: '13px',
+                fontWeight: 700,
+                color: 'var(--text-accent)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
               {t('ecosystem.grpcDaemon')}
             </span>
             <span
@@ -206,7 +267,9 @@ export function EcosystemView() {
 
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-              <label style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{t('ecosystem.serverPort')}</label>
+              <label style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                {t('ecosystem.serverPort')}
+              </label>
               <input
                 type="number"
                 value={grpcPort}
@@ -230,7 +293,7 @@ export function EcosystemView() {
                 setGrpcActive(!grpcActive);
                 setGrpcLogs((prev) => [
                   ...prev,
-                  `[gRPC] Server status toggled manually to: ${!grpcActive ? 'RUNNING' : 'STOPPED'}`
+                  `[gRPC] Server status toggled manually to: ${!grpcActive ? 'RUNNING' : 'STOPPED'}`,
                 ]);
               }}
               style={{
@@ -240,7 +303,9 @@ export function EcosystemView() {
                 fontWeight: 700,
                 borderRadius: '6px',
                 border: 'none',
-                background: grpcActive ? '#ef4444' : 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                background: grpcActive
+                  ? '#ef4444'
+                  : 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
                 color: '#fff',
                 cursor: 'pointer',
                 transition: 'all 0.2s',
@@ -252,7 +317,9 @@ export function EcosystemView() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
-            <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600 }}>{t('ecosystem.daemonConsole')}</span>
+            <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600 }}>
+              {t('ecosystem.daemonConsole')}
+            </span>
             <div
               style={{
                 background: 'var(--bg-primary)',
@@ -271,7 +338,9 @@ export function EcosystemView() {
               className="custom-scrollbar"
             >
               {grpcLogs.map((log, i) => (
-                <div key={i} style={{ lineBreak: 'anywhere' }}>{log}</div>
+                <div key={i} style={{ lineBreak: 'anywhere' }}>
+                  {log}
+                </div>
               ))}
             </div>
           </div>
@@ -291,7 +360,16 @@ export function EcosystemView() {
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-accent)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span
+              style={{
+                fontSize: '13px',
+                fontWeight: 700,
+                color: 'var(--text-accent)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
               {t('ecosystem.agentProtocol')}
             </span>
             <span
@@ -315,7 +393,9 @@ export function EcosystemView() {
 
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-              <label style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{t('ecosystem.apiPort')}</label>
+              <label style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                {t('ecosystem.apiPort')}
+              </label>
               <input
                 type="number"
                 value={apPort}
@@ -343,7 +423,9 @@ export function EcosystemView() {
                 fontWeight: 700,
                 borderRadius: '6px',
                 border: 'none',
-                background: apActive ? '#ef4444' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                background: apActive
+                  ? '#ef4444'
+                  : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                 color: '#fff',
                 cursor: 'pointer',
                 transition: 'all 0.2s',
@@ -355,7 +437,9 @@ export function EcosystemView() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
-            <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600 }}>{t('ecosystem.requestsMonitor')}</span>
+            <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600 }}>
+              {t('ecosystem.requestsMonitor')}
+            </span>
             <div
               style={{
                 background: 'var(--bg-primary)',
@@ -371,7 +455,16 @@ export function EcosystemView() {
               className="custom-scrollbar"
             >
               {apRequests.length === 0 ? (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '11px', color: 'var(--text-muted)' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '100%',
+                    fontSize: '11px',
+                    color: 'var(--text-muted)',
+                  }}
+                >
                   {t('ecosystem.noRequestLogs')}
                 </div>
               ) : (
@@ -389,17 +482,23 @@ export function EcosystemView() {
                     }}
                   >
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <span style={{
-                        color: req.method === 'POST' ? '#34d399' : '#60a5fa',
-                        fontWeight: 'bold',
-                        width: '40px',
-                      }}>
+                      <span
+                        style={{
+                          color: req.method === 'POST' ? '#34d399' : '#60a5fa',
+                          fontWeight: 'bold',
+                          width: '40px',
+                        }}
+                      >
                         {req.method}
                       </span>
                       <span style={{ color: 'var(--text-secondary)' }}>{req.path}</span>
                     </div>
                     <div style={{ display: 'flex', gap: '10px' }}>
-                      <span style={{ color: req.status === 200 || req.status === 201 ? '#34d399' : '#f87171' }}>
+                      <span
+                        style={{
+                          color: req.status === 200 || req.status === 201 ? '#34d399' : '#f87171',
+                        }}
+                      >
                         {req.status}
                       </span>
                       <span style={{ color: 'var(--text-muted)' }}>{req.time}</span>
@@ -426,7 +525,16 @@ export function EcosystemView() {
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-accent)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span
+            style={{
+              fontSize: '13px',
+              fontWeight: 700,
+              color: 'var(--text-accent)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
             {t('ecosystem.dynamicRouter')}
           </span>
           <span style={{ fontSize: '11px', color: '#fbbf24', fontWeight: 600 }}>
@@ -451,7 +559,9 @@ export function EcosystemView() {
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <label style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{t('ecosystem.maxCostPerTask')}</label>
+            <label style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+              {t('ecosystem.maxCostPerTask')}
+            </label>
             <input
               type="number"
               step="0.001"
@@ -470,7 +580,9 @@ export function EcosystemView() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <label style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{t('ecosystem.complexityRouting')}</label>
+            <label style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+              {t('ecosystem.complexityRouting')}
+            </label>
             <select
               value={complexityBoundary}
               onChange={(e) => setComplexityBoundary(e.target.value)}
@@ -502,13 +614,20 @@ export function EcosystemView() {
             }}
           >
             <thead>
-              <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)', color: 'var(--text-muted)' }}>
+              <tr
+                style={{
+                  borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                  color: 'var(--text-muted)',
+                }}
+              >
                 <th style={{ padding: '8px' }}>{t('ecosystem.provider')}</th>
                 <th style={{ padding: '8px' }}>{t('ecosystem.modelName')}</th>
                 <th style={{ padding: '8px' }}>{t('ecosystem.mappedComplexity')}</th>
                 <th style={{ padding: '8px', textAlign: 'right' }}>{t('ecosystem.costPer1k')}</th>
                 <th style={{ padding: '8px', textAlign: 'right' }}>{t('ecosystem.avgLatency')}</th>
-                <th style={{ padding: '8px', textAlign: 'center' }}>{t('ecosystem.routingState')}</th>
+                <th style={{ padding: '8px', textAlign: 'center' }}>
+                  {t('ecosystem.routingState')}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -520,10 +639,22 @@ export function EcosystemView() {
                     background: index % 2 === 0 ? 'rgba(255, 255, 255, 0.01)' : 'transparent',
                     transition: 'background 0.2s',
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(99, 102, 241, 0.05)'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = index % 2 === 0 ? 'rgba(255, 255, 255, 0.01)' : 'transparent'}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = 'rgba(99, 102, 241, 0.05)')
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background =
+                      index % 2 === 0 ? 'rgba(255, 255, 255, 0.01)' : 'transparent')
+                  }
                 >
-                  <td style={{ padding: '10px 8px', fontWeight: 600, color: 'var(--text-accent)', textTransform: 'uppercase' }}>
+                  <td
+                    style={{
+                      padding: '10px 8px',
+                      fontWeight: 600,
+                      color: 'var(--text-accent)',
+                      textTransform: 'uppercase',
+                    }}
+                  >
                     {route.provider}
                   </td>
                   <td style={{ padding: '10px 8px', fontFamily: 'monospace' }}>{route.model}</td>
@@ -538,23 +669,36 @@ export function EcosystemView() {
                           route.complexity === 'simple'
                             ? 'rgba(16, 185, 129, 0.15)'
                             : route.complexity === 'medium'
-                            ? 'rgba(245, 158, 11, 0.15)'
-                            : 'rgba(139, 92, 246, 0.15)',
+                              ? 'rgba(245, 158, 11, 0.15)'
+                              : 'rgba(139, 92, 246, 0.15)',
                         color:
                           route.complexity === 'simple'
                             ? '#34d399'
                             : route.complexity === 'medium'
-                            ? '#fbbf24'
-                            : '#c084fc',
+                              ? '#fbbf24'
+                              : '#c084fc',
                       }}
                     >
                       {route.complexity.toUpperCase()}
                     </span>
                   </td>
-                  <td style={{ padding: '10px 8px', textAlign: 'right', fontFamily: 'monospace', color: '#fbbf24' }}>
+                  <td
+                    style={{
+                      padding: '10px 8px',
+                      textAlign: 'right',
+                      fontFamily: 'monospace',
+                      color: '#fbbf24',
+                    }}
+                  >
                     ${route.costPer1kToken.toFixed(6)}
                   </td>
-                  <td style={{ padding: '10px 8px', textAlign: 'right', color: 'var(--text-secondary)' }}>
+                  <td
+                    style={{
+                      padding: '10px 8px',
+                      textAlign: 'right',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
                     {route.latencyMs} ms
                   </td>
                   <td style={{ padding: '10px 8px', textAlign: 'center' }}>
@@ -571,14 +715,14 @@ export function EcosystemView() {
                           route.status === 'active'
                             ? 'rgba(16, 185, 129, 0.2)'
                             : route.status === 'backup'
-                            ? 'rgba(59, 130, 246, 0.2)'
-                            : 'rgba(239, 68, 68, 0.2)',
+                              ? 'rgba(59, 130, 246, 0.2)'
+                              : 'rgba(239, 68, 68, 0.2)',
                         color:
                           route.status === 'active'
                             ? '#34d399'
                             : route.status === 'backup'
-                            ? '#60a5fa'
-                            : '#f87171',
+                              ? '#60a5fa'
+                              : '#f87171',
                       }}
                     >
                       {route.status.toUpperCase()}

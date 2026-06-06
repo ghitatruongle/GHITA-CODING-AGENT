@@ -129,7 +129,11 @@ export class AgentProtocolServer {
   /**
    * Add a mock artifact to a task for testing purposes
    */
-  public addArtifact(taskId: string, fileName: string, relativePath: string): APArtifact | undefined {
+  public addArtifact(
+    taskId: string,
+    fileName: string,
+    relativePath: string,
+  ): APArtifact | undefined {
     const task = this.tasks.get(taskId);
     if (!task) return undefined;
 

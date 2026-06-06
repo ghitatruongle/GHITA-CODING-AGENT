@@ -4,7 +4,14 @@
 
 import type { AIStreamChunk } from '@ghita/shared';
 import { OLLAMA_DEFAULT_URL } from '@ghita/shared';
-import type { ChatMessage, ChatOptions, ChatResponse, ProviderConfig, EmbeddingResponse, EmbeddingManyResponse } from '../types.js';
+import type {
+  ChatMessage,
+  ChatOptions,
+  ChatResponse,
+  ProviderConfig,
+  EmbeddingResponse,
+  EmbeddingManyResponse,
+} from '../types.js';
 import { BaseProvider } from './base.js';
 
 export class OllamaProvider extends BaseProvider {
@@ -96,10 +103,7 @@ export class OllamaProvider extends BaseProvider {
     };
   }
 
-  async *chatStream(
-    messages: ChatMessage[],
-    options?: ChatOptions,
-  ): AsyncGenerator<AIStreamChunk> {
+  async *chatStream(messages: ChatMessage[], options?: ChatOptions): AsyncGenerator<AIStreamChunk> {
     const model = this.getModel(options);
     const baseUrl = this.getOllamaUrl();
 

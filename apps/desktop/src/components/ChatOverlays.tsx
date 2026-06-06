@@ -9,7 +9,13 @@ interface ApprovalModalProps {
   onReject: (reason?: string) => void;
 }
 
-export function ApprovalModal({ toolName, toolArguments, warningMessage, onApprove, onReject }: ApprovalModalProps) {
+export function ApprovalModal({
+  toolName,
+  toolArguments,
+  warningMessage,
+  onApprove,
+  onReject,
+}: ApprovalModalProps) {
   const { t } = useTranslation();
 
   return (
@@ -46,20 +52,33 @@ export function ApprovalModal({ toolName, toolArguments, warningMessage, onAppro
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '20px' }}>⚠️</span>
-          <span style={{ fontWeight: 700, fontSize: '13px', color: '#f43f5e', letterSpacing: '1px' }}>
+          <span
+            style={{ fontWeight: 700, fontSize: '13px', color: '#f43f5e', letterSpacing: '1px' }}
+          >
             {t('chat.approveTool')}
           </span>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <span style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>{t('chat.toolName')}</span>
-          <span style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9', fontFamily: 'var(--font-mono)' }}>
+          <span style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>
+            {t('chat.toolName')}
+          </span>
+          <span
+            style={{
+              fontSize: '13px',
+              fontWeight: 600,
+              color: '#f1f5f9',
+              fontFamily: 'var(--font-mono)',
+            }}
+          >
             {toolName}
           </span>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <span style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>{t('chat.parameters')}</span>
+          <span style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>
+            {t('chat.parameters')}
+          </span>
           <pre
             style={{
               margin: 0,
@@ -166,7 +185,9 @@ export function AgentEventsTimeline({ events, onClear }: AgentEventsTimelineProp
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
       }}
     >
-      <style dangerouslySetInnerHTML={{__html: `
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         @keyframes pulsePurple {
           0% { box-shadow: 0 0 0 0 rgba(192, 132, 252, 0.7); }
           70% { box-shadow: 0 0 0 6px rgba(192, 132, 252, 0); }
@@ -175,16 +196,45 @@ export function AgentEventsTimeline({ events, onClear }: AgentEventsTimelineProp
         .pulse-indicator-purple {
           animation: pulsePurple 2s infinite;
         }
-      `}} />
+      `,
+        }}
+      />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--accent-secondary)', display: 'flex', alignItems: 'center', gap: '6px', letterSpacing: '0.5px' }}>
-          <span className="pulse-indicator-purple" style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#c084fc', display: 'inline-block' }} />
+        <span
+          style={{
+            fontSize: '11px',
+            fontWeight: 700,
+            color: 'var(--accent-secondary)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            letterSpacing: '0.5px',
+          }}
+        >
+          <span
+            className="pulse-indicator-purple"
+            style={{
+              width: '6px',
+              height: '6px',
+              borderRadius: '50%',
+              backgroundColor: '#c084fc',
+              display: 'inline-block',
+            }}
+          />
           {t('chat.liveAgentEvents')}
         </span>
         <button
           onClick={onClear}
-          style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '10px', cursor: 'pointer', opacity: 0.7, transition: 'opacity 0.2s' }}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'var(--text-muted)',
+            fontSize: '10px',
+            cursor: 'pointer',
+            opacity: 0.7,
+            transition: 'opacity 0.2s',
+          }}
           onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
           onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
         >
@@ -199,36 +249,94 @@ export function AgentEventsTimeline({ events, onClear }: AgentEventsTimelineProp
           let label: string = evt.type;
 
           switch (evt.type) {
-            case 'agent:thinking': icon = '🧠'; color = '#c084fc'; label = 'Thinking'; break;
-            case 'agent:state': icon = '🤖'; color = '#38bdf8'; label = 'State'; break;
-            case 'tool:run': icon = '⚙️'; color = '#f472b6'; label = `Running Tool: ${(evt.payload as { name?: string })?.name || ''}`; break;
-            case 'tool:complete': icon = '✅'; color = '#34d399'; label = `Completed Tool: ${(evt.payload as { name?: string })?.name || ''}`; break;
-            case 'tool:error': icon = '❌'; color = '#f87171'; label = `Tool Error: ${(evt.payload as { name?: string })?.name || ''}`; break;
-            case 'skill:learning': icon = '⚡'; color = '#fbbf24'; label = 'Skill Learning'; break;
-            case 'memory:update': icon = '💾'; color = '#22d3ee'; label = 'Memory Update'; break;
+            case 'agent:thinking':
+              icon = '🧠';
+              color = '#c084fc';
+              label = 'Thinking';
+              break;
+            case 'agent:state':
+              icon = '🤖';
+              color = '#38bdf8';
+              label = 'State';
+              break;
+            case 'tool:run':
+              icon = '⚙️';
+              color = '#f472b6';
+              label = `Running Tool: ${(evt.payload as { name?: string })?.name || ''}`;
+              break;
+            case 'tool:complete':
+              icon = '✅';
+              color = '#34d399';
+              label = `Completed Tool: ${(evt.payload as { name?: string })?.name || ''}`;
+              break;
+            case 'tool:error':
+              icon = '❌';
+              color = '#f87171';
+              label = `Tool Error: ${(evt.payload as { name?: string })?.name || ''}`;
+              break;
+            case 'skill:learning':
+              icon = '⚡';
+              color = '#fbbf24';
+              label = 'Skill Learning';
+              break;
+            case 'memory:update':
+              icon = '💾';
+              color = '#22d3ee';
+              label = 'Memory Update';
+              break;
           }
 
           return (
             <div
               key={evt.id}
               style={{
-                display: 'flex', gap: '10px', fontSize: '12px', color,
-                alignItems: 'flex-start', padding: '6px 10px',
-                background: 'rgba(255,255,255,0.02)', borderRadius: '8px',
+                display: 'flex',
+                gap: '10px',
+                fontSize: '12px',
+                color,
+                alignItems: 'flex-start',
+                padding: '6px 10px',
+                background: 'rgba(255,255,255,0.02)',
+                borderRadius: '8px',
                 border: '1px solid rgba(255,255,255,0.03)',
               }}
             >
               <span style={{ fontSize: '13px' }}>{icon}</span>
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>
                 <div style={{ fontWeight: 600 }}>{evt.message || label}</div>
-                {evt.payload != null && typeof evt.payload === 'object' && Object.keys(evt.payload).length > 0 && evt.type !== 'skill:learning' && (
-                  <pre style={{ margin: 0, fontSize: '10px', color: 'var(--text-muted)', whiteSpace: 'pre-wrap', wordBreak: 'break-all', background: 'rgba(0,0,0,0.15)', padding: '4px 6px', borderRadius: '4px' }}>
-                    {JSON.stringify(evt.payload, null, 2)}
-                  </pre>
-                )}
+                {evt.payload != null &&
+                  typeof evt.payload === 'object' &&
+                  Object.keys(evt.payload).length > 0 &&
+                  evt.type !== 'skill:learning' && (
+                    <pre
+                      style={{
+                        margin: 0,
+                        fontSize: '10px',
+                        color: 'var(--text-muted)',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-all',
+                        background: 'rgba(0,0,0,0.15)',
+                        padding: '4px 6px',
+                        borderRadius: '4px',
+                      }}
+                    >
+                      {JSON.stringify(evt.payload, null, 2)}
+                    </pre>
+                  )}
               </div>
-              <span style={{ fontSize: '9px', color: 'var(--text-muted)', opacity: 0.6, marginTop: '2px' }}>
-                {new Date(evt.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              <span
+                style={{
+                  fontSize: '9px',
+                  color: 'var(--text-muted)',
+                  opacity: 0.6,
+                  marginTop: '2px',
+                }}
+              >
+                {new Date(evt.timestamp).toLocaleTimeString('vi-VN', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                })}
               </span>
             </div>
           );
@@ -261,16 +369,31 @@ export function RalphProgressCard({ iteration, cost, message }: RalphProgressCar
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: '11px', fontWeight: 700, color: '#34d399', display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <span
+          style={{
+            fontSize: '11px',
+            fontWeight: 700,
+            color: '#34d399',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+          }}
+        >
           <span className="pulse-indicator" /> {t('chat.ralphRunning')}
         </span>
-        <span style={{ fontSize: '10px', color: '#a7f3d0', background: 'rgba(16, 185, 129, 0.2)', padding: '2px 6px', borderRadius: '4px' }}>
+        <span
+          style={{
+            fontSize: '10px',
+            color: '#a7f3d0',
+            background: 'rgba(16, 185, 129, 0.2)',
+            padding: '2px 6px',
+            borderRadius: '4px',
+          }}
+        >
           #{iteration} | ${cost.toFixed(5)}
         </span>
       </div>
-      <p style={{ margin: 0, fontSize: '11px', color: '#cbd5e1' }}>
-        {message}
-      </p>
+      <p style={{ margin: 0, fontSize: '11px', color: '#cbd5e1' }}>{message}</p>
     </div>
   );
 }

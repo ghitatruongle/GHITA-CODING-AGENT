@@ -41,8 +41,12 @@ export class ConfigLoader {
       const parsed = JSON.parse(data) as LocalConfig;
 
       // Validate required fields exist (file may be from another tool like OpenClaude CLI)
-      if (!parsed.agentModels || typeof parsed.agentModels !== 'object' ||
-          !parsed.agentRouting || typeof parsed.agentRouting !== 'object') {
+      if (
+        !parsed.agentModels ||
+        typeof parsed.agentModels !== 'object' ||
+        !parsed.agentRouting ||
+        typeof parsed.agentRouting !== 'object'
+      ) {
         console.warn('Config file missing agentModels/agentRouting, using defaults');
         return this.initializeDefaultConfig();
       }

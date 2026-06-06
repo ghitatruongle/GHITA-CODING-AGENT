@@ -38,69 +38,87 @@ export function CodeView() {
   const activeFile = openFiles.find((f) => f.path === activePath);
 
   // Open a file from explorer
-  const handleFileOpen = useCallback((path: string, name: string, content: string, language: string) => {
-    // Check if already open
-    const existing = openFiles.find((f) => f.path === path);
-    if (existing) {
-      setActivePath(path);
-      return;
-    }
+  const handleFileOpen = useCallback(
+    (path: string, name: string, content: string, language: string) => {
+      // Check if already open
+      const existing = openFiles.find((f) => f.path === path);
+      if (existing) {
+        setActivePath(path);
+        return;
+      }
 
-    setOpenFiles((prev) => [...prev, {
-      path, name, content,
-      originalContent: content,
-      language,
-      modified: false,
-    }]);
-    setActivePath(path);
-  }, [openFiles]);
+      setOpenFiles((prev) => [
+        ...prev,
+        {
+          path,
+          name,
+          content,
+          originalContent: content,
+          language,
+          modified: false,
+        },
+      ]);
+      setActivePath(path);
+    },
+    [openFiles],
+  );
 
   // Close a tab
-  const handleCloseTab = useCallback((path: string, e?: React.MouseEvent) => {
-    e?.stopPropagation();
+  const handleCloseTab = useCallback(
+    (path: string, e?: React.MouseEvent) => {
+      e?.stopPropagation();
 
-    // Check if file is modified
-    const file = openFiles.find((f) => f.path === path);
-    if (file?.modified) {
-      const confirmDiscard = window.confirm(
-        tRef.current('codeView.unsavedChangesConfirm', { name: file.name })
-      );
-      if (!confirmDiscard) return;
-    }
-
-    // Compute new active path from the *filtered* list, not the old index.
-    // After removing `path`, prefer the file that was sitting to the right
-    // of the closed tab (VSCode-style); fall back to the last one to the left
-    // if there's nothing on the right; finally fall back to '' (no tabs).
-    const idx = openFiles.findIndex((f) => f.path === path);
-    const nextFiles = openFiles.filter((f) => f.path !== path);
-
-    if (activePath === path) {
-      let newActive = '';
-      if (nextFiles.length > 0) {
-        // `idx` is the position of the closed tab in the *old* array.
-        // In the new array the right-neighbor lives at `idx` (same index
-        // because everything left of the gap shifted down by one).
-        // If `idx` points past the end, fall back to the new last element.
-        const rightNeighbor = nextFiles[idx];
-        const leftNeighbor = rightNeighbor ? undefined : (nextFiles[idx - 1] ?? nextFiles[nextFiles.length - 1]);
-        const chosen = rightNeighbor ?? leftNeighbor ?? nextFiles[0];
-        if (chosen) newActive = chosen.path;
+      // Check if file is modified
+      const file = openFiles.find((f) => f.path === path);
+      if (file?.modified) {
+        const confirmDiscard = window.confirm(
+          tRef.current('codeView.unsavedChangesConfirm', { name: file.name }),
+        );
+        if (!confirmDiscard) return;
       }
-      setActivePath(newActive);
-    }
-    setOpenFiles(nextFiles);
-  }, [openFiles, activePath]);
+
+      // Compute new active path from the *filtered* list, not the old index.
+      // After removing `path`, prefer the file that was sitting to the right
+      // of the closed tab (VSCode-style); fall back to the last one to the left
+      // if there's nothing on the right; finally fall back to '' (no tabs).
+      const idx = openFiles.findIndex((f) => f.path === path);
+      const nextFiles = openFiles.filter((f) => f.path !== path);
+
+      if (activePath === path) {
+        let newActive = '';
+        if (nextFiles.length > 0) {
+          // `idx` is the position of the closed tab in the *old* array.
+          // In the new array the right-neighbor lives at `idx` (same index
+          // because everything left of the gap shifted down by one).
+          // If `idx` points past the end, fall back to the new last element.
+          const rightNeighbor = nextFiles[idx];
+          const leftNeighbor = rightNeighbor
+            ? undefined
+            : (nextFiles[idx - 1] ?? nextFiles[nextFiles.length - 1]);
+          const chosen = rightNeighbor ?? leftNeighbor ?? nextFiles[0];
+          if (chosen) newActive = chosen.path;
+        }
+        setActivePath(newActive);
+      }
+      setOpenFiles(nextFiles);
+    },
+    [openFiles, activePath],
+  );
 
   // Handle editor content change
-  const handleContentChange = useCallback((value: string) => {
-    if (!activePath) return;
-    setOpenFiles((prev) => prev.map((f) =>
-      f.path === activePath
-        ? { ...f, content: value, modified: value !== f.originalContent }
-        : f,
-    ));
-  }, [activePath]);
+  const handleContentChange = useCallback(
+    (value: string) => {
+      if (!activePath) return;
+      setOpenFiles((prev) =>
+        prev.map((f) =>
+          f.path === activePath
+            ? { ...f, content: value, modified: value !== f.originalContent }
+            : f,
+        ),
+      );
+    },
+    [activePath],
+  );
 
   // Save current file
   const handleSave = useCallback(async () => {
@@ -117,20 +135,24 @@ export function CodeView() {
       // looked "unmodified" while it was actually dirty. We now use a
       // functional setState and compare against the value present at the
       // time of state application.
-      setOpenFiles((prev) => prev.map((f) => {
-        if (f.path !== activePath) return f;
-        return {
-          ...f,
-          originalContent: contentToSave,
-          // `f.content` here is whatever the user has in the editor right
-          // now. If it equals what we wrote, the tab is clean; otherwise
-          // it is still dirty (we just persisted an older snapshot).
-          modified: f.content !== contentToSave,
-        };
-      }));
+      setOpenFiles((prev) =>
+        prev.map((f) => {
+          if (f.path !== activePath) return f;
+          return {
+            ...f,
+            originalContent: contentToSave,
+            // `f.content` here is whatever the user has in the editor right
+            // now. If it equals what we wrote, the tab is clean; otherwise
+            // it is still dirty (we just persisted an older snapshot).
+            modified: f.content !== contentToSave,
+          };
+        }),
+      );
       toast.success(tRef.current('codeView.fileSaved', { name: file.name }));
     } catch (e) {
-      toast.error(tRef.current('codeView.saveFailed', { error: e instanceof Error ? e.message : String(e) }));
+      toast.error(
+        tRef.current('codeView.saveFailed', { error: e instanceof Error ? e.message : String(e) }),
+      );
     }
   }, [openFiles, activePath]);
 
@@ -157,18 +179,24 @@ export function CodeView() {
       }
     }
     if (savedContents.size > 0) {
-      setOpenFiles((prev) => prev.map((f) => {
-        const savedVal = savedContents.get(f.path);
-        if (savedVal === undefined) return f;
-        return {
-          ...f,
-          originalContent: savedVal,
-          modified: f.content !== savedVal,
-        };
-      }));
+      setOpenFiles((prev) =>
+        prev.map((f) => {
+          const savedVal = savedContents.get(f.path);
+          if (savedVal === undefined) return f;
+          return {
+            ...f,
+            originalContent: savedVal,
+            modified: f.content !== savedVal,
+          };
+        }),
+      );
     }
     if (lastError) {
-      toast.error(tRef.current('codeView.saveFailed', { error: lastError instanceof Error ? lastError.message : String(lastError) }));
+      toast.error(
+        tRef.current('codeView.saveFailed', {
+          error: lastError instanceof Error ? lastError.message : String(lastError),
+        }),
+      );
       return;
     }
     toast.success(tRef.current('codeView.filesSaved', { count: savedContents.size }));
@@ -196,13 +224,16 @@ export function CodeView() {
   }, [handleSave, handleSaveAll, activePath, handleCloseTab]);
 
   // Explorer resize drag
-  const onDragStart = useCallback((e: React.MouseEvent) => {
-    isDragging.current = true;
-    startX.current = e.clientX;
-    startWidth.current = explorerWidth;
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-  }, [explorerWidth]);
+  const onDragStart = useCallback(
+    (e: React.MouseEvent) => {
+      isDragging.current = true;
+      startX.current = e.clientX;
+      startWidth.current = explorerWidth;
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    },
+    [explorerWidth],
+  );
 
   useEffect(() => {
     const onMouseMove = (e: MouseEvent) => {
@@ -226,12 +257,21 @@ export function CodeView() {
   // Language label
   const langLabel = (lang: string): string => {
     const map: Record<string, string> = {
-      typescript: 'TS', typescriptreact: 'TSX',
-      javascript: 'JS', javascriptreact: 'JSX',
-      python: 'PY', rust: 'RS', go: 'GO',
-      json: 'JSON', html: 'HTML', css: 'CSS',
-      markdown: 'MD', yaml: 'YML', sql: 'SQL',
-      shell: 'SH', powershell: 'PS',
+      typescript: 'TS',
+      typescriptreact: 'TSX',
+      javascript: 'JS',
+      javascriptreact: 'JSX',
+      python: 'PY',
+      rust: 'RS',
+      go: 'GO',
+      json: 'JSON',
+      html: 'HTML',
+      css: 'CSS',
+      markdown: 'MD',
+      yaml: 'YML',
+      sql: 'SQL',
+      shell: 'SH',
+      powershell: 'PS',
     };
     return map[lang] || lang.slice(0, 3).toUpperCase();
   };
@@ -239,11 +279,19 @@ export function CodeView() {
   // File icon color
   const langColor = (lang: string): string => {
     const map: Record<string, string> = {
-      typescript: '#3178c6', typescriptreact: '#61dafb',
-      javascript: '#f7df1e', javascriptreact: '#61dafb',
-      python: '#3776ab', rust: '#dea584', go: '#00add8',
-      json: '#eab308', html: '#e34c26', css: '#1572b6',
-      markdown: '#083fa1', yaml: '#cb171e', sql: '#e38c00',
+      typescript: '#3178c6',
+      typescriptreact: '#61dafb',
+      javascript: '#f7df1e',
+      javascriptreact: '#61dafb',
+      python: '#3776ab',
+      rust: '#dea584',
+      go: '#00add8',
+      json: '#eab308',
+      html: '#e34c26',
+      css: '#1572b6',
+      markdown: '#083fa1',
+      yaml: '#cb171e',
+      sql: '#e38c00',
     };
     return map[lang] || '#818cf8';
   };
@@ -259,61 +307,99 @@ export function CodeView() {
       <div
         onMouseDown={onDragStart}
         style={{
-          width: '3px', cursor: 'col-resize', flexShrink: 0,
+          width: '3px',
+          cursor: 'col-resize',
+          flexShrink: 0,
           background: 'var(--border-subtle)',
           transition: 'background 0.2s',
         }}
-        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--accent-primary)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--border-subtle)'; }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = 'var(--accent-primary)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'var(--border-subtle)';
+        }}
       />
 
       {/* Editor area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {/* Tab bar */}
-        <div style={{
-          display: 'flex', alignItems: 'center',
-          height: '36px', background: 'var(--bg-primary)',
-          borderBottom: '1px solid var(--border-subtle)',
-          overflow: 'auto', flexShrink: 0,
-        }} className="custom-scrollbar">
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            height: '36px',
+            background: 'var(--bg-primary)',
+            borderBottom: '1px solid var(--border-subtle)',
+            overflow: 'auto',
+            flexShrink: 0,
+          }}
+          className="custom-scrollbar"
+        >
           {openFiles.map((f) => (
             <div
               key={f.path}
               onClick={() => setActivePath(f.path)}
               style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
-                padding: '4px 14px', fontSize: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '4px 14px',
+                fontSize: '12px',
                 color: f.path === activePath ? 'var(--text-primary)' : 'var(--text-muted)',
                 background: f.path === activePath ? 'var(--bg-secondary)' : 'transparent',
-                borderTop: f.path === activePath ? '2px solid var(--accent-primary)' : '2px solid transparent',
-                cursor: 'pointer', whiteSpace: 'nowrap',
+                borderTop:
+                  f.path === activePath
+                    ? '2px solid var(--accent-primary)'
+                    : '2px solid transparent',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
                 transition: 'all 0.15s',
                 borderRight: '1px solid var(--border-subtle)',
               }}
             >
-              <span style={{
-                fontSize: '10px', fontWeight: 700, color: langColor(f.language),
-                minWidth: '20px',
-              }}>
+              <span
+                style={{
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  color: langColor(f.language),
+                  minWidth: '20px',
+                }}
+              >
                 {langLabel(f.language)}
               </span>
               <span>{f.name}</span>
               {f.modified && (
-                <span style={{
-                  width: '6px', height: '6px', borderRadius: '50%',
-                  background: 'var(--warning)', flexShrink: 0,
-                }} title={t('codeView.unsaved')} />
+                <span
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    background: 'var(--warning)',
+                    flexShrink: 0,
+                  }}
+                  title={t('codeView.unsaved')}
+                />
               )}
               <button
                 onClick={(e) => handleCloseTab(f.path, e)}
                 style={{
-                  fontSize: '14px', color: 'var(--text-muted)',
-                  marginLeft: '4px', lineHeight: 1,
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  padding: '0 2px', borderRadius: '2px',
+                  fontSize: '14px',
+                  color: 'var(--text-muted)',
+                  marginLeft: '4px',
+                  lineHeight: 1,
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0 2px',
+                  borderRadius: '2px',
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--bg-hover)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
               >
                 ×
               </button>
@@ -323,26 +409,41 @@ export function CodeView() {
 
         {/* Breadcrumb */}
         {activeFile && (
-          <div style={{
-            padding: '4px 12px', fontSize: '11px', color: 'var(--text-muted)',
-            background: 'var(--bg-secondary)',
-            borderBottom: '1px solid var(--border-subtle)',
-            display: 'flex', alignItems: 'center', gap: '4px',
-          }}>
+          <div
+            style={{
+              padding: '4px 12px',
+              fontSize: '11px',
+              color: 'var(--text-muted)',
+              background: 'var(--bg-secondary)',
+              borderBottom: '1px solid var(--border-subtle)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+          >
             {activeFile.path.split(/[/\\]/).map((part, i, arr) => (
-              <span key={i} style={{
-                color: i === arr.length - 1 ? 'var(--text-primary)' : 'var(--text-muted)',
-                fontWeight: i === arr.length - 1 ? 600 : 400,
-              }}>
-                {part}{i < arr.length - 1 && <span style={{ margin: '0 4px', opacity: 0.5 }}>/</span>}
+              <span
+                key={i}
+                style={{
+                  color: i === arr.length - 1 ? 'var(--text-primary)' : 'var(--text-muted)',
+                  fontWeight: i === arr.length - 1 ? 600 : 400,
+                }}
+              >
+                {part}
+                {i < arr.length - 1 && <span style={{ margin: '0 4px', opacity: 0.5 }}>/</span>}
               </span>
             ))}
             {activeFile.modified && (
-              <span style={{
-                marginLeft: '8px', fontSize: '10px', color: 'var(--warning)',
-                padding: '1px 6px', background: 'rgba(245, 158, 11, 0.1)',
-                borderRadius: 'var(--radius-full)',
-              }}>
+              <span
+                style={{
+                  marginLeft: '8px',
+                  fontSize: '10px',
+                  color: 'var(--warning)',
+                  padding: '1px 6px',
+                  background: 'rgba(245, 158, 11, 0.1)',
+                  borderRadius: 'var(--radius-full)',
+                }}
+              >
                 {t('codeView.modified')}
               </span>
             )}
@@ -357,10 +458,15 @@ export function CodeView() {
           {activeFile ? (
             <Suspense
               fallback={
-                <div style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  height: '100%', color: 'var(--accent-primary)',
-                }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '100%',
+                    color: 'var(--accent-primary)',
+                  }}
+                >
                   {t('codeView.loadingEditor')}
                 </div>
               }
@@ -374,20 +480,30 @@ export function CodeView() {
               />
             </Suspense>
           ) : (
-            <div style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center',
-              justifyContent: 'center', height: '100%', color: 'var(--text-muted)',
-              gap: '12px',
-            }}>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%',
+                color: 'var(--text-muted)',
+                gap: '12px',
+              }}
+            >
               <span style={{ fontSize: '48px', opacity: 0.3 }}>🤖</span>
               <span style={{ fontSize: '14px', fontWeight: 600 }}>GHITA CODING AGENT</span>
-              <span style={{ fontSize: '12px', opacity: 0.6 }}>
-                {t('codeView.openFileHint')}
-              </span>
-              <div style={{
-                marginTop: '16px', display: 'flex', gap: '12px', fontSize: '11px',
-                color: 'var(--text-muted)', opacity: 0.5,
-              }}>
+              <span style={{ fontSize: '12px', opacity: 0.6 }}>{t('codeView.openFileHint')}</span>
+              <div
+                style={{
+                  marginTop: '16px',
+                  display: 'flex',
+                  gap: '12px',
+                  fontSize: '11px',
+                  color: 'var(--text-muted)',
+                  opacity: 0.5,
+                }}
+              >
                 <span>{t('codeView.shortcutSave')}</span>
                 <span>·</span>
                 <span>{t('codeView.shortcutClose')}</span>

@@ -10,6 +10,8 @@ import { AnthropicProvider } from './providers/anthropic.js';
 import { GoogleProvider } from './providers/google.js';
 import { OllamaProvider } from './providers/ollama.js';
 import { CustomProvider } from './providers/custom.js';
+import { GroqProvider } from './providers/groq.js';
+import { MistralProvider } from './providers/mistral.js';
 
 export class ProviderRegistry {
   private providers = new Map<AIProviderType, AIProvider>();
@@ -57,9 +59,7 @@ export class ProviderRegistry {
   }
 
   /** Lấy status của tất cả providers */
-  async getStatus(): Promise<
-    Array<{ type: AIProviderType; name: string; ready: boolean }>
-  > {
+  async getStatus(): Promise<Array<{ type: AIProviderType; name: string; ready: boolean }>> {
     const results: Array<{ type: AIProviderType; name: string; ready: boolean }> = [];
     for (const provider of this.providers.values()) {
       results.push({
@@ -83,14 +83,18 @@ export class ProviderRegistry {
         return new OllamaProvider(config);
       case 'custom':
         return new CustomProvider(config);
+      // Phase 1: Dedicated Groq provider (ultra-fast LPU inference)
+      case 'groq':
+        return new GroqProvider(config);
+      // Phase 1: Dedicated Mistral provider (La Plateforme API)
+      case 'mistral':
+        return new MistralProvider(config);
       // OpenAI-compatible providers (reuse CustomProvider)
       // Phase 1.2 providers use the same path.
       case 'opengateway':
       case 'mimo':
       case 'openrouter':
       case 'deepseek':
-      case 'groq':
-      case 'mistral':
       case 'hicap':
       case 'github-models':
       case 'cerebras':
@@ -104,6 +108,8 @@ export class ProviderRegistry {
       case 'ai21':
       case 'sambanova':
       case 'novita':
+      case 'opencode-zen':
+      case 'nvidia-nim':
         return new CustomProvider({
           ...config,
           providerType: config.type,

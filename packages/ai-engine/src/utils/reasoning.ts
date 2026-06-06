@@ -3,7 +3,7 @@
 // ==============================================================================
 
 export interface ExtractedReasoning {
-  content: string;   // Text content after stripping <think> blocks
+  content: string; // Text content after stripping <think> blocks
   reasoning: string; // The extracted thinking block content
 }
 
@@ -47,10 +47,10 @@ export function extractReasoning(text: string): ExtractedReasoning {
 }
 
 export interface ReasoningStreamResult {
-  text: string;           // The original chunk text slice
-  contentSlice: string;   // Flushed standard content slice
+  text: string; // The original chunk text slice
+  contentSlice: string; // Flushed standard content slice
   reasoningSlice: string; // Flushed thinking reasoning slice
-  isThinking: boolean;    // Current state of thinking
+  isThinking: boolean; // Current state of thinking
 }
 
 /**

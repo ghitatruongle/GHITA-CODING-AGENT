@@ -119,7 +119,7 @@ export async function generateObject<T>(
   orchestrator: Orchestrator,
   schema: z.ZodType<T>,
   messages: ChatMessage[],
-  options?: ChatOptions & { provider?: AIProviderType }
+  options?: ChatOptions & { provider?: AIProviderType },
 ): Promise<GenerateObjectResponse<T>> {
   const jsonSchema = zodToJsonSchema(schema);
   const schemaStr = JSON.stringify(jsonSchema, null, 2);
@@ -169,7 +169,7 @@ ${schemaStr}
       schemaStr,
       rawResponse,
       [err],
-      `Failed to parse response content as JSON: ${err instanceof Error ? err.message : String(err)}`
+      `Failed to parse response content as JSON: ${err instanceof Error ? err.message : String(err)}`,
     );
   }
 
@@ -180,7 +180,7 @@ ${schemaStr}
       schemaStr,
       rawResponse,
       result.error.errors,
-      'Response JSON did not match the requested schema schema'
+      'Response JSON did not match the requested schema schema',
     );
   }
 

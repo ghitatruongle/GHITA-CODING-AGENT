@@ -43,9 +43,27 @@ describe('RustMemoryAddon', () => {
 
     it('should index multiple messages and rank them based on keyword relevance', async () => {
       const logs = [
-        { id: 'c1', session_id: 's1', role: 'user', content: 'Lập trình nodejs', timestamp: Date.now() - 5000 },
-        { id: 'c2', session_id: 's1', role: 'assistant', content: 'Nodejs là run-time của JavaScript cực nhanh', timestamp: Date.now() - 4000 },
-        { id: 'c3', session_id: 's2', role: 'user', content: 'Học ReactJS làm giao diện', timestamp: Date.now() - 3000 },
+        {
+          id: 'c1',
+          session_id: 's1',
+          role: 'user',
+          content: 'Lập trình nodejs',
+          timestamp: Date.now() - 5000,
+        },
+        {
+          id: 'c2',
+          session_id: 's1',
+          role: 'assistant',
+          content: 'Nodejs là run-time của JavaScript cực nhanh',
+          timestamp: Date.now() - 4000,
+        },
+        {
+          id: 'c3',
+          session_id: 's2',
+          role: 'user',
+          content: 'Học ReactJS làm giao diện',
+          timestamp: Date.now() - 3000,
+        },
       ];
 
       await addon.indexManyMessages(logs);
@@ -58,7 +76,13 @@ describe('RustMemoryAddon', () => {
 
     it('should fall back to general LIKE query or token matching if matching syntax fails', async () => {
       const logs = [
-        { id: 'c1', session_id: 's1', role: 'user', content: 'Viết unit tests với Vitest', timestamp: Date.now() },
+        {
+          id: 'c1',
+          session_id: 's1',
+          role: 'user',
+          content: 'Viết unit tests với Vitest',
+          timestamp: Date.now(),
+        },
       ];
       await addon.indexManyMessages(logs);
 
@@ -103,9 +127,27 @@ describe('RustMemoryAddon', () => {
       const oneDay = 24 * 60 * 60 * 1000;
 
       const logs = [
-        { id: 'old_1', session_id: 's', role: 'u', content: 'Rất cũ 35 ngày trước', timestamp: now - 35 * oneDay },
-        { id: 'old_2', session_id: 's', role: 'a', content: 'Rất cũ 40 ngày trước', timestamp: now - 40 * oneDay },
-        { id: 'new_1', session_id: 's', role: 'u', content: 'Mới 5 ngày trước', timestamp: now - 5 * oneDay },
+        {
+          id: 'old_1',
+          session_id: 's',
+          role: 'u',
+          content: 'Rất cũ 35 ngày trước',
+          timestamp: now - 35 * oneDay,
+        },
+        {
+          id: 'old_2',
+          session_id: 's',
+          role: 'a',
+          content: 'Rất cũ 40 ngày trước',
+          timestamp: now - 40 * oneDay,
+        },
+        {
+          id: 'new_1',
+          session_id: 's',
+          role: 'u',
+          content: 'Mới 5 ngày trước',
+          timestamp: now - 5 * oneDay,
+        },
         { id: 'new_2', session_id: 's', role: 'a', content: 'Vừa xong', timestamp: now },
       ];
 
@@ -180,7 +222,7 @@ describe('RustMemoryAddon', () => {
       // Vì MAX_CACHE_SIZE_BYTES = 100MB, ta sẽ hạ thấp giới hạn bộ nhớ trong test hoặc
       // mô phỏng đưa vào các vector cực lớn để kích hoạt LRU Eviction.
       // Thay vào đó, ta có thể ghi đè biến MAX_CACHE_SIZE_BYTES trong test để kiểm thử an toàn!
-      
+
       const smallLimit = 1000; // 1000 bytes limit
       (addon as any).MAX_CACHE_SIZE_BYTES = smallLimit;
 
@@ -211,7 +253,7 @@ describe('RustMemoryAddon', () => {
 
       addon.cacheEmbedding('k1', v);
       addon.cacheEmbedding('k2', v);
-      
+
       // Lúc này cả k1 và k2 đều nằm trong cache (~936 bytes <= 1000)
       expect(addon.getCacheSize()).toBe(2);
 

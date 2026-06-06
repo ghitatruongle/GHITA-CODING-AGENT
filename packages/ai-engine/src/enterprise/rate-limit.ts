@@ -93,11 +93,7 @@ export const DEFAULT_RATE_LIMIT_TIERS: Record<string, RateLimitTier> = {
 class SlidingWindowCounter {
   private states: Map<string, RateLimitState> = new Map();
 
-  check(
-    identifier: string,
-    config: RateLimitConfig,
-    tokenCount?: number
-  ): RateLimitResult {
+  check(identifier: string, config: RateLimitConfig, tokenCount?: number): RateLimitResult {
     const now = Date.now();
     let state = this.states.get(identifier);
 
@@ -136,8 +132,7 @@ class SlidingWindowCounter {
     }
 
     // Check request limit
-    const effectiveLimit =
-      config.requestsPerWindow + (config.burstAllowance ?? 0);
+    const effectiveLimit = config.requestsPerWindow + (config.burstAllowance ?? 0);
 
     if (state.requestCount >= effectiveLimit) {
       // Apply cooldown
@@ -211,13 +206,8 @@ export class RateLimiter {
   private counters: Map<RateLimitScope, SlidingWindowCounter>;
   private defaultTier: string;
 
-  constructor(options?: {
-    tiers?: Record<string, RateLimitTier>;
-    defaultTier?: string;
-  }) {
-    this.tiers = new Map(
-      Object.entries(options?.tiers ?? DEFAULT_RATE_LIMIT_TIERS)
-    );
+  constructor(options?: { tiers?: Record<string, RateLimitTier>; defaultTier?: string }) {
+    this.tiers = new Map(Object.entries(options?.tiers ?? DEFAULT_RATE_LIMIT_TIERS));
     this.defaultTier = options?.defaultTier ?? 'standard';
 
     this.counters = new Map([
@@ -261,7 +251,13 @@ export class RateLimiter {
 
     // Check global limit first
     if (!globalCounter) {
-      return { allowed: false, remaining: 0, limit: 0, resetAt: 0, reason: 'Global rate limiter not initialized' };
+      return {
+        allowed: false,
+        remaining: 0,
+        limit: 0,
+        resetAt: 0,
+        reason: 'Global rate limiter not initialized',
+      };
     }
     const globalResult = globalCounter.check('global', {
       ...config,
@@ -271,22 +267,19 @@ export class RateLimiter {
 
     // Check team limit
     if (options.teamId && teamCounter) {
-      const teamResult = teamCounter
-        .check(options.teamId, config, options.tokenCount);
+      const teamResult = teamCounter.check(options.teamId, config, options.tokenCount);
       if (!teamResult.allowed) return teamResult;
     }
 
     // Check user limit
     if (options.userId && userCounter) {
-      const userResult = userCounter
-        .check(options.userId, config, options.tokenCount);
+      const userResult = userCounter.check(options.userId, config, options.tokenCount);
       if (!userResult.allowed) return userResult;
     }
 
     // Check key limit
     if (options.keyId && keyCounter) {
-      const keyResult = keyCounter
-        .check(options.keyId, config, options.tokenCount);
+      const keyResult = keyCounter.check(options.keyId, config, options.tokenCount);
       if (!keyResult.allowed) return keyResult;
     }
 
@@ -296,15 +289,13 @@ export class RateLimiter {
         ...config,
         requestsPerWindow: Math.ceil(config.requestsPerWindow / 2),
       };
-      const modelResult = modelCounter
-        .check(`${options.model}`, modelConfig, options.tokenCount);
+      const modelResult = modelCounter.check(`${options.model}`, modelConfig, options.tokenCount);
       if (!modelResult.allowed) return modelResult;
     }
 
     // All passed — return the most restrictive remaining
-    const userState = options.userId && userCounter
-      ? userCounter.getState(options.userId)
-      : undefined;
+    const userState =
+      options.userId && userCounter ? userCounter.getState(options.userId) : undefined;
 
     return {
       allowed: true,
@@ -331,7 +322,7 @@ export class RateLimiter {
         userCounter.check(
           options.userId,
           { requestsPerWindow: 0, windowSeconds: 60 },
-          options.tokenCount
+          options.tokenCount,
         );
       }
     }

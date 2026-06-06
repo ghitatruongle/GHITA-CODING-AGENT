@@ -9,7 +9,7 @@ import {
   instrumentCode,
   profileFunction,
   profileExecution,
-  type ProfilerRecord
+  type ProfilerRecord,
 } from '../src/parser/ahpi.js';
 
 const require = createRequire(import.meta.url);
@@ -25,7 +25,7 @@ describe('Automatic Hot-Path Instrumentation (AHPI)', () => {
     it('should record calls and execution times', async () => {
       const name = 'test-func';
       const id = ghitaProfiler.enter(name);
-      
+
       // Delay to simulate some execution time
       await new Promise((resolve) => setTimeout(resolve, 20));
       ghitaProfiler.exit(id);
@@ -39,9 +39,24 @@ describe('Automatic Hot-Path Instrumentation (AHPI)', () => {
     });
 
     it('should classify heatmap colors based on execution thresholds', () => {
-      const fastRecord: ProfilerRecord = { name: 'fast', calls: 1, totalTimeMs: 5, averageTimeMs: 5 };
-      const warningRecord: ProfilerRecord = { name: 'warn', calls: 1, totalTimeMs: 50, averageTimeMs: 50 };
-      const criticalRecord: ProfilerRecord = { name: 'crit', calls: 1, totalTimeMs: 150, averageTimeMs: 150 };
+      const fastRecord: ProfilerRecord = {
+        name: 'fast',
+        calls: 1,
+        totalTimeMs: 5,
+        averageTimeMs: 5,
+      };
+      const warningRecord: ProfilerRecord = {
+        name: 'warn',
+        calls: 1,
+        totalTimeMs: 50,
+        averageTimeMs: 50,
+      };
+      const criticalRecord: ProfilerRecord = {
+        name: 'crit',
+        calls: 1,
+        totalTimeMs: 150,
+        averageTimeMs: 150,
+      };
 
       expect(getHeatmapColor(fastRecord)).toBe('green');
       expect(getHeatmapColor(warningRecord)).toBe('orange');
@@ -62,7 +77,7 @@ describe('Automatic Hot-Path Instrumentation (AHPI)', () => {
         }
       `;
       const instrumented = instrumentCode(code, 'math.js');
-      
+
       expect(instrumented).toContain('__ghita_perf_id');
       expect(instrumented).toContain('globalThis.__ghita_profiler.enter("math.js:calculateSum")');
       expect(instrumented).toContain('globalThis.__ghita_profiler.enter("math.js:computeAsync")');

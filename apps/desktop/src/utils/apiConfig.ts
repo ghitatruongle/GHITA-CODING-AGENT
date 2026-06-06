@@ -58,3 +58,11 @@ export async function saveApiConfig(config: ApiConfigSnapshot): Promise<void> {
     }
   }
 }
+
+export function normalizeApiKeys(entry: Record<string, unknown> | null | undefined): string[] {
+  if (!entry) return [];
+  if (Array.isArray(entry.apiKeys)) return entry.apiKeys.filter(Boolean) as string[];
+  if (typeof entry.apiKeys === 'string' && entry.apiKeys) return [entry.apiKeys];
+  if (typeof entry.apiKey === 'string' && entry.apiKey) return [entry.apiKey];
+  return [];
+}

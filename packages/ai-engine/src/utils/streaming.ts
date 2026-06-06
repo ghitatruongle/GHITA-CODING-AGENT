@@ -7,8 +7,8 @@ import type { AIStreamChunk } from '@ghita/shared';
 import type { ChatMessage } from '../types.js';
 
 export interface SmoothStreamOptions {
-  delayMs?: number;    // Delay in milliseconds per chunk yield
-  chunkSize?: number;  // Number of characters to yield at a time
+  delayMs?: number; // Delay in milliseconds per chunk yield
+  chunkSize?: number; // Number of characters to yield at a time
 }
 
 /**
@@ -16,7 +16,7 @@ export interface SmoothStreamOptions {
  */
 export async function* smoothStream(
   stream: AsyncGenerator<AIStreamChunk>,
-  options?: SmoothStreamOptions
+  options?: SmoothStreamOptions,
 ): AsyncGenerator<AIStreamChunk> {
   const delayMs = options?.delayMs ?? 15;
   const chunkSize = options?.chunkSize ?? 2;
@@ -79,14 +79,15 @@ export class ChunkDetector {
     const averageChunkSize = totalChars / this.totalChunks;
 
     let totalInterval = 0;
-  for (let i = 1; i < this.arrivalTimes.length; i++) {
-    const current = this.arrivalTimes[i];
-    const previous = this.arrivalTimes[i - 1];
-    if (current !== undefined && previous !== undefined) {
-      totalInterval += (current - previous);
+    for (let i = 1; i < this.arrivalTimes.length; i++) {
+      const current = this.arrivalTimes[i];
+      const previous = this.arrivalTimes[i - 1];
+      if (current !== undefined && previous !== undefined) {
+        totalInterval += current - previous;
+      }
     }
-  }
-    const averageIntervalMs = this.arrivalTimes.length > 1 ? totalInterval / (this.arrivalTimes.length - 1) : 0;
+    const averageIntervalMs =
+      this.arrivalTimes.length > 1 ? totalInterval / (this.arrivalTimes.length - 1) : 0;
 
     return {
       totalChunks: this.totalChunks,

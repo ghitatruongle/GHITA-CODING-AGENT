@@ -55,11 +55,19 @@ class InMemoryAgentContext implements AgentMemoryLike {
   }
 
   injectContext(query: string, options: { limit?: number } = {}): string {
-    const tokens = new Set(query.toLowerCase().split(/\W+/).filter((token) => token.length > 2));
+    const tokens = new Set(
+      query
+        .toLowerCase()
+        .split(/\W+/)
+        .filter((token) => token.length > 2),
+    );
     const scored = [...this.entries.values()]
       .map((entry) => {
         const content = entry.content.toLowerCase();
-        const score = [...tokens].reduce((count, token) => count + (content.includes(token) ? 1 : 0), 0);
+        const score = [...tokens].reduce(
+          (count, token) => count + (content.includes(token) ? 1 : 0),
+          0,
+        );
         return { entry, score };
       })
       .filter(({ score }) => score > 0)
@@ -67,7 +75,10 @@ class InMemoryAgentContext implements AgentMemoryLike {
       .slice(0, options.limit ?? 3);
 
     if (scored.length === 0) return '';
-    return ['Relevant memory:', ...scored.map(({ entry }) => `- [${entry.type}] ${entry.content}`)].join('\n');
+    return [
+      'Relevant memory:',
+      ...scored.map(({ entry }) => `- [${entry.type}] ${entry.content}`),
+    ].join('\n');
   }
 }
 
@@ -195,7 +206,14 @@ export function AgentGroups() {
 
   return (
     <div style={{ padding: '24px', overflow: 'auto', height: '100%' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', marginBottom: '20px' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          gap: '16px',
+          marginBottom: '20px',
+        }}
+      >
         <div>
           <h2
             style={{
@@ -225,7 +243,9 @@ export function AgentGroups() {
           <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--accent-secondary)' }}>
             {agents.length}
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{t('agentGroups.registeredAgents')}</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+            {t('agentGroups.registeredAgents')}
+          </div>
         </div>
       </div>
 
@@ -246,7 +266,8 @@ export function AgentGroups() {
             <article
               key={group.id}
               style={{
-                background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.08), rgba(99, 102, 241, 0.08))',
+                background:
+                  'linear-gradient(135deg, rgba(168, 85, 247, 0.08), rgba(99, 102, 241, 0.08))',
                 border: '1px solid var(--border-accent)',
                 borderRadius: 'var(--radius-md)',
                 padding: '18px',
@@ -254,10 +275,19 @@ export function AgentGroups() {
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
                 <div>
-                  <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--accent-secondary)' }}>
+                  <h3
+                    style={{ fontSize: '16px', fontWeight: 700, color: 'var(--accent-secondary)' }}
+                  >
                     {group.name}
                   </h3>
-                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px', lineHeight: 1.5 }}>
+                  <p
+                    style={{
+                      fontSize: '12px',
+                      color: 'var(--text-muted)',
+                      marginTop: '6px',
+                      lineHeight: 1.5,
+                    }}
+                  >
                     {group.description}
                   </p>
                 </div>
@@ -276,7 +306,9 @@ export function AgentGroups() {
                 </span>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '14px' }}>
+              <div
+                style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '14px' }}
+              >
                 {groupAgents.map((agent) => (
                   <AgentRow key={agent.id} agent={agent} />
                 ))}

@@ -41,7 +41,7 @@ const DEFAULT_PERMISSIONS: ToolPermission[] = [
 
 export type PermissionRule = (
   toolName: string,
-  context?: PermissionContext
+  context?: PermissionContext,
 ) => boolean | { level?: PermissionLevel; autoApprove?: boolean } | undefined;
 
 export class PermissionManager {
@@ -68,7 +68,7 @@ export class PermissionManager {
   /** Kiểm tra quyền truy cập tool kèm theo PermissionContext */
   checkPermission(
     toolName: string,
-    context?: PermissionContext
+    context?: PermissionContext,
   ): { level: PermissionLevel; autoApprove: boolean } {
     let level = this.getLevel(toolName);
     let autoApprove = this.isAutoApprove(toolName);
@@ -95,9 +95,9 @@ export class PermissionManager {
 
   /** Trả về danh sách các tool khả dụng cho stepIndex hiện tại */
   filterActiveTools(stepIndex: number): string[] {
-  if (this.stepFilters.has(stepIndex)) {
-    return this.stepFilters.get(stepIndex) ?? [];
-  }
+    if (this.stepFilters.has(stepIndex)) {
+      return this.stepFilters.get(stepIndex) ?? [];
+    }
     return Array.from(this.permissions.keys());
   }
 

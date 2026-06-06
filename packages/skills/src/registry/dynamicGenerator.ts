@@ -15,12 +15,12 @@ export class DynamicSkillGenerator {
    */
   public sanitizeCommand(cmd: string): string {
     let sanitized = cmd;
-    
+
     // Che giấu API keys phổ biến
     sanitized = sanitized.replace(/(sk-[a-zA-Z0-9]{20,})/g, '[REDACTED]');
     sanitized = sanitized.replace(/(ghp_[a-zA-Z0-9]{20,})/g, '[REDACTED]');
     sanitized = sanitized.replace(/(AIzaSy[a-zA-Z0-9_-]{20,})/g, '[REDACTED]');
-    
+
     // Che giấu passwords trong lệnh gán hoặc query parameters
     sanitized = sanitized.replace(/(pass(?:word)?\s*=\s*)([a-zA-Z0-9_.-]+)/gi, '$1[REDACTED]');
     sanitized = sanitized.replace(/(?<!-)(-p\s*)([a-zA-Z0-9_.-]+)/gi, (match, p1, p2) => {
@@ -40,26 +40,29 @@ export class DynamicSkillGenerator {
   public validateSkillSafety(jsonContent: string): { safe: boolean; error?: string } {
     try {
       const parsed = JSON.parse(jsonContent);
-      
+
       // Quét schema cơ bản
       if (!parsed.id || !parsed.name || !parsed.category || !parsed.steps) {
         return { safe: false, error: 'JSON Schema không đúng định dạng agentskills.io' };
       }
 
       // Quét các lệnh độc hại trong steps
-      const steps = parsed.steps as Array<{ toolName: string; inputTemplate?: Record<string, unknown> }>;
-      
+      const steps = parsed.steps as Array<{
+        toolName: string;
+        inputTemplate?: Record<string, unknown>;
+      }>;
+
       const dangerousPatterns = [
-        /\brm\s+-rf\s+\//,         // rm -rf /
-        /\brm\s+-rf\s+\*/,         // rm -rf *
-        /\brm\s+-rf\s+\./,         // rm -rf .
+        /\brm\s+-rf\s+\//, // rm -rf /
+        /\brm\s+-rf\s+\*/, // rm -rf *
+        /\brm\s+-rf\s+\./, // rm -rf .
         /:\{\s*:\s*\|\s*:\s*&\s*\}\s*;\s*:/, // Fork bomb
-        /\bdd\s+if=\/dev\/zero/,   // dd write
-        /\bmkfs\b/,                // Format disk
-        /\bchmod\s+-R\s+777\b/,    // Dangerous permissions
+        /\bdd\s+if=\/dev\/zero/, // dd write
+        /\bmkfs\b/, // Format disk
+        /\bchmod\s+-R\s+777\b/, // Dangerous permissions
         /\bchown\s+-R\b/,
         /wget\s+.*-[a-zA-Z]*O\s*-.*\s*\|\s*(sh|bash|zsh)/, // Blind curl shell exec
-        /curl\s+.*\s*\|\s*(sh|bash|zsh)/
+        /curl\s+.*\s*\|\s*(sh|bash|zsh)/,
       ];
 
       for (const step of steps) {
@@ -67,9 +70,9 @@ export class DynamicSkillGenerator {
           const command = (step.inputTemplate.command || '') as string;
           for (const pattern of dangerousPatterns) {
             if (pattern.test(command)) {
-              return { 
-                safe: false, 
-                error: `Phát hiện lệnh độc hại tiềm ẩn trong Terminal: "${command}"` 
+              return {
+                safe: false,
+                error: `Phát hiện lệnh độc hại tiềm ẩn trong Terminal: "${command}"`,
               };
             }
           }
@@ -85,14 +88,18 @@ export class DynamicSkillGenerator {
   /**
    * Ghi lại chuỗi câu lệnh terminal thành một TaskTrajectory thành công
    */
-  public recordSession(commands: string[], outputs: string, filesChanged: string[]): TaskTrajectory {
+  public recordSession(
+    commands: string[],
+    outputs: string,
+    filesChanged: string[],
+  ): TaskTrajectory {
     const steps: TrajectoryStep[] = commands.map((cmd, idx) => ({
       toolName: 'terminal.run',
       input: { command: this.sanitizeCommand(cmd) },
       output: idx === commands.length - 1 ? outputs : 'Success',
       success: true,
       durationMs: 100,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     }));
 
     return {
@@ -102,7 +109,7 @@ export class DynamicSkillGenerator {
       totalDurationMs: steps.length * 100,
       success: true,
       startTime: Date.now() - steps.length * 100,
-      endTime: Date.now()
+      endTime: Date.now(),
     };
   }
 
@@ -114,14 +121,14 @@ export class DynamicSkillGenerator {
     _outputs: string,
     name: string,
     description: string,
-    hub: SkillHub
+    hub: SkillHub,
   ): Promise<SkillTemplate> {
-    const sanitizedCommands = commands.map(cmd => this.sanitizeCommand(cmd));
+    const sanitizedCommands = commands.map((cmd) => this.sanitizeCommand(cmd));
     const safeId = `auto.terminal.${name.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
 
-    const steps = sanitizedCommands.map(cmd => ({
+    const steps = sanitizedCommands.map((cmd) => ({
       toolName: 'terminal.run',
-      inputTemplate: { command: cmd }
+      inputTemplate: { command: cmd },
     }));
 
     const skillTemplate: SkillTemplate = {
@@ -133,7 +140,7 @@ export class DynamicSkillGenerator {
       version: '0.1.0',
       createdAt: Date.now(),
       sourceTrajectoryIds: [`trajectory.${Date.now().toString(36)}`],
-      steps
+      steps,
     };
 
     const jsonContent = JSON.stringify(skillTemplate, null, 2);
@@ -160,28 +167,28 @@ export function createSkillsSyncCommand(hub: SkillHub): SlashCommand {
     usage: '/skills-sync',
     execute: async () => {
       try {
-      const { exec } = await import('node:child_process');
-      const { promisify } = await import('node:util');
+        const { exec } = await import('node:child_process');
+        const { promisify } = await import('node:util');
         const execAsync = promisify(exec);
 
-        const skills = hub.loadSkills().filter(s => s.id.startsWith('auto.'));
+        const skills = hub.loadSkills().filter((s) => s.id.startsWith('auto.'));
         if (skills.length === 0) {
           return '[SKILLS-SYNC] Không tìm thấy skill động tự tạo nào cần đồng bộ.';
         }
 
         // Lấy hubPath từ hub
         const hubPath = (hub as unknown as { hubPath: string }).hubPath;
-        
+
         // Thực thi các lệnh git đồng bộ
         await execAsync(`git add "${hubPath}/*.json"`);
         const { stdout } = await execAsync('git status --porcelain');
-        
+
         if (!stdout.trim()) {
           return '[SKILLS-SYNC] Toàn bộ các skill động cục bộ đã được đồng bộ hóa từ trước.';
         }
 
         await execAsync('git commit -m "sync: push dynamically generated skills"');
-        
+
         // Thử git push, nếu lỗi (như chưa set remote) thì bắt exception
         try {
           await execAsync('git push');
@@ -189,9 +196,9 @@ export function createSkillsSyncCommand(hub: SkillHub): SlashCommand {
         } catch {
           return `[SKILLS-SYNC] Đã commit ${skills.length} skills động vào Local Git repository.\n(Lưu ý: Không thể push lên remote, vui lòng cấu hình "git remote add origin" trước).`;
         }
-    } catch (err: unknown) {
-      return `[SKILLS-SYNC] Lỗi trong quá trình đồng bộ Git: ${(err as Error)?.message || String(err)}`;
+      } catch (err: unknown) {
+        return `[SKILLS-SYNC] Lỗi trong quá trình đồng bộ Git: ${(err as Error)?.message || String(err)}`;
       }
-    }
+    },
   };
 }

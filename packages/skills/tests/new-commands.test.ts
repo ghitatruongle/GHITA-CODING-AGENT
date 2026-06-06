@@ -8,8 +8,17 @@ describe('New Slash Commands', () => {
   registry.registerMany(commands);
 
   const newTriggers = [
-    '/test', '/format', '/lint', '/explain', '/refactor',
-    '/optimize', '/doc', '/security', '/deps', '/migrate', '/benchmark',
+    '/test',
+    '/format',
+    '/lint',
+    '/explain',
+    '/refactor',
+    '/optimize',
+    '/doc',
+    '/security',
+    '/deps',
+    '/migrate',
+    '/benchmark',
   ];
 
   describe('Registration', () => {

@@ -1,1 +1,34 @@
-{"rustc":8891013984288978370,"features":"[\"config-json\", \"default\"]","declared_features":"[\"codegen\", \"config-json\", \"config-json5\", \"config-toml\", \"default\", \"isolation\", \"quote\", \"tauri-codegen\"]","target":1006236803848883740,"profile":2225463790103693989,"path":18371548636072016195,"deps":[[1777850508716973404,"tauri_winres",false,12462089575472020633],[4824857623768494398,"cargo_toml",false,3059392172832686455],[6635477322540433457,"tauri_utils",false,9637701440305983960],[6913375703034175521,"schemars",false,3926484740315525455],[7170110829644101142,"json_patch",false,15384021077653193191],[9293239362693504808,"glob",false,10409812120776664605],[9680020106200215617,"semver",false,15497953724652876437],[12478428894219133322,"anyhow",false,19359883548339549],[13077543566650298139,"heck",false,13412710735956058147],[13548984313718623784,"serde",false,11278685482312659220],[13795362694956882968,"serde_json",false,15493299078553435940],[15622660310229662834,"walkdir",false,5394805186826260473],[16928111194414003569,"dirs",false,12067198161485754580]],"local":[{"CheckDepInfo":{"dep_info":"debug\\.fingerprint\\tauri-build-8d9631320b08c1b6\\dep-lib-tauri_build","checksum":false}}],"rustflags":[],"config":8247474407144887393,"compile_kind":0}
+{
+  "rustc": 8891013984288978370,
+  "features": "[\"config-json\", \"default\"]",
+  "declared_features": "[\"codegen\", \"config-json\", \"config-json5\", \"config-toml\", \"default\", \"isolation\", \"quote\", \"tauri-codegen\"]",
+  "target": 1006236803848883740,
+  "profile": 2225463790103693989,
+  "path": 18371548636072016195,
+  "deps": [
+    [1777850508716973404, "tauri_winres", false, 12462089575472020633],
+    [4824857623768494398, "cargo_toml", false, 3059392172832686455],
+    [6635477322540433457, "tauri_utils", false, 9637701440305983960],
+    [6913375703034175521, "schemars", false, 3926484740315525455],
+    [7170110829644101142, "json_patch", false, 15384021077653193191],
+    [9293239362693504808, "glob", false, 10409812120776664605],
+    [9680020106200215617, "semver", false, 15497953724652876437],
+    [12478428894219133322, "anyhow", false, 19359883548339549],
+    [13077543566650298139, "heck", false, 13412710735956058147],
+    [13548984313718623784, "serde", false, 11278685482312659220],
+    [13795362694956882968, "serde_json", false, 15493299078553435940],
+    [15622660310229662834, "walkdir", false, 5394805186826260473],
+    [16928111194414003569, "dirs", false, 12067198161485754580]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "debug\\.fingerprint\\tauri-build-8d9631320b08c1b6\\dep-lib-tauri_build",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 8247474407144887393,
+  "compile_kind": 0
+}

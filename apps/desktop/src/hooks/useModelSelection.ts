@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { loadApiConfig } from '../utils/apiConfig';
+import { loadApiConfig, normalizeApiKeys } from '../utils/apiConfig';
+import { formatModelLabel as formatModelLabelUtil } from '../utils/modelLabel';
 
 export type ProviderId =
   | 'openai'
@@ -25,33 +26,37 @@ export type ProviderId =
   | 'voyage'
   | 'ai21'
   | 'sambanova'
-  | 'novita';
+  | 'novita'
+  | 'opencode-zen'
+  | 'nvidia-nim';
 
 export const PROVIDER_LABELS: Record<ProviderId, { name: string; icon: string }> = {
-  openai:          { name: 'OpenAI',                icon: '🟢' },
-  anthropic:       { name: 'Anthropic',             icon: '🟣' },
-  google:          { name: 'Google Gemini',         icon: '🔵' },
-  ollama:          { name: 'Ollama (Local)',         icon: '🦙' },
-  custom:          { name: 'Custom Provider',       icon: '⚙️' },
-  opengateway:     { name: 'Gitlawb Opengateway',   icon: '🌐' },
-  mimo:            { name: 'Xiaomi MiMo',           icon: '🤖' },
-  openrouter:      { name: 'OpenRouter',            icon: '🔀' },
-  deepseek:        { name: 'DeepSeek',              icon: '🔍' },
-  groq:            { name: 'Groq',                  icon: '⚡' },
-  mistral:         { name: 'Mistral',               icon: '🌊' },
-  hicap:           { name: 'Hicap',                 icon: '🔗' },
-  'github-models': { name: 'GitHub Models',         icon: '🐙' },
-  cerebras:        { name: 'Cerebras',              icon: '⚡' },
-  together:        { name: 'Together AI',           icon: '🤝' },
-  fireworks:       { name: 'Fireworks AI',          icon: '🎆' },
-  cohere:          { name: 'Cohere',                icon: '🔷' },
-  xai:             { name: 'xAI (Grok)',            icon: '❌' },
-  replicate:       { name: 'Replicate',             icon: '🔁' },
-  perplexity:      { name: 'Perplexity',            icon: '🔎' },
-  voyage:          { name: 'Voyage AI',             icon: '🧭' },
-  ai21:            { name: 'AI21 Labs',             icon: '🧪' },
-  sambanova:       { name: 'SambaNova',             icon: '🔥' },
-  novita:          { name: 'Novita AI',             icon: '🌟' },
+  openai: { name: 'OpenAI', icon: '🟢' },
+  anthropic: { name: 'Anthropic', icon: '🟣' },
+  google: { name: 'Google Gemini', icon: '🔵' },
+  ollama: { name: 'Ollama (Local)', icon: '🦙' },
+  custom: { name: 'Custom Provider', icon: '⚙️' },
+  opengateway: { name: 'Gitlawb Opengateway', icon: '🌐' },
+  mimo: { name: 'Xiaomi MiMo', icon: '🤖' },
+  openrouter: { name: 'OpenRouter', icon: '🔀' },
+  deepseek: { name: 'DeepSeek', icon: '🔍' },
+  groq: { name: 'Groq', icon: '⚡' },
+  mistral: { name: 'Mistral', icon: '🌊' },
+  hicap: { name: 'Hicap', icon: '🔗' },
+  'github-models': { name: 'GitHub Models', icon: '🐙' },
+  cerebras: { name: 'Cerebras', icon: '⚡' },
+  together: { name: 'Together AI', icon: '🤝' },
+  fireworks: { name: 'Fireworks AI', icon: '🎆' },
+  cohere: { name: 'Cohere', icon: '🔷' },
+  xai: { name: 'xAI (Grok)', icon: '❌' },
+  replicate: { name: 'Replicate', icon: '🔁' },
+  perplexity: { name: 'Perplexity', icon: '🔎' },
+  voyage: { name: 'Voyage AI', icon: '🧭' },
+  ai21: { name: 'AI21 Labs', icon: '🧪' },
+  sambanova: { name: 'SambaNova', icon: '🔥' },
+  novita: { name: 'Novita AI', icon: '🌟' },
+  'opencode-zen': { name: 'OpenCode Zen', icon: '🧘' },
+  'nvidia-nim': { name: 'NVIDIA NIM', icon: '🟢' },
 };
 
 export interface DynamicModelOption {
@@ -61,34 +66,38 @@ export interface DynamicModelOption {
   model: string;
 }
 
-function buildModelOptions(parsed: Record<string, Record<string, unknown>> = {}): DynamicModelOption[] {
+function buildModelOptions(
+  parsed: Record<string, Record<string, unknown>> = {},
+): DynamicModelOption[] {
   try {
     const options: DynamicModelOption[] = [];
     for (const [id, entry] of Object.entries(parsed)) {
       const pid = id as ProviderId;
       if (!entry || !entry['active']) continue;
 
-      const apiKeys = Array.isArray(entry['apiKeys'])
-        ? (entry['apiKeys'] as string[])
-        : typeof entry['apiKey'] === 'string' && entry['apiKey']
-          ? [entry['apiKey'] as string]
-          : [];
+      const apiKeys = normalizeApiKeys(entry);
 
-      if (pid !== 'ollama' && pid !== 'opengateway' && apiKeys.length === 0) continue;
+      if (
+        pid !== 'ollama' &&
+        pid !== 'opencode-zen' &&
+        apiKeys.length === 0
+      )
+        continue;
 
       const meta = PROVIDER_LABELS[pid] || { name: pid, icon: '🔷' };
       const availableModels = entry['availableModels'] as string[] | undefined;
       const selectedModel = entry['selectedModel'] as string | undefined;
-      const models = availableModels && availableModels.length > 0
-        ? availableModels
-        : selectedModel
-          ? [selectedModel]
-          : [];
+      const models =
+        availableModels && availableModels.length > 0
+          ? availableModels
+          : selectedModel
+            ? [selectedModel]
+            : [];
 
       for (const model of models) {
         options.push({
           value: `${pid}/${model}`,
-          label: `${meta.icon} ${meta.name} — ${model}`,
+          label: `${meta.icon} ${meta.name} — ${formatModelLabelUtil(pid, model)}`,
           providerId: pid,
           model,
         });
@@ -132,8 +141,13 @@ export function useModelSelection() {
       }
     };
     void refresh();
-    const interval = setInterval(() => { void refresh(); }, 30000);
-    return () => { disposed = true; clearInterval(interval); };
+    const interval = setInterval(() => {
+      void refresh();
+    }, 30000);
+    return () => {
+      disposed = true;
+      clearInterval(interval);
+    };
   }, [provider]);
 
   const selectedProviderId = (() => {

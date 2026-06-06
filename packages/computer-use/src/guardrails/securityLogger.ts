@@ -84,9 +84,9 @@ export class SecurityLogger {
     if (!this.db) this.init();
     if (!this.db) throw new Error('Database not initialized');
 
-    const rows = this.db.prepare(
-      'SELECT * FROM security_logs ORDER BY timestamp DESC LIMIT ?'
-    ).all(limit) as Record<string, unknown>[];
+    const rows = this.db
+      .prepare('SELECT * FROM security_logs ORDER BY timestamp DESC LIMIT ?')
+      .all(limit) as Record<string, unknown>[];
 
     return rows.map(this.rowToEntry);
   }
@@ -98,9 +98,11 @@ export class SecurityLogger {
     if (!this.db) this.init();
     if (!this.db) throw new Error('Database not initialized');
 
-    const rows = this.db.prepare(
-      'SELECT * FROM security_logs WHERE safe = 0 AND (approved = 0 OR approved IS NULL) ORDER BY timestamp DESC LIMIT ?'
-    ).all(limit) as Record<string, unknown>[];
+    const rows = this.db
+      .prepare(
+        'SELECT * FROM security_logs WHERE safe = 0 AND (approved = 0 OR approved IS NULL) ORDER BY timestamp DESC LIMIT ?',
+      )
+      .all(limit) as Record<string, unknown>[];
 
     return rows.map(this.rowToEntry);
   }
@@ -112,14 +114,14 @@ export class SecurityLogger {
     if (!this.db) this.init();
     if (!this.db) throw new Error('Database not initialized');
 
-    const rows = this.db.prepare(
-      'SELECT threats_json FROM security_logs WHERE safe = 0'
-    ).all() as Record<string, unknown>[];
+    const rows = this.db
+      .prepare('SELECT threats_json FROM security_logs WHERE safe = 0')
+      .all() as Record<string, unknown>[];
 
     const stats: Record<string, number> = {};
     for (const row of rows) {
       try {
-	const threats: ThreatDetection[] = JSON.parse(String(row.threats_json));
+        const threats: ThreatDetection[] = JSON.parse(String(row.threats_json));
         for (const t of threats) {
           stats[t.type] = (stats[t.type] || 0) + 1;
         }
@@ -138,15 +140,15 @@ export class SecurityLogger {
     if (!this.db) this.init();
     if (!this.db) throw new Error('Database not initialized');
 
-    const total = this.db.prepare(
-      'SELECT COUNT(*) as count FROM security_logs'
-    ).get() as { count: number };
+    const total = this.db.prepare('SELECT COUNT(*) as count FROM security_logs').get() as {
+      count: number;
+    };
 
     if (total.count === 0) return -1;
 
-    const blocked = this.db.prepare(
-      'SELECT COUNT(*) as count FROM security_logs WHERE safe = 0'
-    ).get() as { count: number };
+    const blocked = this.db
+      .prepare('SELECT COUNT(*) as count FROM security_logs WHERE safe = 0')
+      .get() as { count: number };
 
     return blocked.count / total.count;
   }
@@ -159,9 +161,7 @@ export class SecurityLogger {
     if (!this.db) throw new Error('Database not initialized');
 
     const cutoff = new Date(Date.now() - days * 86400000).toISOString();
-    const result = this.db.prepare(
-      'DELETE FROM security_logs WHERE timestamp < ?'
-    ).run(cutoff);
+    const result = this.db.prepare('DELETE FROM security_logs WHERE timestamp < ?').run(cutoff);
 
     return result.changes;
   }
@@ -213,7 +213,7 @@ export class SecurityLogger {
       },
       approved,
       timestamp: new Date(row.timestamp as string),
-	source: row.source as "local" | "remote-olt",
+      source: row.source as 'local' | 'remote-olt',
     };
   }
 }

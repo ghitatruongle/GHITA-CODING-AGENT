@@ -4,8 +4,8 @@
 // ==============================================================================
 
 export interface SlashCommandFlag {
-  name: string;         // e.g. '--verbose'
-  short?: string;       // e.g. '-v'
+  name: string; // e.g. '--verbose'
+  short?: string; // e.g. '-v'
   description: string;
   type: 'boolean' | 'string';
   required?: boolean;
@@ -108,7 +108,10 @@ export class SlashCommandRegistry {
   }
 
   /** Navigate history */
-  navigateHistory(currentIndex: number, direction: 'up' | 'down'): { entry: string; index: number } | null {
+  navigateHistory(
+    currentIndex: number,
+    direction: 'up' | 'down',
+  ): { entry: string; index: number } | null {
     if (this.history.length === 0) return null;
     let newIndex: number;
     if (direction === 'up') {
@@ -138,50 +141,56 @@ export class SlashCommandRegistry {
     const tokens = this.tokenize(input);
     let i = 0;
 
-while (i < tokens.length) {
-  const token = tokens[i];
-  if (!token) { i++; continue; }
-
-  if (token.startsWith('--')) {
-    // Long flag
-    const eqIdx = token.indexOf('=');
-    if (eqIdx > 0) {
-      // --flag=value
-      const name = token.substring(2, eqIdx);
-      result.flags[name] = token.substring(eqIdx + 1);
-    } else {
-      const name = token.substring(2);
-      const flagDef = flags?.find((f) => f.name === `--${name}`);
-      if (flagDef?.type === 'boolean') {
-        result.flags[name] = true;
-      } else if (i + 1 < tokens.length && !tokens[i + 1]?.startsWith('-')) {
-        const nextToken = tokens[i + 1];
-        if (nextToken) result.flags[name] = nextToken;
+    while (i < tokens.length) {
+      const token = tokens[i];
+      if (!token) {
         i++;
-      } else {
-        result.flags[name] = true;
+        continue;
       }
-    }
-  } else if (token.startsWith('-') && token.length === 2) {
-    // Short flag
-    const short = token[1];
-    if (!short) { i++; continue; }
-    const flagDef = flags?.find((f) => f.short === `-${short}`);
-    const name = flagDef?.name?.substring(2) ?? short;
-    if (flagDef?.type === 'boolean') {
-      result.flags[name] = true;
-    } else if (i + 1 < tokens.length && !tokens[i + 1]?.startsWith('-')) {
-      const nextToken = tokens[i + 1];
-      if (nextToken) result.flags[name] = nextToken;
+
+      if (token.startsWith('--')) {
+        // Long flag
+        const eqIdx = token.indexOf('=');
+        if (eqIdx > 0) {
+          // --flag=value
+          const name = token.substring(2, eqIdx);
+          result.flags[name] = token.substring(eqIdx + 1);
+        } else {
+          const name = token.substring(2);
+          const flagDef = flags?.find((f) => f.name === `--${name}`);
+          if (flagDef?.type === 'boolean') {
+            result.flags[name] = true;
+          } else if (i + 1 < tokens.length && !tokens[i + 1]?.startsWith('-')) {
+            const nextToken = tokens[i + 1];
+            if (nextToken) result.flags[name] = nextToken;
+            i++;
+          } else {
+            result.flags[name] = true;
+          }
+        }
+      } else if (token.startsWith('-') && token.length === 2) {
+        // Short flag
+        const short = token[1];
+        if (!short) {
+          i++;
+          continue;
+        }
+        const flagDef = flags?.find((f) => f.short === `-${short}`);
+        const name = flagDef?.name?.substring(2) ?? short;
+        if (flagDef?.type === 'boolean') {
+          result.flags[name] = true;
+        } else if (i + 1 < tokens.length && !tokens[i + 1]?.startsWith('-')) {
+          const nextToken = tokens[i + 1];
+          if (nextToken) result.flags[name] = nextToken;
+          i++;
+        } else {
+          result.flags[name] = true;
+        }
+      } else {
+        result.positional.push(token);
+      }
       i++;
-    } else {
-      result.flags[name] = true;
     }
-  } else {
-    result.positional.push(token);
-  }
-  i++;
-}
 
     return result;
   }
@@ -194,7 +203,7 @@ while (i < tokens.length) {
 
     for (let i = 0; i < input.length; i++) {
       const ch = input[i];
-    if (!ch) continue;
+      if (!ch) continue;
 
       if (inQuote) {
         if (ch === quoteChar) {

@@ -28,15 +28,21 @@ export function useAIChat(options?: {
  * Will emit a console.warn if called at runtime.
  */
 export function WorkflowVisualizer(_props: {
-  steps: Array<{ id: string; name: string; status: 'pending' | 'running' | 'completed' | 'failed' }>;
+  steps: Array<{
+    id: string;
+    name: string;
+    status: 'pending' | 'running' | 'completed' | 'failed';
+  }>;
   currentStepId?: string;
 }) {
-  console.warn('[WorkflowVisualizer] This is a stub. Use a real workflow visualization component instead.');
+  console.warn(
+    '[WorkflowVisualizer] This is a stub. Use a real workflow visualization component instead.',
+  );
   return {
     type: 'div',
     props: {
       className: 'workflow-visualizer',
       children: 'Workflow Steps Visualizer Rendered',
-    }
+    },
   };
 }

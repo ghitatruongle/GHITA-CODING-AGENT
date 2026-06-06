@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Orchestrator } from '../../packages/ai-engine/src/orchestrator.js';
-import type { OrchestratorConfig, ChatMessage, ChatResponse } from '../../packages/ai-engine/src/types.js';
+import type {
+  OrchestratorConfig,
+  ChatMessage,
+  ChatResponse,
+} from '../../packages/ai-engine/src/types.js';
 
 // Mock các class providers
 const mockChatFn = vi.fn();
@@ -52,7 +56,7 @@ describe('Orchestrator (AI Multi-Provider Coordinator)', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     config = {
       providers: [
         { type: 'openai', name: 'OpenAI', apiKey: 'op-123' },
@@ -95,7 +99,7 @@ describe('Orchestrator (AI Multi-Provider Coordinator)', () => {
 
     it('nên định tuyến chính xác theo agentRole (Routing)', async () => {
       const orchestrator = new Orchestrator(config);
-      
+
       const mockResult: ChatResponse = {
         content: 'resolved content',
         model: 'model',
@@ -106,7 +110,7 @@ describe('Orchestrator (AI Multi-Provider Coordinator)', () => {
 
       // Thử với role 'researcher' -> nên gọi Anthropic
       await orchestrator.chat([{ role: 'user', content: 'test' }], { agentRole: 'researcher' });
-      
+
       // Kiểm tra xem Anthropic provider có được resolve và gọi chat không
       // Ở đây mockChatFn được dùng chung, chúng ta có thể kiểm tra provider được chọn thông qua registry
       const resolved = (orchestrator as any).resolveProvider(undefined, 'researcher');
@@ -132,11 +136,11 @@ describe('Orchestrator (AI Multi-Provider Coordinator)', () => {
         provider: 'openai',
         finishReason: 'stop',
       };
-      
+
       mockChatFn.mockResolvedValueOnce(expectedResponse);
 
       const response = await orchestrator.chat([{ role: 'user', content: 'hello' }]);
-      
+
       expect(response).toEqual(expectedResponse);
       expect(mockChatFn).toHaveBeenCalledTimes(1);
     });
@@ -175,7 +179,7 @@ describe('Orchestrator (AI Multi-Provider Coordinator)', () => {
       mockChatFn
         .mockRejectedValueOnce(new Error('OpenAI Down 1')) // OpenAI trial 1
         .mockRejectedValueOnce(new Error('OpenAI Down 2')) // OpenAI trial 2 (retry)
-        .mockResolvedValueOnce(fallbackResponse);          // Anthropic (fallback)
+        .mockResolvedValueOnce(fallbackResponse); // Anthropic (fallback)
 
       const response = await orchestrator.chat([{ role: 'user', content: 'hello' }]);
 
@@ -192,9 +196,9 @@ describe('Orchestrator (AI Multi-Provider Coordinator)', () => {
         .mockRejectedValueOnce(new Error('OpenAI Fatal Error')) // OpenAI trial 2
         .mockRejectedValueOnce(new Error('Anthropic Fatal Error')); // Anthropic fallback
 
-      await expect(
-        orchestrator.chat([{ role: 'user', content: 'hello' }])
-      ).rejects.toThrow('OpenAI Fatal Error'); // Trả về lỗi của primary provider
+      await expect(orchestrator.chat([{ role: 'user', content: 'hello' }])).rejects.toThrow(
+        'OpenAI Fatal Error',
+      ); // Trả về lỗi của primary provider
     });
   });
 
@@ -202,7 +206,7 @@ describe('Orchestrator (AI Multi-Provider Coordinator)', () => {
     it('nên trả về các chunks từ primary provider nếu hoạt động bình thường', async () => {
       const orchestrator = new Orchestrator(config);
       const stream = orchestrator.chatStream([{ role: 'user', content: 'hello' }]);
-      
+
       const chunks = [];
       for await (const chunk of stream) {
         chunks.push(chunk);
@@ -215,7 +219,7 @@ describe('Orchestrator (AI Multi-Provider Coordinator)', () => {
 
     it('nên tự động chuyển đổi sang provider dự phòng khi stream của primary provider bị lỗi ngay từ đầu', async () => {
       const orchestrator = new Orchestrator(config);
-      
+
       // Mock class OpenAI chatStream ném ra lỗi
       const openaiProvider = orchestrator.getRegistry().get('openai') as any;
       openaiProvider.chatStream = async function* () {
@@ -223,7 +227,7 @@ describe('Orchestrator (AI Multi-Provider Coordinator)', () => {
       };
 
       const stream = orchestrator.chatStream([{ role: 'user', content: 'hello' }]);
-      
+
       const chunks = [];
       for await (const chunk of stream) {
         chunks.push(chunk);

@@ -27,12 +27,14 @@ group/
 ## Cách sử dụng
 
 ### Giám đốc tạo phiên chat:
+
 ```bash
 cd "D:\ghita coding agent\group"
 bash create-chat.sh
 ```
 
 ### Agent khác tham gia:
+
 ```bash
 bash join-chat.sh developer
 bash join-chat.sh reviewer
@@ -41,6 +43,7 @@ bash join-chat.sh pm
 ```
 
 ### Hoặc tạo file thủ công:
+
 ```bash
 cd Chat_2026-05-31_14-30-45
 echo "[14:31:00] Developer | Dev:" > developer.txt

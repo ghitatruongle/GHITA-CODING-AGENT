@@ -114,7 +114,9 @@ function windowlessSetTimeout(callback: () => void, ms: number): ReturnType<type
   return setTimeout(callback, ms);
 }
 
-export function createNodeSkillAdapters(options: NodeSkillAdapterOptions = {}): SkillRuntimeAdapters {
+export function createNodeSkillAdapters(
+  options: NodeSkillAdapterOptions = {},
+): SkillRuntimeAdapters {
   const defaultCwd = options.defaultCwd ? resolve(options.defaultCwd) : process.cwd();
   const maxOutputBytes = options.maxOutputBytes ?? DEFAULT_MAX_OUTPUT_BYTES;
 
@@ -158,16 +160,14 @@ export function createNodeSkillAdapters(options: NodeSkillAdapterOptions = {}): 
       openApp: async (target, args = []) => {
         const safeTarget = escapeShellArg(target);
         const safeArgs = args.map(escapeShellArg).join(' ');
-        const command = platform === 'win32'
-          ? `start "" ${safeTarget} ${safeArgs}`
-          : `${safeTarget} ${safeArgs}`;
+        const command =
+          platform === 'win32' ? `start "" ${safeTarget} ${safeArgs}` : `${safeTarget} ${safeArgs}`;
         await runProcess(command, { cwd: defaultCwd, timeoutMs: 5000, maxOutputBytes });
       },
       closeApp: async (target) => {
         const safeTarget = escapeShellArg(target);
-        const command = platform === 'win32'
-          ? `taskkill /IM ${safeTarget} /T`
-          : `pkill -f ${safeTarget}`;
+        const command =
+          platform === 'win32' ? `taskkill /IM ${safeTarget} /T` : `pkill -f ${safeTarget}`;
         await runProcess(command, { cwd: defaultCwd, timeoutMs: 5000, maxOutputBytes });
       },
     },
@@ -202,5 +202,10 @@ export { DynamicSkillGenerator, createSkillsSyncCommand } from './registry/dynam
 export { SkillCatalogClient } from './marketplace/catalog.js';
 export { SkillInstaller } from './marketplace/installer.js';
 export { SkillRatingsStore } from './marketplace/ratings.js';
-export type { SkillManifest, InstalledSkill, SkillCatalog, CatalogFilters, SkillRating } from './marketplace/types.js';
-
+export type {
+  SkillManifest,
+  InstalledSkill,
+  SkillCatalog,
+  CatalogFilters,
+  SkillRating,
+} from './marketplace/types.js';

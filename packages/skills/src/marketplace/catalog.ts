@@ -6,7 +6,8 @@
 import type { SkillManifest, SkillCatalog, CatalogFilters } from './types.js';
 import { getDefaultCatalog } from './defaultCatalog.js';
 
-const DEFAULT_CATALOG_URL = 'https://raw.githubusercontent.com/ghita/skills-catalog/main/catalog.json';
+const DEFAULT_CATALOG_URL =
+  'https://raw.githubusercontent.com/ghita/skills-catalog/main/catalog.json';
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 export class SkillCatalogClient {
@@ -73,11 +74,11 @@ export class SkillCatalogClient {
       results = results.filter((s) => s.category === filters.category);
     }
     if (filters?.minRating) {
-    results = results.filter((s) => s.rating >= (filters.minRating ?? 0));
-  }
-  if (filters?.tags && filters.tags.length > 0) {
-    const filterTags = filters.tags;
-    results = results.filter((s) => filterTags.some((t) => s.tags.includes(t)));
+      results = results.filter((s) => s.rating >= (filters.minRating ?? 0));
+    }
+    if (filters?.tags && filters.tags.length > 0) {
+      const filterTags = filters.tags;
+      results = results.filter((s) => filterTags.some((t) => s.tags.includes(t)));
     }
 
     // Sort

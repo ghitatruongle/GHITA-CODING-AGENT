@@ -78,7 +78,7 @@ describe('Sandbox Orphan Cleanup Utility', () => {
     // Create an old directory in sandbox
     const oldSubDir = path.join(sandboxDir, 'old-dir');
     fs.mkdirSync(oldSubDir, { recursive: true });
-    
+
     const fileInSubDir = path.join(oldSubDir, 'some-file.txt');
     fs.writeFileSync(fileInSubDir, 'inner file content', 'utf-8');
 

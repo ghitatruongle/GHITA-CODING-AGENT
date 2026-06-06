@@ -9,19 +9,32 @@ import type { RoutingStrategy, RoutingDecision, RoutingConfig, ProviderMetrics }
 // Pre-assigned quality scores by model family
 const QUALITY_SCORES: Record<string, number> = {
   // Top tier
-  'gpt-4o': 0.95, 'claude-opus': 0.95, 'gemini-2.0-flash': 0.90,
-  'claude-sonnet-4': 0.92, 'claude-sonnet': 0.92,
+  'gpt-4o': 0.95,
+  'claude-opus': 0.95,
+  'gemini-2.0-flash': 0.9,
+  'claude-sonnet-4': 0.92,
+  'claude-sonnet': 0.92,
   // High tier
-  'gpt-4-turbo': 0.90, 'claude-3-5-haiku': 0.80, 'claude-3-opus': 0.93,
-  'gemini-1.5-pro': 0.88, 'deepseek-chat': 0.82,
+  'gpt-4-turbo': 0.9,
+  'claude-3-5-haiku': 0.8,
+  'claude-3-opus': 0.93,
+  'gemini-1.5-pro': 0.88,
+  'deepseek-chat': 0.82,
   // Mid tier
-  'gpt-4o-mini': 0.80, 'gemini-1.5-flash': 0.78,
-  'mistral-large': 0.82, 'command-r-plus': 0.80, 'grok-beta': 0.80,
+  'gpt-4o-mini': 0.8,
+  'gemini-1.5-flash': 0.78,
+  'mistral-large': 0.82,
+  'command-r-plus': 0.8,
+  'grok-beta': 0.8,
   // Fast/cheap
-  'gpt-3.5-turbo': 0.70, 'llama-3.1-70b': 0.75, 'llama-3.1-8b': 0.60,
-  'mistral-medium': 0.72, 'mixtral-8x7b': 0.72,
+  'gpt-3.5-turbo': 0.7,
+  'llama-3.1-70b': 0.75,
+  'llama-3.1-8b': 0.6,
+  'mistral-medium': 0.72,
+  'mixtral-8x7b': 0.72,
   // Specialized
-  'jamba-1.5-large': 0.78, 'voyage-3': 0.70,
+  'jamba-1.5-large': 0.78,
+  'voyage-3': 0.7,
 };
 
 export class SmartRouter {
@@ -33,7 +46,9 @@ export class SmartRouter {
   }
 
   /** Route a request to the best provider/model */
-  route(availableProviders: Array<{ type: AIProviderType; model: string }>): RoutingDecision | null {
+  route(
+    availableProviders: Array<{ type: AIProviderType; model: string }>,
+  ): RoutingDecision | null {
     if (availableProviders.length === 0) return null;
 
     const scored = availableProviders.map((p) => {
@@ -79,18 +94,24 @@ export class SmartRouter {
       case 'balanced':
       default:
         sorted = pool.sort((a, b) => {
-          const scoreA = a.quality * 0.4 + (1 - this.normalizeCost(a.cost, pool)) * 0.3 + (1 - this.normalizeLatency(a.latency, pool)) * 0.3;
-          const scoreB = b.quality * 0.4 + (1 - this.normalizeCost(b.cost, pool)) * 0.3 + (1 - this.normalizeLatency(b.latency, pool)) * 0.3;
+          const scoreA =
+            a.quality * 0.4 +
+            (1 - this.normalizeCost(a.cost, pool)) * 0.3 +
+            (1 - this.normalizeLatency(a.latency, pool)) * 0.3;
+          const scoreB =
+            b.quality * 0.4 +
+            (1 - this.normalizeCost(b.cost, pool)) * 0.3 +
+            (1 - this.normalizeLatency(b.latency, pool)) * 0.3;
           return scoreB - scoreA;
         });
         reason = 'Balanced (quality 40%, cost 30%, latency 30%)';
         break;
     }
 
-  const best = sorted[0];
-  if (!best) return null;
-  return {
-    provider: best.provider,
+    const best = sorted[0];
+    if (!best) return null;
+    return {
+      provider: best.provider,
       model: best.model,
       reason,
       estimatedCost: best.cost,
@@ -100,7 +121,13 @@ export class SmartRouter {
   }
 
   /** Update metrics after a request */
-  updateMetrics(provider: AIProviderType, model: string, latencyMs: number, success: boolean, cost: number): void {
+  updateMetrics(
+    provider: AIProviderType,
+    model: string,
+    latencyMs: number,
+    success: boolean,
+    cost: number,
+  ): void {
     const key = `${provider}:${model}`;
     const existing = this.metrics.get(key);
 
@@ -109,8 +136,8 @@ export class SmartRouter {
       existing.avgLatencyMs = (existing.avgLatencyMs + latencyMs) / n;
       existing.avgCostPer1kTokens = (existing.avgCostPer1kTokens + cost) / n;
       existing.successRate = success
-        ? (existing.successRate * 0.9 + 0.1)
-        : (existing.successRate * 0.9);
+        ? existing.successRate * 0.9 + 0.1
+        : existing.successRate * 0.9;
       existing.lastUpdated = Date.now();
     } else {
       this.metrics.set(key, {
@@ -144,15 +171,17 @@ export class SmartRouter {
     for (const [pattern, score] of Object.entries(QUALITY_SCORES)) {
       if (lower.includes(pattern.toLowerCase())) return score;
     }
-    return 0.50; // Unknown models
+    return 0.5; // Unknown models
   }
 
   private estimateDefaultCost(model: string): number {
     const lower = model.toLowerCase();
-    if (lower.includes('gpt-4o-mini') || lower.includes('haiku') || lower.includes('flash')) return 0.0002;
+    if (lower.includes('gpt-4o-mini') || lower.includes('haiku') || lower.includes('flash'))
+      return 0.0002;
     if (lower.includes('gpt-4o') || lower.includes('sonnet')) return 0.005;
     if (lower.includes('gpt-4') || lower.includes('opus')) return 0.03;
-    if (lower.includes('llama') || lower.includes('mistral') || lower.includes('mixtral')) return 0.0006;
+    if (lower.includes('llama') || lower.includes('mistral') || lower.includes('mixtral'))
+      return 0.0006;
     return 0.002; // Default estimate
   }
 

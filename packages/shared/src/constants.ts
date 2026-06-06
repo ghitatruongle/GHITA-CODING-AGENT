@@ -35,7 +35,10 @@ export const AI_PROVIDERS: Record<AIProviderType, { name: string; defaultModel: 
   // Phase 1.2: New providers
   cerebras: { name: 'Cerebras', defaultModel: 'llama3.1-8b' },
   together: { name: 'Together AI', defaultModel: 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo' },
-  fireworks: { name: 'Fireworks AI', defaultModel: 'accounts/fireworks/models/llama-v3p1-8b-instruct' },
+  fireworks: {
+    name: 'Fireworks AI',
+    defaultModel: 'accounts/fireworks/models/llama-v3p1-8b-instruct',
+  },
   cohere: { name: 'Cohere', defaultModel: 'command-r-plus' },
   xai: { name: 'xAI (Grok)', defaultModel: 'grok-beta' },
   replicate: { name: 'Replicate', defaultModel: 'meta/llama-3.1-8b-instruct' },
@@ -44,6 +47,11 @@ export const AI_PROVIDERS: Record<AIProviderType, { name: string; defaultModel: 
   ai21: { name: 'AI21 Labs', defaultModel: 'jamba-1.5-large' },
   sambanova: { name: 'SambaNova', defaultModel: 'Meta-Llama-3.1-8B-Instruct' },
   novita: { name: 'Novita AI', defaultModel: 'meta-llama/llama-3.1-8b-instruct' },
+  'opencode-zen': { name: 'OpenCode Zen', defaultModel: 'minimax-m3-free' },
+  'nvidia-nim': { name: 'NVIDIA NIM', defaultModel: 'nvidia/nemotron-3-super-120b-a12b' },
+  // Phase 6: New vendors via defineVendor
+  kimi: { name: 'Kimi (Moonshot AI)', defaultModel: 'moonshot-v1-8k' },
+  minimax: { name: 'MiniMax', defaultModel: 'minimax-v1' },
 };
 
 export const OLLAMA_DEFAULT_URL = 'http://localhost:11434';
@@ -90,6 +98,11 @@ export const SOCKET_EVENTS = {
   REJECT_COMMAND: 'reject_command',
   COST_TELEMETRY: 'cost_telemetry',
   SYNC_LANGUAGE: 'sync_language',
+  FILE_CHANGE: 'file_change',
+  VSCODE_FILE_CHANGE: 'vscode_file_change',
+  MOBILE_TOUCH: 'mobile_touch',
+  MOBILE_TYPE: 'mobile_type',
+  MOBILE_KEY: 'mobile_key',
 } as const;
 
 // --- Screen Stream Defaults ---
@@ -100,9 +113,26 @@ export const DEFAULT_PAIRING_TTL = 300_000; // 5 minutes
 
 // --- File Extensions ---
 export const CODE_EXTENSIONS = [
-  '.ts', '.tsx', '.js', '.jsx', '.py', '.rs', '.go',
-  '.java', '.cpp', '.c', '.h', '.css', '.html', '.json',
-  '.yaml', '.yml', '.toml', '.md', '.sql', '.sh',
+  '.ts',
+  '.tsx',
+  '.js',
+  '.jsx',
+  '.py',
+  '.rs',
+  '.go',
+  '.java',
+  '.cpp',
+  '.c',
+  '.h',
+  '.css',
+  '.html',
+  '.json',
+  '.yaml',
+  '.yml',
+  '.toml',
+  '.md',
+  '.sql',
+  '.sh',
 ] as const;
 
 // --- Paths ---

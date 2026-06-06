@@ -1,4 +1,0 @@
-- **Testing Framework**: Utilizes Vitest as the primary test runner with a modular structure separating mocks (`*.mock.ts`) from test suites (`*.test.ts`).
-- **Mocking Strategy**: Implements specialized mocks for external dependencies like Socket.IO (`socket-io-mock.ts`, `socket-io-relay-mock.ts`) and system utilities (`screenshot-desktop-mock.ts`) to isolate unit logic.
-- **Quality Benchmarking**: Includes a `benchmark.json` dataset for evaluating search precision/recall across 100 symbol queries in the quality loop.
-- **Coverage Scope**: Tests span shared utilities (`sharedUtils.test.ts`), security guards (`security.test.ts`), Git workflows (`gitWorkflow.test.ts`), configuration loading (`configLoader.test.ts`), and provider registries (`registry.test.ts`).

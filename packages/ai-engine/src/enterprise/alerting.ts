@@ -71,11 +71,11 @@ export interface SlackConfig {
 
 export interface EmailConfig {
   provider: 'sendgrid' | 'smtp' | 'resend';
-  apiKey?: string;      // SendGrid/Resend
-  smtpHost?: string;    // SMTP
-  smtpPort?: number;    // SMTP
-  smtpUser?: string;    // SMTP
-  smtpPass?: string;    // SMTP
+  apiKey?: string; // SendGrid/Resend
+  smtpHost?: string; // SMTP
+  smtpPort?: number; // SMTP
+  smtpUser?: string; // SMTP
+  smtpPass?: string; // SMTP
   from: string;
   to: string[];
 }
@@ -261,9 +261,9 @@ async function sendWebhookAlert(alert: Alert, config: WebhookConfig): Promise<bo
     };
 
     // HMAC signing if secret provided
-  if (config.secret) {
-    const body = JSON.stringify(payload);
-    const signature = createHash('sha256')
+    if (config.secret) {
+      const body = JSON.stringify(payload);
+      const signature = createHash('sha256')
         .update(body + config.secret)
         .digest('hex');
       headers['X-GHITA-Signature'] = signature;
@@ -436,7 +436,7 @@ export class AlertingManager {
                   : console.info;
 
             logFn(
-              `[ALERT] ${alert.severity.toUpperCase()} [${alert.category}] ${alert.ruleName}: ${alert.message}`
+              `[ALERT] ${alert.severity.toUpperCase()} [${alert.category}] ${alert.ruleName}: ${alert.message}`,
             );
             return true;
           }

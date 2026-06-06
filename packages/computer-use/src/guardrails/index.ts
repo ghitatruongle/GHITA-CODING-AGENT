@@ -21,7 +21,4 @@ export type {
   CustomPatternEntry,
   ApprovalCallback,
 } from './types.js';
-export {
-  DEFAULT_SECURITY_CONFIG,
-  SECURITY_ERROR_PREFIX,
-} from './types.js';
+export { DEFAULT_SECURITY_CONFIG, SECURITY_ERROR_PREFIX } from './types.js';

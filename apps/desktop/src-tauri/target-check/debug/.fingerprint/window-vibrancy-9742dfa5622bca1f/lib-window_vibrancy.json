@@ -1,1 +1,24 @@
-{"rustc":8891013984288978370,"features":"[]","declared_features":"[]","target":13028659016136499722,"profile":2241668132362809309,"path":4275642663789356847,"deps":[[4143744114649553716,"raw_window_handle",false,2256604580440552848],[10281541584571964250,"windows_sys",false,6222107691004087847],[13129119782722264640,"windows_version",false,10968736943835253041]],"local":[{"CheckDepInfo":{"dep_info":"debug\\.fingerprint\\window-vibrancy-9742dfa5622bca1f\\dep-lib-window_vibrancy","checksum":false}}],"rustflags":[],"config":8247474407144887393,"compile_kind":0}
+{
+  "rustc": 8891013984288978370,
+  "features": "[]",
+  "declared_features": "[]",
+  "target": 13028659016136499722,
+  "profile": 2241668132362809309,
+  "path": 4275642663789356847,
+  "deps": [
+    [4143744114649553716, "raw_window_handle", false, 2256604580440552848],
+    [10281541584571964250, "windows_sys", false, 6222107691004087847],
+    [13129119782722264640, "windows_version", false, 10968736943835253041]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "debug\\.fingerprint\\window-vibrancy-9742dfa5622bca1f\\dep-lib-window_vibrancy",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 8247474407144887393,
+  "compile_kind": 0
+}

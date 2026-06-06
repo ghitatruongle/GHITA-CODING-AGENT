@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { parseOpenAICompat, parseOllamaTags, parseGoogleModels, parseReplicateModels } from '../src/discovery/model-discovery.js';
+import {
+  parseOpenAICompat,
+  parseOllamaTags,
+  parseGoogleModels,
+  parseReplicateModels,
+} from '../src/discovery/model-discovery.js';
 
 describe('Model Discovery Parsers', () => {
   describe('parseOpenAICompat', () => {
@@ -34,7 +39,9 @@ describe('Model Discovery Parsers', () => {
 
   describe('parseGoogleModels', () => {
     it('should strip models/ prefix', () => {
-      const data = { models: [{ name: 'models/gemini-1.5-pro' }, { name: 'models/gemini-2.0-flash' }] };
+      const data = {
+        models: [{ name: 'models/gemini-1.5-pro' }, { name: 'models/gemini-2.0-flash' }],
+      };
       const result = parseGoogleModels(data);
       expect(result).toHaveLength(2);
       expect(result[0]!.id).toBe('gemini-1.5-pro');

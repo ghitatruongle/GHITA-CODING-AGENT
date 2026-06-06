@@ -43,10 +43,7 @@ export class GhitAgentClient {
   }
 
   /** Gửi message và nhận response */
-  async sendMessage(
-    message: string,
-    options?: SendMessageOptions,
-  ): Promise<AgentMessage> {
+  async sendMessage(message: string, options?: SendMessageOptions): Promise<AgentMessage> {
     const response = await fetch(`${this.config.serverUrl}/api/chat`, {
       method: 'POST',
       headers: {
@@ -88,13 +85,13 @@ export class GhitAgentClient {
   }
 
   /** Lấy danh sách subagents khả dụng */
- async getSubagents(): Promise<Record<string, unknown>[]> {
- try {
- const response = await fetch(`${this.config.serverUrl}/api/subagents`, {
- signal: AbortSignal.timeout(5000),
- });
- if (!response.ok) return [];
- const data = (await response.json()) as { subagents: Record<string, unknown>[] };
+  async getSubagents(): Promise<Record<string, unknown>[]> {
+    try {
+      const response = await fetch(`${this.config.serverUrl}/api/subagents`, {
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!response.ok) return [];
+      const data = (await response.json()) as { subagents: Record<string, unknown>[] };
       return data.subagents || [];
     } catch {
       return []; // Fallback for network/mock environments

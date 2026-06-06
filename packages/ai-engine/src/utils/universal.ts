@@ -81,9 +81,19 @@ export class UniversalChatModel implements AIProvider {
   private mapModelKeyToProviderType(modelKey: string): AIProviderType | null {
     const key = modelKey.toLowerCase();
     const allTypes: AIProviderType[] = [
-      'openai', 'anthropic', 'google', 'ollama', 'custom',
-      'opengateway', 'mimo', 'openrouter', 'deepseek', 'groq',
-      'mistral', 'hicap', 'github-models',
+      'openai',
+      'anthropic',
+      'google',
+      'ollama',
+      'custom',
+      'opengateway',
+      'mimo',
+      'openrouter',
+      'deepseek',
+      'groq',
+      'mistral',
+      'hicap',
+      'github-models',
     ];
     for (const type of allTypes) {
       if (key === type || key.startsWith(type + '/') || key.includes(type)) return type;
@@ -92,7 +102,8 @@ export class UniversalChatModel implements AIProvider {
     if (key.includes('gpt') || key.includes('o1') || key.includes('o3')) return 'openai';
     if (key.includes('claude')) return 'anthropic';
     if (key.includes('gemini')) return 'google';
-    if (key.includes('llama') || key.includes('mistral') || key.includes('mixtral')) return 'custom';
+    if (key.includes('llama') || key.includes('mistral') || key.includes('mixtral'))
+      return 'custom';
     return null;
   }
 
@@ -136,14 +147,14 @@ export class UniversalChatModel implements AIProvider {
     }
 
     // 5. Take first registered provider
-if (!resolvedType) {
-    const all = this.registry.getAll();
-    const first = all[0];
-    if (first) {
-      return first;
+    if (!resolvedType) {
+      const all = this.registry.getAll();
+      const first = all[0];
+      if (first) {
+        return first;
+      }
+      throw new Error('UniversalChatModel has no providers registered');
     }
-    throw new Error('UniversalChatModel has no providers registered');
-  }
 
     const provider = this.registry.get(resolvedType);
     if (!provider) {
@@ -172,7 +183,7 @@ if (!resolvedType) {
     return await this.executeWithFallback(
       (p) => p.chat(messages, cleanedOpts),
       provider,
-      cleanedOpts
+      cleanedOpts,
     );
   }
 
@@ -209,7 +220,7 @@ if (!resolvedType) {
   async embed(text: string, options?: { model?: string }): Promise<EmbeddingResponse> {
     const dummyOpts: ChatOptions = { model: options?.model };
     const provider = this.resolveProvider(dummyOpts);
-    
+
     let cleanedModel = options?.model;
     if (cleanedModel && cleanedModel.includes('/')) {
       cleanedModel = cleanedModel.split('/').slice(1).join('/');
@@ -218,7 +229,7 @@ if (!resolvedType) {
     return await this.executeWithFallback(
       (p) => p.embed(text, { model: cleanedModel }),
       provider,
-      dummyOpts
+      dummyOpts,
     );
   }
 
@@ -234,7 +245,7 @@ if (!resolvedType) {
     return await this.executeWithFallback(
       (p) => p.embedMany(texts, { model: cleanedModel }),
       provider,
-      dummyOpts
+      dummyOpts,
     );
   }
 
@@ -250,7 +261,7 @@ if (!resolvedType) {
   private async executeWithFallback<T>(
     fn: (provider: AIProvider) => Promise<T>,
     primary: AIProvider,
-    _options?: ChatOptions
+    _options?: ChatOptions,
   ): Promise<T> {
     try {
       return await retry(() => fn(primary), this.retryAttempts, this.retryDelayMs);

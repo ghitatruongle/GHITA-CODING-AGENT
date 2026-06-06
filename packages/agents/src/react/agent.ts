@@ -52,14 +52,12 @@ export class ReActAgent {
   }
 
   /** Run the ReAct loop */
-  async run(
-    userMessage: string,
-    callbacks?: ReActAgentCallbacks,
-  ): Promise<ReActAgentRunResult> {
+  async run(userMessage: string, callbacks?: ReActAgentCallbacks): Promise<ReActAgentRunResult> {
     const startTime = Date.now();
     const maxIterations = this.config.maxIterations ?? 10;
     const steps: AgentStep[] = [];
     const messages: BaseMessage[] = [];
+    const agentId = generateId();
 
     // Build initial messages
     if (this.config.systemPrompt) {
@@ -70,7 +68,7 @@ export class ReActAgent {
     for (let i = 0; i < maxIterations; i++) {
       const middlewareCtx: MiddlewareContext = {
         agent: {
-          id: generateId(),
+          id: agentId,
           name: this.name,
           role: 'executor',
           description: 'ReAct agent',
@@ -85,7 +83,9 @@ export class ReActAgent {
         provider: this.config.provider,
         temperature: this.config.temperature,
         maxTokens: this.config.maxTokens,
-        metadata: {},
+        metadata: {
+          iteration: i,
+        },
       };
 
       // Run pre-model middleware
@@ -105,7 +105,10 @@ export class ReActAgent {
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
         const { retry } = await this.pipeline.runOnError(error, ctx);
-        if (retry && i < maxIterations - 1) continue;
+        if (retry && i < maxIterations - 1) {
+          console.info(`Error in ReAct loop on iteration ${i}, retrying:`, error);
+          continue;
+        }
         throw error;
       }
 
@@ -114,7 +117,10 @@ export class ReActAgent {
         response,
         shouldContinue: false,
       });
-      if (retry && i < maxIterations - 1) continue;
+      if (retry && i < maxIterations - 1) {
+        console.info(`Post-model retry requested at iteration ${i}`);
+        continue;
+      }
       response = postResult.response;
 
       messages.push(response);
@@ -190,7 +196,10 @@ export class ReActAgent {
   }
 
   /** Parse structured output from final response */
-  parseStructuredOutput<T>(result: ReActAgentRunResult, schema: StructuredOutputSchema): T | undefined {
+  parseStructuredOutput<T>(
+    result: ReActAgentRunResult,
+    schema: StructuredOutputSchema,
+  ): T | undefined {
     if (!schema) return undefined;
     try {
       const text = result.output;
@@ -221,13 +230,13 @@ export class ReActAgent {
     // If the message has structured tool_calls in metadata, use those
     const meta = message.metadata;
     if (meta?.toolCalls && Array.isArray(meta.toolCalls)) {
-      return (meta.toolCalls as Array<{ id: string; name: string; arguments: Record<string, unknown> }>).map(
-        (tc) => ({
-          tool: tc.name,
-          toolCallId: tc.id,
-          input: tc.arguments,
-        }),
-      );
+      return (
+        meta.toolCalls as Array<{ id: string; name: string; arguments: Record<string, unknown> }>
+      ).map((tc) => ({
+        tool: tc.name,
+        toolCallId: tc.id,
+        input: tc.arguments,
+      }));
     }
     return [];
   }

@@ -24,16 +24,16 @@ export interface RalphLoopState {
 export class RalphLoopManager {
   private orchestrator: Orchestrator;
   private config: RalphLoopConfig;
-  
+
   // Chi phí trung bình ước tính trên 1000 tokens (Ví dụ Claude Sonnet)
-  private readonly PRICE_PER_1K_INPUT = 0.003;  // $0.003 / 1k input tokens
+  private readonly PRICE_PER_1K_INPUT = 0.003; // $0.003 / 1k input tokens
   private readonly PRICE_PER_1K_OUTPUT = 0.015; // $0.015 / 1k output tokens
 
   constructor(orchestrator: Orchestrator, config?: Partial<RalphLoopConfig>) {
     this.orchestrator = orchestrator;
     this.config = {
       maxIterations: config?.maxIterations ?? 5,
-      costLimitUsd: config?.costLimitUsd ?? 0.50, // Mặc định giới hạn $0.50 để an toàn tài chính
+      costLimitUsd: config?.costLimitUsd ?? 0.5, // Mặc định giới hạn $0.50 để an toàn tài chính
       compileCommand: config?.compileCommand,
       testCommand: config?.testCommand,
     };
@@ -57,9 +57,13 @@ export class RalphLoopManager {
   async run(
     task: string,
     executeAction: (code: string) => Promise<{ success: boolean; logs: string }>,
-    onProgress: (status: { iteration: number; cost: number; message: string; code?: string }) => void
+    onProgress: (status: {
+      iteration: number;
+      cost: number;
+      message: string;
+      code?: string;
+    }) => void,
   ): Promise<RalphLoopState> {
-    
     let currentIteration = 0;
     let totalCostUsd = 0;
     const totalTokensUsed: TokenUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
@@ -82,7 +86,7 @@ Nếu hệ thống báo lỗi biên dịch, bạn phải phân tích kỹ stackt
 
     while (currentIteration < this.config.maxIterations) {
       currentIteration++;
-      
+
       // 1. Kiểm tra giới hạn chi phí trước khi bắt đầu iteration mới
       if (totalCostUsd >= this.config.costLimitUsd) {
         onProgress({
@@ -101,7 +105,7 @@ Nếu hệ thống báo lỗi biên dịch, bạn phải phân tích kỹ stackt
 
       // 2. Gọi Orchestrator chat để sinh code (sử dụng Plan routing)
       const chatResponse = await this.orchestrator.chat(history, { agentRole: 'Plan' });
-      
+
       // Cập nhật Token & Chi phí
       totalTokensUsed.promptTokens += chatResponse.usage.promptTokens;
       totalTokensUsed.completionTokens += chatResponse.usage.completionTokens;
@@ -113,7 +117,9 @@ Nếu hệ thống báo lỗi biên dịch, bạn phải phân tích kỹ stackt
       history.push({ role: 'assistant', content: aiContent });
 
       // Trích xuất mã nguồn từ block code
-      const codeMatch = aiContent.match(/```(?:tsx|typescript|javascript|js|html|css)?\s*([\s\S]*?)```/);
+      const codeMatch = aiContent.match(
+        /```(?:tsx|typescript|javascript|js|html|css)?\s*([\s\S]*?)```/,
+      );
       const code = codeMatch ? codeMatch[1]?.trim() : aiContent;
 
       if (!code) {
@@ -124,7 +130,8 @@ Nếu hệ thống báo lỗi biên dịch, bạn phải phân tích kỹ stackt
         });
         history.push({
           role: 'user',
-          content: 'Không tìm thấy code hợp lệ trong định dạng thẻ block code. Vui lòng viết lại mã nguồn nằm trong thẻ ``` ```.',
+          content:
+            'Không tìm thấy code hợp lệ trong định dạng thẻ block code. Vui lòng viết lại mã nguồn nằm trong thẻ ``` ```.',
         });
         continue;
       }
@@ -138,7 +145,7 @@ Nếu hệ thống báo lỗi biên dịch, bạn phải phân tích kỹ stackt
 
       // 3. Thực thi hành động biên dịch/kiểm thử thực tế
       const executionResult = await executeAction(code);
-      
+
       if (executionResult.success) {
         success = true;
         errorLogs = executionResult.logs;

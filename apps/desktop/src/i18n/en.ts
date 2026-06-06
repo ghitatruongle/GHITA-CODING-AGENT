@@ -33,7 +33,7 @@ export const en: TranslationKeys = {
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v0.0.3-beta1',
+    version: 'v0.0.3',
     deviceReconnected: 'Reconnected to device: {{name}}',
     devicePaired: 'Successfully paired device: {{name}}',
     commandReceived: 'Command received from device: {{action}}',
@@ -112,7 +112,8 @@ export const en: TranslationKeys = {
     shortcutSave: 'Ctrl+S: Save',
     shortcutClose: 'Ctrl+W: Close',
     shortcutSaveAll: 'Ctrl+Shift+S: Save All',
-    unsavedChangesConfirm: 'File "{{name}}" has unsaved changes. Are you sure you want to close and discard these changes?',
+    unsavedChangesConfirm:
+      'File "{{name}}" has unsaved changes. Are you sure you want to close and discard these changes?',
     binaryNotSupported: 'Binary file "{{name}}" is not supported directly in the text editor.',
     readFailed: 'Failed to read file: {{error}}',
   },
@@ -139,7 +140,8 @@ export const en: TranslationKeys = {
     bluetoothConnection: 'Wireless Bluetooth Connection',
     bluetoothGuide: 'On your phone, switch to the Bluetooth tab and enter this computer name:',
     bluetoothHostname: 'Computer Name',
-    bluetoothHint: 'Note: No IP address or pairing code is required when using Bluetooth connection.',
+    bluetoothHint:
+      'Note: No IP address or pairing code is required when using Bluetooth connection.',
     connectedDevices: 'Associated Devices',
     lastSeen: 'Last active:',
     unpair: 'Unpair Device',
@@ -149,6 +151,9 @@ export const en: TranslationKeys = {
     guideStep3: '3. Enter the 6-character pairing code when prompted',
     guideStep4: '4. Wait a few moments for the system to establish a secure link',
     guideStep5: '5. Connected! You can now send commands and authorize tasks.',
+    lanEnabled: 'Allow mobile devices to connect (LAN/Wi-Fi)',
+    lanEnabledDesc:
+      'Allow mobile devices on the same local network to discover and connect to this computer.',
   },
   dashboard: {
     title: 'Dashboard',
@@ -201,14 +206,20 @@ export const en: TranslationKeys = {
     sortByDownloads: 'Most Downloads',
     sortByRating: 'Highest Rating',
     sortByNewest: 'Newest',
-    plugin_ghita_github_assistant_desc: 'Automatically sync git, push commits, manage Pull Requests and issue trackers directly from the chat panel.',
-    plugin_ghita_docker_orchestrator_desc: 'Package skills to manage Docker containers, inspect logs, build images, and safely manage volumes.',
+    plugin_ghita_github_assistant_desc:
+      'Automatically sync git, push commits, manage Pull Requests and issue trackers directly from the chat panel.',
+    plugin_ghita_docker_orchestrator_desc:
+      'Package skills to manage Docker containers, inspect logs, build images, and safely manage volumes.',
     skill_docker_list_desc: 'List running containers',
-    plugin_ghita_vercel_deployer_desc: 'Link projects, automatically trigger deploy preview, production, and audit logs in the CI/CD pipeline.',
-    plugin_ghita_db_client_desc: 'Skills for fast interaction with PostgreSQL, MySQL, SQLite, MongoDB. Allows AI to preview schemas and optimize queries.',
+    plugin_ghita_vercel_deployer_desc:
+      'Link projects, automatically trigger deploy preview, production, and audit logs in the CI/CD pipeline.',
+    plugin_ghita_db_client_desc:
+      'Skills for fast interaction with PostgreSQL, MySQL, SQLite, MongoDB. Allows AI to preview schemas and optimize queries.',
     skill_db_query_desc: 'Run safe select queries and analyze schemas',
-    plugin_ghita_jira_connector_desc: 'Read and update Jira tickets, transition issue statuses, and link git commits with corresponding story IDs.',
-    plugin_ghita_vision_grounding_extra_desc: 'Local vision model supporting coordinate recognition accuracy for Computer Use on large screens.',
+    plugin_ghita_jira_connector_desc:
+      'Read and update Jira tickets, transition issue statuses, and link git commits with corresponding story IDs.',
+    plugin_ghita_vision_grounding_extra_desc:
+      'Local vision model supporting coordinate recognition accuracy for Computer Use on large screens.',
   },
   workflow: {
     dragNodes: 'DRAG ACTION NODES',
@@ -238,9 +249,11 @@ export const en: TranslationKeys = {
   },
   ecosystem: {
     title: 'ECOSYSTEM & COMPONENT INTEGRATION',
-    subtitle: 'Manage background gRPC communication, standardized Agent Protocol API, and LLM cost router.',
+    subtitle:
+      'Manage background gRPC communication, standardized Agent Protocol API, and LLM cost router.',
     grpcDaemon: 'gRPC DAEMON CORE SERVER',
-    grpcDesc: 'High-performance binary communication channel specialized for the VS Code extension.',
+    grpcDesc:
+      'High-performance binary communication channel specialized for the VS Code extension.',
     serverPort: 'DAEMON PORT:',
     daemonConsole: 'DAEMON LIVE CONSOLE:',
     startDaemon: 'Start Daemon',
@@ -253,7 +266,8 @@ export const en: TranslationKeys = {
     enableAp: 'Enable AP',
     disableAp: 'Disable AP',
     dynamicRouter: 'DYNAMIC LLM COST & COMPLEXITY ROUTER',
-    dynamicRouterDesc: 'Automatic algorithm analyzing Prompt/Task complexity to route queries to the most cost-effective model.',
+    dynamicRouterDesc:
+      'Automatic algorithm analyzing Prompt/Task complexity to route queries to the most cost-effective model.',
     maxCostPerTask: 'MAX TASK COST THRESHOLD ($):',
     complexityRouting: 'COMPLEXITY BOUNDARY ROUTING:',
     automaticRouting: 'Automatic Routing (Recommended)',
@@ -273,9 +287,11 @@ export const en: TranslationKeys = {
     demoMode: 'Demo Mode — Data is simulated',
   },
   chat: {
-    welcomeMessage: 'Welcome to GHITA Coding Agent. I am GHITA Assistant, your AI partner. I can write code, run terminal commands, manage files, and automate complex tasks. Let\'s get started!',
+    welcomeMessage:
+      "Welcome to GHITA Coding Agent. I am GHITA Assistant, your AI partner. I can write code, run terminal commands, manage files, and automate complex tasks. Let's get started!",
     notConnected: 'No connection to background service...',
-    notConnectedHint: 'Not connected to service -- type something to see configuration instructions...',
+    notConnectedHint:
+      'Not connected to service -- type something to see configuration instructions...',
     noProvider: 'No AI Provider configured...',
     noProviderHint: 'No API configured -- Type something to see configuration instructions...',
     systemError: 'System Error:',
@@ -297,7 +313,8 @@ export const en: TranslationKeys = {
     placeholderConnected: 'Ask AI or type "/" for quick commands...',
     placeholderNoApi: 'No API configured -- Type something to see configuration instructions...',
     placeholderConnecting: 'Connecting to background server...',
-    placeholderDisconnected: 'Not connected to server -- type something to see configuration instructions...',
+    placeholderDisconnected:
+      'Not connected to server -- type something to see configuration instructions...',
     compactContext: 'Summarize conversation context',
     clearChat: 'Clear conversation history',
     help: 'Show help guide',
@@ -305,7 +322,8 @@ export const en: TranslationKeys = {
     featureDev: 'Develop a new feature',
     deployCheck: 'Check code before deploying',
     summary: 'Summarize conversation',
-    systemPrompt: 'You are GHITA Assistant, an intelligent AI assistant built into the GHITA CODING AGENT application.\n\nCORE CAPABILITY: You can directly execute commands on the user\'s machine. When users ask to open applications, run commands, or manage files — ALWAYS wrap the command in a code block with cmd or powershell language tag. The system will AUTO-EXECUTE the command. NEVER say "I cannot" or "I don\'t have the ability".\n\nMANDATORY RULE: When you need to run a command, ALWAYS use this format:\n```cmd\ncommand to run\n```\nOr:\n```powershell\ncommand to run\n```\n\nExample to open Microsoft Word:\n```cmd\nstart winword\n```\n\nExample to open Notepad:\n```cmd\nnotepad\n```\n\nYou also support: code review, refactor, run tests, format code, lint, security audit, generate docs.\n\nAlways identify yourself as GHITA Assistant when asked about your identity. Be direct and concise.',
+    systemPrompt:
+      'You are GHITA Assistant, an intelligent AI assistant built into the GHITA CODING AGENT application.\n\nCORE CAPABILITY: You can directly execute commands on the user\'s machine. When users ask to open applications, run commands, or manage files — ALWAYS wrap the command in a code block with cmd or powershell language tag. The system will AUTO-EXECUTE the command. NEVER say "I cannot" or "I don\'t have the ability".\n\nMANDATORY RULE: When you need to run a command, ALWAYS use this format:\n```cmd\ncommand to run\n```\nOr:\n```powershell\ncommand to run\n```\n\nExample to open Microsoft Word:\n```cmd\nstart winword\n```\n\nExample to open Notepad:\n```cmd\nnotepad\n```\n\nYou also support: code review, refactor, run tests, format code, lint, security audit, generate docs.\n\nAlways identify yourself as GHITA Assistant when asked about your identity. Be direct and concise.',
     openclawEngine: 'GHITA Assistant',
     skillLearned: 'Skill Auto-Learning: AI agent proposed and integrated a new skill...',
     runningAutomation: 'Executing screen simulation automation steps...',
@@ -325,7 +343,8 @@ export const en: TranslationKeys = {
     runError: 'Error',
     messagesCount: '{{count}} message(s)',
     compactSuccess: 'Context compacted: only recent messages kept for this session.',
-    noWorkspace: 'No workspace directory opened. Please open a project/folder in Explorer first before running Agent, Review, Feature or Ralph.',
+    noWorkspace:
+      'No workspace directory opened. Please open a project/folder in Explorer first before running Agent, Review, Feature or Ralph.',
     permissionCustom: 'Custom: Confirm every command & file edit',
     permissionAuto: 'Auto: Free mode, only ask for dangerous commands (install, download...)',
     liveAgentEvents: 'LIVE AGENT EVENTS',
@@ -337,7 +356,8 @@ export const en: TranslationKeys = {
     running: 'Executing command...',
     placeholder: 'Type command here...',
     failedToExecute: 'Execution failed. Check permissions and ensure command is valid.',
-    permissionHint: 'Ensure the command exists on the host machine and you have sufficient permissions.',
+    permissionHint:
+      'Ensure the command exists on the host machine and you have sufficient permissions.',
     pathNotFound: "Directory or file path '{{path}}' does not exist",
   },
   errorFallback: {
@@ -399,14 +419,16 @@ export const en: TranslationKeys = {
   },
   skillManager: {
     title: 'Skill Management',
-    subtitle: 'Enable, disable, and run diagnostic tests on built-in capabilities and custom automation skills.',
+    subtitle:
+      'Enable, disable, and run diagnostic tests on built-in capabilities and custom automation skills.',
     enabledSkills: 'active capabilities',
     testRun: 'Diagnostic Test Run',
     running: 'Running diagnostics...',
   },
   agentGroups: {
     title: 'AI Agent Groups',
-    subtitle: 'Manage agent profiles, allocate task forces, and maintain shared contextual memories.',
+    subtitle:
+      'Manage agent profiles, allocate task forces, and maintain shared contextual memories.',
     registeredAgents: 'Agents registered in workspace',
     runGroupTask: 'Delegate Task to Group',
     runningGroup: 'AI Task Force executing...',
@@ -419,7 +441,8 @@ export const en: TranslationKeys = {
     title: 'DocsGriller — Socratic Architectural Audit',
     scanDocs: '/grill-me',
     scanning: 'Auditing documentation...',
-    scanPrompt: 'Type /grill-me to scan project documentation and automatically identify architectural contradictions',
+    scanPrompt:
+      'Type /grill-me to scan project documentation and automatically identify architectural contradictions',
     supportedFormats: 'Supports analyzing .md and .txt file formats',
     docsScanned: 'Docs Scanned',
     contradictions: 'Contradictions Detected',
@@ -430,7 +453,8 @@ export const en: TranslationKeys = {
     socraticQuestions: 'Reflective Socratic Questions ({{count}})',
     sources: 'Reference Sources:',
     designDecisions: 'Architectural Design Decisions',
-    allConsistent: 'All documents appear fully consistent. No architectural contradictions detected.',
+    allConsistent:
+      'All documents appear fully consistent. No architectural contradictions detected.',
   },
   sandbox: {
     loadingStatus: 'Checking Sandbox environment status...',
@@ -442,6 +466,7 @@ export const en: TranslationKeys = {
     totalRam: 'Total RAM Allocated',
     networkIo: 'Network I/O Traffic',
     noContainers: 'No sandbox containers currently running',
-    noContainersDesc: 'An isolated Docker container will launch automatically when AI needs to execute tests or unsafe operations.',
+    noContainersDesc:
+      'An isolated Docker container will launch automatically when AI needs to execute tests or unsafe operations.',
   },
 };

@@ -14,7 +14,10 @@ export class OCRProcessor {
   /**
    * Trích xuất văn bản từ hình ảnh sử dụng Multimodal LLM
    */
-  async parseImage(image: Buffer, _mimeType = 'image/png'): Promise<{ text: string; confidence: number }> {
+  async parseImage(
+    image: Buffer,
+    _mimeType = 'image/png',
+  ): Promise<{ text: string; confidence: number }> {
     if (this.orchestrator) {
       try {
         const response = await this.orchestrator.chat([
@@ -49,7 +52,10 @@ export class VideoContentAnalyzer {
   /**
    * Phân tích nội dung video đa phương thức
    */
-  async analyzeVideo(video: Buffer, _mimeType = 'video/mp4'): Promise<{ summary: string; framesAnalyzed: number }> {
+  async analyzeVideo(
+    video: Buffer,
+    _mimeType = 'video/mp4',
+  ): Promise<{ summary: string; framesAnalyzed: number }> {
     if (this.orchestrator) {
       try {
         const response = await this.orchestrator.chat([
@@ -68,7 +74,8 @@ export class VideoContentAnalyzer {
     }
 
     return {
-      summary: 'Bản tóm tắt video giả lập: Video chứa một buổi thuyết trình kỹ thuật về kiến trúc Microservices và gRPC.',
+      summary:
+        'Bản tóm tắt video giả lập: Video chứa một buổi thuyết trình kỹ thuật về kiến trúc Microservices và gRPC.',
       framesAnalyzed: 10,
     };
   }

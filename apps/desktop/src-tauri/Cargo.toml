@@ -13,6 +13,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+# Sidecar port model: uses a dynamic or fixed port allocated in sidecar configuration or environment variables.
 tauri = { version = "2", features = [] }
 tauri-plugin-shell = "2"
 tauri-plugin-fs = "2"

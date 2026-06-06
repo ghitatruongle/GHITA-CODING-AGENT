@@ -21,7 +21,8 @@ export class CustomProvider extends BaseProvider {
   }
 
   async isReady(): Promise<boolean> {
-    return !!this.config.baseUrl && this.keyManager.size > 0;
+    const needsNoKey = this.type === 'opencode-zen';
+    return !!this.config.baseUrl && (needsNoKey || this.keyManager.size > 0);
   }
 
   async chat(messages: ChatMessage[], options?: ChatOptions): Promise<ChatResponse> {
@@ -38,6 +39,11 @@ export class CustomProvider extends BaseProvider {
       headers['Authorization'] = `Bearer ${apiKey}`;
     }
 
+    let signal = options?.signal;
+    if (!signal && typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+      signal = AbortSignal.timeout(60000);
+    }
+
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers,
@@ -48,7 +54,7 @@ export class CustomProvider extends BaseProvider {
         temperature: this.getTemperature(options),
         stream: false,
       }),
-      signal: options?.signal,
+      signal,
     });
 
     if (!response.ok) {
@@ -78,10 +84,7 @@ export class CustomProvider extends BaseProvider {
     };
   }
 
-  async *chatStream(
-    messages: ChatMessage[],
-    options?: ChatOptions,
-  ): AsyncGenerator<AIStreamChunk> {
+  async *chatStream(messages: ChatMessage[], options?: ChatOptions): AsyncGenerator<AIStreamChunk> {
     const baseUrl = this.getNormalizedBaseUrl();
     if (!baseUrl) throw new Error('Custom provider: baseUrl not configured');
 
@@ -95,6 +98,11 @@ export class CustomProvider extends BaseProvider {
       headers['Authorization'] = `Bearer ${apiKey}`;
     }
 
+    let signal = options?.signal;
+    if (!signal && typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+      signal = AbortSignal.timeout(60000);
+    }
+
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers,
@@ -106,7 +114,7 @@ export class CustomProvider extends BaseProvider {
         stream: true,
         stream_options: { include_usage: true },
       }),
-      signal: options?.signal,
+      signal,
     });
 
     if (!response.ok) {

@@ -61,7 +61,9 @@ export function smartResizeForV15(
 /**
  * Parses action string (e.g., click(start_box='(279,81)')) into function & args
  */
-export function parseAction(actionStr: string): { function: string; args: Record<string, string> } | null {
+export function parseAction(
+  actionStr: string,
+): { function: string; args: Record<string, string> } | null {
   try {
     let normalized = actionStr.trim();
     // Support formats with bounding box and point tags
@@ -79,6 +81,13 @@ export function parseAction(actionStr: string): { function: string; args: Record
       if (/^\w+\(\)$/.test(normalized)) {
         return {
           function: normalized.slice(0, -2),
+          args: {},
+        };
+      }
+      // If it is a plain action name, e.g. finished
+      if (/^\w+$/.test(normalized)) {
+        return {
+          function: normalized,
           args: {},
         };
       }
@@ -169,7 +178,9 @@ export class ActionParser {
           thought = thoughtMatch[1].trim();
         }
       } else if (text.startsWith('Reflection:')) {
-        const reflectionMatch = text.match(/Reflection: ([\s\S]+?)Action_Summary: ([\s\S]+?)(?=\s*Action[:：]|$)/);
+        const reflectionMatch = text.match(
+          /Reflection: ([\s\S]+?)Action_Summary: ([\s\S]+?)(?=\s*Action[:：]|$)/,
+        );
         if (reflectionMatch && reflectionMatch[1] && reflectionMatch[2]) {
           thought = reflectionMatch[2].trim();
           reflection = reflectionMatch[1].trim();
@@ -227,14 +238,21 @@ export class ActionParser {
             const floatNumbers = numbers.map((num, idx) => {
               const factorIndex = idx % 2; // 0 is x (width), 1 is y (height)
               const smartFactor = smartResizeFactors ? smartResizeFactors[factorIndex] : undefined;
-              const divider = (modelVer === 'v1.5' && smartFactor !== undefined)
-                ? smartFactor
-                : (factors[factorIndex] ?? 1000);
-              return Number.parseFloat(num) / divider;
+              const divider =
+                modelVer === 'v1.5' && smartFactor !== undefined
+                  ? smartFactor
+                  : (factors[factorIndex] ?? 1000);
+              const parsed = Number.parseFloat(num);
+              const val = parsed / divider;
+              return Number.isNaN(val) ? 0 : val;
             });
 
             // If it's a point (2 numbers), duplicate it to form a 4-number bbox
-            if (floatNumbers.length === 2 && floatNumbers[0] !== undefined && floatNumbers[1] !== undefined) {
+            if (
+              floatNumbers.length === 2 &&
+              floatNumbers[0] !== undefined &&
+              floatNumbers[1] !== undefined
+            ) {
               floatNumbers.push(floatNumbers[0], floatNumbers[1]);
             }
 
@@ -245,9 +263,14 @@ export class ActionParser {
               const boxKey = paramName.includes('start_box') ? 'start_coords' : 'end_coords';
               const [x1 = 0, y1 = 0, x2 = x1, y2 = y1] = floatNumbers;
 
+              const x1Val = Number.isNaN(x1) ? 0 : x1;
+              const y1Val = Number.isNaN(y1) ? 0 : y1;
+              const x2Val = Number.isNaN(x2) ? x1Val : x2;
+              const y2Val = Number.isNaN(y2) ? y1Val : y2;
+
               // Compute physical pixel mid-point
-              const physX = Math.round(((x1 + x2) / 2) * screenContext.width * scaleFactor);
-              const physY = Math.round(((y1 + y2) / 2) * screenContext.height * scaleFactor);
+              const physX = Math.round(((x1Val + x2Val) / 2) * screenContext.width * scaleFactor);
+              const physY = Math.round(((y1Val + y2Val) / 2) * screenContext.height * scaleFactor);
 
               actionInputs[boxKey] = [physX, physY];
             }

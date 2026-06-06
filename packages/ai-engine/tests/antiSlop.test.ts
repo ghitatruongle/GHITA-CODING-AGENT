@@ -87,7 +87,7 @@ describe('AntiSlopFilter', () => {
     });
 
     it('15. removes "Is there anything else" prefix', () => {
-      const result = filter.cleanChunk("Is there anything else I can help with?");
+      const result = filter.cleanChunk('Is there anything else I can help with?');
       expect(result.cleaned).toBe('');
     });
 

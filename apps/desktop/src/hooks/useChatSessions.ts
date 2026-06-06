@@ -83,9 +83,10 @@ export function useChatSessions() {
           : [];
         if (validSessions.length > 0) {
           setSessions(validSessions);
-          const activeId = state.activeSessionId && validSessions.some((s) => s.id === state.activeSessionId)
-            ? state.activeSessionId
-            : (validSessions[0]?.id ?? '');
+          const activeId =
+            state.activeSessionId && validSessions.some((s) => s.id === state.activeSessionId)
+              ? state.activeSessionId
+              : (validSessions[0]?.id ?? '');
           setActiveSessionId(activeId);
           const activeSess = validSessions.find((s) => s.id === activeId);
           if (activeSess) setMessages(activeSess.messages);
@@ -97,18 +98,27 @@ export function useChatSessions() {
         try {
           localStorage.removeItem('ghita_chat_sessions');
           localStorage.removeItem('ghita_active_session_id');
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
       if (!active) return;
       const id = generateUUID();
-      const sess: ChatSession = { id, title: t('chat.newChat'), messages: [], timestamp: Date.now() };
+      const sess: ChatSession = {
+        id,
+        title: t('chat.newChat'),
+        messages: [],
+        timestamp: Date.now(),
+      };
       setSessions([sess]);
       setActiveSessionId(id);
       setMessages([]);
       void persist([sess], id);
     };
     void init();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -122,7 +132,7 @@ export function useChatSessions() {
         if (s.id !== activeSessionId) return s;
         let newTitle = s.title;
         const isDefault = KNOWN_DEFAULT_TITLES.some(
-          (dt) => dt === s.title || dt === s.title.trim()
+          (dt) => dt === s.title || dt === s.title.trim(),
         );
         if (isDefault) {
           const firstUser = messages.find((m) => m.role === 'user');
@@ -139,16 +149,21 @@ export function useChatSessions() {
     });
   }, [messages, activeSessionId]);
 
-  const selectSession = useCallback((sessionId: string) => {
-    const target = sessions.find((s) => s.id === sessionId);
-    if (!target) return;
-    isSwitchingRef.current = true;
-    setActiveSessionId(sessionId);
-    setMessages(target.messages);
-    setCurrentView('chat');
-    void persist(sessions, sessionId);
-    setTimeout(() => { isSwitchingRef.current = false; }, 50);
-  }, [sessions, persist]);
+  const selectSession = useCallback(
+    (sessionId: string) => {
+      const target = sessions.find((s) => s.id === sessionId);
+      if (!target) return;
+      isSwitchingRef.current = true;
+      setActiveSessionId(sessionId);
+      setMessages(target.messages);
+      setCurrentView('chat');
+      void persist(sessions, sessionId);
+      setTimeout(() => {
+        isSwitchingRef.current = false;
+      }, 50);
+    },
+    [sessions, persist],
+  );
 
   const createSession = useCallback(() => {
     const id = generateUUID();
@@ -160,37 +175,49 @@ export function useChatSessions() {
     setMessages([]);
     setCurrentView('chat');
     void persist(next, id);
-    setTimeout(() => { isSwitchingRef.current = false; }, 50);
+    setTimeout(() => {
+      isSwitchingRef.current = false;
+    }, 50);
   }, [sessions, persist]);
 
-  const deleteSession = useCallback((sessionId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const updated = sessions.filter((s) => s.id !== sessionId);
-    if (activeSessionId === sessionId) {
-      if (updated.length > 0) {
-        const nextActive = updated[0];
-        if (!nextActive) return;
-        isSwitchingRef.current = true;
-        setSessions(updated);
-        setActiveSessionId(nextActive.id);
-        setMessages(nextActive.messages);
-        setCurrentView('chat');
-        void persist(updated, nextActive.id);
-        setTimeout(() => { isSwitchingRef.current = false; }, 50);
+  const deleteSession = useCallback(
+    (sessionId: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      const updated = sessions.filter((s) => s.id !== sessionId);
+      if (activeSessionId === sessionId) {
+        if (updated.length > 0) {
+          const nextActive = updated[0];
+          if (!nextActive) return;
+          isSwitchingRef.current = true;
+          setSessions(updated);
+          setActiveSessionId(nextActive.id);
+          setMessages(nextActive.messages);
+          setCurrentView('chat');
+          void persist(updated, nextActive.id);
+          setTimeout(() => {
+            isSwitchingRef.current = false;
+          }, 50);
+        } else {
+          const id = generateUUID();
+          const sess: ChatSession = {
+            id,
+            title: t('chat.newChat'),
+            messages: [],
+            timestamp: Date.now(),
+          };
+          setSessions([sess]);
+          setActiveSessionId(id);
+          setMessages([]);
+          setCurrentView('chat');
+          void persist([sess], id);
+        }
       } else {
-        const id = generateUUID();
-        const sess: ChatSession = { id, title: t('chat.newChat'), messages: [], timestamp: Date.now() };
-        setSessions([sess]);
-        setActiveSessionId(id);
-        setMessages([]);
-        setCurrentView('chat');
-        void persist([sess], id);
+        setSessions(updated);
+        void persist(updated, activeSessionId);
       }
-    } else {
-      setSessions(updated);
-      void persist(updated, activeSessionId);
-    }
-  }, [sessions, activeSessionId, persist, t]);
+    },
+    [sessions, activeSessionId, persist, t],
+  );
 
   return {
     sessions,

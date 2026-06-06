@@ -1,1 +1,20 @@
-{"rustc":8891013984288978370,"features":"[]","declared_features":"[]","target":8732937653025100153,"profile":2241668132362809309,"path":11679661597851883205,"deps":[[6568467691589961976,"windows_sys",false,3717114043027373770]],"local":[{"CheckDepInfo":{"dep_info":"debug\\.fingerprint\\local-ip-address-9ad1f0a9f0fdbc10\\dep-lib-local_ip_address","checksum":false}}],"rustflags":[],"config":8247474407144887393,"compile_kind":0}
+{
+  "rustc": 8891013984288978370,
+  "features": "[]",
+  "declared_features": "[]",
+  "target": 8732937653025100153,
+  "profile": 2241668132362809309,
+  "path": 11679661597851883205,
+  "deps": [[6568467691589961976, "windows_sys", false, 3717114043027373770]],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "debug\\.fingerprint\\local-ip-address-9ad1f0a9f0fdbc10\\dep-lib-local_ip_address",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 8247474407144887393,
+  "compile_kind": 0
+}

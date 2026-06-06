@@ -24,7 +24,11 @@ export class FilesManager {
     return headers;
   }
 
-  async uploadFile(file: Buffer, purpose: string, filename = 'file.jsonl'): Promise<Record<string, unknown>> {
+  async uploadFile(
+    file: Buffer,
+    purpose: string,
+    filename = 'file.jsonl',
+  ): Promise<Record<string, unknown>> {
     const formData = new FormData();
     const blob = new Blob([new Uint8Array(file)], { type: 'application/octet-stream' });
     formData.append('file', blob, filename);

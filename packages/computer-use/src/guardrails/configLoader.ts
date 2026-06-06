@@ -72,7 +72,7 @@ export function parseSecurityYaml(content: string): Partial<SecurityBlacklistCon
   // Parse customPatterns (YAML-like array of objects)
   const patterns: CustomPatternEntry[] = [];
   const patternBlocks = content.match(
-    /customPatterns:\s*\n((?:\s+-\s+name:.*\n(?:\s+\w+:.*\n?)*)*)/
+    /customPatterns:\s*\n((?:\s+-\s+name:.*\n(?:\s+\w+:.*\n?)*)*)/,
   );
 
   if (patternBlocks && patternBlocks[1]) {

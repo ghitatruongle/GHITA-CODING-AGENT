@@ -147,6 +147,8 @@ export interface TranslationKeys {
     guideStep3: string;
     guideStep4: string;
     guideStep5: string;
+    lanEnabled: string;
+    lanEnabledDesc: string;
   };
   dashboard: {
     title: string;

@@ -8,7 +8,11 @@ export { DSOOrchestrator } from './sandbox/dsoOrchestrator.js';
 export { SandboxSecurityFilter } from './guardrails/sandboxFilter.js';
 export { SandboxLogger } from './sandbox/sandboxLogger.js';
 export { SecurityLogger } from './guardrails/securityLogger.js';
-export { SandboxValidationReporter, type SandboxValidationReport, type ValidationResult } from './sandboxValidationReporter.js';
+export {
+  SandboxValidationReporter,
+  type SandboxValidationReport,
+  type ValidationResult,
+} from './sandboxValidationReporter.js';
 export * from './guardrails/index.js';
 
 type NutButtonMap = Record<string, unknown>;
@@ -55,7 +59,9 @@ export async function createNutJsAdapter(): Promise<ComputerUseAdapter> {
 
   const resolveMouseButton = (button?: MouseButton): NutMouseButton => {
     const normalized = button ?? 'left';
-    return (buttons[normalized] ?? buttons[normalized.toUpperCase()] ?? buttons.LEFT) as NutMouseButton;
+    return (buttons[normalized] ??
+      buttons[normalized.toUpperCase()] ??
+      buttons.LEFT) as NutMouseButton;
   };
 
   const resolveKey = (key: string): NutKeyboardKey => {

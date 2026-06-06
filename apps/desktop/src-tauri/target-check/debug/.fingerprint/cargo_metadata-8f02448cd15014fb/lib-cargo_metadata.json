@@ -1,1 +1,27 @@
-{"rustc":8891013984288978370,"features":"[\"default\"]","declared_features":"[\"builder\", \"default\", \"derive_builder\", \"unstable\"]","target":13176895034425886201,"profile":2225463790103693989,"path":254549111679513502,"deps":[[2448563160050429386,"thiserror",false,6135465165768329922],[9680020106200215617,"semver",false,15497953724652876437],[11463991340766958661,"camino",false,11121613990363950385],[13249756436863741821,"cargo_platform",false,12427619057399567478],[13548984313718623784,"serde",false,11278685482312659220],[13795362694956882968,"serde_json",false,15493299078553435940]],"local":[{"CheckDepInfo":{"dep_info":"debug\\.fingerprint\\cargo_metadata-8f02448cd15014fb\\dep-lib-cargo_metadata","checksum":false}}],"rustflags":[],"config":8247474407144887393,"compile_kind":0}
+{
+  "rustc": 8891013984288978370,
+  "features": "[\"default\"]",
+  "declared_features": "[\"builder\", \"default\", \"derive_builder\", \"unstable\"]",
+  "target": 13176895034425886201,
+  "profile": 2225463790103693989,
+  "path": 254549111679513502,
+  "deps": [
+    [2448563160050429386, "thiserror", false, 6135465165768329922],
+    [9680020106200215617, "semver", false, 15497953724652876437],
+    [11463991340766958661, "camino", false, 11121613990363950385],
+    [13249756436863741821, "cargo_platform", false, 12427619057399567478],
+    [13548984313718623784, "serde", false, 11278685482312659220],
+    [13795362694956882968, "serde_json", false, 15493299078553435940]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "debug\\.fingerprint\\cargo_metadata-8f02448cd15014fb\\dep-lib-cargo_metadata",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 8247474407144887393,
+  "compile_kind": 0
+}

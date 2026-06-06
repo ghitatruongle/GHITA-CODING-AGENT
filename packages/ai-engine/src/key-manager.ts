@@ -153,9 +153,7 @@ export class KeyManager {
   /** Check if at least one key is healthy */
   hasHealthyKey(): boolean {
     const now = Date.now();
-    return this.keys.some(
-      (k) => k.isActive && (k.cooldownUntil === 0 || k.cooldownUntil <= now),
-    );
+    return this.keys.some((k) => k.isActive && (k.cooldownUntil === 0 || k.cooldownUntil <= now));
   }
 
   /** Get all keys (for passing to provider) */
@@ -200,8 +198,8 @@ export class KeyManager {
       case 'round-robin': {
         this.roundRobinIndex = this.roundRobinIndex % pool.length;
         const entry = pool[this.roundRobinIndex];
-      if (!entry) return pool[0]?.key ?? '';
-      const key = entry.key;
+        if (!entry) return pool[0]?.key ?? '';
+        const key = entry.key;
         this.roundRobinIndex++;
         return key;
       }

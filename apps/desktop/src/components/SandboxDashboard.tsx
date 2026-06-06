@@ -63,8 +63,7 @@ function ResourceBar({
   color: string;
 }) {
   const percent = max > 0 ? Math.min(100, (value / max) * 100) : 0;
-  const barColor =
-    percent > 80 ? 'var(--error)' : percent > 60 ? 'var(--warning)' : color;
+  const barColor = percent > 80 ? 'var(--error)' : percent > 60 ? 'var(--warning)' : color;
 
   return (
     <div style={{ marginBottom: '12px' }}>
@@ -76,9 +75,7 @@ function ResourceBar({
           marginBottom: '6px',
         }}
       >
-        <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>
-          {label}
-        </span>
+        <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{label}</span>
         <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>
           {value.toFixed(1)} {unit}
           {max > 0 && (
@@ -160,9 +157,39 @@ export function SandboxDashboard() {
         invoke<SandboxLog[]>('get_sandbox_logs', { limit: 20 }),
       ]);
 
-      if (containerData.status === 'fulfilled') setContainers(containerData.value);
-      if (summaryData.status === 'fulfilled') setSummary(summaryData.value);
-      if (logData.status === 'fulfilled') setRecentLogs(logData.value);
+      if (containerData.status === 'fulfilled') {
+        const val = containerData.value;
+        setContainers(Array.isArray(val) ? val : []);
+      }
+
+      if (summaryData.status === 'fulfilled') {
+        let val: unknown = summaryData.value;
+        if (typeof val === 'string') {
+          try {
+            val = JSON.parse(val);
+          } catch {
+            val = null;
+          }
+        }
+        if (val && typeof val === 'object' && 'runningContainers' in (val as Record<string, unknown>)) {
+          setSummary(val as SandboxSummary);
+        } else {
+          setSummary(null);
+        }
+      }
+
+      if (logData.status === 'fulfilled') {
+        let val = logData.value;
+        if (typeof val === 'string') {
+          try {
+            const parsed = JSON.parse(val);
+            val = Array.isArray(parsed) ? parsed : [];
+          } catch {
+            val = [];
+          }
+        }
+        setRecentLogs(Array.isArray(val) ? val : []);
+      }
 
       setError(null);
     } catch (err: unknown) {
@@ -288,8 +315,8 @@ export function SandboxDashboard() {
                 borderRadius: '8px',
               }}
             >
-              {summary.runningContainers}/{summary.totalContainers} containers
-              &middot; {summary.dbLogCount} logs
+              {summary.runningContainers}/{summary.totalContainers} containers &middot;{' '}
+              {summary.dbLogCount} logs
             </span>
           )}
           <div
@@ -421,90 +448,87 @@ export function SandboxDashboard() {
             {t('sandbox.containers', { count: containers.length })}
           </h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {containers.map((c) => (
-              <div
-                key={c.id}
-                style={{
-                  background: 'rgba(255,255,255,0.02)',
-                  borderRadius: '10px',
-                  padding: '14px 16px',
-                  border: '1px solid rgba(255,255,255,0.04)',
-                }}
-              >
-                {/* Container Header */}
+            {Array.isArray(containers) &&
+              containers.map((c) => (
                 <div
+                  key={c.id}
                   style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '10px',
+                    background: 'rgba(255,255,255,0.02)',
+                    borderRadius: '10px',
+                    padding: '14px 16px',
+                    border: '1px solid rgba(255,255,255,0.04)',
                   }}
                 >
-                  <div>
-                    <span
-                      style={{
-                        fontWeight: 700,
-                        fontSize: '13px',
-                        color: 'var(--text-primary)',
-                      }}
-                    >
-                      {c.name.replace(/^ghita-[a-f0-9]+-/, '')}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: '11px',
-                        color: 'var(--text-muted)',
-                        marginLeft: '8px',
-                      }}
-                    >
-                      {c.image}
-                    </span>
-                  </div>
-                  <StatusBadge status={c.status} />
-                </div>
-
-                {/* Resource Bars */}
-                {c.status === 'running' && (
-                  <>
-                    <ResourceBar
-                      label="CPU"
-                      value={c.cpuPercent}
-                      max={100}
-                      unit="%"
-                      color="#3b82f6"
-                    />
-                    <ResourceBar
-                      label="RAM"
-                      value={c.memoryUsageMb}
-                      max={c.memoryLimitMb}
-                      unit="MB"
-                      color="#a855f7"
-                    />
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        fontSize: '11px',
-                        color: 'var(--text-muted)',
-                      }}
-                    >
-                      <span>
-                        &#8593; {c.networkTxMb.toFixed(2)} MB
+                  {/* Container Header */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '10px',
+                    }}
+                  >
+                    <div>
+                      <span
+                        style={{
+                          fontWeight: 700,
+                          fontSize: '13px',
+                          color: 'var(--text-primary)',
+                        }}
+                      >
+                        {c.name.replace(/^ghita-[a-f0-9]+-/, '')}
                       </span>
-                      <span>
-                        &#8595; {c.networkRxMb.toFixed(2)} MB
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          color: 'var(--text-muted)',
+                          marginLeft: '8px',
+                        }}
+                      >
+                        {c.image}
                       </span>
                     </div>
-                  </>
-                )}
-              </div>
-            ))}
+                    <StatusBadge status={c.status} />
+                  </div>
+
+                  {/* Resource Bars */}
+                  {c.status === 'running' && (
+                    <>
+                      <ResourceBar
+                        label="CPU"
+                        value={c.cpuPercent}
+                        max={100}
+                        unit="%"
+                        color="#3b82f6"
+                      />
+                      <ResourceBar
+                        label="RAM"
+                        value={c.memoryUsageMb}
+                        max={c.memoryLimitMb}
+                        unit="MB"
+                        color="#a855f7"
+                      />
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          fontSize: '11px',
+                          color: 'var(--text-muted)',
+                        }}
+                      >
+                        <span>&#8593; {c.networkTxMb.toFixed(2)} MB</span>
+                        <span>&#8595; {c.networkRxMb.toFixed(2)} MB</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
           </div>
         </div>
       )}
 
       {/* Recent Logs */}
-      {recentLogs.length > 0 && (
+      {Array.isArray(recentLogs) && recentLogs.length > 0 && (
         <div>
           <h4
             style={{

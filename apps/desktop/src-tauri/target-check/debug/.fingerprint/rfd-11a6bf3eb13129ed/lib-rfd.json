@@ -1,1 +1,25 @@
-{"rustc":8891013984288978370,"features":"[\"common-controls-v6\", \"glib-sys\", \"gobject-sys\", \"gtk-sys\", \"gtk3\"]","declared_features":"[\"ashpd\", \"async-std\", \"common-controls-v6\", \"default\", \"file-handle-inner\", \"glib-sys\", \"gobject-sys\", \"gtk-sys\", \"gtk3\", \"pollster\", \"tokio\", \"urlencoding\", \"wayland\", \"xdg-portal\"]","target":4644090373205775831,"profile":2241668132362809309,"path":18440881073433270939,"deps":[[4143744114649553716,"raw_window_handle",false,2256604580440552848],[7263319592666514104,"windows_sys",false,17204438661291723857],[10630857666389190470,"log",false,11823398551888263435],[18096261089697941857,"build_script_build",false,7668724674052875404]],"local":[{"CheckDepInfo":{"dep_info":"debug\\.fingerprint\\rfd-11a6bf3eb13129ed\\dep-lib-rfd","checksum":false}}],"rustflags":[],"config":8247474407144887393,"compile_kind":0}
+{
+  "rustc": 8891013984288978370,
+  "features": "[\"common-controls-v6\", \"glib-sys\", \"gobject-sys\", \"gtk-sys\", \"gtk3\"]",
+  "declared_features": "[\"ashpd\", \"async-std\", \"common-controls-v6\", \"default\", \"file-handle-inner\", \"glib-sys\", \"gobject-sys\", \"gtk-sys\", \"gtk3\", \"pollster\", \"tokio\", \"urlencoding\", \"wayland\", \"xdg-portal\"]",
+  "target": 4644090373205775831,
+  "profile": 2241668132362809309,
+  "path": 18440881073433270939,
+  "deps": [
+    [4143744114649553716, "raw_window_handle", false, 2256604580440552848],
+    [7263319592666514104, "windows_sys", false, 17204438661291723857],
+    [10630857666389190470, "log", false, 11823398551888263435],
+    [18096261089697941857, "build_script_build", false, 7668724674052875404]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "debug\\.fingerprint\\rfd-11a6bf3eb13129ed\\dep-lib-rfd",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 8247474407144887393,
+  "compile_kind": 0
+}

@@ -125,12 +125,15 @@ export class ObservabilityManager {
   // --- Trace Management ---
 
   /** Start a new trace */
-  startTrace(name: string, options?: {
-    userId?: string;
-    sessionId?: string;
-    tags?: string[];
-    metadata?: Record<string, unknown>;
-  }): Trace {
+  startTrace(
+    name: string,
+    options?: {
+      userId?: string;
+      sessionId?: string;
+      tags?: string[];
+      metadata?: Record<string, unknown>;
+    },
+  ): Trace {
     const traceId = `trace_${randomBytes(12).toString('hex')}`;
 
     const trace: Trace = {
@@ -169,10 +172,14 @@ export class ObservabilityManager {
   }
 
   /** Start a span within a trace */
-  startSpan(traceId: string, name: string, options?: {
-    parentSpanId?: string;
-    attributes?: Record<string, unknown>;
-  }): TraceSpan {
+  startSpan(
+    traceId: string,
+    name: string,
+    options?: {
+      parentSpanId?: string;
+      attributes?: Record<string, unknown>;
+    },
+  ): TraceSpan {
     const trace = this.traces.get(traceId);
     if (!trace) throw new Error(`Trace not found: ${traceId}`);
 
@@ -232,10 +239,12 @@ export class ObservabilityManager {
   // --- LLM Metrics ---
 
   /** Record LLM call metrics */
-  recordLLMCall(metrics: Omit<LLMCallMetrics, 'traceId' | 'spanId'> & {
-    traceId?: string;
-    spanId?: string;
-  }): void {
+  recordLLMCall(
+    metrics: Omit<LLMCallMetrics, 'traceId' | 'spanId'> & {
+      traceId?: string;
+      spanId?: string;
+    },
+  ): void {
     const fullMetrics: LLMCallMetrics = {
       traceId: metrics.traceId ?? `trace_${randomBytes(8).toString('hex')}`,
       spanId: metrics.spanId ?? `span_${randomBytes(8).toString('hex')}`,
@@ -251,12 +260,7 @@ export class ObservabilityManager {
   }
 
   /** Get aggregated metrics */
-  getMetrics(options?: {
-    startTime?: Date;
-    endTime?: Date;
-    model?: string;
-    provider?: string;
-  }): {
+  getMetrics(options?: { startTime?: Date; endTime?: Date; model?: string; provider?: string }): {
     totalCalls: number;
     totalTokens: number;
     totalCost: number;
@@ -298,12 +302,12 @@ export class ObservabilityManager {
       }
       if (m.error) errors++;
 
-      const modelEntry = byModel[m.model] ??= { calls: 0, tokens: 0, cost: 0 };
+      const modelEntry = (byModel[m.model] ??= { calls: 0, tokens: 0, cost: 0 });
       modelEntry.calls++;
       modelEntry.tokens += m.totalTokens;
       modelEntry.cost += m.cost ?? 0;
 
-      const providerEntry = byProvider[m.provider] ??= { calls: 0, tokens: 0, cost: 0 };
+      const providerEntry = (byProvider[m.provider] ??= { calls: 0, tokens: 0, cost: 0 });
       providerEntry.calls++;
       providerEntry.tokens += m.totalTokens;
       providerEntry.cost += m.cost ?? 0;

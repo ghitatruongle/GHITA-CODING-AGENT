@@ -56,7 +56,11 @@ export class SampleClass {
   });
 
   it('should find keyword and extract surrounding lines (sliding window)', async () => {
-    const scanner = new HeadlessSearchScanner({ range: 3, balanceBrackets: false, removeComments: false });
+    const scanner = new HeadlessSearchScanner({
+      range: 3,
+      balanceBrackets: false,
+      removeComments: false,
+    });
     const result = await scanner.searchFile(sampleFilePath, 'execute');
 
     expect(result.found).toBe(true);
@@ -66,7 +70,11 @@ export class SampleClass {
   });
 
   it('should balance brackets using Sliding Window Bracket Balancer', async () => {
-    const scanner = new HeadlessSearchScanner({ range: 2, balanceBrackets: true, removeComments: false });
+    const scanner = new HeadlessSearchScanner({
+      range: 2,
+      balanceBrackets: true,
+      removeComments: false,
+    });
     const result = await scanner.searchFile(sampleFilePath, 'this.point = {');
 
     expect(result.found).toBe(true);
@@ -121,6 +129,8 @@ console.log(x);`;
     const binaryFilePath = path.join(testDir, 'test.png');
     fs.writeFileSync(binaryFilePath, 'fake-binary-data');
 
-    await expect(scanner.searchFile(binaryFilePath, 'fake')).rejects.toThrow('excluded from headless search');
+    await expect(scanner.searchFile(binaryFilePath, 'fake')).rejects.toThrow(
+      'excluded from headless search',
+    );
   });
 });

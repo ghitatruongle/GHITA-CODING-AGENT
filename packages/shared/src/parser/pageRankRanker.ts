@@ -21,7 +21,7 @@ export class PageRankRanker {
     files: FileTags[],
     damping = 0.85,
     maxIterations = 20,
-    tolerance = 1e-6
+    tolerance = 1e-6,
   ): Record<string, number> {
     const definedSymbols: Map<string, { file: string; tag: SymbolTag }> = new Map();
     const symbolMapByName: Map<string, string[]> = new Map(); // name -> list of symbolKey
@@ -33,11 +33,11 @@ export class PageRankRanker {
           const key = `${file.filePath}#${tag.name}`;
           definedSymbols.set(key, { file: file.filePath, tag });
 
- if (!symbolMapByName.has(tag.name)) {
- symbolMapByName.set(tag.name, []);
- }
- const nameEntries = symbolMapByName.get(tag.name);
- if (nameEntries) nameEntries.push(key);
+          if (!symbolMapByName.has(tag.name)) {
+            symbolMapByName.set(tag.name, []);
+          }
+          const nameEntries = symbolMapByName.get(tag.name);
+          if (nameEntries) nameEntries.push(key);
         }
       }
     }
@@ -57,8 +57,8 @@ export class PageRankRanker {
 
     // 2. Xây dựng các liên kết có hướng (Edges) dựa trên references
     for (const file of files) {
-      const definitions = file.tags.filter(t => t.kind === 'definition');
-      const references = file.tags.filter(t => t.kind === 'reference');
+      const definitions = file.tags.filter((t) => t.kind === 'definition');
+      const references = file.tags.filter((t) => t.kind === 'reference');
 
       for (const ref of references) {
         const targetKeys = symbolMapByName.get(ref.name);
@@ -71,9 +71,13 @@ export class PageRankRanker {
             // Chọn definition nhỏ nhất chứa reference (nếu có nested)
             if (!sourceKey) {
               sourceKey = `${file.filePath}#${def.name}`;
- } else {
- const currentDefEntry = definedSymbols.get(sourceKey);
- if (currentDefEntry && (def.endLine - def.startLine < currentDefEntry.tag.endLine - currentDefEntry.tag.startLine)) {
+            } else {
+              const currentDefEntry = definedSymbols.get(sourceKey);
+              if (
+                currentDefEntry &&
+                def.endLine - def.startLine <
+                  currentDefEntry.tag.endLine - currentDefEntry.tag.startLine
+              ) {
                 sourceKey = `${file.filePath}#${def.name}`;
               }
             }
@@ -87,10 +91,10 @@ export class PageRankRanker {
           // Tránh tự liên kết với chính mình
           if (sourceKey === targetKey) continue;
 
- const outNeighbors = outEdges.get(sourceKey);
- const inNeighbors = inEdges.get(targetKey);
- if (outNeighbors) outNeighbors.add(targetKey);
- if (inNeighbors) inNeighbors.add(sourceKey);
+          const outNeighbors = outEdges.get(sourceKey);
+          const inNeighbors = inEdges.get(targetKey);
+          if (outNeighbors) outNeighbors.add(targetKey);
+          if (inNeighbors) inNeighbors.add(sourceKey);
         }
       }
     }
@@ -111,7 +115,7 @@ export class PageRankRanker {
       // Tính đóng góp từ các Sinks (node không có out-edges)
       for (const node of nodes) {
         const outEdgesForNode = outEdges.get(node);
- if (outEdgesForNode && outEdgesForNode.size === 0) {
+        if (outEdgesForNode && outEdgesForNode.size === 0) {
           sinkContribution += scores[node] || 0;
         }
       }
@@ -120,14 +124,14 @@ export class PageRankRanker {
       // Tính điểm mới cho từng node
       let diff = 0;
       for (const node of nodes) {
- let rankSum = 0;
- const parents = inEdges.get(node);
- if (!parents) continue;
+        let rankSum = 0;
+        const parents = inEdges.get(node);
+        if (!parents) continue;
 
- for (const parent of parents) {
- const parentOutEdges = outEdges.get(parent);
- const outDegree = parentOutEdges?.size ?? 1;
- rankSum += (scores[parent] || 0) / outDegree;
+        for (const parent of parents) {
+          const parentOutEdges = outEdges.get(parent);
+          const outDegree = parentOutEdges?.size ?? 1;
+          rankSum += (scores[parent] || 0) / outDegree;
         }
 
         nextScores[node] = baseConstant + damping * rankSum + sinkShare;

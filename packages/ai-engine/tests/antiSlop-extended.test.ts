@@ -5,7 +5,12 @@
 // ==============================================================================
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { AntiSlopFilter, cleanSlop, createAntiSlopStreamMiddleware, createAntiSlopMiddleware } from '../src/middleware/antiSlop.js';
+import {
+  AntiSlopFilter,
+  cleanSlop,
+  createAntiSlopStreamMiddleware,
+  createAntiSlopMiddleware,
+} from '../src/middleware/antiSlop.js';
 
 // =============================================================================
 // Aho-Corasick Algorithm Tests (via getAcMatcher)
@@ -17,7 +22,7 @@ describe('AhoCorasick (via AntiSlopFilter.getAcMatcher)', () => {
     const ac = filter.getAcMatcher();
     const results = ac.search('hello foobar world');
     expect(results.length).toBeGreaterThan(0);
-    expect(results.some(r => r.endPos === 11)).toBe(true);
+    expect(results.some((r) => r.endPos === 11)).toBe(true);
   });
 
   it('should find multiple patterns in text', () => {
@@ -97,19 +102,19 @@ describe('Code Block Detection', () => {
   });
 
   it('should not filter inside backtick code block', () => {
-    const input = "```\nCertainly! Here is code.\n```";
+    const input = '```\nCertainly! Here is code.\n```';
     const result = filter.cleanWithCodeBlockAwareness(input);
     expect(result.cleaned).toContain('Certainly!');
   });
 
   it('should not filter inside tilde code block', () => {
-    const input = "~~~\nSure! Here is code.\n~~~";
+    const input = '~~~\nSure! Here is code.\n~~~';
     const result = filter.cleanWithCodeBlockAwareness(input);
     expect(result.cleaned).toContain('Sure!');
   });
 
   it('should filter outside code block but not inside', () => {
-    const input = "Certainly! Here is explanation.\n```\nSure! code here\n```\nAbsolutely! Done.";
+    const input = 'Certainly! Here is explanation.\n```\nSure! code here\n```\nAbsolutely! Done.';
     filter.resetCodeBlockState();
     const result = filter.cleanWithCodeBlockAwareness(input);
     expect(result.cleaned).not.toMatch(/^Certainly!/m);
@@ -118,14 +123,14 @@ describe('Code Block Detection', () => {
   });
 
   it('should handle code block with language tag', () => {
-    const input = "```typescript\nCertainly! const x = 1;\n```";
+    const input = '```typescript\nCertainly! const x = 1;\n```';
     filter.resetCodeBlockState();
     const result = filter.cleanWithCodeBlockAwareness(input);
     expect(result.cleaned).toContain('Certainly!');
   });
 
   it('should handle multiple code blocks', () => {
-    const input = "```\nSure! block1\n```\nCertainly! text\n```\nSure! block2\n```";
+    const input = '```\nSure! block1\n```\nCertainly! text\n```\nSure! block2\n```';
     filter.resetCodeBlockState();
     const result = filter.cleanWithCodeBlockAwareness(input);
     expect(result.cleaned).toContain('Sure! block1');
@@ -134,7 +139,7 @@ describe('Code Block Detection', () => {
   });
 
   it('should handle unclosed code block (rest of text is code)', () => {
-    const input = "```\nCertainly! All remaining text is code.\nSure! More code.";
+    const input = '```\nCertainly! All remaining text is code.\nSure! More code.';
     filter.resetCodeBlockState();
     const result = filter.cleanWithCodeBlockAwareness(input);
     expect(result.cleaned).toContain('Certainly!');
@@ -142,7 +147,7 @@ describe('Code Block Detection', () => {
   });
 
   it('should handle nested fences with different counts', () => {
-    const input = "````\n```nested```\n````\nCertainly! outside";
+    const input = '````\n```nested```\n````\nCertainly! outside';
     filter.resetCodeBlockState();
     const result = filter.cleanWithCodeBlockAwareness(input);
     expect(result.cleaned).toContain('```nested```');
@@ -150,9 +155,9 @@ describe('Code Block Detection', () => {
   });
 
   it('should reset code block state correctly', () => {
-    filter.cleanWithCodeBlockAwareness("```\nSure! code\n```");
+    filter.cleanWithCodeBlockAwareness('```\nSure! code\n```');
     filter.resetCodeBlockState();
-    const result = filter.cleanWithCodeBlockAwareness("Certainly! Fresh text.");
+    const result = filter.cleanWithCodeBlockAwareness('Certainly! Fresh text.');
     expect(result.cleaned).not.toContain('Certainly!');
   });
 });
@@ -351,17 +356,14 @@ describe('createAntiSlopStreamMiddleware', () => {
       yield { content: '}\n', done: true };
     }
 
-    const gen = await mw(
-      { messages: [], provider: {} as any },
-      async () => mockStream()
-    );
+    const gen = await mw({ messages: [], provider: {} as any }, async () => mockStream());
 
     const chunks: any[] = [];
     for await (const chunk of gen) {
       chunks.push(chunk);
     }
 
-    const allContent = chunks.map(c => c.content).join('');
+    const allContent = chunks.map((c) => c.content).join('');
     expect(allContent).toContain('function hello()');
     expect(allContent).toContain('return "world"');
   });
@@ -374,17 +376,14 @@ describe('createAntiSlopStreamMiddleware', () => {
       yield { content: 'const x = 1;\n', done: true };
     }
 
-    const gen = await mw(
-      { messages: [], provider: {} as any },
-      async () => mockStream()
-    );
+    const gen = await mw({ messages: [], provider: {} as any }, async () => mockStream());
 
     const chunks: any[] = [];
     for await (const chunk of gen) {
       chunks.push(chunk);
     }
 
-    const allContent = chunks.map(c => c.content).join('');
+    const allContent = chunks.map((c) => c.content).join('');
     expect(allContent).not.toMatch(/^Certainly!/);
     expect(allContent).toContain('const x = 1;');
   });
@@ -396,10 +395,7 @@ describe('createAntiSlopStreamMiddleware', () => {
       // empty
     }
 
-    const gen = await mw(
-      { messages: [], provider: {} as any },
-      async () => mockStream()
-    );
+    const gen = await mw({ messages: [], provider: {} as any }, async () => mockStream());
 
     const chunks: any[] = [];
     for await (const chunk of gen) {
@@ -416,17 +412,14 @@ describe('createAntiSlopStreamMiddleware', () => {
       yield { content: 'Sure! const x = 1;', done: true };
     }
 
-    const gen = await mw(
-      { messages: [], provider: {} as any },
-      async () => mockStream()
-    );
+    const gen = await mw({ messages: [], provider: {} as any }, async () => mockStream());
 
     const chunks: any[] = [];
     for await (const chunk of gen) {
       chunks.push(chunk);
     }
 
-    const allContent = chunks.map(c => c.content).join('');
+    const allContent = chunks.map((c) => c.content).join('');
     expect(allContent).not.toMatch(/^Sure!/);
     expect(allContent).toContain('const x = 1;');
   });
@@ -440,17 +433,14 @@ describe('createAntiSlopStreamMiddleware', () => {
       yield { content: '```\n', done: true };
     }
 
-    const gen = await mw(
-      { messages: [], provider: {} as any },
-      async () => mockStream()
-    );
+    const gen = await mw({ messages: [], provider: {} as any }, async () => mockStream());
 
     const chunks: any[] = [];
     for await (const chunk of gen) {
       chunks.push(chunk);
     }
 
-    const allContent = chunks.map(c => c.content).join('');
+    const allContent = chunks.map((c) => c.content).join('');
     expect(allContent).toContain('Certainly!');
   });
 });
@@ -463,13 +453,10 @@ describe('createAntiSlopMiddleware', () => {
   it('should strip slop from non-stream response', async () => {
     const mw = createAntiSlopMiddleware({ trackSavings: false });
 
-    const response = await mw(
-      { messages: [], provider: {} as any },
-      async () => ({
-        content: 'Certainly! Here is the answer.',
-        role: 'assistant' as const,
-      })
-    );
+    const response = await mw({ messages: [], provider: {} as any }, async () => ({
+      content: 'Certainly! Here is the answer.',
+      role: 'assistant' as const,
+    }));
 
     expect(response.content).not.toMatch(/^Certainly!/);
     expect(response.content).toContain('Here is the answer.');
@@ -478,13 +465,10 @@ describe('createAntiSlopMiddleware', () => {
   it('should pass through response without slop', async () => {
     const mw = createAntiSlopMiddleware({ trackSavings: false });
 
-    const response = await mw(
-      { messages: [], provider: {} as any },
-      async () => ({
-        content: 'The answer is 42.',
-        role: 'assistant' as const,
-      })
-    );
+    const response = await mw({ messages: [], provider: {} as any }, async () => ({
+      content: 'The answer is 42.',
+      role: 'assistant' as const,
+    }));
 
     expect(response.content).toBe('The answer is 42.');
   });
@@ -492,13 +476,10 @@ describe('createAntiSlopMiddleware', () => {
   it('should handle empty content response', async () => {
     const mw = createAntiSlopMiddleware({ trackSavings: false });
 
-    const response = await mw(
-      { messages: [], provider: {} as any },
-      async () => ({
-        content: '',
-        role: 'assistant' as const,
-      })
-    );
+    const response = await mw({ messages: [], provider: {} as any }, async () => ({
+      content: '',
+      role: 'assistant' as const,
+    }));
 
     expect(response.content).toBe('');
   });
@@ -506,13 +487,10 @@ describe('createAntiSlopMiddleware', () => {
   it('should not filter content inside code blocks', async () => {
     const mw = createAntiSlopMiddleware({ trackSavings: false });
 
-    const response = await mw(
-      { messages: [], provider: {} as any },
-      async () => ({
-        content: '```\nCertainly! const x = 1;\n```',
-        role: 'assistant' as const,
-      })
-    );
+    const response = await mw({ messages: [], provider: {} as any }, async () => ({
+      content: '```\nCertainly! const x = 1;\n```',
+      role: 'assistant' as const,
+    }));
 
     expect(response.content).toContain('Certainly!');
   });
@@ -582,17 +560,14 @@ describe('Edge cases & adversarial', () => {
       yield { content: 'Hello', done: true };
     }
 
-    const gen = await mw(
-      { messages: [], provider: {} as any },
-      async () => mockStream()
-    );
+    const gen = await mw({ messages: [], provider: {} as any }, async () => mockStream());
 
     const chunks: any[] = [];
     for await (const chunk of gen) {
       chunks.push(chunk);
     }
 
-    const allContent = chunks.map(c => c.content).join('');
+    const allContent = chunks.map((c) => c.content).join('');
     expect(allContent).toBe('Hello');
   });
 

@@ -27,7 +27,7 @@ export function renderTemplate(template: string, variables: Record<string, unkno
 export class PromptTemplate {
   constructor(
     public readonly template: string,
-    public readonly inputVariables?: string[]
+    public readonly inputVariables?: string[],
   ) {}
 
   format(variables: Record<string, unknown>): string {
@@ -46,7 +46,7 @@ export interface ChatMessageTemplate {
 export class ChatPromptTemplate {
   constructor(
     public readonly messages: ChatMessageTemplate[],
-    public readonly inputVariables?: string[]
+    public readonly inputVariables?: string[],
   ) {}
 
   formatMessages(variables: Record<string, unknown>): ChatMessage[] {
@@ -81,7 +81,8 @@ export class FewShotPromptTemplate {
     this.examplePrompt = options.examplePrompt;
     this.prefix = options.prefix;
     this.suffix = options.suffix;
-    this.exampleSeparator = options.exampleSeparator !== undefined ? options.exampleSeparator : '\n\n';
+    this.exampleSeparator =
+      options.exampleSeparator !== undefined ? options.exampleSeparator : '\n\n';
   }
 
   format(variables: Record<string, unknown>): string {
@@ -103,7 +104,7 @@ export class PipelinePromptTemplate {
     public readonly pipelinePrompts: Array<{
       parameterName: string;
       prompt: PromptTemplate;
-    }>
+    }>,
   ) {}
 
   format(variables: Record<string, unknown>): string {

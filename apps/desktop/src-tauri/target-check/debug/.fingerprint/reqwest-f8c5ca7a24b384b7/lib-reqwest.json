@@ -1,1 +1,47 @@
-{"rustc":8891013984288978370,"features":"[\"__rustls\", \"__tls\", \"json\", \"rustls-no-provider\", \"stream\"]","declared_features":"[\"__native-tls\", \"__native-tls-alpn\", \"__rustls\", \"__rustls-aws-lc-rs\", \"__tls\", \"blocking\", \"brotli\", \"charset\", \"cookies\", \"default\", \"default-tls\", \"deflate\", \"form\", \"gzip\", \"hickory-dns\", \"http2\", \"http3\", \"json\", \"multipart\", \"native-tls\", \"native-tls-no-alpn\", \"native-tls-vendored\", \"native-tls-vendored-no-alpn\", \"query\", \"rustls\", \"rustls-no-provider\", \"socks\", \"stream\", \"system-proxy\", \"zstd\"]","target":8885864859914201979,"profile":447021486742529345,"path":11931365369466876058,"deps":[[302948626015856208,"futures_core",false,11588032535614218554],[784494742817713399,"tower_service",false,4298109923882193059],[1528297757488249563,"url",false,985808208607159057],[1991942485830005045,"tokio_rustls",false,12789837261326499110],[2251399859588827949,"pin_project_lite",false,13544879195664848426],[2517136641825875337,"sync_wrapper",false,6548808663801784516],[2620434475832828286,"http",false,15215202896609420038],[3163899731817361221,"tokio_util",false,16537606986291781662],[3626672138398771397,"hyper",false,13442086456453696812],[3632162862999675140,"tower",false,1178639626667729798],[3870702314125662939,"bytes",false,15524592130628382024],[5308207389380366964,"rustls_pki_types",false,755779307586228801],[5898568623609459682,"futures_util",false,10270524985482332077],[6803352382179706244,"percent_encoding",false,10381796279602102879],[9394460649638301237,"tokio",false,6078048768369008908],[10598472717906767558,"hyper_rustls",false,9529612455404965637],[10630857666389190470,"log",false,11823398551888263435],[11976082518617474977,"hyper_util",false,3766002957056221735],[13077212702700853852,"base64",false,11935094954155282257],[13456317631986937123,"tower_http",false,2682650109221470190],[13548984313718623784,"serde",false,13550245111507472063],[13708883092485345026,"rustls_platform_verifier",false,1948200940858266395],[13795362694956882968,"serde_json",false,8682942452153891812],[14084095096285906100,"http_body",false,1072593905189043719],[14521779147868685257,"rustls",false,1882377505188116373],[16900715236047033623,"http_body_util",false,4875778543742254033]],"local":[{"CheckDepInfo":{"dep_info":"debug\\.fingerprint\\reqwest-f8c5ca7a24b384b7\\dep-lib-reqwest","checksum":false}}],"rustflags":[],"config":8247474407144887393,"compile_kind":0}
+{
+  "rustc": 8891013984288978370,
+  "features": "[\"__rustls\", \"__tls\", \"json\", \"rustls-no-provider\", \"stream\"]",
+  "declared_features": "[\"__native-tls\", \"__native-tls-alpn\", \"__rustls\", \"__rustls-aws-lc-rs\", \"__tls\", \"blocking\", \"brotli\", \"charset\", \"cookies\", \"default\", \"default-tls\", \"deflate\", \"form\", \"gzip\", \"hickory-dns\", \"http2\", \"http3\", \"json\", \"multipart\", \"native-tls\", \"native-tls-no-alpn\", \"native-tls-vendored\", \"native-tls-vendored-no-alpn\", \"query\", \"rustls\", \"rustls-no-provider\", \"socks\", \"stream\", \"system-proxy\", \"zstd\"]",
+  "target": 8885864859914201979,
+  "profile": 447021486742529345,
+  "path": 11931365369466876058,
+  "deps": [
+    [302948626015856208, "futures_core", false, 11588032535614218554],
+    [784494742817713399, "tower_service", false, 4298109923882193059],
+    [1528297757488249563, "url", false, 985808208607159057],
+    [1991942485830005045, "tokio_rustls", false, 12789837261326499110],
+    [2251399859588827949, "pin_project_lite", false, 13544879195664848426],
+    [2517136641825875337, "sync_wrapper", false, 6548808663801784516],
+    [2620434475832828286, "http", false, 15215202896609420038],
+    [3163899731817361221, "tokio_util", false, 16537606986291781662],
+    [3626672138398771397, "hyper", false, 13442086456453696812],
+    [3632162862999675140, "tower", false, 1178639626667729798],
+    [3870702314125662939, "bytes", false, 15524592130628382024],
+    [5308207389380366964, "rustls_pki_types", false, 755779307586228801],
+    [5898568623609459682, "futures_util", false, 10270524985482332077],
+    [6803352382179706244, "percent_encoding", false, 10381796279602102879],
+    [9394460649638301237, "tokio", false, 6078048768369008908],
+    [10598472717906767558, "hyper_rustls", false, 9529612455404965637],
+    [10630857666389190470, "log", false, 11823398551888263435],
+    [11976082518617474977, "hyper_util", false, 3766002957056221735],
+    [13077212702700853852, "base64", false, 11935094954155282257],
+    [13456317631986937123, "tower_http", false, 2682650109221470190],
+    [13548984313718623784, "serde", false, 13550245111507472063],
+    [13708883092485345026, "rustls_platform_verifier", false, 1948200940858266395],
+    [13795362694956882968, "serde_json", false, 8682942452153891812],
+    [14084095096285906100, "http_body", false, 1072593905189043719],
+    [14521779147868685257, "rustls", false, 1882377505188116373],
+    [16900715236047033623, "http_body_util", false, 4875778543742254033]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "debug\\.fingerprint\\reqwest-f8c5ca7a24b384b7\\dep-lib-reqwest",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 8247474407144887393,
+  "compile_kind": 0
+}

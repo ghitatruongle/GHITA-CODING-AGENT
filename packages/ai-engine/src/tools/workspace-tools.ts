@@ -43,7 +43,7 @@ function isDangerousCommand(command: string): boolean {
     /format\s+/i,
     /del\s+\/[sfq]/i,
   ];
-  return dangerousPatterns.some(p => p.test(command));
+  return dangerousPatterns.some((p) => p.test(command));
 }
 
 /**
@@ -56,10 +56,14 @@ export function ensureInSandbox(filePath: string, sandboxRoot?: string): string 
   }
   const resolvedRoot = path.resolve(root);
   // If absolute path, resolve directly; if relative, resolve relative to resolvedRoot
-  const resolvedPath = path.isAbsolute(filePath) ? path.resolve(filePath) : path.resolve(resolvedRoot, filePath);
-  
+  const resolvedPath = path.isAbsolute(filePath)
+    ? path.resolve(filePath)
+    : path.resolve(resolvedRoot, filePath);
+
   if (!resolvedPath.startsWith(resolvedRoot)) {
-    throw new Error(`Security Exception: Access denied. Path "${resolvedPath}" lies outside the active workspace sandbox "${resolvedRoot}".`);
+    throw new Error(
+      `Security Exception: Access denied. Path "${resolvedPath}" lies outside the active workspace sandbox "${resolvedRoot}".`,
+    );
   }
   return resolvedPath;
 }
@@ -69,26 +73,33 @@ export function ensureInSandbox(filePath: string, sandboxRoot?: string): string 
  */
 export async function listDirectory(args: { recursive?: boolean; path?: string }): Promise<string> {
   const targetDir = args.path ? ensureInSandbox(args.path) : ensureInSandbox('.');
-  
+
   interface FileEntry {
     path: string;
     isDirectory: boolean;
     size?: number;
   }
-  
+
   const results: FileEntry[] = [];
-  
+
   function walk(currentDir: string) {
     const entries = fs.readdirSync(currentDir, { withFileTypes: true });
     for (const entry of entries) {
       const fullPath = path.join(currentDir, entry.name);
       // Skip typical noise folders
-      if (entry.name === 'node_modules' || entry.name === '.git' || entry.name === 'dist' || entry.name === '.turbo' || entry.name === 'build' || entry.name === '.cxx') {
+      if (
+        entry.name === 'node_modules' ||
+        entry.name === '.git' ||
+        entry.name === 'dist' ||
+        entry.name === '.turbo' ||
+        entry.name === 'build' ||
+        entry.name === '.cxx'
+      ) {
         continue;
       }
-      
+
       const relPath = path.relative(ensureInSandbox('.'), fullPath);
-      
+
       if (entry.isDirectory()) {
         results.push({ path: relPath, isDirectory: true });
         if (args.recursive) {
@@ -100,7 +111,7 @@ export async function listDirectory(args: { recursive?: boolean; path?: string }
       }
     }
   }
-  
+
   walk(targetDir);
   return JSON.stringify(results, null, 2);
 }
@@ -108,26 +119,30 @@ export async function listDirectory(args: { recursive?: boolean; path?: string }
 /**
  * 2. read_file tool implementation
  */
-export async function readFile(args: { filePath: string; startLine?: number; endLine?: number }): Promise<string> {
+export async function readFile(args: {
+  filePath: string;
+  startLine?: number;
+  endLine?: number;
+}): Promise<string> {
   const fullPath = ensureInSandbox(args.filePath);
   if (!fs.existsSync(fullPath)) {
     throw new Error(`File not found: ${args.filePath}`);
   }
-  
+
   const stat = fs.statSync(fullPath);
   if (!stat.isFile()) {
     throw new Error(`Path is not a file: ${args.filePath}`);
   }
-  
+
   const content = fs.readFileSync(fullPath, 'utf8');
   if (args.startLine === undefined && args.endLine === undefined) {
     return content;
   }
-  
+
   const lines = content.split('\n');
   const start = Math.max(1, args.startLine ?? 1);
   const end = Math.min(lines.length, args.endLine ?? lines.length);
-  
+
   const extractedLines = lines.slice(start - 1, end);
   return extractedLines.join('\n');
 }
@@ -159,7 +174,11 @@ export async function writeFile(args: { filePath: string; content: string }): Pr
 /**
  * 4. replace_file_content tool implementation
  */
-export async function replaceFileContent(args: { filePath: string; targetContent: string; replacementContent: string }): Promise<string> {
+export async function replaceFileContent(args: {
+  filePath: string;
+  targetContent: string;
+  replacementContent: string;
+}): Promise<string> {
   const fullPath = ensureInSandbox(args.filePath);
   const relPath = path.relative(ensureInSandbox('.'), fullPath);
 
@@ -177,17 +196,24 @@ export async function replaceFileContent(args: { filePath: string; targetContent
 
   const content = fs.readFileSync(fullPath, 'utf8');
   if (!content.includes(args.targetContent)) {
-    throw new Error('Target content not found in file. Please specify target content matching lines in the file exactly.');
+    throw new Error(
+      'Target content not found in file. Please specify target content matching lines in the file exactly.',
+    );
   }
 
   // Verify target is unique to avoid wrong replacement
   const firstIndex = content.indexOf(args.targetContent);
   const lastIndex = content.lastIndexOf(args.targetContent);
   if (firstIndex !== lastIndex) {
-    throw new Error('Multiple occurrences of target content found. Please provide a more unique target block (include surrounding lines).');
+    throw new Error(
+      'Multiple occurrences of target content found. Please provide a more unique target block (include surrounding lines).',
+    );
   }
 
-  const newContent = content.substring(0, firstIndex) + args.replacementContent + content.substring(firstIndex + args.targetContent.length);
+  const newContent =
+    content.substring(0, firstIndex) +
+    args.replacementContent +
+    content.substring(firstIndex + args.targetContent.length);
   fs.writeFileSync(fullPath, newContent, 'utf8');
 
   return `Successfully replaced content in ${relPath}`;
@@ -198,29 +224,53 @@ export async function replaceFileContent(args: { filePath: string; targetContent
  */
 export async function grepSearch(args: { query: string }): Promise<string> {
   const sandbox = ensureInSandbox('.');
-  
+
   interface Match {
     file: string;
     line: number;
     content: string;
   }
-  
+
   const matches: Match[] = [];
-  
+
   function search(currentDir: string) {
     const entries = fs.readdirSync(currentDir, { withFileTypes: true });
     for (const entry of entries) {
       const fullPath = path.join(currentDir, entry.name);
-      if (entry.name === 'node_modules' || entry.name === '.git' || entry.name === 'dist' || entry.name === '.turbo' || entry.name === 'build' || entry.name === '.cxx') {
+      if (
+        entry.name === 'node_modules' ||
+        entry.name === '.git' ||
+        entry.name === 'dist' ||
+        entry.name === '.turbo' ||
+        entry.name === 'build' ||
+        entry.name === '.cxx'
+      ) {
         continue;
       }
-      
+
       if (entry.isDirectory()) {
         search(fullPath);
       } else if (entry.isFile()) {
         const ext = path.extname(entry.name).toLowerCase();
         // Search text-like files only
-        if (['.ts', '.tsx', '.js', '.jsx', '.json', '.html', '.css', '.md', '.txt', '.yaml', '.yml', '.toml', '.mjs', '.cjs'].includes(ext)) {
+        if (
+          [
+            '.ts',
+            '.tsx',
+            '.js',
+            '.jsx',
+            '.json',
+            '.html',
+            '.css',
+            '.md',
+            '.txt',
+            '.yaml',
+            '.yml',
+            '.toml',
+            '.mjs',
+            '.cjs',
+          ].includes(ext)
+        ) {
           const content = fs.readFileSync(fullPath, 'utf8');
           if (content.includes(args.query)) {
             const lines = content.split(/\r?\n/);
@@ -238,7 +288,7 @@ export async function grepSearch(args: { query: string }): Promise<string> {
       }
     }
   }
-  
+
   search(sandbox);
   return JSON.stringify(matches.slice(0, 50), null, 2); // Cap matches at 50 to prevent context bloating
 }
@@ -250,17 +300,20 @@ export async function runCommand(args: { command: string; timeoutMs?: number }):
   const sandbox = ensureInSandbox('.');
   const command = args.command;
   const timeout = args.timeoutMs ?? 30000; // default 30s timeout
-  
+
   // Security checks on commands
   const blockedTokens = ['rm -rf /', 'mkfs', 'dd if', 'shutdown', 'reboot', 'killall', 'format '];
-  if (blockedTokens.some(token => command.includes(token))) {
-    throw new Error(`Security Exception: Command "${command}" contains unsafe operations and was blocked.`);
+  if (blockedTokens.some((token) => command.includes(token))) {
+    throw new Error(
+      `Security Exception: Command "${command}" contains unsafe operations and was blocked.`,
+    );
   }
-  
+
   // Check for command approval hook
   // In custom mode: always ask. In auto mode: only ask for dangerous commands.
   if (globalThis.approveCommandHandler) {
-    const needsApproval = globalThis.agentPermissionMode === 'custom' || isDangerousCommand(command);
+    const needsApproval =
+      globalThis.agentPermissionMode === 'custom' || isDangerousCommand(command);
     if (needsApproval) {
       const approved = await globalThis.approveCommandHandler(command);
       if (!approved) {
@@ -268,20 +321,30 @@ export async function runCommand(args: { command: string; timeoutMs?: number }):
       }
     }
   }
-  
+
+  const parts = command.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) throw new Error('Empty command');
+  const spawnCmd = parts[0] as string;
+  const spawnArgs = parts.slice(1);
+
   return new Promise((resolve) => {
-    const isWindows = process.platform === 'win32';
-    const parts = command.trim().split(/\s+/).filter(Boolean);
-    const program = parts[0] as string;
-    const args = parts.slice(1);
-    const spawnCmd = isWindows ? 'cmd.exe' : program;
-    const spawnArgs = isWindows ? ['/c', command] : args;
-    const child = spawn(spawnCmd, spawnArgs, { cwd: sandbox, timeout, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(spawnCmd, spawnArgs, {
+      cwd: sandbox,
+      timeout,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
     let stdout = '';
     let stderr = '';
-    const proc = child as unknown as NodeJS.EventEmitter & { stdout: NodeJS.ReadableStream | null; stderr: NodeJS.ReadableStream | null };
-    proc.stdout?.on('data', (d: Buffer) => { stdout += d.toString(); });
-    proc.stderr?.on('data', (d: Buffer) => { stderr += d.toString(); });
+    const proc = child as unknown as NodeJS.EventEmitter & {
+      stdout: NodeJS.ReadableStream | null;
+      stderr: NodeJS.ReadableStream | null;
+    };
+    proc.stdout?.on('data', (d: Buffer) => {
+      stdout += d.toString();
+    });
+    proc.stderr?.on('data', (d: Buffer) => {
+      stderr += d.toString();
+    });
     proc.on('error', (error: Error) => {
       let output = '';
       if (stdout) output += `STDOUT:\n${stdout}\n`;

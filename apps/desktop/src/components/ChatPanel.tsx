@@ -9,7 +9,8 @@ import { getSharedSocket } from '../utils/sharedSocket';
 import { generateUUID, type AgentEvent } from '@ghita/shared';
 import { useAppStore } from '../stores/appStore';
 import { useTranslation } from '../i18n';
-import { loadApiConfig } from '../utils/apiConfig';
+import { loadApiConfig, normalizeApiKeys } from '../utils/apiConfig';
+import { formatModelLabel as formatModelLabelUtil } from '../utils/modelLabel';
 import { runCommand, assessShellCommand } from '../utils/shell';
 import { useChatSessions } from '../hooks/useChatSessions';
 
@@ -39,45 +40,51 @@ type ProviderId =
   | 'voyage'
   | 'ai21'
   | 'sambanova'
-  | 'novita';
+  | 'novita'
+  | 'opencode-zen'
+  | 'nvidia-nim';
 
 const PROVIDER_LABELS: Record<ProviderId, { name: string; icon: string }> = {
-  openai:          { name: 'OpenAI',                icon: '🟢' },
-  anthropic:       { name: 'Anthropic',             icon: '🟣' },
-  google:          { name: 'Google Gemini',         icon: '🔵' },
-  ollama:          { name: 'Ollama (Local)',         icon: '🦙' },
-  custom:          { name: 'Custom Provider',       icon: '⚙️' },
-  opengateway:     { name: 'Gitlawb Opengateway',   icon: '🌐' },
-  mimo:            { name: 'Xiaomi MiMo',           icon: '🤖' },
-  openrouter:      { name: 'OpenRouter',            icon: '🔀' },
-  deepseek:        { name: 'DeepSeek',              icon: '🔍' },
-  groq:            { name: 'Groq',                  icon: '⚡' },
-  mistral:         { name: 'Mistral',               icon: '🌊' },
-  hicap:           { name: 'Hicap',                 icon: '🔗' },
-  'github-models': { name: 'GitHub Models',         icon: '🐙' },
+  openai: { name: 'OpenAI', icon: '🟢' },
+  anthropic: { name: 'Anthropic', icon: '🟣' },
+  google: { name: 'Google Gemini', icon: '🔵' },
+  ollama: { name: 'Ollama (Local)', icon: '🦙' },
+  custom: { name: 'Custom Provider', icon: '⚙️' },
+  opengateway: { name: 'Gitlawb Opengateway', icon: '🌐' },
+  mimo: { name: 'Xiaomi MiMo', icon: '🤖' },
+  openrouter: { name: 'OpenRouter', icon: '🔀' },
+  deepseek: { name: 'DeepSeek', icon: '🔍' },
+  groq: { name: 'Groq', icon: '⚡' },
+  mistral: { name: 'Mistral', icon: '🌊' },
+  hicap: { name: 'Hicap', icon: '🔗' },
+  'github-models': { name: 'GitHub Models', icon: '🐙' },
   // Phase 1.2: New providers
-  cerebras:        { name: 'Cerebras',              icon: '⚡' },
-  together:        { name: 'Together AI',           icon: '🤝' },
-  fireworks:       { name: 'Fireworks AI',          icon: '🎆' },
-  cohere:          { name: 'Cohere',                icon: '🔷' },
-  xai:             { name: 'xAI (Grok)',            icon: '❌' },
-  replicate:       { name: 'Replicate',             icon: '🔁' },
-  perplexity:      { name: 'Perplexity',            icon: '🔎' },
-  voyage:          { name: 'Voyage AI',             icon: '🧭' },
-  ai21:            { name: 'AI21 Labs',             icon: '🧪' },
-  sambanova:       { name: 'SambaNova',             icon: '🔥' },
-  novita:          { name: 'Novita AI',             icon: '🌟' },
+  cerebras: { name: 'Cerebras', icon: '⚡' },
+  together: { name: 'Together AI', icon: '🤝' },
+  fireworks: { name: 'Fireworks AI', icon: '🎆' },
+  cohere: { name: 'Cohere', icon: '🔷' },
+  xai: { name: 'xAI (Grok)', icon: '❌' },
+  replicate: { name: 'Replicate', icon: '🔁' },
+  perplexity: { name: 'Perplexity', icon: '🔎' },
+  voyage: { name: 'Voyage AI', icon: '🧭' },
+  ai21: { name: 'AI21 Labs', icon: '🧪' },
+  sambanova: { name: 'SambaNova', icon: '🔥' },
+  novita: { name: 'Novita AI', icon: '🌟' },
+  'opencode-zen': { name: 'OpenCode Zen', icon: '🧘' },
+  'nvidia-nim': { name: 'NVIDIA NIM', icon: '🟢' },
 };
 
 interface DynamicModelOption {
-  value: string;       // e.g. 'openai/gpt-4o'
-  label: string;       // e.g. '🟢 OpenAI — gpt-4o'
-  providerId: string;  // e.g. 'openai'
-  model: string;       // e.g. 'gpt-4o'
+  value: string; // e.g. 'openai/gpt-4o'
+  label: string; // e.g. '🟢 OpenAI — gpt-4o'
+  providerId: string; // e.g. 'openai'
+  model: string; // e.g. 'gpt-4o'
 }
 
 /** Build flat model option list from persisted API config. */
-function buildModelOptions(parsed: Record<string, Record<string, unknown>> = {}): DynamicModelOption[] {
+function buildModelOptions(
+  parsed: Record<string, Record<string, unknown>> = {},
+): DynamicModelOption[] {
   try {
     const options: DynamicModelOption[] = [];
 
@@ -89,28 +96,31 @@ function buildModelOptions(parsed: Record<string, Record<string, unknown>> = {})
       if (!entry['active']) continue;
 
       // Phase 1.1: Handle both old (apiKey) and new (apiKeys) formats
-      const apiKeys = Array.isArray(entry['apiKeys'])
-        ? (entry['apiKeys'] as string[])
-        : typeof entry['apiKey'] === 'string' && entry['apiKey']
-          ? [entry['apiKey'] as string]
-          : [];
+      const apiKeys = normalizeApiKeys(entry);
 
-      // Non-ollama/opengateway providers must have a non-empty API key
-      if (pid !== 'ollama' && pid !== 'opengateway' && apiKeys.length === 0) continue;
+      // Non-ollama/opencode-zen providers must have a non-empty API key
+      if (
+        pid !== 'ollama' &&
+        pid !== 'opencode-zen' &&
+        apiKeys.length === 0
+      )
+        continue;
 
       const meta = PROVIDER_LABELS[pid] || { name: pid, icon: '🔷' };
       const availableModels = entry['availableModels'] as string[] | undefined;
       const selectedModel = entry['selectedModel'] as string | undefined;
-      const models = availableModels && availableModels.length > 0
-        ? availableModels
-        : selectedModel
-          ? [selectedModel]
-          : [];
+      const models =
+        availableModels && availableModels.length > 0
+          ? availableModels
+          : selectedModel
+            ? [selectedModel]
+            : [];
 
       for (const model of models) {
+        const displayModel = formatModelLabelUtil(pid, model);
         options.push({
           value: `${pid}/${model}`,
-          label: `${meta.icon} ${meta.name} — ${model}`,
+          label: `${meta.icon} ${meta.name} — ${displayModel}`,
           providerId: pid,
           model,
         });
@@ -402,7 +412,9 @@ function ComputerUsePreviewComponent({ preview }: ComputerUsePreviewProps) {
       )}
 
       {/* Embedded Animation Styles */}
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         @keyframes dashOffset {
           to {
             stroke-dashoffset: -1000;
@@ -422,7 +434,9 @@ function ComputerUsePreviewComponent({ preview }: ComputerUsePreviewProps) {
           0%, 100% { opacity: 0.8; }
           50% { opacity: 0.4; }
         }
-      `}} />
+      `,
+        }}
+      />
     </div>
   );
 }
@@ -436,23 +450,37 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
   const permissionMode = useAppStore((s) => s.permissionMode);
 
   // Determine if this code block is a runnable command
-  const isShellCommand = !lang || lang === 'cmd' || lang === 'powershell' || lang === 'shell' || lang === 'bash' || lang === 'sh';
+  const isShellCommand =
+    !lang ||
+    lang === 'cmd' ||
+    lang === 'powershell' ||
+    lang === 'shell' ||
+    lang === 'bash' ||
+    lang === 'sh';
   // Single-line code blocks without language are likely commands
-  const isRunnable = isShellCommand && code.split('\n').filter(l => l.trim()).length <= 3;
+  const isRunnable = isShellCommand && code.split('\n').filter((l) => l.trim()).length <= 3;
 
   const handleRun = async () => {
     const command = code.trim();
     // Security scan before execution
     const scan = assessShellCommand(command);
     if (scan.threatLevel === 'CRITICAL') {
-      setOutput(`BLOCKED: Command flagged as CRITICAL threat.\nReason: ${scan.reason || 'Unknown'}`);
+      setOutput(
+        `BLOCKED: Command flagged as CRITICAL threat.\nReason: ${scan.reason || 'Unknown'}`,
+      );
       return;
     }
 
     // In auto mode, skip confirmation for safe commands
     const needsApproval = permissionMode === 'custom' || !scan.safe;
     if (needsApproval) {
-      if (scan.threatLevel === 'HIGH' && !window.confirm(`WARNING: Potentially dangerous command.\n${scan.reason || 'Unknown'}\n\nRun anyway?\n\n${command}`)) return;
+      if (
+        scan.threatLevel === 'HIGH' &&
+        !window.confirm(
+          `WARNING: Potentially dangerous command.\n${scan.reason || 'Unknown'}\n\nRun anyway?\n\n${command}`,
+        )
+      )
+        return;
       else if (!window.confirm(`Run this command?\n\n${command}`)) return;
     }
 
@@ -462,22 +490,35 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
     if (result.success) {
       setOutput(result.stdout || t('chat.runSuccessNoOutput'));
     } else {
-      setOutput(result.stderr || result.stdout || `(${t('chat.runError')}, exit code: ${result.code})`);
+      setOutput(
+        result.stderr || result.stdout || `(${t('chat.runError')}, exit code: ${result.code})`,
+      );
     }
     setIsRunning(false);
   };
 
   return (
-    <div style={{
-      margin: '8px 0', borderRadius: '6px',
-      background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)',
-      overflow: 'hidden',
-    }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '4px 10px', fontSize: '10px', color: '#64748b',
-        background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.05)',
-      }}>
+    <div
+      style={{
+        margin: '8px 0',
+        borderRadius: '6px',
+        background: 'rgba(0,0,0,0.3)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '4px 10px',
+          fontSize: '10px',
+          color: '#64748b',
+          background: 'rgba(255,255,255,0.03)',
+          borderBottom: '1px solid rgba(255,255,255,0.05)',
+        }}
+      >
         <span style={{ textTransform: 'uppercase', fontWeight: 600 }}>{lang || 'command'}</span>
         {isRunnable && (
           <button
@@ -485,8 +526,12 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
             disabled={isRunning}
             style={{
               background: isRunning ? 'rgba(99,102,241,0.3)' : 'rgba(99,102,241,0.6)',
-              color: '#fff', border: 'none', borderRadius: '4px',
-              padding: '2px 10px', fontSize: '10px', cursor: isRunning ? 'default' : 'pointer',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '4px',
+              padding: '2px 10px',
+              fontSize: '10px',
+              cursor: isRunning ? 'default' : 'pointer',
               fontWeight: 600,
             }}
           >
@@ -494,23 +539,41 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
           </button>
         )}
       </div>
-      <pre style={{
-        margin: 0, padding: '10px', fontSize: '12px', color: '#e2e8f0',
-        whiteSpace: 'pre-wrap', wordBreak: 'break-all', overflow: 'auto',
-        maxHeight: '200px', fontFamily: "'Cascadia Code', 'Fira Code', monospace",
-      }}>
+      <pre
+        style={{
+          margin: 0,
+          padding: '10px',
+          fontSize: '12px',
+          color: '#e2e8f0',
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-all',
+          overflow: 'auto',
+          maxHeight: '200px',
+          fontFamily: "'Cascadia Code', 'Fira Code', monospace",
+        }}
+      >
         {code}
       </pre>
       {output && (
-        <div style={{
-          padding: '8px 10px', fontSize: '11px',
-          borderTop: '1px solid rgba(255,255,255,0.05)',
-          background: 'rgba(0,0,0,0.2)',
-          color: output.includes(t('chat.runError')) || output.toLowerCase().includes('error') || output.includes('错误') ? '#f87171' : '#86efac',
-          whiteSpace: 'pre-wrap', wordBreak: 'break-all',
-          maxHeight: '120px', overflow: 'auto',
-          fontFamily: "'Cascadia Code', 'Fira Code', monospace",
-        }}>
+        <div
+          style={{
+            padding: '8px 10px',
+            fontSize: '11px',
+            borderTop: '1px solid rgba(255,255,255,0.05)',
+            background: 'rgba(0,0,0,0.2)',
+            color:
+              output.includes(t('chat.runError')) ||
+              output.toLowerCase().includes('error') ||
+              output.includes('错误')
+                ? '#f87171'
+                : '#86efac',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-all',
+            maxHeight: '120px',
+            overflow: 'auto',
+            fontFamily: "'Cascadia Code', 'Fira Code', monospace",
+          }}
+        >
           {output}
         </div>
       )}
@@ -555,7 +618,12 @@ function renderMarkdown(text: string): React.ReactNode {
           </div>
         );
       }
-      return <span key={`${i}-${li}`}>{li > 0 && <br />}{renderInline(line)}</span>;
+      return (
+        <span key={`${i}-${li}`}>
+          {li > 0 && <br />}
+          {renderInline(line)}
+        </span>
+      );
     });
   });
 }
@@ -567,24 +635,46 @@ function renderInline(text: string): React.ReactNode {
   const parts = text.split(regex);
   return parts.map((p, i) => {
     if (p.startsWith('`') && p.endsWith('`')) {
-      return <code key={i} style={{
-        background: 'rgba(99,102,241,0.15)', padding: '1px 5px',
-        borderRadius: '3px', fontSize: '12px', color: '#a5b4fc',
-        fontFamily: "'Cascadia Code', 'Fira Code', monospace",
-      }}>{p.slice(1, -1)}</code>;
+      return (
+        <code
+          key={i}
+          style={{
+            background: 'rgba(99,102,241,0.15)',
+            padding: '1px 5px',
+            borderRadius: '3px',
+            fontSize: '12px',
+            color: '#a5b4fc',
+            fontFamily: "'Cascadia Code', 'Fira Code', monospace",
+          }}
+        >
+          {p.slice(1, -1)}
+        </code>
+      );
     }
     if (p.startsWith('**') && p.endsWith('**')) {
-      return <strong key={i} style={{ color: '#e2e8f0', fontWeight: 700 }}>{p.slice(2, -2)}</strong>;
+      return (
+        <strong key={i} style={{ color: '#e2e8f0', fontWeight: 700 }}>
+          {p.slice(2, -2)}
+        </strong>
+      );
     }
     if (p.startsWith('*') && p.endsWith('*')) {
-      return <em key={i} style={{ color: '#cbd5e1', fontStyle: 'italic' }}>{p.slice(1, -1)}</em>;
+      return (
+        <em key={i} style={{ color: '#cbd5e1', fontStyle: 'italic' }}>
+          {p.slice(1, -1)}
+        </em>
+      );
     }
     return p;
   });
 }
 
 /** Memoized markdown content — only re-parses when `content` changes */
-const MemoizedMessageContent = React.memo(function MemoizedMessageContent({ content }: { content: string }) {
+const MemoizedMessageContent = React.memo(function MemoizedMessageContent({
+  content,
+}: {
+  content: string;
+}) {
   const rendered = useMemo(() => renderMarkdown(content), [content]);
   return <>{rendered}</>;
 });
@@ -607,7 +697,9 @@ export function ChatPanel() {
   } = useChatSessions();
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
+  const [connectionStatus, setConnectionStatus] = useState<
+    'connecting' | 'connected' | 'disconnected'
+  >('disconnected');
   const [reconnectTrigger, setReconnectTrigger] = useState(0);
   const terminalCwd = useAppStore((s) => s.terminalCwd);
 
@@ -624,7 +716,8 @@ export function ChatPanel() {
     if (connectionStatus === 'connected') return;
     setConnectionStatus('connecting');
     try {
-      if (import.meta.env.DEV) console.info('[ChatPanel] Manual reconnect triggered, starting sidecar server...');
+      if (import.meta.env.DEV)
+        console.info('[ChatPanel] Manual reconnect triggered, starting sidecar server...');
       await invoke('start_server');
       // Wait 1.5 seconds for server to start
       await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -688,7 +781,9 @@ export function ChatPanel() {
     void refresh();
 
     // Refresh on window focus (user switched back from API Manager)
-    const onFocus = () => { void refresh(); };
+    const onFocus = () => {
+      void refresh();
+    };
     window.addEventListener('focus', onFocus);
 
     // Reduced polling: 10s instead of 3s (API config rarely changes)
@@ -714,7 +809,11 @@ export function ChatPanel() {
   const [activeFlow, setActiveFlow] = useState<'ralph' | 'agent' | null>(null);
   const [reviewMode, setReviewMode] = useState<boolean>(false);
   const [featureMode, setFeatureMode] = useState<boolean>(false);
-  const [fileApprovalRequest, setFileApprovalRequest] = useState<{ id: string; operation: string; filePath: string } | null>(null);
+  const [fileApprovalRequest, setFileApprovalRequest] = useState<{
+    id: string;
+    operation: string;
+    filePath: string;
+  } | null>(null);
 
   // Phase 6B: Context usage - read from store (updated by chat_done handler)
   const contextUsage = useAppStore((s) => s.contextUsage);
@@ -759,10 +858,8 @@ export function ChatPanel() {
       streamBufferRef.current = '';
       setMessages((prev) =>
         prev.map((msg) =>
-          msg.id === 'streaming-message'
-            ? { ...msg, content: msg.content + buffered }
-            : msg
-        )
+          msg.id === 'streaming-message' ? { ...msg, content: msg.content + buffered } : msg,
+        ),
       );
     }, 50);
   }, [setMessages]);
@@ -778,10 +875,8 @@ export function ChatPanel() {
       streamBufferRef.current = '';
       setMessages((prev) =>
         prev.map((msg) =>
-          msg.id === 'streaming-message'
-            ? { ...msg, content: msg.content + remaining }
-            : msg
-        )
+          msg.id === 'streaming-message' ? { ...msg, content: msg.content + remaining } : msg,
+        ),
       );
     }
   }, [setMessages]);
@@ -888,7 +983,7 @@ export function ChatPanel() {
                 role: 'user',
                 content: data.text,
                 timestamp: Date.now(),
-              }
+              },
             ]);
           }
 
@@ -904,7 +999,7 @@ export function ChatPanel() {
                 content: '',
                 timestamp: Date.now(),
                 isStreaming: true,
-              }
+              },
             ];
           });
         });
@@ -917,21 +1012,26 @@ export function ChatPanel() {
           startStreamFlush();
         });
 
-        socket.on('chat_done', (data: { text: string; usage?: { promptTokens: number; completionTokens: number; totalTokens: number } }) => {
-          if (!active) return;
-          stopStreamFlush();
-          const finalId = generateUUID();
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === 'streaming-message'
-                ? { id: finalId, role: 'assistant', content: data.text, timestamp: Date.now() }
-                : msg
-            )
-          );
-          setIsSending(false);
-          setActiveFlow(null);
+        socket.on(
+          'chat_done',
+          (data: {
+            text: string;
+            usage?: { promptTokens: number; completionTokens: number; totalTokens: number };
+          }) => {
+            if (!active) return;
+            stopStreamFlush();
+            const finalId = generateUUID();
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === 'streaming-message'
+                  ? { id: finalId, role: 'assistant', content: data.text, timestamp: Date.now() }
+                  : msg,
+              ),
+            );
+            setIsSending(false);
+            setActiveFlow(null);
 
-          /*
+            /*
           // Auto-execute shell commands from AI response
           const cmdRegex = /```(?:cmd|powershell|shell|bash|sh)?\s*\n?([\s\S]*?)```/g;
           const commands: string[] = [];
@@ -962,25 +1062,26 @@ export function ChatPanel() {
           }
 
           */
-          // Update dashboard stats with real usage data
-          if (data.usage) {
-            const currentStats = useAppStore.getState().dashboardStats;
-            useAppStore.getState().setDashboardStats({
-              totalTokens: currentStats.totalTokens + data.usage.totalTokens,
-              totalCost: currentStats.totalCost + (data.usage.totalTokens * 0.000002),
-              activeAgents: currentStats.activeAgents,
-              mcpConnections: currentStats.mcpConnections,
-            });
-            // Update context usage
-            const used = data.usage.totalTokens;
-            const max = 128000;
-            useAppStore.getState().setContextUsage({
-              used: Math.min(used, max),
-              max,
-              percentage: Math.round((used / max) * 100),
-            });
-          }
-        });
+            // Update dashboard stats with real usage data
+            if (data.usage) {
+              const currentStats = useAppStore.getState().dashboardStats;
+              useAppStore.getState().setDashboardStats({
+                totalTokens: currentStats.totalTokens + data.usage.totalTokens,
+                totalCost: currentStats.totalCost + data.usage.totalTokens * 0.000002,
+                activeAgents: currentStats.activeAgents,
+                mcpConnections: currentStats.mcpConnections,
+              });
+              // Update context usage
+              const used = data.usage.totalTokens;
+              const max = 128000;
+              useAppStore.getState().setContextUsage({
+                used: Math.min(used, max),
+                max,
+                percentage: Math.round((used / max) * 100),
+              });
+            }
+          },
+        );
 
         socket.on('chat_error', (data: { message: string }) => {
           if (!active) return;
@@ -991,11 +1092,24 @@ export function ChatPanel() {
             const next = prev.map((msg) => {
               if (msg.id !== 'streaming-message') return msg;
               replacedStreaming = true;
-              return { id: generateUUID(), role: 'assistant' as const, content: errorMessage, timestamp: Date.now() };
+              return {
+                id: generateUUID(),
+                role: 'assistant' as const,
+                content: errorMessage,
+                timestamp: Date.now(),
+              };
             });
             return replacedStreaming
               ? next
-              : [...prev, { id: generateUUID(), role: 'assistant' as const, content: errorMessage, timestamp: Date.now() }];
+              : [
+                  ...prev,
+                  {
+                    id: generateUUID(),
+                    role: 'assistant' as const,
+                    content: errorMessage,
+                    timestamp: Date.now(),
+                  },
+                ];
           });
           setIsSending(false);
           setActiveFlow(null);
@@ -1011,24 +1125,30 @@ export function ChatPanel() {
         });
 
         // Workspace command approval request from the ReAct agent.
-        socket.on('require_approval', (data: { id: string; command: string; warningMessage?: string }) => {
-          if (active) {
-            setApprovalRequest({
-              toolCallId: data.id,
-              name: 'run_command',
-              arguments: JSON.stringify({ command: data.command }, null, 2),
-              warningMessage: data.warningMessage,
-              approvalKind: 'command',
-            });
-          }
-        });
+        socket.on(
+          'require_approval',
+          (data: { id: string; command: string; warningMessage?: string }) => {
+            if (active) {
+              setApprovalRequest({
+                toolCallId: data.id,
+                name: 'run_command',
+                arguments: JSON.stringify({ command: data.command }, null, 2),
+                warningMessage: data.warningMessage,
+                approvalKind: 'command',
+              });
+            }
+          },
+        );
 
         // File write approval request
-        socket.on('require_file_approval', (data: { id: string; operation: string; filePath: string }) => {
-          if (active) {
-            setFileApprovalRequest(data);
-          }
-        });
+        socket.on(
+          'require_file_approval',
+          (data: { id: string; operation: string; filePath: string }) => {
+            if (active) {
+              setFileApprovalRequest(data);
+            }
+          },
+        );
 
         // Phase 3: Listen to live agent runtime events
         socket.on('agent_event', (event: AgentEvent) => {
@@ -1049,17 +1169,20 @@ export function ChatPanel() {
                   role: 'assistant',
                   content: `⚡ **${tRef.current('chat.skillLearned')}**\n\n**${event.payload?.name || 'Unnamed Skill'}**\n*${tRef.current('chat.description')}:* ${event.payload?.description || ''}\n\n${tRef.current('chat.skillSaved')}`,
                   timestamp: Date.now(),
-                }
+                },
               ]);
             }
           }
         });
 
-        socket.on('ralph_loop_progress', (data: { iteration: number; cost: number; message: string; code?: string }) => {
-          if (active) {
-            setRalphProgress(data);
-          }
-        });
+        socket.on(
+          'ralph_loop_progress',
+          (data: { iteration: number; cost: number; message: string; code?: string }) => {
+            if (active) {
+              setRalphProgress(data);
+            }
+          },
+        );
 
         socket.on('ralph_loop_done', () => {
           if (active) {
@@ -1067,30 +1190,34 @@ export function ChatPanel() {
           }
         });
 
-        socket.on('computer_use_step', (data: {
-          action?: string;
-          screenshot: string;
-          point?: { x: number; y: number };
-          box?: { x1: number; y1: number; x2: number; y2: number };
-        }) => {
-          if (active) {
-            setMessages((prev) => [
-              ...prev,
-              {
-                id: generateUUID(),
-                role: 'assistant',
-                content: data.action ? `🤖 **[Computer Action]** ${data.action}` : `🤖 **[Computer Action]** ${tRef.current('chat.runningAutomation')}`,
-                timestamp: Date.now(),
-                computerUsePreview: {
-                  screenshot: data.screenshot,
-                  point: data.point,
-                  box: data.box,
+        socket.on(
+          'computer_use_step',
+          (data: {
+            action?: string;
+            screenshot: string;
+            point?: { x: number; y: number };
+            box?: { x1: number; y1: number; x2: number; y2: number };
+          }) => {
+            if (active) {
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: generateUUID(),
+                  role: 'assistant',
+                  content: data.action
+                    ? `🤖 **[Computer Action]** ${data.action}`
+                    : `🤖 **[Computer Action]** ${tRef.current('chat.runningAutomation')}`,
+                  timestamp: Date.now(),
+                  computerUsePreview: {
+                    screenshot: data.screenshot,
+                    point: data.point,
+                    box: data.box,
+                  },
                 },
-              },
-            ]);
-          }
-        });
-
+              ]);
+            }
+          },
+        );
       } catch (err) {
         console.error('[ChatPanel] Socket initialization failed:', err);
         if (active) setConnectionStatus('disconnected');
@@ -1103,7 +1230,9 @@ export function ChatPanel() {
     const loadConfigMapping = async () => {
       try {
         // We will query config files in Phase 3
-      } catch (e) { console.warn('[ChatPanel] Error:', e); }
+      } catch (e) {
+        console.warn('[ChatPanel] Error:', e);
+      }
     };
     loadConfigMapping();
 
@@ -1248,7 +1377,9 @@ export function ChatPanel() {
 
     let outgoingInput = trimmedInput;
     let forcedAgentMode: 'review' | 'feature' | 'deploy' | 'grill' | null = null;
-    const slashMatch = trimmedInput.match(/^\/(code-review|feature-dev|deploy-check|grill-me)\b\s*(.*)$/i);
+    const slashMatch = trimmedInput.match(
+      /^\/(code-review|feature-dev|deploy-check|grill-me)\b\s*(.*)$/i,
+    );
     if (slashMatch) {
       const command = (slashMatch[1] ?? '').toLowerCase();
       const task = (slashMatch[2] ?? '').trim();
@@ -1278,7 +1409,10 @@ export function ChatPanel() {
           setFeatureMode(false);
           setRalphMode(false);
         }
-        appendLocalExchange(trimmedInput, '✅ Đã bật mode tương ứng. Nhập yêu cầu tiếp theo để chạy.');
+        appendLocalExchange(
+          trimmedInput,
+          '✅ Đã bật mode tương ứng. Nhập yêu cầu tiếp theo để chạy.',
+        );
         resetComposer();
         return;
       }
@@ -1288,29 +1422,38 @@ export function ChatPanel() {
 
     // Guard: nếu chưa kết nối socket thì hiển thị hướng dẫn
     if (!socketRef.current || connectionStatus !== 'connected') {
-      appendLocalExchange(outgoingInput, `⚠️ **${t('chat.notConnected')}**\n\n${t('chat.notConnectedHint')}`);
+      appendLocalExchange(
+        outgoingInput,
+        `⚠️ **${t('chat.notConnected')}**\n\n${t('chat.notConnectedHint')}`,
+      );
       resetComposer();
       return;
     }
 
     // Guard: nếu chưa cấu hình API Key thì hiển thị hướng dẫn thay vì gửi lên server
     if (modelOptions.length === 0) {
-      appendLocalExchange(outgoingInput, `⚙️ **${t('chat.noProvider')}**\n\n${t('chat.noProviderHint')}`);
+      appendLocalExchange(
+        outgoingInput,
+        `⚙️ **${t('chat.noProvider')}**\n\n${t('chat.noProviderHint')}`,
+      );
       resetComposer();
       return;
     }
 
     // Auto-detect: chuyển sang Agent mode khi người dùng yêu cầu đọc/sửa code (không trigger cho câu hỏi ngắn)
-    const agentPattern = /(đọc code|xem code|phân tích code|read.*file|show.*file|list.*file|explain.*code|analyze.*code|explore.*code|show.*project|list.*folder|tổng quan.*dự án|overview.*project|toàn bộ.*code|all.*files|codebase|sửa code|fix.*bug|refactor|implement|tạo file|create.*file|write.*file)/i;
-    const isLongEnoughForAgent = outgoingInput.length > 30;
-    const shouldUseAgent = forcedAgentMode !== null || agentMode || reviewMode || featureMode || (terminalCwd && isLongEnoughForAgent && agentPattern.test(outgoingInput));
+    const agentPattern =
+      /(đọc|xem|phân tích|quét|tìm|tổng quan|sửa|tạo|read|show|list|explain|analyze|explore|overview|fix|refactor|implement|create|write).*(code|file|tệp|thư mục|folder|dự\s*u?\s*án|project|workspace|codebase)/i;
+    const isLongEnoughForAgent = outgoingInput.length > 10;
+    const shouldUseAgent =
+      forcedAgentMode !== null ||
+      agentMode ||
+      reviewMode ||
+      featureMode ||
+      (terminalCwd && isLongEnoughForAgent && agentPattern.test(outgoingInput));
     const shouldUseRalph = ralphMode && forcedAgentMode === null;
 
     if ((shouldUseRalph || shouldUseAgent) && !terminalCwd) {
-      appendLocalExchange(
-        outgoingInput,
-        `⚠️ **${t('chat.noWorkspace')}**`,
-      );
+      appendLocalExchange(outgoingInput, `⚠️ **${t('chat.noWorkspace')}**`);
       resetComposer();
       return;
     }
@@ -1362,11 +1505,7 @@ export function ChatPanel() {
         const parsed = await loadApiConfig();
         const entry = parsed[selectedProvider];
         if (entry) {
-          const apiKeys = Array.isArray(entry['apiKeys'])
-            ? (entry['apiKeys'] as string[])
-            : typeof entry['apiKey'] === 'string' && entry['apiKey']
-              ? [entry['apiKey'] as string]
-              : [];
+          const apiKeys = normalizeApiKeys(entry);
           providerApiKey = apiKeys[0] || undefined;
           providerBaseUrl = (entry['baseUrl'] as string) || undefined;
         }
@@ -1420,11 +1559,7 @@ export function ChatPanel() {
         const entry = parsed[selectedProvider];
         if (entry) {
           // Phase 1.1: Handle both old and new formats
-          const apiKeys = Array.isArray(entry['apiKeys'])
-            ? (entry['apiKeys'] as string[])
-            : typeof entry['apiKey'] === 'string' && entry['apiKey']
-              ? [entry['apiKey'] as string]
-              : [];
+          const apiKeys = normalizeApiKeys(entry);
           providerApiKey = apiKeys[0] || undefined;
           providerApiKeys = apiKeys.length > 0 ? apiKeys : undefined;
           providerBaseUrl = (entry['baseUrl'] as string) || undefined;
@@ -1541,8 +1676,14 @@ export function ChatPanel() {
                 padding: '2px 8px',
                 fontSize: '10px',
                 fontWeight: 600,
-                backgroundColor: connectionStatus === 'connecting' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(245, 158, 11, 0.15)',
-                border: connectionStatus === 'connecting' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(245, 158, 11, 0.3)',
+                backgroundColor:
+                  connectionStatus === 'connecting'
+                    ? 'rgba(255, 255, 255, 0.05)'
+                    : 'rgba(245, 158, 11, 0.15)',
+                border:
+                  connectionStatus === 'connecting'
+                    ? '1px solid rgba(255, 255, 255, 0.1)'
+                    : '1px solid rgba(245, 158, 11, 0.3)',
                 borderRadius: '4px',
                 color: connectionStatus === 'connecting' ? '#94a3b8' : '#f59e0b',
                 cursor: connectionStatus === 'connecting' ? 'not-allowed' : 'pointer',
@@ -1568,7 +1709,7 @@ export function ChatPanel() {
           {/* Session History & New Session Buttons */}
           <div style={{ display: 'flex', gap: '4px', marginLeft: '8px' }}>
             <button
-              onClick={() => setCurrentView(v => v === 'chat' ? 'history' : 'chat')}
+              onClick={() => setCurrentView((v) => (v === 'chat' ? 'history' : 'chat'))}
               title={t('chat.chatHistory')}
               style={{
                 background: currentView === 'history' ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
@@ -1584,8 +1725,12 @@ export function ChatPanel() {
                 color: currentView === 'history' ? '#a5b4fc' : '#94a3b8',
                 transition: 'all 0.2s',
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(99,102,241,0.3)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(99,102,241,0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
+              }}
             >
               📂
             </button>
@@ -1606,8 +1751,12 @@ export function ChatPanel() {
                 color: '#94a3b8',
                 transition: 'all 0.2s',
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(99,102,241,0.3)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(99,102,241,0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
+              }}
             >
               ➕
             </button>
@@ -1624,33 +1773,56 @@ export function ChatPanel() {
               }
             }}
             style={{
-              padding: '4px 10px', fontSize: '11px',
+              padding: '4px 10px',
+              fontSize: '11px',
               background: 'rgba(15, 23, 42, 0.6)',
-              border: modelOptions.length === 0
-                ? '1px solid rgba(239, 68, 68, 0.3)'
-                : '1px solid rgba(255, 255, 255, 0.1)',
+              border:
+                modelOptions.length === 0
+                  ? '1px solid rgba(239, 68, 68, 0.3)'
+                  : '1px solid rgba(255, 255, 255, 0.1)',
               borderRadius: '6px',
               color: modelOptions.length === 0 ? '#f87171' : '#cbd5e1',
               cursor: modelOptions.length === 0 ? 'not-allowed' : 'pointer',
-              maxWidth: '220px', display: 'flex', alignItems: 'center', gap: '4px',
+              maxWidth: '220px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
               transition: 'border 0.2s',
             }}
           >
             {modelOptions.length === 0
               ? `⚠️ ${t('chat.noConfig')}`
-              : (modelOptions.find((o) => o.value === provider)?.label || provider)}
-            <span style={{ fontSize: '8px', marginLeft: '2px', transform: modelDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▼</span>
+              : modelOptions.find((o) => o.value === provider)?.label || provider}
+            <span
+              style={{
+                fontSize: '8px',
+                marginLeft: '2px',
+                transform: modelDropdownOpen ? 'rotate(180deg)' : 'none',
+                transition: 'transform 0.2s',
+              }}
+            >
+              ▼
+            </span>
           </button>
 
           {modelDropdownOpen && modelOptions.length > 0 && (
-            <div style={{
-              position: 'absolute', top: '100%', right: 0, marginTop: '4px',
-              width: '280px', maxHeight: '320px',
-              background: 'rgba(15, 23, 42, 0.95)', backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '8px', zIndex: 1000, overflow: 'hidden',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
-            }}>
+            <div
+              style={{
+                position: 'absolute',
+                top: '100%',
+                right: 0,
+                marginTop: '4px',
+                width: '280px',
+                maxHeight: '320px',
+                background: 'rgba(15, 23, 42, 0.95)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '8px',
+                zIndex: 1000,
+                overflow: 'hidden',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+              }}
+            >
               {/* Search input */}
               <div style={{ padding: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                 <input
@@ -1660,9 +1832,14 @@ export function ChatPanel() {
                   value={modelSearch}
                   onChange={(e) => setModelSearch(e.target.value)}
                   style={{
-                    width: '100%', padding: '6px 10px', fontSize: '12px',
-                    background: 'rgba(30, 41, 59, 0.8)', border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '4px', color: '#e2e8f0', outline: 'none',
+                    width: '100%',
+                    padding: '6px 10px',
+                    fontSize: '12px',
+                    background: 'rgba(30, 41, 59, 0.8)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '4px',
+                    color: '#e2e8f0',
+                    outline: 'none',
                     boxSizing: 'border-box',
                   }}
                 />
@@ -1673,7 +1850,10 @@ export function ChatPanel() {
                 {(() => {
                   const q = modelSearch.toLowerCase().trim();
                   const filtered = q
-                    ? modelOptions.filter((o) => o.label.toLowerCase().includes(q) || o.model.toLowerCase().includes(q))
+                    ? modelOptions.filter(
+                        (o) =>
+                          o.label.toLowerCase().includes(q) || o.model.toLowerCase().includes(q),
+                      )
                     : modelOptions;
 
                   // Group by providerId
@@ -1684,28 +1864,54 @@ export function ChatPanel() {
                   }
 
                   return [...groups.entries()].map(([pid, opts]) => {
-                    const meta = PROVIDER_LABELS[pid as ProviderId] || { name: pid, icon: '\uD83D\uDD37' };
+                    const meta = PROVIDER_LABELS[pid as ProviderId] || {
+                      name: pid,
+                      icon: '\uD83D\uDD37',
+                    };
                     return (
                       <div key={pid}>
-                        <div style={{
-                          fontSize: '10px', fontWeight: 700, color: '#64748b',
-                          padding: '6px 8px 2px', textTransform: 'uppercase', letterSpacing: '0.5px',
-                        }}>
+                        <div
+                          style={{
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            color: '#64748b',
+                            padding: '6px 8px 2px',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                          }}
+                        >
                           {meta.icon} {meta.name}
                         </div>
                         {opts.map((opt) => (
                           <div
                             key={opt.value}
-                            onClick={() => { setProvider(opt.value); setModelDropdownOpen(false); setModelSearch(''); }}
+                            onClick={() => {
+                              setProvider(opt.value);
+                              setModelDropdownOpen(false);
+                              setModelSearch('');
+                            }}
                             style={{
-                              padding: '6px 10px', fontSize: '12px', color: '#e2e8f0',
-                              cursor: 'pointer', borderRadius: '4px',
-                              background: opt.value === provider ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
-                              borderLeft: opt.value === provider ? '2px solid #818cf8' : '2px solid transparent',
+                              padding: '6px 10px',
+                              fontSize: '12px',
+                              color: '#e2e8f0',
+                              cursor: 'pointer',
+                              borderRadius: '4px',
+                              background:
+                                opt.value === provider ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
+                              borderLeft:
+                                opt.value === provider
+                                  ? '2px solid #818cf8'
+                                  : '2px solid transparent',
                               transition: 'background 0.15s',
                             }}
-                            onMouseEnter={(e) => { if (opt.value !== provider) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
-                            onMouseLeave={(e) => { if (opt.value !== provider) e.currentTarget.style.background = 'transparent'; }}
+                            onMouseEnter={(e) => {
+                              if (opt.value !== provider)
+                                e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                            }}
+                            onMouseLeave={(e) => {
+                              if (opt.value !== provider)
+                                e.currentTarget.style.background = 'transparent';
+                            }}
                           >
                             {opt.model}
                           </div>
@@ -1714,13 +1920,23 @@ export function ChatPanel() {
                     );
                   });
                 })()}
-                {modelSearch && modelOptions.filter((o) =>
-                  o.label.toLowerCase().includes(modelSearch.toLowerCase()) || o.model.toLowerCase().includes(modelSearch.toLowerCase())
-                ).length === 0 && (
-                  <div style={{ padding: '12px', textAlign: 'center', color: '#64748b', fontSize: '12px' }}>
-                    {t('chat.noModelFound')}
-                  </div>
-                )}
+                {modelSearch &&
+                  modelOptions.filter(
+                    (o) =>
+                      o.label.toLowerCase().includes(modelSearch.toLowerCase()) ||
+                      o.model.toLowerCase().includes(modelSearch.toLowerCase()),
+                  ).length === 0 && (
+                    <div
+                      style={{
+                        padding: '12px',
+                        textAlign: 'center',
+                        color: '#64748b',
+                        fontSize: '12px',
+                      }}
+                    >
+                      {t('chat.noModelFound')}
+                    </div>
+                  )}
               </div>
             </div>
           )}
@@ -1740,8 +1956,23 @@ export function ChatPanel() {
           }}
           className="custom-scrollbar"
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#a5b4fc', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '8px',
+            }}
+          >
+            <span
+              style={{
+                fontSize: '11px',
+                fontWeight: 700,
+                color: '#a5b4fc',
+                letterSpacing: '0.5px',
+                textTransform: 'uppercase',
+              }}
+            >
               {t('chat.chatHistory')}
             </span>
             <button
@@ -1749,7 +1980,8 @@ export function ChatPanel() {
               style={{
                 padding: '4px 10px',
                 fontSize: '11px',
-                background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(79, 70, 229, 0.2) 100%)',
+                background:
+                  'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(79, 70, 229, 0.2) 100%)',
                 border: '1px solid rgba(99, 102, 241, 0.3)',
                 borderRadius: '6px',
                 color: '#e2e8f0',
@@ -1760,15 +1992,23 @@ export function ChatPanel() {
                 gap: '4px',
                 transition: 'all 0.2s',
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(99, 102, 241, 0.3) 0%, rgba(79, 70, 229, 0.3) 100%)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(79, 70, 229, 0.2) 100%)'; }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background =
+                  'linear-gradient(135deg, rgba(99, 102, 241, 0.3) 0%, rgba(79, 70, 229, 0.3) 100%)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background =
+                  'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(79, 70, 229, 0.2) 100%)';
+              }}
             >
               ➕ {t('chat.newChat')}
             </button>
           </div>
 
           {sessions.length === 0 ? (
-            <div style={{ textAlign: 'center', color: '#64748b', fontSize: '13px', padding: '40px 0' }}>
+            <div
+              style={{ textAlign: 'center', color: '#64748b', fontSize: '13px', padding: '40px 0' }}
+            >
               {t('chat.noHistory')}
             </div>
           ) : (
@@ -1778,8 +2018,14 @@ export function ChatPanel() {
                 onClick={() => handleSelectSession(sess.id)}
                 style={{
                   padding: '12px 14px',
-                  background: sess.id === activeSessionId ? 'rgba(99, 102, 241, 0.12)' : 'rgba(30, 41, 59, 0.4)',
-                  border: sess.id === activeSessionId ? '1px solid rgba(99, 102, 241, 0.35)' : '1px solid rgba(255, 255, 255, 0.04)',
+                  background:
+                    sess.id === activeSessionId
+                      ? 'rgba(99, 102, 241, 0.12)'
+                      : 'rgba(30, 41, 59, 0.4)',
+                  border:
+                    sess.id === activeSessionId
+                      ? '1px solid rgba(99, 102, 241, 0.35)'
+                      : '1px solid rgba(255, 255, 255, 0.04)',
                   borderRadius: '12px',
                   cursor: 'pointer',
                   display: 'flex',
@@ -1787,7 +2033,8 @@ export function ChatPanel() {
                   alignItems: 'center',
                   gap: '12px',
                   transition: 'all 0.2s',
-                  boxShadow: sess.id === activeSessionId ? '0 4px 20px rgba(99, 102, 241, 0.08)' : 'none',
+                  boxShadow:
+                    sess.id === activeSessionId ? '0 4px 20px rgba(99, 102, 241, 0.08)' : 'none',
                 }}
                 onMouseEnter={(e) => {
                   if (sess.id !== activeSessionId) {
@@ -1802,7 +2049,15 @@ export function ChatPanel() {
                   }
                 }}
               >
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, flex: 1 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px',
+                    minWidth: 0,
+                    flex: 1,
+                  }}
+                >
                   <span
                     style={{
                       fontSize: '13px',
@@ -1823,10 +2078,12 @@ export function ChatPanel() {
                         day: 'numeric',
                         hour: '2-digit',
                         minute: '2-digit',
-                      }
+                      },
                     )}
                     <span style={{ margin: '0 6px' }}>•</span>
-                    {t('chat.messagesCount', { count: sess.messages.filter(m => m.id !== 'streaming-message').length })}
+                    {t('chat.messagesCount', {
+                      count: sess.messages.filter((m) => m.id !== 'streaming-message').length,
+                    })}
                   </span>
                 </div>
                 <button
@@ -1891,10 +2148,7 @@ export function ChatPanel() {
                   style={{
                     maxWidth: '85%',
                     padding: '12px 16px',
-                    borderRadius:
-                      msg.role === 'user'
-                        ? '16px 16px 4px 16px'
-                        : '16px 16px 16px 4px',
+                    borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
                     background:
                       msg.role === 'user'
                         ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(79, 70, 229, 0.2) 100%)'
@@ -1913,13 +2167,18 @@ export function ChatPanel() {
                 >
                   {/* Markdown rendered content */}
                   <MemoizedMessageContent content={msg.content} />
-                  
+
                   {/* Phase 6C: Image attachment display */}
                   {msg.imageAttachment && (
                     <img
                       src={msg.imageAttachment}
                       alt="Attached"
-                      style={{ maxWidth: '100%', borderRadius: '8px', marginTop: '8px', border: '1px solid rgba(255,255,255,0.1)' }}
+                      style={{
+                        maxWidth: '100%',
+                        borderRadius: '8px',
+                        marginTop: '8px',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                      }}
                     />
                   )}
 
@@ -1934,19 +2193,43 @@ export function ChatPanel() {
                       style={{
                         marginTop: '8px',
                         padding: '10px 12px',
-                        background: msg.mcpCard.isError ? 'rgba(239,68,68,0.1)' : 'rgba(99,102,241,0.1)',
+                        background: msg.mcpCard.isError
+                          ? 'rgba(239,68,68,0.1)'
+                          : 'rgba(99,102,241,0.1)',
                         border: `1px solid ${msg.mcpCard.isError ? 'rgba(239,68,68,0.3)' : 'rgba(99,102,241,0.3)'}`,
                         borderRadius: '8px',
                         fontSize: '12px',
                       }}
                     >
-                      <div style={{ fontWeight: 700, color: msg.mcpCard.isError ? '#f87171' : '#a5b4fc', marginBottom: '4px' }}>
+                      <div
+                        style={{
+                          fontWeight: 700,
+                          color: msg.mcpCard.isError ? '#f87171' : '#a5b4fc',
+                          marginBottom: '4px',
+                        }}
+                      >
                         🔌 MCP: {msg.mcpCard.tool}
                       </div>
-                      <div style={{ color: 'var(--text-muted)', fontSize: '11px', marginBottom: '4px' }}>
+                      <div
+                        style={{
+                          color: 'var(--text-muted)',
+                          fontSize: '11px',
+                          marginBottom: '4px',
+                        }}
+                      >
                         Server: {msg.mcpCard.server}
                       </div>
-                      <pre style={{ margin: 0, color: '#cbd5e1', fontSize: '11px', whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: '100px', overflow: 'auto' }}>
+                      <pre
+                        style={{
+                          margin: 0,
+                          color: '#cbd5e1',
+                          fontSize: '11px',
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-all',
+                          maxHeight: '100px',
+                          overflow: 'auto',
+                        }}
+                      >
                         {msg.mcpCard.result}
                       </pre>
                     </div>
@@ -1968,9 +2251,18 @@ export function ChatPanel() {
                         🌐 Search: {msg.searchCard.query}
                       </div>
                       {msg.searchCard.results.map((r, i) => (
-                        <div key={i} style={{ marginBottom: '6px', paddingLeft: '8px', borderLeft: '2px solid rgba(59,130,246,0.3)' }}>
+                        <div
+                          key={i}
+                          style={{
+                            marginBottom: '6px',
+                            paddingLeft: '8px',
+                            borderLeft: '2px solid rgba(59,130,246,0.3)',
+                          }}
+                        >
                           <div style={{ fontWeight: 600, color: '#93c5fd' }}>{r.title}</div>
-                          <div style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{r.snippet.substring(0, 100)}...</div>
+                          <div style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
+                            {r.snippet.substring(0, 100)}...
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -1990,14 +2282,24 @@ export function ChatPanel() {
                     />
                   )}
                 </div>
-                <span style={{
-                  fontSize: '10px', color: 'rgba(148, 163, 184, 0.6)',
-                  marginTop: '4px', padding: '0 4px', display: 'flex', gap: '8px', alignItems: 'center',
-                }}>
-                  <span>{new Date(msg.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
-                  <span style={{ opacity: 0.5 }}>
-                    ~{Math.ceil(msg.content.length / 4)} tok
+                <span
+                  style={{
+                    fontSize: '10px',
+                    color: 'rgba(148, 163, 184, 0.6)',
+                    marginTop: '4px',
+                    padding: '0 4px',
+                    display: 'flex',
+                    gap: '8px',
+                    alignItems: 'center',
+                  }}
+                >
+                  <span>
+                    {new Date(msg.timestamp).toLocaleTimeString('vi-VN', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
                   </span>
+                  <span style={{ opacity: 0.5 }}>~{Math.ceil(msg.content.length / 4)} tok</span>
                 </span>
               </div>
             ))}
@@ -2023,7 +2325,9 @@ export function ChatPanel() {
                 boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
               }}
             >
-              <style dangerouslySetInnerHTML={{__html: `
+              <style
+                dangerouslySetInnerHTML={{
+                  __html: `
                 @keyframes pulsePurple {
                   0% { box-shadow: 0 0 0 0 rgba(192, 132, 252, 0.7); }
                   70% { box-shadow: 0 0 0 6px rgba(192, 132, 252, 0); }
@@ -2032,17 +2336,34 @@ export function ChatPanel() {
                 .pulse-indicator-purple {
                   animation: pulsePurple 2s infinite;
                 }
-              `}} />
+              `,
+                }}
+              />
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--accent-secondary)', display: 'flex', alignItems: 'center', gap: '6px', letterSpacing: '0.5px' }}>
-                  <span className="pulse-indicator-purple" style={{
-                    width: '6px',
-                    height: '6px',
-                    borderRadius: '50%',
-                    backgroundColor: '#c084fc',
-                    display: 'inline-block',
-                  }} />
+              <div
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+              >
+                <span
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    color: 'var(--accent-secondary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    letterSpacing: '0.5px',
+                  }}
+                >
+                  <span
+                    className="pulse-indicator-purple"
+                    style={{
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      backgroundColor: '#c084fc',
+                      display: 'inline-block',
+                    }}
+                  />
                   LIVE AGENT EVENTS
                 </span>
                 <button
@@ -2056,19 +2377,19 @@ export function ChatPanel() {
                     opacity: 0.7,
                     transition: 'opacity 0.2s',
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-                  onMouseLeave={(e) => e.currentTarget.style.opacity = '0.7'}
+                  onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+                  onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
                 >
                   Clear
                 </button>
               </div>
-              
+
               <div style={{ display: 'flex', flexDirection: 'column-reverse', gap: '8px' }}>
                 {agentEvents.map((evt) => {
                   let icon = 'ℹ️';
                   let color = '#cbd5e1';
                   let label: string = evt.type;
-                  
+
                   switch (evt.type) {
                     case 'agent:thinking':
                       icon = '🧠';
@@ -2123,27 +2444,43 @@ export function ChatPanel() {
                       }}
                     >
                       <span style={{ fontSize: '13px' }}>{icon}</span>
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <div
+                        style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}
+                      >
                         <div style={{ fontWeight: 600 }}>{evt.message || label}</div>
-                        {evt.payload && typeof evt.payload === 'object' && Object.keys(evt.payload).length > 0 && evt.type !== 'skill:learning' && (
-                          <pre
-                            style={{
-                              margin: 0,
-                              fontSize: '10px',
-                              color: 'var(--text-muted)',
-                              whiteSpace: 'pre-wrap',
-                              wordBreak: 'break-all',
-                              background: 'rgba(0,0,0,0.15)',
-                              padding: '4px 6px',
-                              borderRadius: '4px',
-                            }}
-                          >
-                            {JSON.stringify(evt.payload, null, 2)}
-                          </pre>
-                        )}
+                        {evt.payload &&
+                          typeof evt.payload === 'object' &&
+                          Object.keys(evt.payload).length > 0 &&
+                          evt.type !== 'skill:learning' && (
+                            <pre
+                              style={{
+                                margin: 0,
+                                fontSize: '10px',
+                                color: 'var(--text-muted)',
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-all',
+                                background: 'rgba(0,0,0,0.15)',
+                                padding: '4px 6px',
+                                borderRadius: '4px',
+                              }}
+                            >
+                              {JSON.stringify(evt.payload, null, 2)}
+                            </pre>
+                          )}
                       </div>
-                      <span style={{ fontSize: '9px', color: 'var(--text-muted)', opacity: 0.6, marginTop: '2px' }}>
-                        {new Date(evt.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      <span
+                        style={{
+                          fontSize: '9px',
+                          color: 'var(--text-muted)',
+                          opacity: 0.6,
+                          marginTop: '2px',
+                        }}
+                      >
+                        {new Date(evt.timestamp).toLocaleTimeString('vi-VN', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit',
+                        })}
                       </span>
                     </div>
                   );
@@ -2166,13 +2503,40 @@ export function ChatPanel() {
             }}
           >
             {/* Left: Context + Status */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '10px', color: 'rgba(148, 163, 184, 0.6)' }}>
-              <span>Context: {contextUsage.used.toLocaleString()} / {contextUsage.max.toLocaleString()}</span>
-              <div style={{ width: '40px', height: '3px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${Math.min(100, contextUsage.percentage)}%`, background: contextUsage.percentage > 80 ? '#f87171' : '#818cf8', borderRadius: '2px' }} />
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                fontSize: '10px',
+                color: 'rgba(148, 163, 184, 0.6)',
+              }}
+            >
+              <span>
+                Context: {contextUsage.used.toLocaleString()} / {contextUsage.max.toLocaleString()}
+              </span>
+              <div
+                style={{
+                  width: '40px',
+                  height: '3px',
+                  background: 'rgba(255,255,255,0.05)',
+                  borderRadius: '2px',
+                  overflow: 'hidden',
+                }}
+              >
+                <div
+                  style={{
+                    height: '100%',
+                    width: `${Math.min(100, contextUsage.percentage)}%`,
+                    background: contextUsage.percentage > 80 ? '#f87171' : '#818cf8',
+                    borderRadius: '2px',
+                  }}
+                />
               </div>
               {ralphMode && (
-                <span style={{ color: '#34d399', fontWeight: 600, fontSize: '10px' }}>🔄 RALPH</span>
+                <span style={{ color: '#34d399', fontWeight: 600, fontSize: '10px' }}>
+                  🔄 RALPH
+                </span>
               )}
             </div>
 
@@ -2214,7 +2578,16 @@ export function ChatPanel() {
             >
               {/* Row 1: Agent Router */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', minWidth: '72px' }}>
+                <span
+                  style={{
+                    fontSize: '10px',
+                    color: '#64748b',
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    minWidth: '72px',
+                  }}
+                >
                   {t('chat.agentRole')}
                 </span>
                 <div style={{ display: 'flex', gap: '3px' }}>
@@ -2227,7 +2600,11 @@ export function ChatPanel() {
                         fontSize: '10px',
                         fontWeight: 600,
                         borderRadius: '4px',
-                        border: '1px solid ' + (agentRole === role ? 'rgba(99, 102, 241, 0.4)' : 'rgba(255, 255, 255, 0.05)'),
+                        border:
+                          '1px solid ' +
+                          (agentRole === role
+                            ? 'rgba(99, 102, 241, 0.4)'
+                            : 'rgba(255, 255, 255, 0.05)'),
                         background: agentRole === role ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
                         color: agentRole === role ? '#a5b4fc' : '#94a3b8',
                         cursor: 'pointer',
@@ -2242,7 +2619,16 @@ export function ChatPanel() {
 
               {/* Row 2: Ralph Loop + Workflow shortcuts */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', minWidth: '72px' }}>
+                <span
+                  style={{
+                    fontSize: '10px',
+                    color: '#64748b',
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    minWidth: '72px',
+                  }}
+                >
                   {t('chat.workflows')}
                 </span>
                 <button
@@ -2261,12 +2647,19 @@ export function ChatPanel() {
                     fontSize: '10px',
                     fontWeight: 700,
                     borderRadius: '4px',
-                    border: '1px solid ' + (activeFlow === 'ralph' ? '#10b981' : ralphMode ? 'rgba(16, 185, 129, 0.5)' : 'rgba(255, 255, 255, 0.1)'),
-                    background: activeFlow === 'ralph'
-                      ? 'rgba(16, 185, 129, 0.5)'
-                      : ralphMode
-                        ? 'rgba(16, 185, 129, 0.2)'
-                        : 'rgba(255, 255, 255, 0.03)',
+                    border:
+                      '1px solid ' +
+                      (activeFlow === 'ralph'
+                        ? '#10b981'
+                        : ralphMode
+                          ? 'rgba(16, 185, 129, 0.5)'
+                          : 'rgba(255, 255, 255, 0.1)'),
+                    background:
+                      activeFlow === 'ralph'
+                        ? 'rgba(16, 185, 129, 0.5)'
+                        : ralphMode
+                          ? 'rgba(16, 185, 129, 0.2)'
+                          : 'rgba(255, 255, 255, 0.03)',
                     color: activeFlow === 'ralph' ? '#fff' : ralphMode ? '#34d399' : '#64748b',
                     cursor: 'pointer',
                     transition: 'all 0.15s',
@@ -2294,12 +2687,19 @@ export function ChatPanel() {
                     fontSize: '10px',
                     fontWeight: 700,
                     borderRadius: '4px',
-                    border: '1px solid ' + (activeFlow === 'agent' ? '#6366f1' : agentMode ? 'rgba(99, 102, 241, 0.5)' : 'rgba(255, 255, 255, 0.1)'),
-                    background: activeFlow === 'agent'
-                      ? 'rgba(99, 102, 241, 0.5)'
-                      : agentMode
-                        ? 'rgba(99, 102, 241, 0.2)'
-                        : 'rgba(255, 255, 255, 0.03)',
+                    border:
+                      '1px solid ' +
+                      (activeFlow === 'agent'
+                        ? '#6366f1'
+                        : agentMode
+                          ? 'rgba(99, 102, 241, 0.5)'
+                          : 'rgba(255, 255, 255, 0.1)'),
+                    background:
+                      activeFlow === 'agent'
+                        ? 'rgba(99, 102, 241, 0.5)'
+                        : agentMode
+                          ? 'rgba(99, 102, 241, 0.2)'
+                          : 'rgba(255, 255, 255, 0.03)',
                     color: activeFlow === 'agent' ? '#fff' : agentMode ? '#818cf8' : '#64748b',
                     cursor: 'pointer',
                     transition: 'all 0.15s',
@@ -2318,10 +2718,15 @@ export function ChatPanel() {
                     fontSize: '10px',
                     fontWeight: 700,
                     borderRadius: '4px',
-                    border: '1px solid ' + (permissionMode === 'auto' ? 'rgba(251, 191, 36, 0.5)' : 'rgba(59, 130, 246, 0.5)'),
-                    background: permissionMode === 'auto'
-                      ? 'rgba(251, 191, 36, 0.15)'
-                      : 'rgba(59, 130, 246, 0.15)',
+                    border:
+                      '1px solid ' +
+                      (permissionMode === 'auto'
+                        ? 'rgba(251, 191, 36, 0.5)'
+                        : 'rgba(59, 130, 246, 0.5)'),
+                    background:
+                      permissionMode === 'auto'
+                        ? 'rgba(251, 191, 36, 0.15)'
+                        : 'rgba(59, 130, 246, 0.15)',
                     color: permissionMode === 'auto' ? '#fbbf24' : '#60a5fa',
                     cursor: 'pointer',
                     transition: 'all 0.15s',
@@ -2329,9 +2734,11 @@ export function ChatPanel() {
                     alignItems: 'center',
                     gap: '3px',
                   }}
-                  title={permissionMode === 'custom'
-                    ? t('chat.permissionCustom')
-                    : t('chat.permissionAuto')}
+                  title={
+                    permissionMode === 'custom'
+                      ? t('chat.permissionCustom')
+                      : t('chat.permissionAuto')
+                  }
                 >
                   {permissionMode === 'custom' ? '🔒 Custom' : '⚡ Auto'}
                 </button>
@@ -2339,7 +2746,11 @@ export function ChatPanel() {
                   onClick={() => {
                     const next = !reviewMode;
                     setReviewMode(next);
-                    if (next) { setFeatureMode(false); setAgentMode(false); setRalphMode(false); }
+                    if (next) {
+                      setFeatureMode(false);
+                      setAgentMode(false);
+                      setRalphMode(false);
+                    }
                     if (!next) setActiveFlow(null);
                   }}
                   style={{
@@ -2347,28 +2758,48 @@ export function ChatPanel() {
                     fontSize: '10px',
                     fontWeight: 700,
                     borderRadius: '4px',
-                    border: '1px solid ' + (activeFlow === 'agent' && reviewMode ? '#f59e0b' : reviewMode ? 'rgba(245, 158, 11, 0.5)' : 'rgba(255, 255, 255, 0.1)'),
-                    background: activeFlow === 'agent' && reviewMode
-                      ? 'rgba(245, 158, 11, 0.5)'
-                      : reviewMode
-                        ? 'rgba(245, 158, 11, 0.2)'
-                        : 'rgba(255, 255, 255, 0.03)',
-                    color: activeFlow === 'agent' && reviewMode ? '#fff' : reviewMode ? '#fbbf24' : '#64748b',
+                    border:
+                      '1px solid ' +
+                      (activeFlow === 'agent' && reviewMode
+                        ? '#f59e0b'
+                        : reviewMode
+                          ? 'rgba(245, 158, 11, 0.5)'
+                          : 'rgba(255, 255, 255, 0.1)'),
+                    background:
+                      activeFlow === 'agent' && reviewMode
+                        ? 'rgba(245, 158, 11, 0.5)'
+                        : reviewMode
+                          ? 'rgba(245, 158, 11, 0.2)'
+                          : 'rgba(255, 255, 255, 0.03)',
+                    color:
+                      activeFlow === 'agent' && reviewMode
+                        ? '#fff'
+                        : reviewMode
+                          ? '#fbbf24'
+                          : '#64748b',
                     cursor: 'pointer',
                     transition: 'all 0.15s',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '3px',
-                    boxShadow: activeFlow === 'agent' && reviewMode ? '0 0 10px rgba(245, 158, 11, 0.5)' : 'none',
+                    boxShadow:
+                      activeFlow === 'agent' && reviewMode
+                        ? '0 0 10px rgba(245, 158, 11, 0.5)'
+                        : 'none',
                   }}
                 >
-                  🕵️ Review {activeFlow === 'agent' && reviewMode ? '⏳' : reviewMode ? 'ON' : 'OFF'}
+                  🕵️ Review{' '}
+                  {activeFlow === 'agent' && reviewMode ? '⏳' : reviewMode ? 'ON' : 'OFF'}
                 </button>
                 <button
                   onClick={() => {
                     const next = !featureMode;
                     setFeatureMode(next);
-                    if (next) { setReviewMode(false); setAgentMode(false); setRalphMode(false); }
+                    if (next) {
+                      setReviewMode(false);
+                      setAgentMode(false);
+                      setRalphMode(false);
+                    }
                     if (!next) setActiveFlow(null);
                   }}
                   style={{
@@ -2376,22 +2807,38 @@ export function ChatPanel() {
                     fontSize: '10px',
                     fontWeight: 700,
                     borderRadius: '4px',
-                    border: '1px solid ' + (activeFlow === 'agent' && featureMode ? '#ec4899' : featureMode ? 'rgba(236, 72, 153, 0.5)' : 'rgba(255, 255, 255, 0.1)'),
-                    background: activeFlow === 'agent' && featureMode
-                      ? 'rgba(236, 72, 153, 0.5)'
-                      : featureMode
-                        ? 'rgba(236, 72, 153, 0.2)'
-                        : 'rgba(255, 255, 255, 0.03)',
-                    color: activeFlow === 'agent' && featureMode ? '#fff' : featureMode ? '#f472b6' : '#64748b',
+                    border:
+                      '1px solid ' +
+                      (activeFlow === 'agent' && featureMode
+                        ? '#ec4899'
+                        : featureMode
+                          ? 'rgba(236, 72, 153, 0.5)'
+                          : 'rgba(255, 255, 255, 0.1)'),
+                    background:
+                      activeFlow === 'agent' && featureMode
+                        ? 'rgba(236, 72, 153, 0.5)'
+                        : featureMode
+                          ? 'rgba(236, 72, 153, 0.2)'
+                          : 'rgba(255, 255, 255, 0.03)',
+                    color:
+                      activeFlow === 'agent' && featureMode
+                        ? '#fff'
+                        : featureMode
+                          ? '#f472b6'
+                          : '#64748b',
                     cursor: 'pointer',
                     transition: 'all 0.15s',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '3px',
-                    boxShadow: activeFlow === 'agent' && featureMode ? '0 0 10px rgba(236, 72, 153, 0.5)' : 'none',
+                    boxShadow:
+                      activeFlow === 'agent' && featureMode
+                        ? '0 0 10px rgba(236, 72, 153, 0.5)'
+                        : 'none',
                   }}
                 >
-                  ⚡ Feature {activeFlow === 'agent' && featureMode ? '⏳' : featureMode ? 'ON' : 'OFF'}
+                  ⚡ Feature{' '}
+                  {activeFlow === 'agent' && featureMode ? '⏳' : featureMode ? 'ON' : 'OFF'}
                 </button>
               </div>
             </div>
@@ -2411,11 +2858,30 @@ export function ChatPanel() {
                 animation: 'slideIn 0.2s ease',
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '11px', fontWeight: 700, color: '#34d399', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <div
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+              >
+                <span
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    color: '#34d399',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
                   <span className="pulse-indicator" /> {t('chat.ralphRunning')}
                 </span>
-                <span style={{ fontSize: '10px', color: '#a7f3d0', background: 'rgba(16, 185, 129, 0.2)', padding: '2px 6px', borderRadius: '4px' }}>
+                <span
+                  style={{
+                    fontSize: '10px',
+                    color: '#a7f3d0',
+                    background: 'rgba(16, 185, 129, 0.2)',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                  }}
+                >
                   #{ralphProgress.iteration} | ${ralphProgress.cost.toFixed(5)}
                 </span>
               </div>
@@ -2427,10 +2893,42 @@ export function ChatPanel() {
 
           {/* Phase 6C: Image Preview */}
           {attachedImage && (
-            <div style={{ padding: '8px 14px', background: 'rgba(30, 41, 59, 0.3)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <img src={attachedImage} alt="Preview" style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)' }} />
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{t('chat.attachedImage')}</span>
-              <button onClick={() => setAttachedImage(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '14px' }}>✕</button>
+            <div
+              style={{
+                padding: '8px 14px',
+                background: 'rgba(30, 41, 59, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <img
+                src={attachedImage}
+                alt="Preview"
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  objectFit: 'cover',
+                  borderRadius: '6px',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                }}
+              />
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                {t('chat.attachedImage')}
+              </span>
+              <button
+                onClick={() => setAttachedImage(null)}
+                style={{
+                  marginLeft: 'auto',
+                  background: 'none',
+                  border: 'none',
+                  color: '#f87171',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                }}
+              >
+                ✕
+              </button>
             </div>
           )}
 
@@ -2476,7 +2974,9 @@ export function ChatPanel() {
                   onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(99,102,241,0.15)')}
                   onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                 >
-                  <span style={{ fontWeight: 700, color: '#a5b4fc', minWidth: '100px' }}>{cmd.trigger}</span>
+                  <span style={{ fontWeight: 700, color: '#a5b4fc', minWidth: '100px' }}>
+                    {cmd.trigger}
+                  </span>
                   <span style={{ color: 'var(--text-muted)' }}>{cmd.description}</span>
                 </button>
               ))}
@@ -2516,8 +3016,8 @@ export function ChatPanel() {
                     ? t('chat.placeholderNoApi')
                     : t('chat.placeholderConnected')
                   : connectionStatus === 'connecting'
-                  ? t('chat.placeholderConnecting')
-                  : t('chat.placeholderDisconnected')
+                    ? t('chat.placeholderConnecting')
+                    : t('chat.placeholderDisconnected')
               }
               style={{
                 flex: 1,
@@ -2549,7 +3049,7 @@ export function ChatPanel() {
                 fontSize: '14px',
                 transition: 'transform 0.1s, opacity 0.2s',
                 boxShadow: '0 4px 10px rgba(99, 102, 241, 0.3)',
-                opacity: (!input.trim() || isSending) ? 0.5 : 1,
+                opacity: !input.trim() || isSending ? 0.5 : 1,
               }}
               onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.95)')}
               onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
@@ -2631,20 +3131,38 @@ export function ChatPanel() {
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '20px' }}>⚠️</span>
-              <span style={{ fontWeight: 700, fontSize: '13px', color: '#f43f5e', letterSpacing: '1px' }}>
+              <span
+                style={{
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  color: '#f43f5e',
+                  letterSpacing: '1px',
+                }}
+              >
                 {t('chat.approveTool')}
               </span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <span style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>{t('chat.toolName')}</span>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9', fontFamily: 'var(--font-mono)' }}>
+              <span style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>
+                {t('chat.toolName')}
+              </span>
+              <span
+                style={{
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: '#f1f5f9',
+                  fontFamily: 'var(--font-mono)',
+                }}
+              >
                 {approvalRequest.name}
               </span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <span style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>{t('chat.parameters')}</span>
+              <span style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>
+                {t('chat.parameters')}
+              </span>
               <pre
                 style={{
                   margin: 0,
@@ -2761,15 +3279,33 @@ export function ChatPanel() {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '20px' }}>{fileApprovalRequest.operation === 'write' ? '📝' : '✏️'}</span>
-              <span style={{ fontWeight: 700, fontSize: '13px', color: '#3b82f6', letterSpacing: '1px' }}>
+              <span style={{ fontSize: '20px' }}>
+                {fileApprovalRequest.operation === 'write' ? '📝' : '✏️'}
+              </span>
+              <span
+                style={{
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  color: '#3b82f6',
+                  letterSpacing: '1px',
+                }}
+              >
                 {fileApprovalRequest.operation === 'write' ? 'TẠO FILE MỚI' : 'SỬA FILE'}
               </span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <span style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>File</span>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9', fontFamily: 'var(--font-mono)' }}>
+              <span style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>
+                File
+              </span>
+              <span
+                style={{
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: '#f1f5f9',
+                  fontFamily: 'var(--font-mono)',
+                }}
+              >
                 {fileApprovalRequest.filePath}
               </span>
             </div>

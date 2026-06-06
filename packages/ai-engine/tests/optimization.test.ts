@@ -25,7 +25,7 @@ describe('FallbackManager Router Optimization Tests', () => {
     manager = new FallbackManager({
       dbPath,
       budgetConfigPath,
-      fallbackChain: ['gpt-4o-mini', 'claude-3-7-sonnet', 'deepseek-r1']
+      fallbackChain: ['gpt-4o-mini', 'claude-3-7-sonnet', 'deepseek-r1'],
     });
   });
 
@@ -46,14 +46,14 @@ describe('FallbackManager Router Optimization Tests', () => {
       // claude-3-7-sonnet resolves instantly
       const callFn = vi.fn().mockImplementation(async (model: string) => {
         if (model === 'gpt-4o-mini') {
-          await new Promise(resolve => setTimeout(resolve, 4000));
+          await new Promise((resolve) => setTimeout(resolve, 4000));
           return { content: 'slow' } as ChatResponse;
         }
         return {
           content: 'fallback success',
           model,
           provider: 'test',
-          usage: { promptTokens: 5, completionTokens: 5, totalTokens: 10 }
+          usage: { promptTokens: 5, completionTokens: 5, totalTokens: 10 },
         } as ChatResponse;
       });
 
@@ -61,7 +61,7 @@ describe('FallbackManager Router Optimization Tests', () => {
       vi.useFakeTimers();
 
       const promise = manager.executeWithFailover(callFn, []);
-      
+
       // Advance timers to trigger the gpt-4o-mini timeout (which triggers failover)
       await vi.advanceTimersByTimeAsync(3500);
 
@@ -85,7 +85,7 @@ describe('FallbackManager Router Optimization Tests', () => {
           content: 'fallback',
           model,
           provider: 'test',
-          usage: { promptTokens: 5, completionTokens: 5, totalTokens: 10 }
+          usage: { promptTokens: 5, completionTokens: 5, totalTokens: 10 },
         } as ChatResponse;
       });
 
@@ -128,35 +128,37 @@ describe('FallbackManager Router Optimization Tests', () => {
       const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout');
 
       // Setup a rate limit error (429) for gpt-4o-mini, success on claude-3-7-sonnet
-      const rateLimitCall = vi.fn()
+      const rateLimitCall = vi
+        .fn()
         .mockRejectedValueOnce(new Error('HTTP 429: Too many requests'))
         .mockResolvedValueOnce({
           content: 'success',
           model: 'claude-3-7-sonnet',
           provider: 'test',
-          usage: { promptTokens: 5, completionTokens: 5, totalTokens: 10 }
+          usage: { promptTokens: 5, completionTokens: 5, totalTokens: 10 },
         } as ChatResponse);
 
       await manager.executeWithFailover(rateLimitCall, []);
       // The failover delay is 500ms, which maps to a setTimeout call
-      const rateLimitTimeoutCall = setTimeoutSpy.mock.calls.find(c => c[1] === 500);
+      const rateLimitTimeoutCall = setTimeoutSpy.mock.calls.find((c) => c[1] === 500);
       expect(rateLimitTimeoutCall).toBeDefined();
 
       setTimeoutSpy.mockClear();
 
       // Setup a transient error for gpt-4o-mini, success on claude-3-7-sonnet
-      const transientCall = vi.fn()
+      const transientCall = vi
+        .fn()
         .mockRejectedValueOnce(new Error('Transient error 503'))
         .mockResolvedValueOnce({
           content: 'success',
           model: 'claude-3-7-sonnet',
           provider: 'test',
-          usage: { promptTokens: 5, completionTokens: 5, totalTokens: 10 }
+          usage: { promptTokens: 5, completionTokens: 5, totalTokens: 10 },
         } as ChatResponse);
 
       await manager.executeWithFailover(transientCall, []);
       // The failover delay is 100ms
-      const transientTimeoutCall = setTimeoutSpy.mock.calls.find(c => c[1] === 100);
+      const transientTimeoutCall = setTimeoutSpy.mock.calls.find((c) => c[1] === 100);
       expect(transientTimeoutCall).toBeDefined();
     });
   });

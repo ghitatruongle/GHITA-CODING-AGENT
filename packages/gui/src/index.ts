@@ -1,0 +1,24 @@
+// ==============================================================================
+// GHITA CODING AGENT - GUI Module Barrel Export (Phase 33)
+// ==============================================================================
+
+// --- Types ---
+export type {
+  WindowRole,
+  WindowGeometry,
+  WindowSpec,
+  PersistedWindow,
+  ThemeKind,
+  ThemeConfig,
+  ShortcutBinding,
+  TrayMenuItem,
+} from './types.js';
+
+// --- Modules ---
+export { WindowManager } from './manager.js';
+export { WindowStateStore } from './persistence.js';
+export { TrayController } from './tray.js';
+export { ShortcutRegistry } from './shortcut.js';
+export { ThemeManager } from './theme.js';
+
+export const GUI_VERSION = '0.0.3';

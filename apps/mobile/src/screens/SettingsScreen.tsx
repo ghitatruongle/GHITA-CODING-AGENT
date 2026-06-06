@@ -63,6 +63,20 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): React.JSX.E
     }, 500);
   }, []);
 
+  const handleLanguageChange = useCallback(
+    async (newLang: string) => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+      }
+      const updatedSettings = { ...settings, language: newLang };
+      setSettings(updatedSettings);
+      await saveSettingsToStorage(updatedSettings);
+      await changeLanguage(newLang);
+    },
+    [settings, changeLanguage],
+  );
+
   const handleRemoveDevice = async (deviceId: string) => {
     Alert.alert(t('settings.removeDeviceConfirmTitle'), t('settings.removeDeviceConfirmDesc'), [
       { text: t('common.cancel'), style: 'cancel' },
@@ -96,7 +110,11 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): React.JSX.E
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} accessibilityLabel={t('common.back')}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backBtn}
+          accessibilityLabel={t('common.back')}
+        >
           <Text style={styles.backBtnText}>{'<'}</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('settings.title')}</Text>
@@ -151,21 +169,35 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): React.JSX.E
             <View style={styles.langSelector}>
               <TouchableOpacity
                 style={[styles.langBtn, lang === 'vi' && styles.langBtnActive]}
-                onPress={() => changeLanguage('vi')}
+                onPress={() => handleLanguageChange('vi')}
               >
-                <Text style={[styles.langBtnText, lang === 'vi' && styles.langBtnTextActive]}>VI</Text>
+                <Text style={[styles.langBtnText, lang === 'vi' && styles.langBtnTextActive]}>
+                  VI
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.langBtn, lang === 'en' && styles.langBtnActive]}
-                onPress={() => changeLanguage('en')}
+                onPress={() => handleLanguageChange('en')}
               >
-                <Text style={[styles.langBtnText, lang === 'en' && styles.langBtnTextActive]}>EN</Text>
+                <Text style={[styles.langBtnText, lang === 'en' && styles.langBtnTextActive]}>
+                  EN
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.langBtn, lang === 'zh' && styles.langBtnActive]}
-                onPress={() => changeLanguage('zh')}
+                onPress={() => handleLanguageChange('zh')}
               >
-                <Text style={[styles.langBtnText, lang === 'zh' && styles.langBtnTextActive]}>ZH</Text>
+                <Text style={[styles.langBtnText, lang === 'zh' && styles.langBtnTextActive]}>
+                  ZH
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.langBtn, lang === 'ru' && styles.langBtnActive]}
+                onPress={() => handleLanguageChange('ru')}
+              >
+                <Text style={[styles.langBtnText, lang === 'ru' && styles.langBtnTextActive]}>
+                  RU (beta)
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -185,7 +217,10 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): React.JSX.E
                   <Text style={styles.deviceName}>{device.name || 'Unknown'}</Text>
                   <Text style={styles.deviceId}>{device.address}</Text>
                 </View>
-                <TouchableOpacity onPress={() => handleRemoveDevice(device.id)} accessibilityLabel={t('common.remove')}>
+                <TouchableOpacity
+                  onPress={() => handleRemoveDevice(device.id)}
+                  accessibilityLabel={t('common.remove')}
+                >
                   <Text style={styles.removeBtn}>{t('common.remove')}</Text>
                 </TouchableOpacity>
               </View>

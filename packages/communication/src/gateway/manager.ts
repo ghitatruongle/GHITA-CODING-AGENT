@@ -8,7 +8,7 @@ import { DiscordGateway } from './discord.js';
 import { SlackGateway } from './slack.js';
 
 export class GatewayManager {
-	private readonly gateways = new Map<GatewayType, CommunicationGateway>();
+  private readonly gateways = new Map<GatewayType, CommunicationGateway>();
   private messageHandler?: (message: GatewayMessage) => void | Promise<void>;
 
   constructor(config: GatewayConfig = {}) {
@@ -18,10 +18,13 @@ export class GatewayManager {
       this.gateways.set('telegram', new TelegramGateway(config.telegramToken));
     }
     if (enabled.includes('discord')) {
-      this.gateways.set('discord', new DiscordGateway({
-        token: config.discordToken,
-        webhookUrl: config.discordWebhookUrl,
-      }));
+      this.gateways.set(
+        'discord',
+        new DiscordGateway({
+          token: config.discordToken,
+          webhookUrl: config.discordWebhookUrl,
+        }),
+      );
     }
     if (enabled.includes('slack')) {
       this.gateways.set('slack', new SlackGateway(config.slackToken));
@@ -32,7 +35,7 @@ export class GatewayManager {
     for (const [type, gateway] of this.gateways.entries()) {
       const success = await gateway.initialize();
       if (success) {
-		console.info(`[Gateway Manager] Initialized gateway: ${type} (Mock: ${gateway.isMock})`);
+        console.info(`[Gateway Manager] Initialized gateway: ${type} (Mock: ${gateway.isMock})`);
         gateway.onMessage((msg: GatewayMessage) => this.handleIncomingMessage(msg));
       } else {
         console.warn(`[Gateway Manager] Failed to initialize gateway: ${type}`);
@@ -53,7 +56,9 @@ export class GatewayManager {
     return gateway.sendMessage(channelId, text);
   }
 
-	getGateway<T extends CommunicationGateway = CommunicationGateway>(type: GatewayType): T | undefined {
+  getGateway<T extends CommunicationGateway = CommunicationGateway>(
+    type: GatewayType,
+  ): T | undefined {
     return this.gateways.get(type) as T | undefined;
   }
 

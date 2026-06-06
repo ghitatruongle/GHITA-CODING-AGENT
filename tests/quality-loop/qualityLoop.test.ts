@@ -60,7 +60,13 @@ describe('Confusion Matrix (TP, FP, FN)', () => {
       expectedType: 'class',
     };
     const results: SearchResult[] = [
-      { symbol: 'PolyglotTagParser', file: 'packages/shared/src/parser/polyglotTags.ts', kind: 'definition', type: 'class', score: 1.0 },
+      {
+        symbol: 'PolyglotTagParser',
+        file: 'packages/shared/src/parser/polyglotTags.ts',
+        kind: 'definition',
+        type: 'class',
+        score: 1.0,
+      },
     ];
     const { tp, fp, fn } = calculateConfusion(query, results);
     expect(tp).toBe(1);
@@ -92,7 +98,13 @@ describe('Confusion Matrix (TP, FP, FN)', () => {
     };
     const results: SearchResult[] = [
       { symbol: 'MyClass', file: 'wrong/file.ts', kind: 'definition', type: 'class', score: 0.5 },
-      { symbol: 'OtherClass', file: 'another/file.ts', kind: 'definition', type: 'class', score: 0.3 },
+      {
+        symbol: 'OtherClass',
+        file: 'another/file.ts',
+        kind: 'definition',
+        type: 'class',
+        score: 0.3,
+      },
     ];
     const { tp, fp, fn } = calculateConfusion(query, results);
     expect(tp).toBe(0);
@@ -109,9 +121,27 @@ describe('Confusion Matrix (TP, FP, FN)', () => {
       expectedType: 'class',
     };
     const results: SearchResult[] = [
-      { symbol: 'PageRankRanker', file: 'packages/shared/src/parser/pageRankRanker.ts', kind: 'definition', type: 'class', score: 1.0 },
-      { symbol: 'PageRankRanker', file: 'packages/shared/src/parser/pageRankRanker.ts', kind: 'reference', type: 'class', score: 0.8 },
-      { symbol: 'OtherSymbol', file: 'other/file.ts', kind: 'definition', type: 'class', score: 0.3 },
+      {
+        symbol: 'PageRankRanker',
+        file: 'packages/shared/src/parser/pageRankRanker.ts',
+        kind: 'definition',
+        type: 'class',
+        score: 1.0,
+      },
+      {
+        symbol: 'PageRankRanker',
+        file: 'packages/shared/src/parser/pageRankRanker.ts',
+        kind: 'reference',
+        type: 'class',
+        score: 0.8,
+      },
+      {
+        symbol: 'OtherSymbol',
+        file: 'other/file.ts',
+        kind: 'definition',
+        type: 'class',
+        score: 0.3,
+      },
     ];
     const { tp, fp, fn } = calculateConfusion(query, results);
     expect(tp).toBe(1);
@@ -236,7 +266,7 @@ describe('Mock LLM Search Engine (Deterministic)', () => {
 
 describe('calculateQualityMetrics (Full Pipeline)', () => {
   it('should return perfect metrics with deterministic mock', () => {
-    const metrics = calculateQualityMetrics(benchmarkData.queries, q => mockEngine.search(q));
+    const metrics = calculateQualityMetrics(benchmarkData.queries, (q) => mockEngine.search(q));
     expect(metrics.precision).toBe(1);
     expect(metrics.recall).toBe(1);
     expect(metrics.f1Score).toBe(1);
@@ -268,7 +298,7 @@ describe('calculateQualityMetrics (Full Pipeline)', () => {
 
   it('should handle single query', () => {
     const singleQuery = [benchmarkData.queries[0]];
-    const metrics = calculateQualityMetrics(singleQuery, q => mockEngine.search(q));
+    const metrics = calculateQualityMetrics(singleQuery, (q) => mockEngine.search(q));
     expect(metrics.totalQueries).toBe(1);
     expect(metrics.f1Score).toBe(1);
   });
@@ -280,12 +310,12 @@ describe('calculateQualityMetrics (Full Pipeline)', () => {
 
 describe('Quality Report Generation', () => {
   it('should generate complete report with all fields', () => {
-    const metrics = calculateQualityMetrics(benchmarkData.queries, q => mockEngine.search(q));
+    const metrics = calculateQualityMetrics(benchmarkData.queries, (q) => mockEngine.search(q));
     const report = generateQualityReport(
       benchmarkData.queries,
       metrics,
-      q => mockEngine.search(q),
-      0.85
+      (q) => mockEngine.search(q),
+      0.85,
     );
 
     expect(report.version).toBe('1.0');
@@ -297,31 +327,43 @@ describe('Quality Report Generation', () => {
   });
 
   it('should include per-query found/not-found status', () => {
-    const metrics = calculateQualityMetrics(benchmarkData.queries, q => mockEngine.search(q));
+    const metrics = calculateQualityMetrics(benchmarkData.queries, (q) => mockEngine.search(q));
     const report = generateQualityReport(
       benchmarkData.queries,
       metrics,
-      q => mockEngine.search(q),
-      0.85
+      (q) => mockEngine.search(q),
+      0.85,
     );
 
-    const allFound = report.perQueryResults.every(r => r.found);
+    const allFound = report.perQueryResults.every((r) => r.found);
     expect(allFound).toBe(true);
   });
 
   it('should accumulate trend data from previous runs', () => {
     const existingTrend: TrendDataPoint[] = [
-      { runDate: '2026-05-20T00:00:00Z', f1Score: 0.75, precision: 0.8, recall: 0.7, damping: 0.85 },
-      { runDate: '2026-05-21T00:00:00Z', f1Score: 0.82, precision: 0.85, recall: 0.79, damping: 0.85 },
+      {
+        runDate: '2026-05-20T00:00:00Z',
+        f1Score: 0.75,
+        precision: 0.8,
+        recall: 0.7,
+        damping: 0.85,
+      },
+      {
+        runDate: '2026-05-21T00:00:00Z',
+        f1Score: 0.82,
+        precision: 0.85,
+        recall: 0.79,
+        damping: 0.85,
+      },
     ];
 
-    const metrics = calculateQualityMetrics(benchmarkData.queries, q => mockEngine.search(q));
+    const metrics = calculateQualityMetrics(benchmarkData.queries, (q) => mockEngine.search(q));
     const report = generateQualityReport(
       benchmarkData.queries,
       metrics,
-      q => mockEngine.search(q),
+      (q) => mockEngine.search(q),
       0.85,
-      existingTrend
+      existingTrend,
     );
 
     expect(report.trendData.length).toBe(3);
@@ -330,12 +372,12 @@ describe('Quality Report Generation', () => {
   });
 
   it('should save report to file', () => {
-    const metrics = calculateQualityMetrics(benchmarkData.queries, q => mockEngine.search(q));
+    const metrics = calculateQualityMetrics(benchmarkData.queries, (q) => mockEngine.search(q));
     const report = generateQualityReport(
       benchmarkData.queries,
       metrics,
-      q => mockEngine.search(q),
-      0.85
+      (q) => mockEngine.search(q),
+      0.85,
     );
 
     saveReport(report, reportOutputPath);
@@ -356,7 +398,14 @@ describe('Vis.js Trend Chart Data Export', () => {
     const report: QualityReport = {
       timestamp: new Date().toISOString(),
       version: '1.0',
-      metrics: { precision: 0.9, recall: 0.85, f1Score: 0.874, totalQueries: 100, matchedQueries: 85, avgScore: 0.9 },
+      metrics: {
+        precision: 0.9,
+        recall: 0.85,
+        f1Score: 0.874,
+        totalQueries: 100,
+        matchedQueries: 85,
+        avgScore: 0.9,
+      },
       perQueryResults: [],
       pageRankConfig: { damping: 0.85, maxIterations: 20, tolerance: 1e-6 },
       trendData: [
@@ -375,12 +424,19 @@ describe('Vis.js Trend Chart Data Export', () => {
     const report: QualityReport = {
       timestamp: new Date().toISOString(),
       version: '1.0',
-      metrics: { precision: 0.5, recall: 0.5, f1Score: 0.5, totalQueries: 10, matchedQueries: 5, avgScore: 0.5 },
+      metrics: {
+        precision: 0.5,
+        recall: 0.5,
+        f1Score: 0.5,
+        totalQueries: 10,
+        matchedQueries: 5,
+        avgScore: 0.5,
+      },
       perQueryResults: [],
       pageRankConfig: { damping: 0.85, maxIterations: 20, tolerance: 1e-6 },
       trendData: [
-        { runDate: '2026-05-20', f1Score: 0.5, precision: 0.5, recall: 0.5, damping: 0.85 },  // Red
-        { runDate: '2026-05-21', f1Score: 0.7, precision: 0.7, recall: 0.7, damping: 0.85 },  // Yellow
+        { runDate: '2026-05-20', f1Score: 0.5, precision: 0.5, recall: 0.5, damping: 0.85 }, // Red
+        { runDate: '2026-05-21', f1Score: 0.7, precision: 0.7, recall: 0.7, damping: 0.85 }, // Yellow
         { runDate: '2026-05-22', f1Score: 0.85, precision: 0.85, recall: 0.85, damping: 0.85 }, // Green
       ],
     };
@@ -395,12 +451,17 @@ describe('Vis.js Trend Chart Data Export', () => {
     const report: QualityReport = {
       timestamp: new Date().toISOString(),
       version: '1.0',
-      metrics: { precision: 1, recall: 1, f1Score: 1, totalQueries: 10, matchedQueries: 10, avgScore: 1 },
+      metrics: {
+        precision: 1,
+        recall: 1,
+        f1Score: 1,
+        totalQueries: 10,
+        matchedQueries: 10,
+        avgScore: 1,
+      },
       perQueryResults: [],
       pageRankConfig: { damping: 0.85, maxIterations: 20, tolerance: 1e-6 },
-      trendData: [
-        { runDate: '2026-05-22', f1Score: 1, precision: 1, recall: 1, damping: 0.85 },
-      ],
+      trendData: [{ runDate: '2026-05-22', f1Score: 1, precision: 1, recall: 1, damping: 0.85 }],
     };
 
     const graph = generateVisTrendData(report);
@@ -415,35 +476,70 @@ describe('Vis.js Trend Chart Data Export', () => {
 
 describe('F1 Threshold Gate', () => {
   it('should PASS when F1 >= 80%', () => {
-    const metrics = { precision: 0.85, recall: 0.8, f1Score: 0.824, totalQueries: 100, matchedQueries: 80, avgScore: 0.9 };
-    const result = checkF1Threshold(metrics, 0.80);
+    const metrics = {
+      precision: 0.85,
+      recall: 0.8,
+      f1Score: 0.824,
+      totalQueries: 100,
+      matchedQueries: 80,
+      avgScore: 0.9,
+    };
+    const result = checkF1Threshold(metrics, 0.8);
     expect(result.passed).toBe(true);
     expect(result.message).toContain('PASS');
   });
 
   it('should FAIL when F1 < 80%', () => {
-    const metrics = { precision: 0.6, recall: 0.5, f1Score: 0.545, totalQueries: 100, matchedQueries: 50, avgScore: 0.6 };
-    const result = checkF1Threshold(metrics, 0.80);
+    const metrics = {
+      precision: 0.6,
+      recall: 0.5,
+      f1Score: 0.545,
+      totalQueries: 100,
+      matchedQueries: 50,
+      avgScore: 0.6,
+    };
+    const result = checkF1Threshold(metrics, 0.8);
     expect(result.passed).toBe(false);
     expect(result.message).toContain('FAIL');
     expect(result.message).toContain('blocked');
   });
 
   it('should PASS at exact threshold', () => {
-    const metrics = { precision: 0.8, recall: 0.8, f1Score: 0.8, totalQueries: 100, matchedQueries: 80, avgScore: 0.8 };
-    const result = checkF1Threshold(metrics, 0.80);
+    const metrics = {
+      precision: 0.8,
+      recall: 0.8,
+      f1Score: 0.8,
+      totalQueries: 100,
+      matchedQueries: 80,
+      avgScore: 0.8,
+    };
+    const result = checkF1Threshold(metrics, 0.8);
     expect(result.passed).toBe(true);
   });
 
   it('should support custom threshold', () => {
-    const metrics = { precision: 0.9, recall: 0.9, f1Score: 0.9, totalQueries: 100, matchedQueries: 90, avgScore: 0.9 };
+    const metrics = {
+      precision: 0.9,
+      recall: 0.9,
+      f1Score: 0.9,
+      totalQueries: 100,
+      matchedQueries: 90,
+      avgScore: 0.9,
+    };
     const result = checkF1Threshold(metrics, 0.95);
     expect(result.passed).toBe(false);
   });
 
   it('should always pass with perfect metrics', () => {
-    const metrics = { precision: 1, recall: 1, f1Score: 1, totalQueries: 100, matchedQueries: 100, avgScore: 1 };
-    const result = checkF1Threshold(metrics, 0.80);
+    const metrics = {
+      precision: 1,
+      recall: 1,
+      f1Score: 1,
+      totalQueries: 100,
+      matchedQueries: 100,
+      avgScore: 1,
+    };
+    const result = checkF1Threshold(metrics, 0.8);
     expect(result.passed).toBe(true);
     expect(result.f1Score).toBe(1);
   });
@@ -458,13 +554,15 @@ describe('PageRank vs Regex Search Comparison', () => {
     const pageRankFn = (q: BenchmarkQuery) => mockEngine.search(q);
     const regexFn = (q: BenchmarkQuery): SearchResult[] => {
       // Regex always finds (simulates broader but less precise search)
-      return [{
-        symbol: q.symbol,
-        file: q.file,
-        kind: q.expectedKind,
-        type: q.expectedType,
-        score: 0.5,
-      }];
+      return [
+        {
+          symbol: q.symbol,
+          file: q.file,
+          kind: q.expectedKind,
+          type: q.expectedType,
+          score: 0.5,
+        },
+      ];
     };
 
     const results = compareSearchMethods(benchmarkData.queries, pageRankFn, regexFn);
@@ -483,7 +581,13 @@ describe('PageRank vs Regex Search Comparison', () => {
       // Regex returns extra false results
       return [
         { symbol: q.symbol, file: q.file, kind: q.expectedKind, type: q.expectedType, score: 0.9 },
-        { symbol: 'FakeSymbol', file: 'wrong/file.ts', kind: 'definition', type: 'class', score: 0.3 },
+        {
+          symbol: 'FakeSymbol',
+          file: 'wrong/file.ts',
+          kind: 'definition',
+          type: 'class',
+          score: 0.3,
+        },
       ];
     };
 
@@ -500,27 +604,57 @@ describe('PageRank vs Regex Search Comparison', () => {
 describe('Auto-adjust PageRank Damping Parameter', () => {
   it('should find optimal damping within range', () => {
     // Simulate: F1 peaks at damping=0.85
-    const evaluateFn = (damping: number): { precision: number; recall: number; f1Score: number; totalQueries: number; matchedQueries: number; avgScore: number } => {
+    const evaluateFn = (
+      damping: number,
+    ): {
+      precision: number;
+      recall: number;
+      f1Score: number;
+      totalQueries: number;
+      matchedQueries: number;
+      avgScore: number;
+    } => {
       // Bell curve centered at 0.85
       const f1 = Math.exp(-Math.pow((damping - 0.85) / 0.15, 2) * 2);
-      return { precision: f1, recall: f1, f1Score: f1, totalQueries: 100, matchedQueries: 100, avgScore: f1 };
+      return {
+        precision: f1,
+        recall: f1,
+        f1Score: f1,
+        totalQueries: 100,
+        matchedQueries: 100,
+        avgScore: f1,
+      };
     };
 
-    const result = optimizeDampingParameter(benchmarkData.queries, evaluateFn, 0.50, 0.95, 0.05);
+    const result = optimizeDampingParameter(benchmarkData.queries, evaluateFn, 0.5, 0.95, 0.05);
     expect(result.optimalDamping).toBeCloseTo(0.85, 1);
     expect(result.bestF1).toBeGreaterThan(0.9);
     expect(result.results.length).toBeGreaterThan(0);
   });
 
   it('should return results for each damping step', () => {
-    const evaluateFn = () => ({ precision: 0.8, recall: 0.8, f1Score: 0.8, totalQueries: 100, matchedQueries: 80, avgScore: 0.8 });
-    const result = optimizeDampingParameter(benchmarkData.queries, evaluateFn, 0.50, 0.95, 0.10);
+    const evaluateFn = () => ({
+      precision: 0.8,
+      recall: 0.8,
+      f1Score: 0.8,
+      totalQueries: 100,
+      matchedQueries: 80,
+      avgScore: 0.8,
+    });
+    const result = optimizeDampingParameter(benchmarkData.queries, evaluateFn, 0.5, 0.95, 0.1);
     // 0.50, 0.60, 0.70, 0.80, 0.90 = 5 steps
     expect(result.results.length).toBe(5);
   });
 
   it('should default to 0.85 if all dampings equal', () => {
-    const evaluateFn = () => ({ precision: 0.5, recall: 0.5, f1Score: 0.5, totalQueries: 100, matchedQueries: 50, avgScore: 0.5 });
+    const evaluateFn = () => ({
+      precision: 0.5,
+      recall: 0.5,
+      f1Score: 0.5,
+      totalQueries: 100,
+      matchedQueries: 50,
+      avgScore: 0.5,
+    });
     const result = optimizeDampingParameter(benchmarkData.queries, evaluateFn);
     expect(result.optimalDamping).toBe(0.85); // First one tested
   });
@@ -536,7 +670,7 @@ describe('Benchmark Data Integrity', () => {
   });
 
   it('should have unique IDs for all queries', () => {
-    const ids = benchmarkData.queries.map(q => q.id);
+    const ids = benchmarkData.queries.map((q) => q.id);
     const uniqueIds = new Set(ids);
     expect(uniqueIds.size).toBe(100);
   });
@@ -553,13 +687,13 @@ describe('Benchmark Data Integrity', () => {
   });
 
   it('should cover multiple packages', () => {
-    const packages = new Set(benchmarkData.queries.map(q => q.file.split('/')[1]));
+    const packages = new Set(benchmarkData.queries.map((q) => q.file.split('/')[1]));
     expect(packages.size).toBeGreaterThanOrEqual(4); // shared, agents, ai-engine, computer-use, skills, communication
   });
 
   it('should include both definition and reference queries', () => {
-    const definitions = benchmarkData.queries.filter(q => q.expectedKind === 'definition');
-    const references = benchmarkData.queries.filter(q => q.expectedKind === 'reference');
+    const definitions = benchmarkData.queries.filter((q) => q.expectedKind === 'definition');
+    const references = benchmarkData.queries.filter((q) => q.expectedKind === 'reference');
     expect(definitions.length).toBeGreaterThan(0);
     expect(references.length).toBeGreaterThan(0);
   });

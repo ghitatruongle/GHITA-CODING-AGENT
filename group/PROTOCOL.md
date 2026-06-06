@@ -30,6 +30,7 @@ Nội dung tin nhắn
 ```
 
 Ví dụ:
+
 ```
 [14:30:45] Giam Doc | Director:
 Hôm nay ta sẽ bàn về Phase 7. Developer, hãy báo cáo tiến độ.
@@ -45,31 +46,34 @@ Phase 7 đã hoàn thành 80%. Còn 2 task: API endpoint và UI.
 ## Quy trình giao tiếp
 
 ### Giám đốc tạo phiên chat:
+
 1. Tạo thư mục `Chat_YYYY-MM-DD_HH-MM-SS`
 2. Tạo file `giam_doc.txt` trong đó
 3. Ghi lệnh/chủ đề đầu tiên
 4. Thông báo cho các agent khác
 
 ### Agent khác tham gia:
+
 1. Tạo file của mình trong thư mục chat (ví dụ: `developer.txt`)
 2. Đọc file `giam_doc.txt` để biết lệnh
 3. Đọc file các agent khác để biết context
 4. Phản hồi trong file của mình
 
 ### Khi muốn ra lệnh cho agent khác:
+
 1. Ghi rõ tên agent cần nhận lệnh
 2. Ghi rõ nội dung lệnh
 3. Agent đó phải đọc file Giám đốc và phản hồi
 
 ## Vai trò agent
 
-| Vai trò | File name | Quyền hạn |
-|---------|-----------|-----------|
-| Giám đốc | `giam_doc.txt` | Ra lệnh, phân công, quyết định |
-| Developer | `developer.txt` | Code, implement, báo cáo |
-| Reviewer | `reviewer.txt` | Review, test, tìm bug |
-| Architect | `architect.txt` | Thiết kế, tư vấn kiến trúc |
-| PM | `pm.txt` | Quản lý task, theo dõi tiến độ |
+| Vai trò   | File name       | Quyền hạn                      |
+| --------- | --------------- | ------------------------------ |
+| Giám đốc  | `giam_doc.txt`  | Ra lệnh, phân công, quyết định |
+| Developer | `developer.txt` | Code, implement, báo cáo       |
+| Reviewer  | `reviewer.txt`  | Review, test, tìm bug          |
+| Architect | `architect.txt` | Thiết kế, tư vấn kiến trúc     |
+| PM        | `pm.txt`        | Quản lý task, theo dõi tiến độ |
 
 ## Lệnh của Giám đốc
 

@@ -1,1 +1,23 @@
-{"rustc":8891013984288978370,"features":"[]","declared_features":"[]","target":4853353551047732211,"profile":2225463790103693989,"path":11062120485502785676,"deps":[[10420560437213941093,"syn",false,18019088986341028544],[13111758008314797071,"quote",false,18173047592110776083]],"local":[{"CheckDepInfo":{"dep_info":"debug\\.fingerprint\\cssparser-macros-7d0114965cd9c6df\\dep-lib-cssparser_macros","checksum":false}}],"rustflags":[],"config":8247474407144887393,"compile_kind":0}
+{
+  "rustc": 8891013984288978370,
+  "features": "[]",
+  "declared_features": "[]",
+  "target": 4853353551047732211,
+  "profile": 2225463790103693989,
+  "path": 11062120485502785676,
+  "deps": [
+    [10420560437213941093, "syn", false, 18019088986341028544],
+    [13111758008314797071, "quote", false, 18173047592110776083]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "debug\\.fingerprint\\cssparser-macros-7d0114965cd9c6df\\dep-lib-cssparser_macros",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 8247474407144887393,
+  "compile_kind": 0
+}

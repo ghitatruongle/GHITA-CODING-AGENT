@@ -4,8 +4,11 @@
 // ==============================================================================
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Keychain from 'react-native-keychain';
 import type { MobileSettings, PairedDevice } from '../types';
 import { DEFAULT_MOBILE_SETTINGS } from '../types';
+
+const KEYCHAIN_SERVICE = 'com.ghita.mobile.auth';
 
 // --- Storage Keys ---
 const KEYS = {
@@ -112,25 +115,33 @@ export async function getDeviceId(): Promise<string> {
 
 export async function getAuthToken(): Promise<string | null> {
   try {
-    return await AsyncStorage.getItem(KEYS.AUTH_TOKEN);
-  } catch {
+    const creds = await Keychain.getGenericPassword({
+      service: KEYCHAIN_SERVICE,
+    });
+    return creds ? creds.password : null;
+  } catch (error) {
+    console.error('[Storage] Failed to get auth token from Keychain:', error);
     return null;
   }
 }
 
 export async function saveAuthToken(token: string): Promise<void> {
   try {
-    await AsyncStorage.setItem(KEYS.AUTH_TOKEN, token);
+    await Keychain.setGenericPassword('auth', token, {
+      service: KEYCHAIN_SERVICE,
+    });
   } catch (error) {
-    console.error('[Storage] Failed to save auth token:', error);
+    console.error('[Storage] Failed to save auth token to Keychain:', error);
   }
 }
 
 export async function clearAuthToken(): Promise<void> {
   try {
-    await AsyncStorage.removeItem(KEYS.AUTH_TOKEN);
+    await Keychain.resetGenericPassword({
+      service: KEYCHAIN_SERVICE,
+    });
   } catch (error) {
-    console.error('[Storage] Failed to clear auth token:', error);
+    console.error('[Storage] Failed to clear auth token from Keychain:', error);
   }
 }
 
@@ -138,8 +149,9 @@ export async function clearAuthToken(): Promise<void> {
 
 export async function clearAllData(): Promise<void> {
   try {
-    const allKeys = Object.values(KEYS);
+    const allKeys = Object.values(KEYS).filter((k) => k !== KEYS.AUTH_TOKEN);
     await AsyncStorage.multiRemove(allKeys);
+    await clearAuthToken();
   } catch (error) {
     console.error('[Storage] Failed to clear all data:', error);
   }

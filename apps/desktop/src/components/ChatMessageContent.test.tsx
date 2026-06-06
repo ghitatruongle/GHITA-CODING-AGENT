@@ -63,15 +63,23 @@ describe('MarkdownMessage', () => {
   });
 
   it('renders unordered list', () => {
-    render(<MarkdownMessage content={`- Item 1
-- Item 2`} />);
+    render(
+      <MarkdownMessage
+        content={`- Item 1
+- Item 2`}
+      />,
+    );
     expect(screen.getByText('Item 1')).toBeInTheDocument();
     expect(screen.getByText('Item 2')).toBeInTheDocument();
   });
 
   it('renders ordered list', () => {
-    render(<MarkdownMessage content={`1. First
-2. Second`} />);
+    render(
+      <MarkdownMessage
+        content={`1. First
+2. Second`}
+      />,
+    );
     expect(screen.getByText('First')).toBeInTheDocument();
     expect(screen.getByText('Second')).toBeInTheDocument();
   });
@@ -168,7 +176,8 @@ describe('MarkdownMessage', () => {
     it('renders deeply nested markdown structure without stack overflow', () => {
       // Simulate deeply nested blockquotes (> 20 levels deep)
       const nestedDepth = 30;
-      const nested = Array.from({ length: nestedDepth }, () => '> ').join('') + `Level ${nestedDepth}`;
+      const nested =
+        Array.from({ length: nestedDepth }, () => '> ').join('') + `Level ${nestedDepth}`;
 
       expect(() => render(<MarkdownMessage content={nested} />)).not.toThrow();
       expect(screen.getByText(`Level ${nestedDepth}`)).toBeInTheDocument();
@@ -176,13 +185,7 @@ describe('MarkdownMessage', () => {
 
     it('handles consecutive backtick code fences gracefully', () => {
       // Three backticks inside inline code should not break the parser
-      const content = [
-        'Inline: `` `code` `` is fine.',
-        '',
-        '```',
-        'fence',
-        '```',
-      ].join('\n');
+      const content = ['Inline: `` `code` `` is fine.', '', '```', 'fence', '```'].join('\n');
 
       expect(() => render(<MarkdownMessage content={content} />)).not.toThrow();
       expect(screen.getByText('fence')).toBeInTheDocument();
@@ -197,11 +200,7 @@ describe('CodeBlock', () => {
 
   it('renders a code block with copy and run buttons', () => {
     const code = 'console.log("hello")';
-    render(
-      <MarkdownMessage
-        content={`\`\`\`javascript\n${code}\n\`\`\``}
-      />,
-    );
+    render(<MarkdownMessage content={`\`\`\`javascript\n${code}\n\`\`\``} />);
 
     // Should display the code content
     expect(screen.getByText(code)).toBeInTheDocument();
@@ -213,11 +212,7 @@ describe('CodeBlock', () => {
 
   it('renders shell command block with run button', () => {
     const code = 'echo "hello world"';
-    render(
-      <MarkdownMessage
-        content={`\`\`\`bash\n${code}\n\`\`\``}
-      />,
-    );
+    render(<MarkdownMessage content={`\`\`\`bash\n${code}\n\`\`\``} />);
 
     expect(screen.getByText(code)).toBeInTheDocument();
     expect(screen.getByText('▶ Run')).toBeInTheDocument();
@@ -225,11 +220,7 @@ describe('CodeBlock', () => {
 
   it('copies code to clipboard when copy button is clicked', async () => {
     const code = 'const x = 1;';
-    render(
-      <MarkdownMessage
-        content={`\`\`\`js\n${code}\n\`\`\``}
-      />,
-    );
+    render(<MarkdownMessage content={`\`\`\`js\n${code}\n\`\`\``} />);
 
     const copyButton = screen.getByText('📋 Copy');
     await act(async () => {

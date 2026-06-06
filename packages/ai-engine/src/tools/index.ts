@@ -18,12 +18,14 @@ export type { SearchResult, SearchResponse } from './web-search.js';
 export { WebFetchTool } from './web-fetch.js';
 export type { FetchResponse } from './web-fetch.js';
 export * from './workspace-tools.js';
+export * from './registry.js';
+export * from './custom-tools.js';
 
 /** Built-in tool definitions cho AI function calling */
 export interface BuiltInTool {
   name: string;
   description: string;
-  parameters: Record<string, unknown>;
+  parameters: unknown;
   execute: (args: Record<string, unknown>) => Promise<string>;
 }
 
@@ -35,7 +37,8 @@ export function createBuiltInTools(): BuiltInTool[] {
   return [
     {
       name: 'web_search',
-      description: 'Search the web for information. Returns search results with titles, URLs, and snippets.',
+      description:
+        'Search the web for information. Returns search results with titles, URLs, and snippets.',
       parameters: {
         type: 'object',
         properties: {
@@ -69,12 +72,19 @@ export function createBuiltInTools(): BuiltInTool[] {
     },
     {
       name: 'list_dir',
-      description: 'List all files and directories recursively or non-recursively inside the workspace sandbox.',
+      description:
+        'List all files and directories recursively or non-recursively inside the workspace sandbox.',
       parameters: {
         type: 'object',
         properties: {
-          path: { type: 'string', description: 'Relative path of directory to list (optional, default is workspace root)' },
-          recursive: { type: 'boolean', description: 'Whether to list subdirectories recursively (optional, default is false)' },
+          path: {
+            type: 'string',
+            description: 'Relative path of directory to list (optional, default is workspace root)',
+          },
+          recursive: {
+            type: 'boolean',
+            description: 'Whether to list subdirectories recursively (optional, default is false)',
+          },
         },
       },
       execute: async (args) => {
@@ -85,13 +95,17 @@ export function createBuiltInTools(): BuiltInTool[] {
     },
     {
       name: 'read_file',
-      description: 'Read the contents of a file inside the workspace sandbox, optionally specifying a line range.',
+      description:
+        'Read the contents of a file inside the workspace sandbox, optionally specifying a line range.',
       parameters: {
         type: 'object',
         properties: {
           filePath: { type: 'string', description: 'Relative path of the file to read' },
           startLine: { type: 'number', description: '1-indexed starting line to read (optional)' },
-          endLine: { type: 'number', description: '1-indexed ending line to read (inclusive, optional)' },
+          endLine: {
+            type: 'number',
+            description: '1-indexed ending line to read (inclusive, optional)',
+          },
         },
         required: ['filePath'],
       },
@@ -104,7 +118,8 @@ export function createBuiltInTools(): BuiltInTool[] {
     },
     {
       name: 'write_file',
-      description: 'Write complete contents to a new or existing file inside the workspace sandbox.',
+      description:
+        'Write complete contents to a new or existing file inside the workspace sandbox.',
       parameters: {
         type: 'object',
         properties: {
@@ -121,13 +136,20 @@ export function createBuiltInTools(): BuiltInTool[] {
     },
     {
       name: 'replace_file_content',
-      description: 'Replace a single contiguous unique block of lines in an existing file inside the workspace sandbox.',
+      description:
+        'Replace a single contiguous unique block of lines in an existing file inside the workspace sandbox.',
       parameters: {
         type: 'object',
         properties: {
           filePath: { type: 'string', description: 'Relative path of the file' },
-          targetContent: { type: 'string', description: 'The precise lines of code in the file to be replaced' },
-          replacementContent: { type: 'string', description: 'The complete replacement lines of code' },
+          targetContent: {
+            type: 'string',
+            description: 'The precise lines of code in the file to be replaced',
+          },
+          replacementContent: {
+            type: 'string',
+            description: 'The complete replacement lines of code',
+          },
         },
         required: ['filePath', 'targetContent', 'replacementContent'],
       },
@@ -140,7 +162,8 @@ export function createBuiltInTools(): BuiltInTool[] {
     },
     {
       name: 'grep_search',
-      description: 'Find occurrences of a text query across all supported files in the workspace sandbox.',
+      description:
+        'Find occurrences of a text query across all supported files in the workspace sandbox.',
       parameters: {
         type: 'object',
         properties: {
@@ -155,12 +178,16 @@ export function createBuiltInTools(): BuiltInTool[] {
     },
     {
       name: 'run_command',
-      description: 'Execute a terminal shell command inside the workspace sandbox with safety guardrails.',
+      description:
+        'Execute a terminal shell command inside the workspace sandbox with safety guardrails.',
       parameters: {
         type: 'object',
         properties: {
           command: { type: 'string', description: 'The terminal command to run' },
-          timeoutMs: { type: 'number', description: 'Execution timeout in milliseconds (optional, default is 30000)' },
+          timeoutMs: {
+            type: 'number',
+            description: 'Execution timeout in milliseconds (optional, default is 30000)',
+          },
         },
         required: ['command'],
       },

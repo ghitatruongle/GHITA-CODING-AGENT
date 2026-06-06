@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { TelepresencePortal } from '../../packages/communication/src/channels/telepresencePortal.js';
 import * as net from 'node:net';
 
-describe('Phase 18: Omnichannel Live Telepresence Portal Unit Tests', () => {
+describe('18: Omnichannel Live Telepresence Portal Unit Tests', () => {
   let portal: TelepresencePortal;
   let currentPort = 8200;
 
@@ -134,7 +134,7 @@ describe('Phase 18: Omnichannel Live Telepresence Portal Unit Tests', () => {
       expect(response).toContain('101 Switching Protocols');
       expect(response).toContain('Upgrade: websocket');
       expect(response).toContain('Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=');
-      
+
       // Wait for server to process socket close event tick
       await new Promise((r) => setTimeout(r, 20));
       expect(portal.getClientCount()).toBe(0); // Socket is destroyed now
@@ -230,7 +230,7 @@ describe('Phase 18: Omnichannel Live Telepresence Portal Unit Tests', () => {
         setTimeout(() => {
           const forceBranchMsg = JSON.stringify({
             command: 'FORCE_BRANCH',
-            args: { branch: 'experimental-feature' }
+            args: { branch: 'experimental-feature' },
           });
           portal.sendFrame(client, 1, Buffer.from(forceBranchMsg, 'utf8'));
         }, 30);
@@ -279,7 +279,7 @@ describe('Phase 18: Omnichannel Live Telepresence Portal Unit Tests', () => {
         setTimeout(() => {
           const injectMsg = JSON.stringify({
             command: 'INJECT_VARIABLES',
-            args: { variables: { NODE_ENV: 'production', API_TIMEOUT: '5000' } }
+            args: { variables: { NODE_ENV: 'production', API_TIMEOUT: '5000' } },
           });
           portal.sendFrame(client, 1, Buffer.from(injectMsg, 'utf8'));
         }, 30);
@@ -288,7 +288,7 @@ describe('Phase 18: Omnichannel Live Telepresence Portal Unit Tests', () => {
       await completionPromise;
       expect(onInjectVarsSpy).toHaveBeenCalledWith({
         NODE_ENV: 'production',
-        API_TIMEOUT: '5000'
+        API_TIMEOUT: '5000',
       });
     });
   });
@@ -353,31 +353,31 @@ describe('Phase 18: Omnichannel Live Telepresence Portal Unit Tests', () => {
         // Send a fragmented frame for PAUSE command
         setTimeout(() => {
           const pauseMsg = JSON.stringify({ command: 'PAUSE' });
-          
+
           // Generate raw frame buffer manually
           const payload = Buffer.from(pauseMsg, 'utf8');
           const header = [];
           header.push(0x81); // FIN = 1, Opcode = 1 (Text)
-          
+
           // Client must mask payload!
           const maskKey = Buffer.from([0x12, 0x34, 0x56, 0x78]);
           const len = payload.length;
-          
+
           // Assume length <= 125 for PAUSE command
           header.push(0x80 | len); // MASK = 1, len
-          
+
           const maskedPayload = Buffer.alloc(len);
           for (let i = 0; i < len; i++) {
             maskedPayload[i] = payload[i]! ^ maskKey[i % 4]!;
           }
-          
+
           const fullFrame = Buffer.concat([Buffer.from(header), maskKey, maskedPayload]);
-          
+
           // Split fullFrame into 3 fragmented chunks and write sequentially with small gaps!
           const chunk1 = fullFrame.subarray(0, 2);
           const chunk2 = fullFrame.subarray(2, 6);
           const chunk3 = fullFrame.subarray(6);
-          
+
           client.write(chunk1);
           setTimeout(() => client.write(chunk2), 5);
           setTimeout(() => client.write(chunk3), 10);

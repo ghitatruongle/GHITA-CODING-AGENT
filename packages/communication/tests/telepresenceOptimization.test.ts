@@ -7,9 +7,9 @@ vi.mock('sharp', () => {
     default: vi.fn().mockImplementation(() => {
       return {
         jpeg: vi.fn().mockReturnThis(),
-        toBuffer: vi.fn().mockResolvedValue(Buffer.from('mocked-jpeg-buffer'))
+        toBuffer: vi.fn().mockResolvedValue(Buffer.from('mocked-jpeg-buffer')),
       };
-    })
+    }),
   };
 });
 
@@ -27,7 +27,7 @@ describe('Telepresence Portal Bandwidth Optimization Tests', () => {
       destroyed: false,
       write: vi.fn(),
       on: vi.fn(),
-      destroy: vi.fn()
+      destroy: vi.fn(),
     };
 
     // Authenticate the mock client socket

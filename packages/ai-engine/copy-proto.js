@@ -13,10 +13,7 @@ if (!fs.existsSync(distDir)) {
 }
 
 try {
-  fs.copyFileSync(
-    path.join(srcDir, 'agent.proto'),
-    path.join(distDir, 'agent.proto')
-  );
+  fs.copyFileSync(path.join(srcDir, 'agent.proto'), path.join(distDir, 'agent.proto'));
   console.log('Successfully copied agent.proto to dist/proto');
 } catch (err) {
   console.error('Failed to copy agent.proto:', err);

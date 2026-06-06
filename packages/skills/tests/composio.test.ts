@@ -9,9 +9,9 @@ describe('ComposioSkillAdapter', () => {
   let adapter: ComposioSkillAdapter;
 
   beforeEach(async () => {
-  adapter = await ComposioSkillAdapter.create();
-  vi.clearAllMocks();
-});
+    adapter = await ComposioSkillAdapter.create();
+    vi.clearAllMocks();
+  });
 
   // ==============================================================================
   // 1. Credentials Management & Centralized Syncing
@@ -35,7 +35,11 @@ describe('ComposioSkillAdapter', () => {
 
     it('should sync credentials centrally from an external object', () => {
       const externalStore = {
-        slack: { accessToken: 'slack_token', refreshToken: 'slack_refresh', expiresAt: 1800000000000 },
+        slack: {
+          accessToken: 'slack_token',
+          refreshToken: 'slack_refresh',
+          expiresAt: 1800000000000,
+        },
         jira: { accessToken: 'jira_token', expiresAt: 1900000000000 },
       };
 
@@ -53,7 +57,7 @@ describe('ComposioSkillAdapter', () => {
         accessToken: 'abc',
       });
       expect(adapter.listConnectedApps()).toContain('slack');
-      
+
       const removed = adapter.removeCredential('slack');
       expect(removed).toBe(true);
       expect(adapter.listConnectedApps()).not.toContain('slack');
@@ -106,7 +110,18 @@ describe('ComposioSkillAdapter', () => {
   describe('Simulated Default Actions Execution', () => {
     beforeEach(() => {
       // Setup credentials for all test apps
-      const apps = ['slack', 'github', 'jira', 'trello', 'googlecalendar', 'zoom', 'salesforce', 'hubspot', 'shopify', 'notion'];
+      const apps = [
+        'slack',
+        'github',
+        'jira',
+        'trello',
+        'googlecalendar',
+        'zoom',
+        'salesforce',
+        'hubspot',
+        'shopify',
+        'notion',
+      ];
       for (const app of apps) {
         adapter.setCredential({ appId: app, accessToken: `${app}_mock_token` });
       }
@@ -119,7 +134,10 @@ describe('ComposioSkillAdapter', () => {
     });
 
     it('should execute slack.send_message and slack.create_channel', async () => {
-      const res1 = await adapter.executeSaaSAction('slack.send_message', { channel: '#dev', text: 'Hello' });
+      const res1 = await adapter.executeSaaSAction('slack.send_message', {
+        channel: '#dev',
+        text: 'Hello',
+      });
       expect(res1.success).toBe(true);
       expect(res1.data.channel).toBe('#dev');
       expect(res1.data).toBeDefined();
@@ -131,44 +149,68 @@ describe('ComposioSkillAdapter', () => {
     });
 
     it('should execute github.create_issue, github.create_pull_request, github.add_comment', async () => {
-      const res1 = await adapter.executeSaaSAction('github.create_issue', { title: 'Tauri window crash', repo: 'ghita/desktop' });
+      const res1 = await adapter.executeSaaSAction('github.create_issue', {
+        title: 'Tauri window crash',
+        repo: 'ghita/desktop',
+      });
       expect(res1.success).toBe(true);
       expect(res1.data.title).toBe('Tauri window crash');
       expect(res1.data.issue_number).toBeGreaterThan(0);
 
-      const res2 = await adapter.executeSaaSAction('github.create_pull_request', { title: 'Fix window bounds', head: 'fix-window', base: 'main' });
+      const res2 = await adapter.executeSaaSAction('github.create_pull_request', {
+        title: 'Fix window bounds',
+        head: 'fix-window',
+        base: 'main',
+      });
       expect(res2.success).toBe(true);
       expect(res2.data.pr_number).toBeGreaterThan(0);
 
-      const res3 = await adapter.executeSaaSAction('github.add_comment', { issue_number: 12, body: 'Checking this issue' });
+      const res3 = await adapter.executeSaaSAction('github.add_comment', {
+        issue_number: 12,
+        body: 'Checking this issue',
+      });
       expect(res3.success).toBe(true);
       expect(res3.data.comment_id).toBeDefined();
     });
 
     it('should execute jira.create_issue and jira.update_issue_status', async () => {
-      const res1 = await adapter.executeSaaSAction('jira.create_issue', { summary: 'Implement Cosine similarity', type: 'Bug' });
+      const res1 = await adapter.executeSaaSAction('jira.create_issue', {
+        summary: 'Implement Cosine similarity',
+        type: 'Bug',
+      });
       expect(res1.success).toBe(true);
       expect(res1.data.key).toContain('GHITA-');
       expect(res1.data.status).toBe('To Do');
 
-      const res2 = await adapter.executeSaaSAction('jira.update_issue_status', { key: 'GHITA-204', status: 'Done' });
+      const res2 = await adapter.executeSaaSAction('jira.update_issue_status', {
+        key: 'GHITA-204',
+        status: 'Done',
+      });
       expect(res2.success).toBe(true);
       expect(res2.data.key).toBe('GHITA-204');
       expect(res2.data.status).toBe('Done');
     });
 
     it('should execute trello.create_card and trello.move_card', async () => {
-      const res1 = await adapter.executeSaaSAction('trello.create_card', { name: 'Update Plan', board_id: 'b1' });
+      const res1 = await adapter.executeSaaSAction('trello.create_card', {
+        name: 'Update Plan',
+        board_id: 'b1',
+      });
       expect(res1.success).toBe(true);
       expect(res1.data.card_id).toBeDefined();
 
-      const res2 = await adapter.executeSaaSAction('trello.move_card', { card_id: 'c123', list_id: 'lDone' });
+      const res2 = await adapter.executeSaaSAction('trello.move_card', {
+        card_id: 'c123',
+        list_id: 'lDone',
+      });
       expect(res2.success).toBe(true);
       expect(res2.data.success).toBe(true);
     });
 
     it('should execute googlecalendar.create_event and googlecalendar.list_events', async () => {
-      const res1 = await adapter.executeSaaSAction('googlecalendar.create_event', { summary: 'Sprint Retrospective' });
+      const res1 = await adapter.executeSaaSAction('googlecalendar.create_event', {
+        summary: 'Sprint Retrospective',
+      });
       expect(res1.success).toBe(true);
       expect(res1.data.event_id).toBeDefined();
 
@@ -185,29 +227,43 @@ describe('ComposioSkillAdapter', () => {
     });
 
     it('should execute salesforce.create_lead and salesforce.update_opportunity', async () => {
-      const res1 = await adapter.executeSaaSAction('salesforce.create_lead', { name: 'Alice Smith', company: 'Acme Inc' });
+      const res1 = await adapter.executeSaaSAction('salesforce.create_lead', {
+        name: 'Alice Smith',
+        company: 'Acme Inc',
+      });
       expect(res1.success).toBe(true);
       expect(res1.data.lead_id).toBeDefined();
 
-      const res2 = await adapter.executeSaaSAction('salesforce.update_opportunity', { opportunity_id: 'opp1', stage: 'Closed Won' });
+      const res2 = await adapter.executeSaaSAction('salesforce.update_opportunity', {
+        opportunity_id: 'opp1',
+        stage: 'Closed Won',
+      });
       expect(res2.success).toBe(true);
       expect(res2.data.success).toBe(true);
     });
 
     it('should execute hubspot.create_contact', async () => {
-      const res = await adapter.executeSaaSAction('hubspot.create_contact', { email: 'test@gmail.com', firstname: 'Bob' });
+      const res = await adapter.executeSaaSAction('hubspot.create_contact', {
+        email: 'test@gmail.com',
+        firstname: 'Bob',
+      });
       expect(res.success).toBe(true);
       expect(res.data.contact_id).toBeDefined();
     });
 
     it('should execute shopify.get_order_details', async () => {
-      const res = await adapter.executeSaaSAction('shopify.get_order_details', { order_id: '#500' });
+      const res = await adapter.executeSaaSAction('shopify.get_order_details', {
+        order_id: '#500',
+      });
       expect(res.success).toBe(true);
       expect(res.data.order_id).toBe('#500');
     });
 
     it('should execute notion.create_page and notion.append_block', async () => {
-      const res1 = await adapter.executeSaaSAction('notion.create_page', { database_id: 'db1', title: 'Roadmap docs' });
+      const res1 = await adapter.executeSaaSAction('notion.create_page', {
+        database_id: 'db1',
+        title: 'Roadmap docs',
+      });
       expect(res1.success).toBe(true);
       expect(res1.data.page_id).toBeDefined();
 
@@ -229,19 +285,25 @@ describe('ComposioSkillAdapter', () => {
       expect(adapter.isIsolated('slack')).toBe(false);
 
       // Failure 1
-      const res1 = await adapter.executeSaaSAction('slack.send_message', { simulate_failure: true });
+      const res1 = await adapter.executeSaaSAction('slack.send_message', {
+        simulate_failure: true,
+      });
       expect(res1.success).toBe(false);
       expect(adapter.isIsolated('slack')).toBe(false);
 
       // Failure 2
-      const res2 = await adapter.executeSaaSAction('slack.send_message', { simulate_failure: true });
+      const res2 = await adapter.executeSaaSAction('slack.send_message', {
+        simulate_failure: true,
+      });
       expect(res2.success).toBe(false);
       expect(adapter.isIsolated('slack')).toBe(false);
 
       // Failure 3
-      const res3 = await adapter.executeSaaSAction('slack.send_message', { simulate_failure: true });
+      const res3 = await adapter.executeSaaSAction('slack.send_message', {
+        simulate_failure: true,
+      });
       expect(res3.success).toBe(false);
-      
+
       // Slack must be isolated now!
       expect(adapter.isIsolated('slack')).toBe(true);
       expect(adapter.getIsolatedApps()).toContain('slack');
@@ -257,7 +319,7 @@ describe('ComposioSkillAdapter', () => {
       await adapter.executeSaaSAction('slack.send_message', { simulate_failure: true });
       // Failure 2
       await adapter.executeSaaSAction('slack.send_message', { simulate_failure: true });
-      
+
       // Success (should reset counter)
       const resOk = await adapter.executeSaaSAction('slack.send_message', { text: 'Reset me' });
       expect(resOk.success).toBe(true);

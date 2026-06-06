@@ -170,7 +170,7 @@ export class TrajectoryCompressor {
     }
 
     // Pass 1: Phân tích importance (not needed for simple LLM slice, keeping rule-based fallbacks)
-    
+
     // Chia messages thành 2 phần: cũ (nén) và mới (giữ)
     const preserveCount = Math.min(this.config.preserveRecentCount, messages.length);
     const oldMessages = messages.slice(0, messages.length - preserveCount);
@@ -320,10 +320,10 @@ export class TrajectoryCompressor {
    * Tóm tắt một nhóm messages ít quan trọng thành 1 message.
    */
   private summarizeGroup(group: MessageAnalysis[]): ChatMessage {
-  if (group.length === 1) {
-    const first = group[0];
-    if (!first) return { role: 'system', content: '[Compressed] Empty group' };
-    const msg = first.message;
+    if (group.length === 1) {
+      const first = group[0];
+      if (!first) return { role: 'system', content: '[Compressed] Empty group' };
+      const msg = first.message;
       return {
         role: 'system',
         content: `[Compressed] ${msg.role}: ${this.extractSummary(msg.content)}`,

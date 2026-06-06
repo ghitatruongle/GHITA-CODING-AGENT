@@ -22,7 +22,7 @@ function hashContent(content: string): string {
   let hash = 0;
   for (let i = 0; i < content.length; i++) {
     const char = content.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
+    hash = (hash << 5) - hash + char;
     hash |= 0;
   }
   return hash.toString(36);
@@ -128,10 +128,10 @@ export class KnowledgeEngine {
       const chunk: KnowledgeChunk = {
         id: generateId('chk'),
         documentId: docId,
-content: rawChunks[i]?.text ?? '',
-      index: i,
-      startOffset: rawChunks[i]?.start ?? 0,
-      endOffset: rawChunks[i]?.end ?? 0,
+        content: rawChunks[i]?.text ?? '',
+        index: i,
+        startOffset: rawChunks[i]?.start ?? 0,
+        endOffset: rawChunks[i]?.end ?? 0,
         metadata: options.metadata,
       };
 
@@ -148,7 +148,10 @@ content: rawChunks[i]?.text ?? '',
   }
 
   /** Ingest from a registered source */
-  async ingestFromSource(sourceId: string, options?: IngestOptions): Promise<KnowledgeDocument | undefined> {
+  async ingestFromSource(
+    sourceId: string,
+    options?: IngestOptions,
+  ): Promise<KnowledgeDocument | undefined> {
     const source = this.sources.get(sourceId);
     if (!source) return undefined;
 
@@ -185,7 +188,10 @@ content: rawChunks[i]?.text ?? '',
   }
 
   /** Query knowledge and format as context string for RAG injection */
-  async queryContext(query: string, options: SearchOptions & { maxChars?: number } = {}): Promise<string> {
+  async queryContext(
+    query: string,
+    options: SearchOptions & { maxChars?: number } = {},
+  ): Promise<string> {
     const maxChars = options.maxChars ?? 3000;
     const results = await this.search(query, options);
     if (results.length === 0) return '';
@@ -257,8 +263,8 @@ content: rawChunks[i]?.text ?? '',
     while (start < text.length) {
       const end = Math.min(start + chunkSize, text.length);
       chunks.push({ text: text.slice(start, end), start, end });
+      if (end >= text.length) break;
       start = end - overlap;
-      if (start >= text.length) break;
     }
 
     return chunks;

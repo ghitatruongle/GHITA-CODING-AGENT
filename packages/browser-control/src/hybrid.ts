@@ -3,7 +3,11 @@
 // ==============================================================================
 
 import { GuiGrounder } from '@ghita/computer-use';
-import { extractInteractiveElements, formatAccessibilityTree, type InteractiveElement } from './dom-extractor.js';
+import {
+  extractInteractiveElements,
+  formatAccessibilityTree,
+  type InteractiveElement,
+} from './dom-extractor.js';
 
 import type { Browser, Page } from 'playwright';
 
@@ -55,14 +59,17 @@ export class HybridBrowserController {
 
     // 1. Try DOM selector if it looks like one (doesn't contain spaces and starts with valid selector char)
     const isLikelySelector = /^[a-zA-Z0-9#._[\]:=-]+$/.test(selectorOrDescription);
-    
+
     if (isLikelySelector) {
       try {
         console.info(`[HybridController] Trying DOM click for selector: ${selectorOrDescription}`);
         await this.page.click(selectorOrDescription, { timeout: 3000 });
         return;
       } catch (err) {
-        console.warn(`[HybridController] DOM click failed for "${selectorOrDescription}". Falling back to vision grounding.`, err);
+        console.warn(
+          `[HybridController] DOM click failed for "${selectorOrDescription}". Falling back to vision grounding.`,
+          err,
+        );
       }
     }
 
@@ -76,10 +83,14 @@ export class HybridBrowserController {
     const grounding = await this.grounder.ground(screenshot.data, selectorOrDescription, size);
 
     if (!grounding.point) {
-      throw new Error(`Vision grounding failed: Could not resolve coordinates for "${selectorOrDescription}"`);
+      throw new Error(
+        `Vision grounding failed: Could not resolve coordinates for "${selectorOrDescription}"`,
+      );
     }
 
-    console.info(`[HybridController] Vision click at coordinates: [${grounding.point.x}, ${grounding.point.y}]`);
+    console.info(
+      `[HybridController] Vision click at coordinates: [${grounding.point.x}, ${grounding.point.y}]`,
+    );
     await this.page.mouse.click(grounding.point.x, grounding.point.y);
   }
 
@@ -97,7 +108,10 @@ export class HybridBrowserController {
         await this.page.fill(selectorOrDescription, value, { timeout: 3000 });
         return;
       } catch (err) {
-        console.warn(`[HybridController] DOM fill failed for "${selectorOrDescription}". Falling back to vision grounding.`, err);
+        console.warn(
+          `[HybridController] DOM fill failed for "${selectorOrDescription}". Falling back to vision grounding.`,
+          err,
+        );
       }
     }
 
@@ -111,10 +125,14 @@ export class HybridBrowserController {
     const grounding = await this.grounder.ground(screenshot.data, selectorOrDescription, size);
 
     if (!grounding.point) {
-      throw new Error(`Vision grounding failed: Could not resolve coordinates for "${selectorOrDescription}"`);
+      throw new Error(
+        `Vision grounding failed: Could not resolve coordinates for "${selectorOrDescription}"`,
+      );
     }
 
-    console.info(`[HybridController] Vision fill: clicking at [${grounding.point.x}, ${grounding.point.y}]`);
+    console.info(
+      `[HybridController] Vision fill: clicking at [${grounding.point.x}, ${grounding.point.y}]`,
+    );
     await this.page.mouse.click(grounding.point.x, grounding.point.y);
     // Double click to select existing text before typing
     await this.page.mouse.click(grounding.point.x, grounding.point.y, { clickCount: 2 });

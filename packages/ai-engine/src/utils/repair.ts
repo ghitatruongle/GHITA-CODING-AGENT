@@ -21,7 +21,7 @@ export async function chatWithToolCallRepair<T>(
   orchestrator: Orchestrator,
   messages: ChatMessage[],
   parseFn: (text: string) => T,
-  options?: RepairOptions
+  options?: RepairOptions,
 ): Promise<{ parsed: T; response: ChatResponse }> {
   const maxRetries = options?.maxRetries ?? 3;
   const history: ChatMessage[] = [...messages];
@@ -40,7 +40,7 @@ export async function chatWithToolCallRepair<T>(
           JSON.stringify(history),
           attempts,
           toolErrors,
-          `Failed to get response from AI during tool call repair: ${err instanceof Error ? err.message : String(err)}`
+          `Failed to get response from AI during tool call repair: ${err instanceof Error ? err.message : String(err)}`,
         );
       }
       continue;
@@ -58,7 +58,7 @@ export async function chatWithToolCallRepair<T>(
           response.content,
           attempts,
           toolErrors,
-          `Tool call parsing failed after ${attempts} attempts: ${parseErr instanceof Error ? parseErr.message : String(parseErr)}`
+          `Tool call parsing failed after ${attempts} attempts: ${parseErr instanceof Error ? parseErr.message : String(parseErr)}`,
         );
       }
 
@@ -79,10 +79,5 @@ Please correct the format and try again. Make sure your output matches the expec
     }
   }
 
-  throw new AIToolCallRepairError(
-    '',
-    attempts,
-    toolErrors,
-    'Failed to repair tool call'
-  );
+  throw new AIToolCallRepairError('', attempts, toolErrors, 'Failed to repair tool call');
 }

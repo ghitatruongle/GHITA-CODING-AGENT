@@ -47,7 +47,6 @@ vi.mock('node:http', () => ({
   })),
 }));
 
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -60,9 +59,9 @@ function simulateConnection(socketOverrides?: Partial<typeof mockSocket>): typeo
   const socket = { ...mockSocket, ...socketOverrides };
   // Re-trigger the connection handler with this socket
   // We need to access the handler that was registered
-  const connectionHandler = (mockIoOn.mock.calls.find(
-    (call) => call[0] === 'connection',
-  )?.[1]) as ((s: typeof mockSocket) => void) | undefined;
+  const connectionHandler = mockIoOn.mock.calls.find((call) => call[0] === 'connection')?.[1] as
+    | ((s: typeof mockSocket) => void)
+    | undefined;
 
   if (connectionHandler) {
     // Reset socket event handlers for the new socket
@@ -184,9 +183,7 @@ describe('start() / stop()', () => {
 
     // Try starting again
     await server.start();
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('already running'),
-    );
+    expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('already running'));
     consoleWarnSpy.mockRestore();
   });
 
@@ -428,10 +425,10 @@ describe('broadcastStatus()', () => {
     await startPromise;
 
     server.broadcastStatus({ status: 'working', task: 'coding' });
-    expect(mockIoEmit).toHaveBeenCalledWith(
-      SOCKET_EVENTS.STATUS,
-      { status: 'working', task: 'coding' },
-    );
+    expect(mockIoEmit).toHaveBeenCalledWith(SOCKET_EVENTS.STATUS, {
+      status: 'working',
+      task: 'coding',
+    });
   });
 });
 
@@ -545,7 +542,11 @@ describe('COMMAND event', () => {
     await startPromise;
 
     // Send command without pairing
-    triggerSocketEvent(SOCKET_EVENTS.COMMAND, { action: 'run_code', params: {}, timestamp: Date.now() });
+    triggerSocketEvent(SOCKET_EVENTS.COMMAND, {
+      action: 'run_code',
+      params: {},
+      timestamp: Date.now(),
+    });
 
     expect(onCommand).not.toHaveBeenCalled();
   });
@@ -572,9 +573,9 @@ describe('COMMAND event', () => {
         custom_number: 42,
         custom_bool: true,
         custom_array: [1, 2, 3],
-        custom_object: { nested: 'val' }
+        custom_object: { nested: 'val' },
       },
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
     triggerSocketEvent(SOCKET_EVENTS.COMMAND, cmdPayload);
 
@@ -587,9 +588,9 @@ describe('COMMAND event', () => {
           custom_number: 42,
           custom_bool: true,
           custom_array: expect.arrayContaining([1, 2, 3]),
-          custom_object: expect.objectContaining({ nested: 'val' })
-        })
-      })
+          custom_object: expect.objectContaining({ nested: 'val' }),
+        }),
+      }),
     );
   });
 });
@@ -687,7 +688,7 @@ describe('SCREENSHOT event', () => {
     // Trigger screenshot request
     triggerSocketEvent(SOCKET_EVENTS.SCREENSHOT);
     // Give the async handler time to complete (dynamic import + screenshot mock)
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     expect(mockSocketEmit).toHaveBeenCalledWith(
       SOCKET_EVENTS.SCREEN_STREAM,
@@ -721,7 +722,7 @@ describe('SCREENSHOT event', () => {
     // Trigger screenshot request
     triggerSocketEvent(SOCKET_EVENTS.SCREENSHOT);
     // Give the async handler time to complete
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     expect(mockSocketEmit).toHaveBeenCalledWith(SOCKET_EVENTS.ERROR, {
       message: 'Failed to capture screenshot',
@@ -840,7 +841,10 @@ describe('session resumption', () => {
 
     // 3. Reconnect with deviceId
     mockSocketEmit.mockClear();
-    triggerSocketEvent(SOCKET_EVENTS.PAIR, { deviceId: 'device-123', authToken: firstPairConfirm.authToken });
+    triggerSocketEvent(SOCKET_EVENTS.PAIR, {
+      deviceId: 'device-123',
+      authToken: firstPairConfirm.authToken,
+    });
 
     expect(server.deviceCount).toBe(1);
     expect(mockSocketEmit).toHaveBeenCalledWith(SOCKET_EVENTS.PAIR_CONFIRM, {
@@ -891,7 +895,10 @@ describe('session resumption', () => {
     // 3. Connect a new socket test-socket-2 and resume session
     simulateConnection({ id: 'test-socket-2' });
     mockSocketEmit.mockClear();
-    triggerSocketEvent(SOCKET_EVENTS.PAIR, { deviceId: 'device-abc', authToken: firstPairConfirm.authToken });
+    triggerSocketEvent(SOCKET_EVENTS.PAIR, {
+      deviceId: 'device-abc',
+      authToken: firstPairConfirm.authToken,
+    });
 
     expect(server.deviceCount).toBe(1);
     expect(mockSocketEmit).toHaveBeenCalledWith(SOCKET_EVENTS.PAIR_CONFIRM, {

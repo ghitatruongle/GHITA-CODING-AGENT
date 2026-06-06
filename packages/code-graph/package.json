@@ -1,0 +1,31 @@
+{
+  "name": "@ghita/code-graph",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Code Knowledge Graph — AST parsing, dependency graph, symbol search",
+  "main": "./dist/index.js",
+  "type": "module",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsc -b --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/",
+    "clean": "node -e \"const fs=require('fs'); fs.rmSync('dist',{recursive:true,force:true}); fs.readdirSync('.').filter(f=>f.endsWith('.tsbuildinfo')).forEach(f=>fs.rmSync(f,{force:true}))\""
+  },
+  "dependencies": {
+    "@ghita/shared": "workspace:*",
+    "better-sqlite3": "^12.10.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.6.0"
+  }
+}

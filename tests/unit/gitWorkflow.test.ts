@@ -6,15 +6,20 @@ import { execSync } from 'child_process';
 // Mock child_process at top level for ESM compatibility
 vi.mock('child_process', async (importOriginal) => {
   const original = await importOriginal<typeof import('child_process')>();
+  const mockFn = vi.fn();
   return {
     ...original,
-    execSync: vi.fn(),
+    execSync: mockFn,
+    execFileSync: (prog: string, args?: string[], opts?: any) => {
+      const cmd = [prog, ...(args || [])].join(' ');
+      return mockFn(cmd, opts);
+    },
   };
 });
 
 import { GitSafePointManager, GitSafePointMiddleware } from '../../packages/agents/src/index.js';
 
-describe('Phase 8: Git Safe-Points & Rollback Unit Tests', () => {
+describe('8: Git Safe-Points & Rollback Unit Tests', () => {
   const mockCwd = path.resolve('mock-project');
 
   beforeEach(() => {
@@ -25,7 +30,9 @@ describe('Phase 8: Git Safe-Points & Rollback Unit Tests', () => {
   describe('1. GitSafePointManager - Git Lock File Cleanup', () => {
     it('should delete index.lock file if it has existed for more than 10 seconds', () => {
       const existsSpy = vi.spyOn(fs, 'existsSync').mockReturnValue(true);
-      const statSpy = vi.spyOn(fs, 'statSync').mockReturnValue({ mtimeMs: Date.now() - 15000 } as any);
+      const statSpy = vi
+        .spyOn(fs, 'statSync')
+        .mockReturnValue({ mtimeMs: Date.now() - 15000 } as any);
       const unlinkSpy = vi.spyOn(fs, 'unlinkSync').mockImplementation(() => {});
 
       GitSafePointManager.checkAndReleaseLock(mockCwd);
@@ -36,7 +43,9 @@ describe('Phase 8: Git Safe-Points & Rollback Unit Tests', () => {
 
     it('should NOT delete index.lock file if it has existed for less than 10 seconds', () => {
       const existsSpy = vi.spyOn(fs, 'existsSync').mockReturnValue(true);
-      const statSpy = vi.spyOn(fs, 'statSync').mockReturnValue({ mtimeMs: Date.now() - 2000 } as any);
+      const statSpy = vi
+        .spyOn(fs, 'statSync')
+        .mockReturnValue({ mtimeMs: Date.now() - 2000 } as any);
       const unlinkSpy = vi.spyOn(fs, 'unlinkSync').mockImplementation(() => {});
 
       GitSafePointManager.checkAndReleaseLock(mockCwd);
@@ -70,7 +79,7 @@ describe('Phase 8: Git Safe-Points & Rollback Unit Tests', () => {
       });
 
       expect(() => GitSafePointManager.execGit('git status', mockCwd, 3, 10)).toThrow(
-        'Git command failed after 3 attempts'
+        'Git command failed after 3 attempts',
       );
     });
 
@@ -80,7 +89,7 @@ describe('Phase 8: Git Safe-Points & Rollback Unit Tests', () => {
       });
 
       expect(() => GitSafePointManager.execGit('git status', mockCwd)).toThrow(
-        'fatal: not a git repository'
+        'fatal: not a git repository',
       );
     });
 
@@ -95,15 +104,13 @@ describe('Phase 8: Git Safe-Points & Rollback Unit Tests', () => {
     });
   });
 
-
   describe('2. GitSafePointManager - Safe-Point Creation & Rollback', () => {
     it('should create a safe point successfully when git status is dirty', () => {
-      const execSpy = vi.spyOn(GitSafePointManager, 'execGit')
-        .mockImplementation((cmd) => {
-          if (cmd.includes('rev-parse')) return 'true';
-          if (cmd.includes('status')) return 'M src/file.ts';
-          return ''; // git add, git commit
-        });
+      const execSpy = vi.spyOn(GitSafePointManager, 'execGit').mockImplementation((cmd) => {
+        if (cmd.includes('rev-parse')) return 'true';
+        if (cmd.includes('status')) return 'M src/file.ts';
+        return ''; // git add, git commit
+      });
 
       const appendSpy = vi.spyOn(fs, 'appendFileSync').mockImplementation(() => {});
 
@@ -111,16 +118,18 @@ describe('Phase 8: Git Safe-Points & Rollback Unit Tests', () => {
 
       expect(result).toBe(true);
       expect(execSpy).toHaveBeenCalledWith('git add -A', mockCwd);
-      expect(execSpy).toHaveBeenCalledWith('git commit -m "ghita-temp-safepoint" --no-verify', mockCwd);
+      expect(execSpy).toHaveBeenCalledWith(
+        "git commit -m 'ghita-temp-safepoint' --no-verify",
+        mockCwd,
+      );
     });
 
     it('should NOT create a safe-point if git status is clean', () => {
-      const execSpy = vi.spyOn(GitSafePointManager, 'execGit')
-        .mockImplementation((cmd) => {
-          if (cmd.includes('rev-parse')) return 'true';
-          if (cmd.includes('status')) return '';
-          return '';
-        });
+      const execSpy = vi.spyOn(GitSafePointManager, 'execGit').mockImplementation((cmd) => {
+        if (cmd.includes('rev-parse')) return 'true';
+        if (cmd.includes('status')) return '';
+        return '';
+      });
 
       const result = GitSafePointManager.createSafePoint(mockCwd);
 
@@ -129,12 +138,11 @@ describe('Phase 8: Git Safe-Points & Rollback Unit Tests', () => {
     });
 
     it('should hard rollback successfully when safepoint commit is found', () => {
-      const execSpy = vi.spyOn(GitSafePointManager, 'execGit')
-        .mockImplementation((cmd) => {
-          if (cmd.includes('rev-parse')) return 'true';
-          if (cmd.includes('log -1')) return 'ghita-temp-safepoint';
-          return '';
-        });
+      const execSpy = vi.spyOn(GitSafePointManager, 'execGit').mockImplementation((cmd) => {
+        if (cmd.includes('rev-parse')) return 'true';
+        if (cmd.includes('log -1')) return 'ghita-temp-safepoint';
+        return '';
+      });
 
       const appendSpy = vi.spyOn(fs, 'appendFileSync').mockImplementation(() => {});
 
@@ -146,12 +154,11 @@ describe('Phase 8: Git Safe-Points & Rollback Unit Tests', () => {
     });
 
     it('should standard clean successfully when no safepoint commit is found', () => {
-      const execSpy = vi.spyOn(GitSafePointManager, 'execGit')
-        .mockImplementation((cmd) => {
-          if (cmd.includes('rev-parse')) return 'true';
-          if (cmd.includes('log -1')) return 'feat(agent): some commit';
-          return '';
-        });
+      const execSpy = vi.spyOn(GitSafePointManager, 'execGit').mockImplementation((cmd) => {
+        if (cmd.includes('rev-parse')) return 'true';
+        if (cmd.includes('log -1')) return 'feat(agent): some commit';
+        return '';
+      });
 
       const appendSpy = vi.spyOn(fs, 'appendFileSync').mockImplementation(() => {});
 
@@ -193,7 +200,7 @@ describe('Phase 8: Git Safe-Points & Rollback Unit Tests', () => {
       const rollbackSpy = vi.spyOn(GitSafePointManager, 'rollback').mockReturnValue(true);
 
       const failedOutput = 'Vitest Failed: 2 tests crashed\nCommand failed with exit code 1';
-      
+
       const res = await middleware.postTool('run_command', failedOutput, {} as any);
 
       expect(res).toBeDefined();
@@ -206,7 +213,7 @@ describe('Phase 8: Git Safe-Points & Rollback Unit Tests', () => {
       const rollbackSpy = vi.spyOn(GitSafePointManager, 'rollback');
 
       const successOutput = 'Vitest Passed: All 12 tests passed successfully.';
-      
+
       const res = await middleware.postTool('run_command', successOutput, {} as any);
 
       expect(res).toBeUndefined();

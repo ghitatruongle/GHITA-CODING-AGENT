@@ -1,1 +1,20 @@
-{"rustc":8891013984288978370,"features":"[]","declared_features":"[\"unsafe\"]","target":1942380541186272485,"profile":2241668132362809309,"path":6516298713124516577,"deps":[],"local":[{"CheckDepInfo":{"dep_info":"debug\\.fingerprint\\alloc-no-stdlib-085eb30fc180f485\\dep-lib-alloc_no_stdlib","checksum":false}}],"rustflags":[],"config":8247474407144887393,"compile_kind":0}
+{
+  "rustc": 8891013984288978370,
+  "features": "[]",
+  "declared_features": "[\"unsafe\"]",
+  "target": 1942380541186272485,
+  "profile": 2241668132362809309,
+  "path": 6516298713124516577,
+  "deps": [],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "debug\\.fingerprint\\alloc-no-stdlib-085eb30fc180f485\\dep-lib-alloc_no_stdlib",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 8247474407144887393,
+  "compile_kind": 0
+}

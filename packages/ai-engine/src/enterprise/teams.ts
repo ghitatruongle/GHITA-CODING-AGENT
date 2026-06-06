@@ -55,8 +55,8 @@ export interface User {
   ssoUserId?: string;
   isInternal: boolean;
   globalRole?: 'admin' | 'user';
-  teams: string[];         // team IDs
-  projects: string[];      // project IDs
+  teams: string[]; // team IDs
+  projects: string[]; // project IDs
   metadata?: Record<string, unknown>;
   createdAt: Date;
   lastLoginAt?: Date;
@@ -96,9 +96,7 @@ export class TeamManager {
     metadata?: Record<string, unknown>;
   }): User {
     // Check if user exists by email
-    const existingUser = [...this.users.values()].find(
-      (u) => u.email === options.email
-    );
+    const existingUser = [...this.users.values()].find((u) => u.email === options.email);
 
     if (existingUser) {
       // Update
@@ -204,7 +202,21 @@ export class TeamManager {
   }
 
   /** Update team */
-  updateTeam(teamId: string, updates: Partial<Pick<Team, 'name' | 'description' | 'maxMembers' | 'maxBudget' | 'rateLimitTier' | 'defaultScopes' | 'metadata'>>): Team | null {
+  updateTeam(
+    teamId: string,
+    updates: Partial<
+      Pick<
+        Team,
+        | 'name'
+        | 'description'
+        | 'maxMembers'
+        | 'maxBudget'
+        | 'rateLimitTier'
+        | 'defaultScopes'
+        | 'metadata'
+      >
+    >,
+  ): Team | null {
     const team = this.teams.get(teamId);
     if (!team) return null;
 
@@ -327,9 +339,7 @@ export class TeamManager {
   getUserTeams(userId: string): Team[] {
     const user = this.users.get(userId);
     if (!user) return [];
-    return user.teams
-      .map((tid) => this.teams.get(tid))
-      .filter((t): t is Team => t !== undefined);
+    return user.teams.map((tid) => this.teams.get(tid)).filter((t): t is Team => t !== undefined);
   }
 
   /** Check if user has a specific role in a team */
@@ -390,7 +400,12 @@ export class TeamManager {
   }
 
   /** Update project */
-  updateProject(projectId: string, updates: Partial<Pick<Project, 'name' | 'description' | 'status' | 'budget' | 'rateLimitTier' | 'metadata'>>): Project | null {
+  updateProject(
+    projectId: string,
+    updates: Partial<
+      Pick<Project, 'name' | 'description' | 'status' | 'budget' | 'rateLimitTier' | 'metadata'>
+    >,
+  ): Project | null {
     const project = this.projects.get(projectId);
     if (!project) return null;
 
@@ -455,7 +470,7 @@ export class TeamManager {
   /** List pending invitations for a team */
   listInvitations(teamId: string): Invitation[] {
     return [...this.invitations.values()].filter(
-      (inv) => inv.teamId === teamId && !inv.acceptedAt && inv.expiresAt > new Date()
+      (inv) => inv.teamId === teamId && !inv.acceptedAt && inv.expiresAt > new Date(),
     );
   }
 
@@ -471,7 +486,7 @@ export class TeamManager {
       totalProjects: this.projects.size,
       totalUsers: this.users.size,
       totalInvitations: [...this.invitations.values()].filter(
-        (inv) => !inv.acceptedAt && inv.expiresAt > new Date()
+        (inv) => !inv.acceptedAt && inv.expiresAt > new Date(),
       ).length,
     };
   }

@@ -3,7 +3,14 @@
 // ==============================================================================
 
 import type { AIStreamChunk } from '@ghita/shared';
-import type { ChatMessage, ChatOptions, ChatResponse, ProviderConfig, EmbeddingResponse, EmbeddingManyResponse } from '../types.js';
+import type {
+  ChatMessage,
+  ChatOptions,
+  ChatResponse,
+  ProviderConfig,
+  EmbeddingResponse,
+  EmbeddingManyResponse,
+} from '../types.js';
 import { BaseProvider } from './base.js';
 
 const OPENAI_MODELS = [
@@ -78,10 +85,7 @@ export class OpenAIProvider extends BaseProvider {
     };
   }
 
-  async *chatStream(
-    messages: ChatMessage[],
-    options?: ChatOptions,
-  ): AsyncGenerator<AIStreamChunk> {
+  async *chatStream(messages: ChatMessage[], options?: ChatOptions): AsyncGenerator<AIStreamChunk> {
     const apiKey = this.getApiKey();
     const model = this.getModel(options);
 
@@ -159,14 +163,18 @@ export class OpenAIProvider extends BaseProvider {
     }
   }
 
-  private mapFinishReason(
-    reason: string | undefined,
-  ): 'stop' | 'length' | 'error' | 'aborted' {
+  private mapFinishReason(reason: string | undefined): 'stop' | 'length' | 'error' | 'aborted' {
     switch (reason) {
       case 'stop':
+      case 'tool_calls':
+      case 'function_call':
         return 'stop';
       case 'length':
+      case 'max_tokens':
         return 'length';
+      case 'content_filter':
+      case 'safety':
+        return 'error';
       default:
         return 'stop';
     }
@@ -262,7 +270,10 @@ export class OpenAIProvider extends BaseProvider {
     };
   }
 
-  async generateImage(prompt: string, options?: Record<string, unknown>): Promise<{ url: string; b64?: string }> {
+  async generateImage(
+    prompt: string,
+    options?: Record<string, unknown>,
+  ): Promise<{ url: string; b64?: string }> {
     const apiKey = this.getApiKey();
     const model = options?.model ?? 'dall-e-3';
     const baseUrl = this.getBaseUrl() || 'https://api.openai.com/v1';
@@ -300,7 +311,10 @@ export class OpenAIProvider extends BaseProvider {
     };
   }
 
-  async generateSpeech(text: string, options?: Record<string, unknown>): Promise<{ audio: Buffer; contentType: string }> {
+  async generateSpeech(
+    text: string,
+    options?: Record<string, unknown>,
+  ): Promise<{ audio: Buffer; contentType: string }> {
     const apiKey = this.getApiKey();
     const model = options?.model ?? 'tts-1';
     const baseUrl = this.getBaseUrl() || 'https://api.openai.com/v1';
@@ -338,14 +352,17 @@ export class OpenAIProvider extends BaseProvider {
     const baseUrl = this.getBaseUrl() || 'https://api.openai.com/v1';
 
     const formData = new FormData();
-const blob = new Blob([new Uint8Array(audio)], { type: String(options?.contentType || 'audio/mpeg') });
-formData.append('file', blob, String(options?.filename || 'audio.mp3'));
-formData.append('model', String(model));
+    const blob = new Blob([new Uint8Array(audio)], {
+      type: String(options?.contentType || 'audio/mpeg'),
+    });
+    formData.append('file', blob, String(options?.filename || 'audio.mp3'));
+    formData.append('model', String(model));
 
-if (options?.language) formData.append('language', String(options.language));
-if (options?.prompt) formData.append('prompt', String(options.prompt));
-if (options?.responseFormat) formData.append('response_format', String(options.responseFormat));
-    if (options?.temperature !== undefined) formData.append('temperature', String(options.temperature));
+    if (options?.language) formData.append('language', String(options.language));
+    if (options?.prompt) formData.append('prompt', String(options.prompt));
+    if (options?.responseFormat) formData.append('response_format', String(options.responseFormat));
+    if (options?.temperature !== undefined)
+      formData.append('temperature', String(options.temperature));
 
     const response = await fetch(`${baseUrl}/audio/transcriptions`, {
       method: 'POST',

@@ -3,7 +3,7 @@
 // ==============================================================================
 
 /** Transport type cho MCP server */
-export type MCPTransportType = 'stdio' | 'sse';
+export type MCPTransportType = 'stdio' | 'sse' | 'http' | 'in-process';
 
 /** Cấu hình MCP server */
 export interface MCPServerConfig {

@@ -1,1 +1,0 @@
-Provides comprehensive unit testing, mocking utilities, and quality benchmarks for the GHITA Coding Agent's core modules.

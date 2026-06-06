@@ -19,7 +19,7 @@ describe('Debate-Driven Architectural Alignment (DDAA)', () => {
       callsCount++;
       const lastMessage = messages[messages.length - 1];
       const systemMessage = messages[0];
-      
+
       callsHistory.push({
         system: systemMessage.getText(),
         input: lastMessage.getText(),
@@ -27,14 +27,20 @@ describe('Debate-Driven Architectural Alignment (DDAA)', () => {
 
       const sysText = systemMessage.getText();
       if (sysText.includes('Editor-in-Chief')) {
-        return new AIMessage(JSON.stringify({
-          consensusScore: 9,
-          spec: "# Final Approved Technical Specification\n\n1. System architecture is robust.\n2. Security guardrails implemented successfully.\n3. Performance tested."
-        }));
+        return new AIMessage(
+          JSON.stringify({
+            consensusScore: 9,
+            spec: '# Final Approved Technical Specification\n\n1. System architecture is robust.\n2. Security guardrails implemented successfully.\n3. Performance tested.',
+          }),
+        );
       } else if (sysText.includes('Innovator')) {
-        return new AIMessage(`[Innovator Draft Spec] - Turn ${callsCount} - Solving the problem elegantly.`);
-      } else if (sysText.includes('Devil\'s Advocate')) {
-        return new AIMessage(`[Devil's Advocate Critique] - Turn ${callsCount} - Pointing out security/perf issues.`);
+        return new AIMessage(
+          `[Innovator Draft Spec] - Turn ${callsCount} - Solving the problem elegantly.`,
+        );
+      } else if (sysText.includes("Devil's Advocate")) {
+        return new AIMessage(
+          `[Devil's Advocate Critique] - Turn ${callsCount} - Pointing out security/perf issues.`,
+        );
       }
 
       return new AIMessage('Default response');
@@ -64,8 +70,8 @@ describe('Debate-Driven Architectural Alignment (DDAA)', () => {
           expect(score).toBe(9);
           expect(spec).toContain('Final Approved Technical Specification');
           return true; // Approve
-        }
-      }
+        },
+      },
     );
 
     expect(callsCount).toBe(7);
@@ -87,10 +93,12 @@ describe('Debate-Driven Architectural Alignment (DDAA)', () => {
     const mockLlmCall = async (messages: any[]) => {
       const sysText = messages[0].getText();
       if (sysText.includes('Editor-in-Chief')) {
-        return new AIMessage(JSON.stringify({
-          consensusScore: 4,
-          spec: 'Rejected spec draft.'
-        }));
+        return new AIMessage(
+          JSON.stringify({
+            consensusScore: 4,
+            spec: 'Rejected spec draft.',
+          }),
+        );
       }
       return new AIMessage('General output');
     };
@@ -103,7 +111,7 @@ describe('Debate-Driven Architectural Alignment (DDAA)', () => {
       onApprovalRequired: async (spec, score) => {
         expect(score).toBe(4);
         return false;
-      }
+      },
     });
 
     expect(result.approved).toBe(false);
@@ -118,10 +126,12 @@ describe('Debate-Driven Architectural Alignment (DDAA)', () => {
     const mockLlmCall = async (messages: any[]) => {
       const sysText = messages[0].getText();
       if (sysText.includes('Editor-in-Chief')) {
-        return new AIMessage(JSON.stringify({
-          consensusScore: 8,
-          spec: 'Auto-approved spec.'
-        }));
+        return new AIMessage(
+          JSON.stringify({
+            consensusScore: 8,
+            spec: 'Auto-approved spec.',
+          }),
+        );
       }
       return new AIMessage('Draft');
     };
@@ -254,13 +264,20 @@ describe('Debate-Driven Architectural Alignment (DDAA)', () => {
 
     // Verify sequential ordering
     expect(callOrder).toEqual([
-      'start_Innovator_1', 'end_Innovator_1',
-      'start_DevilAdvocate_1', 'end_DevilAdvocate_1',
-      'start_Innovator_2', 'end_Innovator_2',
-      'start_DevilAdvocate_2', 'end_DevilAdvocate_2',
-      'start_Innovator_3', 'end_Innovator_3',
-      'start_DevilAdvocate_3', 'end_DevilAdvocate_3',
-      'start_EIC_4', 'end_EIC_4',
+      'start_Innovator_1',
+      'end_Innovator_1',
+      'start_DevilAdvocate_1',
+      'end_DevilAdvocate_1',
+      'start_Innovator_2',
+      'end_Innovator_2',
+      'start_DevilAdvocate_2',
+      'end_DevilAdvocate_2',
+      'start_Innovator_3',
+      'end_Innovator_3',
+      'start_DevilAdvocate_3',
+      'end_DevilAdvocate_3',
+      'start_EIC_4',
+      'end_EIC_4',
     ]);
   });
 });

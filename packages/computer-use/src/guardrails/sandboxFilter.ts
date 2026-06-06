@@ -246,12 +246,27 @@ function isBase64EncodedCommand(s: string): boolean {
     const decoded = Buffer.from(cleaned, 'base64').toString('utf-8');
     // Kiểm tra decoded có chứa lệnh shell không
     const shellIndicators = [
-      /\bsh\b/, /\bbash\b/, /\bexec\b/, /\brun\b/,
-      /\beval\b/, /\bimport\b/, /\brequire\b/,
-      /\bsystem\b/, /\bspawn\b/, /\bchild_process\b/,
-      /\brm\b/, /\bcurl\b/, /\bwget\b/, /\bsudo\b/,
-      /\bchmod\b/, /\bchown\b/, /\bmkfs\b/, /\bdd\b/,
-      /;\s*\w+/, /\|\s*\w+/, /&&\s*\w+/,
+      /\bsh\b/,
+      /\bbash\b/,
+      /\bexec\b/,
+      /\brun\b/,
+      /\beval\b/,
+      /\bimport\b/,
+      /\brequire\b/,
+      /\bsystem\b/,
+      /\bspawn\b/,
+      /\bchild_process\b/,
+      /\brm\b/,
+      /\bcurl\b/,
+      /\bwget\b/,
+      /\bsudo\b/,
+      /\bchmod\b/,
+      /\bchown\b/,
+      /\bmkfs\b/,
+      /\bdd\b/,
+      /;\s*\w+/,
+      /\|\s*\w+/,
+      /&&\s*\w+/,
     ];
     return shellIndicators.some((re) => re.test(decoded));
   } catch {
@@ -297,7 +312,8 @@ function detectBase64Threats(command: string): ThreatDetection[] {
   }
 
   // Pattern 3: python/node -e "exec(__import__('base64').b64decode(...))"
-  const execBase64Pattern = /(?:exec|eval)\s*\(\s*(?:__import__|require)\s*\(\s*['"]base64['"]\s*\)/i;
+  const execBase64Pattern =
+    /(?:exec|eval)\s*\(\s*(?:__import__|require)\s*\(\s*['"]base64['"]\s*\)/i;
   const execMatch = execBase64Pattern.exec(command);
   if (execMatch) {
     threats.push({
@@ -338,7 +354,10 @@ function detectBinaryExecution(command: string): ThreatDetection[] {
   // Chạy file binary từ /tmp, /dev/shm, hoặc thư mục tạm
   const tmpExecPattern = /(?:\/tmp|\/dev\/shm|\/var\/tmp)\/[^\s]+\b/;
   const tmpMatch = tmpExecPattern.exec(command);
-  if (tmpMatch && !/\b(cat|less|more|head|tail|grep|file|ls|stat)\b/.test(command.slice(0, tmpMatch.index || 0))) {
+  if (
+    tmpMatch &&
+    !/\b(cat|less|more|head|tail|grep|file|ls|stat)\b/.test(command.slice(0, tmpMatch.index || 0))
+  ) {
     threats.push({
       type: 'binary-execution',
       severity: 'high',
@@ -458,11 +477,20 @@ export class SandboxSecurityFilter {
 
     const maxSeverity = this.getMaxSeverity(threats);
     const safe = threats.length === 0;
-    const requiresApproval = !safe && (
-      maxSeverity === 'high' || maxSeverity === 'medium'
-    ) && this.config.requireApprovalForHigh;
+    
+    let requiresApproval = false;
+    if (this.config.executionMode === 'dev') {
+      requiresApproval = true;
+    } else {
+      requiresApproval =
+        !safe &&
+        (maxSeverity === 'high' || maxSeverity === 'medium') &&
+        this.config.requireApprovalForHigh;
+    }
 
-    const errorCode = !safe ? `${SECURITY_ERROR_PREFIX}-${this.getErrorCode(maxSeverity)}` : undefined;
+    const errorCode = !safe
+      ? `${SECURITY_ERROR_PREFIX}-${this.getErrorCode(maxSeverity)}`
+      : undefined;
 
     return {
       safe,
@@ -600,11 +628,16 @@ export class SandboxSecurityFilter {
 
   private getErrorCode(severity: ThreatSeverity | null): string {
     switch (severity) {
-      case 'critical': return '001';
-      case 'high': return '002';
-      case 'medium': return '003';
-      case 'low': return '004';
-      default: return '000';
+      case 'critical':
+        return '001';
+      case 'high':
+        return '002';
+      case 'medium':
+        return '003';
+      case 'low':
+        return '004';
+      default:
+        return '000';
     }
   }
 
@@ -627,6 +660,8 @@ export class SandboxSecurityFilter {
 /**
  * Factory function tạo filter mặc định
  */
-export function createSecurityFilter(config?: Partial<SecurityBlacklistConfig>): SandboxSecurityFilter {
+export function createSecurityFilter(
+  config?: Partial<SecurityBlacklistConfig>,
+): SandboxSecurityFilter {
   return new SandboxSecurityFilter(config);
 }

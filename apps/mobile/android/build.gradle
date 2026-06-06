@@ -44,22 +44,10 @@ subprojects { subproject ->
         mavenCentral()
     }
 
-    // Suppress C++ codegen $ identifier warnings from RN libraries
+    // Suppress warnings from RN codegen in subproject libraries
     tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
         compilerOptions {
             suppressWarnings.set(true)
-        }
-    }
-
-    // Suppress C++ $-in-identifier warnings in all generated codegen C++ files
-    tasks.configureEach { task ->
-        if (task.name.contains("externalNativeBuild") || task.name.contains("CMake")) {
-            task.doFirst {
-                // Environment variable approach: set CXXFLAGS for CMake
-                if (task.hasProperty('cmakeArgs')) {
-                    task.cmakeArgs = (task.cmakeArgs ?: []) + ['-Wno-dollar-in-identifier-extension']
-                }
-            }
         }
     }
 }

@@ -36,7 +36,12 @@ export class AIGatewayServer {
     this.orchestrator = orchestrator;
     this.config = {
       port: config?.port ?? 3001,
-      apiKey: config?.apiKey ?? process.env.GHITA_ADMIN_API_KEY ?? (() => { throw new Error('GHITA_ADMIN_API_KEY environment variable is required'); })(),
+      apiKey:
+        config?.apiKey ??
+        process.env.GHITA_ADMIN_API_KEY ??
+        (() => {
+          throw new Error('GHITA_ADMIN_API_KEY environment variable is required');
+        })(),
       rateLimitLimit: config?.rateLimitLimit ?? 60,
       rateLimitWindowMs: config?.rateLimitWindowMs ?? 60000,
       monthlyBudget: config?.monthlyBudget ?? 100.0,
@@ -84,14 +89,18 @@ export class AIGatewayServer {
           const ip = req.socket.remoteAddress || 'unknown';
           if (this.isRateLimited(ip)) {
             res.writeHead(429, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: { message: 'Too Many Requests: Rate limit exceeded' } }));
+            res.end(
+              JSON.stringify({ error: { message: 'Too Many Requests: Rate limit exceeded' } }),
+            );
             return;
           }
 
           // 3. Budget check
           if (this.accumulatedCost >= this.config.monthlyBudget) {
             res.writeHead(403, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: { message: 'Quota Exceeded: Monthly budget reached' } }));
+            res.end(
+              JSON.stringify({ error: { message: 'Quota Exceeded: Monthly budget reached' } }),
+            );
             return;
           }
 
@@ -130,32 +139,33 @@ export class AIGatewayServer {
 
           // Return OpenAI response
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({
-            id: `chatcmpl-${Date.now().toString(36)}`,
-            object: 'chat.completion',
-            created: Math.floor(Date.now() / 1000),
-            model: chatResponse.model,
-            choices: [
-              {
-                index: 0,
-                message: {
-                  role: 'assistant',
-                  content: chatResponse.content,
+          res.end(
+            JSON.stringify({
+              id: `chatcmpl-${Date.now().toString(36)}`,
+              object: 'chat.completion',
+              created: Math.floor(Date.now() / 1000),
+              model: chatResponse.model,
+              choices: [
+                {
+                  index: 0,
+                  message: {
+                    role: 'assistant',
+                    content: chatResponse.content,
+                  },
+                  finish_reason: chatResponse.finishReason,
                 },
-                finish_reason: chatResponse.finishReason,
+              ],
+              usage: {
+                prompt_tokens: chatResponse.usage.promptTokens,
+                completion_tokens: chatResponse.usage.completionTokens,
+                total_tokens: chatResponse.usage.totalTokens,
               },
-            ],
-            usage: {
-              prompt_tokens: chatResponse.usage.promptTokens,
-              completion_tokens: chatResponse.usage.completionTokens,
-              total_tokens: chatResponse.usage.totalTokens,
-            },
-          }));
-
-  } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'Internal Server Error';
-    res.writeHead(500, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: { message } }));
+            }),
+          );
+        } catch (e: unknown) {
+          const message = e instanceof Error ? e.message : 'Internal Server Error';
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: { message } }));
         }
         return;
       }
@@ -222,7 +232,10 @@ export class AIGatewayServer {
     });
   }
 
-  private estimateCost(model: string, usage: { promptTokens: number; completionTokens: number }): number {
+  private estimateCost(
+    model: string,
+    usage: { promptTokens: number; completionTokens: number },
+  ): number {
     let promptRate = 2.5;
     let completionRate = 10.0;
 
