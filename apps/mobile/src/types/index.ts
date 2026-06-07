@@ -48,6 +48,7 @@ export interface MobileSettings {
   autoReconnect: boolean;
   vibrationEnabled: boolean;
   language: string;
+  theme?: 'light' | 'dark' | 'system';
 }
 
 export const DEFAULT_MOBILE_SETTINGS: MobileSettings = {
@@ -56,4 +57,5 @@ export const DEFAULT_MOBILE_SETTINGS: MobileSettings = {
   autoReconnect: true,
   vibrationEnabled: true,
   language: 'vi',
+  theme: 'system',
 };

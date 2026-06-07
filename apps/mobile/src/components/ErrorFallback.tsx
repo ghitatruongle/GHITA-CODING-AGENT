@@ -5,7 +5,8 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Colors } from '../theme/colors';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { FontSize, Spacing, Radius } from '../theme/styles';
 
 interface ErrorFallbackProps {
@@ -14,6 +15,8 @@ interface ErrorFallbackProps {
 }
 
 export function ErrorFallback({ error, resetError }: ErrorFallbackProps): React.JSX.Element {
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   // Do NOT use useTranslation() here — if I18nProvider caused the error,
   // calling useTranslation() would throw again, creating an infinite loop.
   // Use hardcoded English fallback text instead.
@@ -32,10 +35,10 @@ export function ErrorFallback({ error, resetError }: ErrorFallbackProps): React.
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
     padding: Spacing.xxxl,
@@ -45,26 +48,26 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xl,
   },
   title: {
-    color: Colors.error,
+    color: colors.error,
     fontSize: FontSize.xl,
     fontWeight: '700',
     marginBottom: Spacing.md,
   },
   message: {
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     fontSize: FontSize.sm,
     textAlign: 'center',
     marginBottom: Spacing.xxl,
     lineHeight: 20,
   },
   retryButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: colors.primary,
     borderRadius: Radius.md,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.xxxl,
   },
   retryText: {
-    color: Colors.white,
+    color: colors.white,
     fontSize: FontSize.md,
     fontWeight: '700',
   },

@@ -13,7 +13,8 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import type { GestureResponderEvent, LayoutChangeEvent } from 'react-native';
-import { Colors } from '../theme/colors';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { FontSize, Spacing, Radius } from '../theme/styles';
 import { useTranslation } from '../i18n/context';
 
@@ -24,12 +25,14 @@ interface ScreenPreviewProps {
   onScreenTouch?: (x: number, y: number) => void;
 }
 
-export function ScreenPreview({
+export const ScreenPreview = React.memo(function ScreenPreview({
   imageBase64,
   loading = false,
   connected = false,
   onScreenTouch,
 }: ScreenPreviewProps): React.JSX.Element {
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
   const [imageError, setImageError] = useState(false);
   const [dimensions, setDimensions] = useState({ width: 320, height: 240 });
@@ -47,7 +50,7 @@ export function ScreenPreview({
   if (loading) {
     return (
       <View style={[styles.container, styles.placeholder]}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.placeholderText}>{t('remote.screenPreviewLoading')}</Text>
       </View>
     );
@@ -73,6 +76,7 @@ export function ScreenPreview({
             resizeMode="contain"
             accessibilityLabel="Desktop screen preview"
             onError={() => setImageError(true)}
+            fadeDuration={0}
           />
         </TouchableWithoutFeedback>
       </View>
@@ -100,20 +104,20 @@ export function ScreenPreview({
       )}
     </View>
   );
-}
+});
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     borderRadius: Radius.xl,
     overflow: 'hidden',
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     minHeight: 180,
   },
   placeholder: {
     borderStyle: 'dashed',
-    borderColor: Colors.borderPrimary,
+    borderColor: colors.borderPrimary,
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: Spacing.xxxl,
@@ -124,11 +128,11 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   placeholderText: {
-    color: Colors.textDark,
+    color: colors.textDark,
     fontSize: FontSize.md,
   },
   placeholderSubtext: {
-    color: Colors.textDark,
+    color: colors.textDark,
     fontSize: FontSize.xs,
     marginTop: Spacing.xs,
   },

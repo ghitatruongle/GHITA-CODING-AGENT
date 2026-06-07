@@ -1,38 +1,65 @@
 // ==============================================================================
 // GHITA CODING AGENT — Mobile App Root
-// Navigation + SafeArea + ErrorBoundary
+// Navigation + SafeArea + ErrorBoundary + Theme
 // ==============================================================================
 
-import React, { Component } from 'react';
+import React, { Component, useEffect } from 'react';
 import type { ErrorInfo } from 'react';
-import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PairingScreen } from './screens/PairingScreen';
 import { RemoteControlScreen } from './screens/RemoteControlScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
+import { DashboardScreen } from './screens/DashboardScreen';
 import { ErrorFallback } from './components/ErrorFallback';
-import { Colors } from './theme/colors';
 import type { RootStackParamList } from './navigation/types';
 import { I18nProvider } from './i18n/context';
+import { ThemeProvider, useTheme } from './theme/ThemeContext';
+import { notificationService } from './services/notificationService';
 
 // --- Navigation Stack ---
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-// --- Dark Theme for React Navigation ---
-const DarkNavigationTheme = {
-  ...DefaultTheme,
-  dark: true,
-  colors: {
-    ...DefaultTheme.colors,
-    primary: Colors.primary,
-    background: Colors.background,
-    card: Colors.backgroundSecondary,
-    text: Colors.textPrimary,
-    border: Colors.border,
-    notification: Colors.accent,
-  },
-};
+// --- Inner Navigator (Uses Hook) ---
+function AppNavigator() {
+  const { colors, isDark } = useTheme();
+
+  useEffect(() => {
+    notificationService.initialize().catch(console.error);
+  }, []);
+
+  const navigationTheme = {
+    ...(isDark ? DarkTheme : DefaultTheme),
+    colors: {
+      ...(isDark ? DarkTheme.colors : DefaultTheme.colors),
+      primary: colors.primary,
+      background: colors.background,
+      card: colors.backgroundSecondary,
+      text: colors.textPrimary,
+      border: colors.border,
+      notification: colors.accent,
+    },
+  };
+
+  return (
+    <NavigationContainer theme={navigationTheme}>
+      <Stack.Navigator
+        initialRouteName="Pairing"
+        screenOptions={{
+          headerShown: false,
+          animation: 'slide_from_right',
+          contentStyle: { backgroundColor: colors.background },
+        }}
+      >
+        <Stack.Screen name="Pairing" component={PairingScreen} />
+        <Stack.Screen name="RemoteControl" component={RemoteControlScreen} />
+        <Stack.Screen name="Settings" component={SettingsScreen} />
+        <Stack.Screen name="Dashboard" component={DashboardScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
 
 // --- Error Boundary ---
 interface ErrorBoundaryState {
@@ -71,22 +98,11 @@ export function App(): React.JSX.Element {
   return (
     <AppErrorBoundary>
       <I18nProvider>
-        <SafeAreaProvider>
-          <NavigationContainer theme={DarkNavigationTheme}>
-            <Stack.Navigator
-              initialRouteName="Pairing"
-              screenOptions={{
-                headerShown: false,
-                animation: 'slide_from_right',
-                contentStyle: { backgroundColor: Colors.background },
-              }}
-            >
-              <Stack.Screen name="Pairing" component={PairingScreen} />
-              <Stack.Screen name="RemoteControl" component={RemoteControlScreen} />
-              <Stack.Screen name="Settings" component={SettingsScreen} />
-            </Stack.Navigator>
-          </NavigationContainer>
-        </SafeAreaProvider>
+        <ThemeProvider>
+          <SafeAreaProvider>
+            <AppNavigator />
+          </SafeAreaProvider>
+        </ThemeProvider>
       </I18nProvider>
     </AppErrorBoundary>
   );

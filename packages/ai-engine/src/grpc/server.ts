@@ -79,7 +79,7 @@ export class GrpcServer {
             reject(error);
             return;
           }
-          console.info(`gRPC Server running at ${host}:${boundPort}`);
+          // Caller (server.mjs) logs with [GHITA] prefix; avoid duplicate output
           resolve(boundPort);
         },
       );

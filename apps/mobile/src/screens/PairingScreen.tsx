@@ -21,7 +21,8 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors } from '../theme/colors';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { FontSize, Spacing, Radius } from '../theme/styles';
 import { ConnectionStatus } from '../components/ConnectionStatus';
 import { socketService } from '../services/socketService';
@@ -36,6 +37,8 @@ import { useTranslation } from '../i18n/context';
 const PAIRING_CODE_LENGTH = 6;
 
 export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Element {
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'wifi' | 'bluetooth'>('wifi');
   const [pairingCode, setPairingCode] = useState('');
@@ -506,7 +509,7 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
+      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -559,7 +562,7 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
                     <TextInput
                       style={styles.input}
                       placeholder={t('pairing.ipPlaceholder')}
-                      placeholderTextColor={Colors.textMuted}
+                      placeholderTextColor={colors.textMuted}
                       value={serverAddress}
                       onChangeText={setServerAddress}
                       autoCapitalize="none"
@@ -574,7 +577,7 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
                     <TextInput
                       style={[styles.input, styles.codeInput]}
                       placeholder={t('pairing.codePlaceholder')}
-                      placeholderTextColor={Colors.textMuted}
+                      placeholderTextColor={colors.textMuted}
                       value={pairingCode}
                       onChangeText={(val) =>
                         setPairingCode(val.toUpperCase().slice(0, PAIRING_CODE_LENGTH))
@@ -599,7 +602,7 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
                     accessibilityLabel={t('pairing.connectBtn')}
                   >
                     {isConnecting ? (
-                      <ActivityIndicator color={Colors.textPrimary} />
+                      <ActivityIndicator color={colors.textPrimary} />
                     ) : (
                       <Text style={styles.connectButtonText}>{t('pairing.connectBtn')}</Text>
                     )}
@@ -627,7 +630,7 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
                       <TextInput
                         style={[styles.input, styles.manualNameInput]}
                         placeholder={t('pairing.manualNamePlaceholder')}
-                        placeholderTextColor={Colors.textMuted}
+                        placeholderTextColor={colors.textMuted}
                         value={manualPcName}
                         onChangeText={setManualPcName}
                         autoCapitalize="characters"
@@ -649,7 +652,7 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
                     <View style={styles.deviceListHeader}>
                       <Text style={styles.label}>{t('pairing.btDevicesHeader')}</Text>
                       {isScanningBt ? (
-                        <ActivityIndicator size="small" color={Colors.accent} />
+                        <ActivityIndicator size="small" color={colors.accent} />
                       ) : (
                         <TouchableOpacity
                           onPress={handleScanBluetooth}
@@ -722,21 +725,21 @@ export function PairingScreen({ navigation }: PairingScreenProps): React.JSX.Ele
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   content: { flex: 1, paddingHorizontal: Spacing.lg, paddingTop: Spacing.xl },
   header: { alignItems: 'center', marginBottom: Spacing.xl },
   logoText: {
     fontSize: FontSize.title,
     fontWeight: '800',
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     letterSpacing: 4,
   },
-  subtitle: { fontSize: FontSize.md, color: Colors.textMuted, marginTop: Spacing.sm },
+  subtitle: { fontSize: FontSize.md, color: colors.textMuted, marginTop: Spacing.sm },
   tabsContainer: {
     flexDirection: 'row',
     marginBottom: Spacing.lg,
-    backgroundColor: Colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: Radius.md,
     padding: 4,
   },
@@ -747,17 +750,17 @@ const styles = StyleSheet.create({
     borderRadius: Radius.sm,
   },
   tabButtonActive: {
-    backgroundColor: Colors.backgroundTertiary,
+    backgroundColor: colors.backgroundTertiary,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   tabButtonText: {
     fontSize: FontSize.sm,
-    color: Colors.textMuted,
+    color: colors.textMuted,
     fontWeight: '600',
   },
   tabButtonTextActive: {
-    color: Colors.accent,
+    color: colors.accent,
     fontWeight: '700',
   },
   formContainer: { flex: 1 },
@@ -765,19 +768,19 @@ const styles = StyleSheet.create({
   inputGroup: { marginBottom: Spacing.md },
   label: {
     fontSize: FontSize.sm,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     marginBottom: Spacing.xs,
     fontWeight: '600',
   },
   input: {
-    backgroundColor: Colors.backgroundTertiary,
+    backgroundColor: colors.backgroundTertiary,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.md,
     paddingVertical: 12,
     fontSize: FontSize.md,
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
   },
   codeInput: { fontSize: FontSize.xl, letterSpacing: 4, textAlign: 'center', fontWeight: '700' },
   errorContainer: {
@@ -790,7 +793,7 @@ const styles = StyleSheet.create({
   },
   errorText: { color: '#ef4444', fontSize: FontSize.sm },
   connectButton: {
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
     borderRadius: Radius.md,
     paddingVertical: 14,
     alignItems: 'center',
@@ -798,20 +801,20 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   connectButtonDisabled: { opacity: 0.6 },
-  connectButtonText: { color: Colors.textPrimary, fontSize: FontSize.lg, fontWeight: '700' },
+  connectButtonText: { color: colors.textPrimary, fontSize: FontSize.lg, fontWeight: '700' },
   instructions: {
-    backgroundColor: Colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: Radius.md,
     padding: Spacing.md,
     marginTop: Spacing.sm,
   },
   instructionTitle: {
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     fontSize: FontSize.sm,
     fontWeight: '600',
     marginBottom: Spacing.xs,
   },
-  instructionText: { color: Colors.textMuted, fontSize: FontSize.sm, lineHeight: 20 },
+  instructionText: { color: colors.textMuted, fontSize: FontSize.sm, lineHeight: 20 },
 
   // Bluetooth specific styles
   manualNameRow: {
@@ -823,7 +826,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   manualNameButton: {
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
     borderRadius: Radius.md,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -831,17 +834,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   manualNameButtonText: {
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     fontWeight: '700',
     fontSize: FontSize.md,
   },
   deviceListContainer: {
-    backgroundColor: Colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: Radius.md,
     padding: Spacing.md,
     marginBottom: Spacing.md,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   deviceListHeader: {
     flexDirection: 'row',
@@ -856,7 +859,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scanActionText: {
-    color: Colors.accent,
+    color: colors.accent,
     fontSize: FontSize.sm,
     fontWeight: '700',
   },
@@ -865,7 +868,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyDeviceText: {
-    color: Colors.textMuted,
+    color: colors.textMuted,
     fontSize: FontSize.sm,
   },
   deviceItem: {
@@ -874,7 +877,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: colors.border,
   },
   deviceInfo: {
     flex: 1,
@@ -882,15 +885,15 @@ const styles = StyleSheet.create({
   deviceName: {
     fontSize: FontSize.md,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
   },
   deviceAddress: {
     fontSize: FontSize.xs,
-    color: Colors.textMuted,
+    color: colors.textMuted,
     marginTop: 2,
   },
   connectDeviceAction: {
-    color: Colors.accent,
+    color: colors.accent,
     fontWeight: '700',
     fontSize: FontSize.sm,
     marginLeft: 8,

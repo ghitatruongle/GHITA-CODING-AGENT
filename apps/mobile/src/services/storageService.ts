@@ -17,6 +17,7 @@ const KEYS = {
   LAST_SERVER: '@ghita/last_server',
   DEVICE_ID: '@ghita/device_id',
   AUTH_TOKEN: '@ghita/auth_token',
+  TELEMETRY: '@ghita/telemetry',
 } as const;
 
 // --- Settings ---
@@ -142,6 +143,79 @@ export async function clearAuthToken(): Promise<void> {
     });
   } catch (error) {
     console.error('[Storage] Failed to clear auth token from Keychain:', error);
+  }
+}
+
+// --- Telemetry Storage ---
+
+export interface TelemetryRecord {
+  tokens: number;
+  cost: number;
+}
+
+export interface TelemetryDayData {
+  day: string;
+  tokens: number;
+  cost: number;
+}
+
+const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+export async function saveTelemetry(tokens: number, cost: number): Promise<void> {
+  try {
+    const today = new Date();
+    const dateStr = today.toISOString().split('T')[0]; // "YYYY-MM-DD"
+    
+    const raw = await AsyncStorage.getItem(KEYS.TELEMETRY);
+    const data: Record<string, TelemetryRecord> = raw ? JSON.parse(raw) : {};
+    
+    const existing = data[dateStr] || { tokens: 0, cost: 0 };
+    data[dateStr] = {
+      tokens: existing.tokens + tokens,
+      cost: existing.cost + cost,
+    };
+    
+    await AsyncStorage.setItem(KEYS.TELEMETRY, JSON.stringify(data));
+  } catch (error) {
+    console.error('[Storage] Failed to save telemetry:', error);
+  }
+}
+
+export async function loadTelemetryHistory(): Promise<TelemetryDayData[]> {
+  try {
+    const raw = await AsyncStorage.getItem(KEYS.TELEMETRY);
+    const data: Record<string, TelemetryRecord> = raw ? JSON.parse(raw) : {};
+    
+    const history: TelemetryDayData[] = [];
+    const today = new Date();
+    
+    // Generate records for the last 7 days (including today) in chronological order
+    for (let i = 6; i >= 0; i--) {
+      const targetDate = new Date(today);
+      targetDate.setDate(today.getDate() - i);
+      const dateStr = targetDate.toISOString().split('T')[0];
+      const dayName = DAYS_OF_WEEK[targetDate.getDay()];
+      
+      const record = data[dateStr] || { tokens: 0, cost: 0 };
+      history.push({
+        day: dayName,
+        tokens: record.tokens,
+        cost: record.cost,
+      });
+    }
+    
+    return history;
+  } catch (error) {
+    console.warn('[Storage] Failed to load telemetry history:', error);
+    return [];
+  }
+}
+
+export async function clearTelemetryHistory(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(KEYS.TELEMETRY);
+  } catch (error) {
+    console.error('[Storage] Failed to clear telemetry history:', error);
   }
 }
 

@@ -78,11 +78,13 @@ export class SocketService {
     this.callbacks = {};
   }
 
-  connect(serverAddress: string): void {
-    // Prefetch auth token asynchronously to avoid race conditions during pair/reconnect
-    void getAuthToken().then((token) => {
-      this.authToken = token;
-    });
+  async connect(serverAddress: string): Promise<void> {
+    // Prefetch auth token and wait to avoid race conditions during pair/reconnect
+    try {
+      this.authToken = await getAuthToken();
+    } catch (err) {
+      console.warn('[SocketService] Failed to load auth token:', err);
+    }
 
     // Save last URL for auto-reconnect
     this.lastUrl = serverAddress;

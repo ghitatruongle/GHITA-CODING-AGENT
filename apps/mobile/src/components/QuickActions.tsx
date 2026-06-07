@@ -5,7 +5,8 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Colors } from '../theme/colors';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { FontSize, Spacing, Radius } from '../theme/styles';
 import type { QuickAction } from '../types';
 import { useTranslation } from '../i18n/context';
@@ -24,6 +25,8 @@ const ACTIONS: QuickAction[] = [
 ];
 
 export function QuickActions({ disabled = false, onAction }: QuickActionsProps): React.JSX.Element {
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
 
   const getActionLabel = (id: string) => {
@@ -65,7 +68,7 @@ export function QuickActions({ disabled = false, onAction }: QuickActionsProps):
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -74,9 +77,9 @@ const styles = StyleSheet.create({
   actionButton: {
     flex: 1,
     minWidth: '42%',
-    backgroundColor: Colors.primaryMuted,
+    backgroundColor: colors.primaryMuted,
     borderWidth: 1,
-    borderColor: Colors.borderPrimary,
+    borderColor: colors.borderPrimary,
     borderRadius: Radius.md,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.lg,
@@ -92,11 +95,11 @@ const styles = StyleSheet.create({
     fontSize: 22,
   },
   actionLabel: {
-    color: Colors.primary,
+    color: colors.primary,
     fontSize: FontSize.sm,
     fontWeight: '600',
   },
   actionLabelDisabled: {
-    color: Colors.textDark,
+    color: colors.textDark,
   },
 });

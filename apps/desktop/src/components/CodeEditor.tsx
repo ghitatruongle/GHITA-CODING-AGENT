@@ -48,6 +48,8 @@ interface CodeEditorProps {
   diffMode?: 'inline' | 'sideBySide';
   /** Whether to show the problem panel */
   showProblems?: boolean;
+  /** Whether to show the editor minimap */
+  showMinimap?: boolean;
   /** Callback when a diagnostic is clicked */
   onDiagnosticClick?: (diagnostic: Diagnostic) => void;
 }
@@ -184,6 +186,7 @@ function CodeEditorInner({
   originalValue,
   diffMode = 'sideBySide',
   showProblems = true,
+  showMinimap = false,
   onDiagnosticClick,
 }: CodeEditorProps) {
   const { t } = useTranslation();
@@ -312,7 +315,7 @@ function CodeEditorInner({
 
   const editorOptions = {
     readOnly,
-    minimap: { enabled: false },
+    minimap: { enabled: showMinimap },
     fontSize: 14,
     fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
     fontLigatures: true,

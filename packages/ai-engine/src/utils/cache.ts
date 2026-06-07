@@ -222,7 +222,9 @@ export class SemanticCache implements BaseCache {
       this.isInitialized = true;
     } catch (err) {
       // Qdrant server offline / connection refused
-      console.info('[SemanticCache] Not available (Qdrant offline):', (err as Error).message);
+      if (process.env.GHITA_DEBUG) {
+        console.info('[SemanticCache] Not available (Qdrant offline):', (err as Error).message);
+      }
       this.isInitialized = false;
     }
   }

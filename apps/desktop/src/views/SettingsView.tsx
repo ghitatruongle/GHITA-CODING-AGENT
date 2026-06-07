@@ -4,6 +4,7 @@
 
 import { useState } from 'react';
 import { useAppStore, type ThemeMode } from '../stores/appStore';
+import { useShallow } from 'zustand/react/shallow';
 import { useTranslation } from '../i18n';
 import { isWindows, isLinux } from '@ghita/shared';
 
@@ -124,9 +125,9 @@ export function SettingsView() {
   ];
 
   // Phase 5: MCP & Hooks state
-  const mcpServers = useAppStore((s) => s.mcpServers);
+  const mcpServers = useAppStore(useShallow((s) => s.mcpServers));
   const setMcpServers = useAppStore((s) => s.setMcpServers);
-  const hooks = useAppStore((s) => s.hooks);
+  const hooks = useAppStore(useShallow((s) => s.hooks));
   const setHooks = useAppStore((s) => s.setHooks);
 
   // MCP form

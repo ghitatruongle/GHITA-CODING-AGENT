@@ -1,9 +1,9 @@
 // ==============================================================================
 // GHITA CODING AGENT — Mobile Theme Colors
-// Matches desktop app dark theme from y_tuong.html & plan
+// Matches desktop app themes
 // ==============================================================================
 
-export const Colors = {
+export const darkColors = {
   // --- Background ---
   background: '#0a0a1a',
   backgroundSecondary: '#1a1a2e',
@@ -45,9 +45,59 @@ export const Colors = {
   black: '#000000',
   overlay: 'rgba(0, 0, 0, 0.5)',
 
-  // --- Gradient colors (for LinearGradient if used) ---
+  // --- Gradient colors ---
   gradientStart: '#818cf8',
   gradientEnd: '#a78bfa',
-} as const;
+};
 
-export type ColorKey = keyof typeof Colors;
+export const lightColors: typeof darkColors = {
+  // --- Background ---
+  background: '#f8fafc',
+  backgroundSecondary: '#f1f5f9',
+  backgroundTertiary: '#e2e8f0',
+  surface: '#ffffff',
+  surfaceElevated: '#f8fafc',
+
+  // --- Primary (Purple/Indigo) ---
+  primary: '#6366f1',
+  primaryLight: '#818cf8',
+  primaryDark: '#4f46e5',
+  primaryMuted: 'rgba(99, 102, 241, 0.15)',
+  accent: '#a855f7',
+
+  // --- Text ---
+  textPrimary: '#0f172a',
+  textSecondary: '#334155',
+  textMuted: '#64748b',
+  textDark: '#94a3b8',
+
+  // --- Status ---
+  success: '#16a34a',
+  successMuted: 'rgba(22, 163, 74, 0.15)',
+  warning: '#ea580c',
+  warningMuted: 'rgba(234, 88, 12, 0.15)',
+  error: '#dc2626',
+  errorMuted: 'rgba(220, 38, 38, 0.15)',
+  info: '#6366f1',
+  infoMuted: 'rgba(99, 102, 241, 0.15)',
+
+  // --- Borders ---
+  border: '#e2e8f0',
+  borderFocused: 'rgba(99, 102, 241, 0.5)',
+  borderPrimary: 'rgba(99, 102, 241, 0.3)',
+
+  // --- Misc ---
+  transparent: 'transparent',
+  white: '#ffffff',
+  black: '#000000',
+  overlay: 'rgba(0, 0, 0, 0.3)',
+
+  // --- Gradient colors ---
+  gradientStart: '#6366f1',
+  gradientEnd: '#818cf8',
+};
+
+// Default export for backward compatibility where needed briefly
+export const Colors = darkColors;
+export type ColorKey = keyof typeof darkColors;
+export type ThemeColors = typeof darkColors;

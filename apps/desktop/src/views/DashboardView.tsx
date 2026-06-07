@@ -3,6 +3,7 @@
 // ==============================================================================
 
 import { useAppStore } from '../stores/appStore';
+import { useShallow } from 'zustand/react/shallow';
 import { useTranslation } from '../i18n';
 import { SandboxDashboard } from '../components/SandboxDashboard';
 import { DocsGrillerDashboard } from '../components/DocsGrillerDashboard';
@@ -22,15 +23,12 @@ function StatCard({
 }) {
   return (
     <div
+      className="glass-card"
       style={{
-        background: 'var(--bg-card)',
-        borderRadius: '16px',
         padding: '24px',
-        border: '1px solid rgba(255,255,255,0.05)',
         display: 'flex',
         flexDirection: 'column',
         gap: '12px',
-        transition: 'all 0.2s',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -55,12 +53,23 @@ function StatCard({
 
 export function DashboardView() {
   const { t } = useTranslation();
-  const serverStatus = useAppStore((s) => s.serverStatus);
-  const connectedDevices = useAppStore((s) => s.connectedDevices);
-  const mcpServers = useAppStore((s) => s.mcpServers);
-  const contextUsage = useAppStore((s) => s.contextUsage);
-  const dashboardStats = useAppStore((s) => s.dashboardStats);
-  const hooks = useAppStore((s) => s.hooks);
+  const {
+    serverStatus,
+    connectedDevices,
+    mcpServers,
+    contextUsage,
+    dashboardStats,
+    hooks,
+  } = useAppStore(
+    useShallow((s) => ({
+      serverStatus: s.serverStatus,
+      connectedDevices: s.connectedDevices,
+      mcpServers: s.mcpServers,
+      contextUsage: s.contextUsage,
+      dashboardStats: s.dashboardStats,
+      hooks: s.hooks,
+    }))
+  );
 
   return (
     <div style={{ height: '100%', overflow: 'auto', padding: '32px' }}>
@@ -126,14 +135,7 @@ export function DashboardView() {
         }}
       >
         {/* Server Status */}
-        <div
-          style={{
-            background: 'var(--bg-card)',
-            borderRadius: '16px',
-            padding: '24px',
-            border: '1px solid rgba(255,255,255,0.05)',
-          }}
-        >
+        <div className="glass-card" style={{ padding: '24px' }}>
           <h3
             style={{
               fontSize: '16px',
@@ -189,14 +191,7 @@ export function DashboardView() {
         </div>
 
         {/* MCP Servers */}
-        <div
-          style={{
-            background: 'var(--bg-card)',
-            borderRadius: '16px',
-            padding: '24px',
-            border: '1px solid rgba(255,255,255,0.05)',
-          }}
-        >
+        <div className="glass-card" style={{ padding: '24px' }}>
           <h3
             style={{
               fontSize: '16px',
@@ -239,14 +234,7 @@ export function DashboardView() {
         </div>
 
         {/* Hooks */}
-        <div
-          style={{
-            background: 'var(--bg-card)',
-            borderRadius: '16px',
-            padding: '24px',
-            border: '1px solid rgba(255,255,255,0.05)',
-          }}
-        >
+        <div className="glass-card" style={{ padding: '24px' }}>
           <h3
             style={{
               fontSize: '16px',
@@ -289,14 +277,7 @@ export function DashboardView() {
         </div>
 
         {/* Context Usage */}
-        <div
-          style={{
-            background: 'var(--bg-card)',
-            borderRadius: '16px',
-            padding: '24px',
-            border: '1px solid rgba(255,255,255,0.05)',
-          }}
-        >
+        <div className="glass-card" style={{ padding: '24px' }}>
           <h3
             style={{
               fontSize: '16px',
