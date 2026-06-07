@@ -1,10 +1,7 @@
-// ==============================================================================
-// GHITA CODING AGENT — Connection Status Indicator
-// ==============================================================================
-
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
-import { Colors } from '../theme/colors';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { FontSize, Spacing } from '../theme/styles';
 import type { ConnectionState } from '../types';
 import { useTranslation } from '../i18n/context';
@@ -14,69 +11,106 @@ interface ConnectionStatusProps {
   compact?: boolean;
 }
 
-const STATUS_CONFIG: Record<ConnectionState, { color: string; label: string }> = {
-  connected: { color: Colors.success, label: 'status.connected' },
-  connecting: { color: Colors.warning, label: 'status.connecting' },
-  pairing: { color: Colors.info, label: 'status.pairing' },
-  disconnected: { color: Colors.textDark, label: 'status.disconnected' },
-  error: { color: Colors.error, label: 'status.error' },
-};
+const getStatusConfig = (colors: ThemeColors): Record<ConnectionState, { color: string; label: string }> => ({
+  connected: { color: colors.success, label: 'status.connected' },
+  connecting: { color: colors.warning, label: 'status.connecting' },
+  pairing: { color: colors.info, label: 'status.pairing' },
+  disconnected: { color: colors.textDark, label: 'status.disconnected' },
+  error: { color: colors.error, label: 'status.error' },
+});
 
 export function ConnectionStatus({
   state,
   compact = false,
 }: ConnectionStatusProps): React.JSX.Element {
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const glowAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (state === 'connecting' || state === 'pairing') {
+      glowAnim.setValue(0);
       const animation = Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 0.3,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-        ]),
+        Animated.timing(glowAnim, {
+          toValue: 1,
+          duration: 1600,
+          useNativeDriver: true,
+        }),
       );
       animation.start();
       return () => {
         animation.stop();
-        pulseAnim.setValue(1);
+        glowAnim.setValue(0);
       };
     } else {
-      pulseAnim.stopAnimation();
-      pulseAnim.setValue(1);
+      glowAnim.stopAnimation();
+      glowAnim.setValue(0);
     }
     return undefined;
-  }, [state, pulseAnim]);
+  }, [state, glowAnim]);
 
-  const config = STATUS_CONFIG[state];
+  const config = getStatusConfig(colors)[state];
+
+  const glowScale = glowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 2.5],
+  });
+
+  const glowOpacity = glowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.8, 0],
+  });
+
+  const showGlow = state === 'connecting' || state === 'pairing';
 
   return (
     <View style={styles.container}>
-      <Animated.View style={[styles.dot, { backgroundColor: config.color, opacity: pulseAnim }]} />
+      <View style={styles.dotContainer}>
+        {showGlow && (
+          <Animated.View
+            style={[
+              styles.glowRing,
+              {
+                borderColor: config.color,
+                transform: [{ scale: glowScale }],
+                opacity: glowOpacity,
+              },
+            ]}
+          />
+        )}
+        <View style={[styles.dot, { backgroundColor: config.color }]} />
+      </View>
       {!compact && <Text style={[styles.label, { color: config.color }]}>{t(config.label)}</Text>}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
   },
+  dotContainer: {
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
   dot: {
     width: 10,
     height: 10,
     borderRadius: 5,
+    position: 'absolute',
+  },
+  glowRing: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 2,
+    position: 'absolute',
   },
   label: {
     fontSize: FontSize.sm,

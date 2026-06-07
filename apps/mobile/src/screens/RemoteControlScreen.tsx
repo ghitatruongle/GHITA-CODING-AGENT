@@ -17,15 +17,18 @@ import {
   Vibration,
   KeyboardAvoidingView,
   Platform,
+  BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors } from '../theme/colors';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { FontSize, Spacing, Radius } from '../theme/styles';
 import { ConnectionStatus } from '../components/ConnectionStatus';
 import { ScreenPreview } from '../components/ScreenPreview';
 import { QuickActions } from '../components/QuickActions';
 import { ChatInput } from '../components/ChatInput';
 import { socketService } from '../services/socketService';
+import { notificationService } from '../services/notificationService';
 import * as storageService from '../services/storageService';
 import type { ConnectionState, QuickAction, ChatMessage } from '../types';
 import type { RemoteControlScreenProps } from '../navigation/types';
@@ -50,6 +53,8 @@ export function RemoteControlScreen({
   route,
   navigation,
 }: RemoteControlScreenProps): React.JSX.Element {
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
   const { deviceName } = route.params;
 
@@ -60,6 +65,8 @@ export function RemoteControlScreen({
   const [screenshotLoading, setScreenshotLoading] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const screenshotTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSessionCostRef = useRef(0);
+  const lastSessionTokensRef = useRef(0);
 
   // Phase 8 States
   const [activeApproval, setActiveApproval] = useState<{ id: string; command: string } | null>(
@@ -149,11 +156,19 @@ export function RemoteControlScreen({
     socketService.setCallbacks({
       onConnectionChange: async (state) => {
         setConnectionState(state);
+        if (state === 'disconnected') {
+          lastSessionCostRef.current = 0;
+          lastSessionTokensRef.current = 0;
+        }
         // Vibrate on successful connection
         try {
           const settings = await storageService.loadSettings();
           if (settings.vibrationEnabled && state === 'connected') {
-            Vibration.vibrate([0, 50, 50, 50]); // Double tap
+            if (Platform.OS === 'ios') {
+              Vibration.vibrate([0, 15, 60, 15]); // Delicate double haptic tick on iOS
+            } else {
+              Vibration.vibrate([0, 50, 50, 50]); // Standard double tap on Android
+            }
           }
         } catch {}
         if (state === 'error') {
@@ -182,23 +197,50 @@ export function RemoteControlScreen({
           }
           return updated;
         });
+        
+        if (AppState.currentState !== 'active') {
+          notificationService.displayNotification('New Message from Agent', message.text);
+        }
+
         // Vibrate on AI response
         try {
           const settings = await storageService.loadSettings();
           if (settings.vibrationEnabled) {
-            Vibration.vibrate(100); // Short vibration
+            if (Platform.OS === 'ios') {
+              Vibration.vibrate(15); // Light single haptic click on iOS
+            } else {
+              Vibration.vibrate(100); // Short vibration on Android
+            }
           }
         } catch {}
       },
       onApprovalRequest: (data) => {
         setActiveApproval(data);
+        if (AppState.currentState !== 'active') {
+          notificationService.displayNotification('Approval Required', `The agent wants to run: ${data.command}`);
+        }
         // Vibrate to alert the user of security action
         try {
-          Vibration.vibrate([0, 100, 50, 150]);
+          if (Platform.OS === 'ios') {
+            Vibration.vibrate([0, 30, 60, 40]); // Double alert haptic pulse on iOS
+          } else {
+            Vibration.vibrate([0, 100, 50, 150]); // High alert vibration on Android
+          }
         } catch {}
       },
       onCostTelemetry: (data) => {
         setCostTelemetry(data);
+        
+        // Calculate difference to save dynamically per day
+        const diffCost = Math.max(0, data.costUsd - lastSessionCostRef.current);
+        const diffTokens = Math.max(0, data.totalTokens - lastSessionTokensRef.current);
+        
+        lastSessionCostRef.current = data.costUsd;
+        lastSessionTokensRef.current = data.totalTokens;
+        
+        if (diffTokens > 0 || diffCost > 0) {
+          storageService.saveTelemetry(diffTokens, diffCost).catch(console.error);
+        }
       },
       onError: (error) => {
         clearScreenshotTimeout();
@@ -239,10 +281,49 @@ export function RemoteControlScreen({
             socketService.connect(lastAddress);
           }
         }
+      } else {
+        // App goes to background: clear pending screen capture timeout, loading state & base64 image memory
+        clearScreenshotTimeout();
+        setScreenshotLoading(false);
+        setScreenshotBase64(null);
       }
     });
     return () => subscription.remove();
-  }, []);
+  }, [clearScreenshotTimeout]);
+
+  // Handle Android back button
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    const backAction = () => {
+      if (activeApproval) {
+        // Reject approval first if active
+        socketService.sendRejectCommand(activeApproval.id);
+        setActiveApproval(null);
+        return true;
+      }
+
+      Alert.alert(t('remote.disconnectTitle'), t('remote.disconnectDesc'), [
+        {
+          text: t('common.cancel'),
+          onPress: () => null,
+          style: 'cancel',
+        },
+        {
+          text: t('remote.disconnectBtn'),
+          onPress: () => {
+            socketService.disconnect();
+            navigation.replace('Pairing');
+          },
+        },
+      ]);
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+
+    return () => backHandler.remove();
+  }, [navigation, t, activeApproval]);
 
   // Handle quick action
   const handleQuickAction = useCallback(
@@ -316,10 +397,10 @@ export function RemoteControlScreen({
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
+      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         {/* Header */}
@@ -341,6 +422,13 @@ export function RemoteControlScreen({
             </View>
           </View>
           <View style={styles.headerRight}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Dashboard')}
+              style={styles.settingsBtnTouchable}
+              accessibilityLabel="Dashboard"
+            >
+              <Text style={styles.settingsBtnText}>📊</Text>
+            </TouchableOpacity>
             <TouchableOpacity
               onPress={() => navigation.navigate('Settings')}
               style={styles.settingsBtnTouchable}
@@ -431,10 +519,10 @@ export function RemoteControlScreen({
                         (costTelemetry.costUsd / Math.max(costTelemetry.limitUsd, 0.01)) * 100,
                         100,
                       )}%`,
-                      backgroundColor:
-                        costTelemetry.costUsd >= costTelemetry.limitUsd * 0.9
-                          ? Colors.error
-                          : Colors.success,
+                      backgroundColor: `hsl(${Math.max(
+                        0,
+                        (1 - Math.min(costTelemetry.costUsd / Math.max(costTelemetry.limitUsd, 0.01), 1)) * 120,
+                      )}, 85%, 45%)`,
                     },
                   ]}
                 />
@@ -458,13 +546,10 @@ export function RemoteControlScreen({
           {chatMessages.length > 0 && (
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>{t('remote.chatTitle')}</Text>
-              <FlatList
-                data={chatMessages.slice(-20)}
-                keyExtractor={(item) => item.id}
-                style={styles.messageListScroll}
-                nestedScrollEnabled
-                renderItem={({ item }) => (
+              <View style={styles.messageList}>
+                {chatMessages.slice(-20).map((item) => (
                   <View
+                    key={item.id}
                     style={[
                       styles.messageBubble,
                       item.sender === 'user' ? styles.userBubble : styles.aiBubble,
@@ -475,8 +560,8 @@ export function RemoteControlScreen({
                       {new Date(item.timestamp).toLocaleTimeString()}
                     </Text>
                   </View>
-                )}
-              />
+                ))}
+              </View>
             </View>
           )}
 
@@ -543,10 +628,10 @@ export function RemoteControlScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -555,7 +640,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: colors.border,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -566,7 +651,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
   },
   deviceName: {
-    color: Colors.primaryLight,
+    color: colors.primaryLight,
     fontSize: FontSize.lg,
     fontWeight: '700',
   },
@@ -583,7 +668,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
   },
   settingsBtnText: {
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     fontSize: FontSize.xxl,
   },
   disconnectBtnTouchable: {
@@ -594,7 +679,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
   },
   disconnectBtnText: {
-    color: Colors.textDark,
+    color: colors.textDark,
     fontSize: FontSize.xxl,
   },
   content: {
@@ -606,14 +691,14 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.huge,
   },
   section: {
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: Radius.xl,
     padding: Spacing.lg,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   sectionLabel: {
-    color: Colors.primaryLight,
+    color: colors.primaryLight,
     fontSize: FontSize.sm,
     fontWeight: '600',
     marginBottom: Spacing.md,
@@ -631,38 +716,38 @@ const styles = StyleSheet.create({
     maxWidth: '85%',
   },
   userBubble: {
-    backgroundColor: Colors.primaryMuted,
+    backgroundColor: colors.primaryMuted,
     alignSelf: 'flex-end',
   },
   aiBubble: {
-    backgroundColor: Colors.surfaceElevated,
+    backgroundColor: colors.surfaceElevated,
     alignSelf: 'flex-start',
   },
   messageText: {
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     fontSize: FontSize.sm,
     lineHeight: 20,
   },
   messageTimestamp: {
-    color: Colors.textMuted,
+    color: colors.textMuted,
     fontSize: 10,
     marginTop: 2,
     alignSelf: 'flex-end',
   },
   // Phase 8 Styles
   approvalSection: {
-    borderColor: Colors.warning,
+    borderColor: colors.warning,
     borderWidth: 2,
     backgroundColor: 'rgba(254, 188, 46, 0.08)',
   },
   approvalHeader: {
-    color: Colors.warning,
+    color: colors.warning,
     fontSize: FontSize.md,
     fontWeight: '800',
     marginBottom: Spacing.xs,
   },
   approvalDesc: {
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     fontSize: FontSize.sm,
     marginBottom: Spacing.md,
   },
@@ -672,7 +757,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     marginBottom: Spacing.md,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   commandCodeText: {
     color: '#818cf8',
@@ -691,10 +776,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   approveBtn: {
-    backgroundColor: Colors.success,
+    backgroundColor: colors.success,
   },
   rejectBtn: {
-    backgroundColor: Colors.error,
+    backgroundColor: colors.error,
   },
   approvalBtnText: {
     color: '#ffffff',
@@ -710,17 +795,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   costLabel: {
-    color: Colors.textMuted,
+    color: colors.textMuted,
     fontSize: FontSize.xs,
     textTransform: 'uppercase',
   },
   costValue: {
-    color: Colors.primaryLight,
+    color: colors.primaryLight,
     fontSize: FontSize.xl,
     fontWeight: '800',
   },
   costLimit: {
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     fontSize: FontSize.lg,
     fontWeight: '700',
   },
@@ -739,12 +824,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    borderTopColor: colors.border,
     paddingTop: Spacing.sm,
     marginTop: Spacing.xs,
   },
   tokenText: {
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     fontSize: FontSize.xs,
   },
   connectionRow: {
@@ -754,7 +839,7 @@ const styles = StyleSheet.create({
   },
   connectionTypeText: {
     fontSize: 10,
-    color: Colors.textMuted,
+    color: colors.textMuted,
   },
   costLimitContainer: {
     alignItems: 'flex-end',
@@ -768,26 +853,26 @@ const styles = StyleSheet.create({
     padding: Spacing.sm,
   },
   skillsCloseText: {
-    color: Colors.textMuted,
+    color: colors.textMuted,
     fontSize: FontSize.lg,
     fontWeight: '700',
   },
   skillsStatusText: {
-    color: Colors.textMuted,
+    color: colors.textMuted,
     fontSize: FontSize.sm,
     textAlign: 'center',
     paddingVertical: Spacing.lg,
   },
   skillItem: {
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: Radius.md,
     padding: Spacing.md,
     marginTop: Spacing.sm,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   skillItemRunning: {
-    borderColor: Colors.primary,
+    borderColor: colors.primary,
     opacity: 0.7,
   },
   skillItemHeader: {
@@ -796,21 +881,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   skillName: {
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     fontSize: FontSize.sm,
     fontWeight: '600',
   },
   skillCategory: {
-    color: Colors.textMuted,
+    color: colors.textMuted,
     fontSize: FontSize.xs,
   },
   skillDesc: {
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     fontSize: FontSize.xs,
     marginTop: Spacing.xs,
   },
   skillRunningText: {
-    color: Colors.primary,
+    color: colors.primary,
     fontSize: FontSize.xs,
     fontWeight: '600',
     marginTop: Spacing.xs,

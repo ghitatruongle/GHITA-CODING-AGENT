@@ -15,14 +15,9 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import {
-  loadSettings,
-  saveSettings as saveSettingsToStorage,
-  loadPairedDevices,
-  removePairedDevice,
-  clearAllData,
-} from '../services/storageService';
-import { Colors } from '../theme/colors';
+import { clearAllData, loadPairedDevices, loadSettings, removePairedDevice, saveSettings as saveSettingsToStorage } from '../services/storageService';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeColors } from '../theme/colors';
 import { FontSize, Spacing, Radius } from '../theme/styles';
 import type { MobileSettings, PairedDevice } from '../types';
 import { DEFAULT_MOBILE_SETTINGS } from '../types';
@@ -31,6 +26,8 @@ import { useTranslation } from '../i18n/context';
 
 export function SettingsScreen({ navigation }: SettingsScreenProps): React.JSX.Element {
   const { t, lang, changeLanguage } = useTranslation();
+  const { colors, themeType, setThemeType } = useTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [settings, setSettings] = useState<MobileSettings>(DEFAULT_MOBILE_SETTINGS);
   const [pairedDevices, setPairedDevices] = useState<PairedDevice[]>([]);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -136,7 +133,7 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): React.JSX.E
               value={settings.deviceName}
               onChangeText={(v) => handleSaveSettings({ ...settings, deviceName: v })}
               placeholder={t('settings.deviceNamePlaceholder')}
-              placeholderTextColor={Colors.textDark}
+              placeholderTextColor={colors.textDark}
               clearButtonMode="while-editing"
               autoCapitalize="words"
               autoCorrect={false}
@@ -152,7 +149,7 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): React.JSX.E
             <Switch
               value={settings.autoReconnect}
               onValueChange={(v) => handleSaveSettings({ ...settings, autoReconnect: v })}
-              trackColor={{ true: Colors.primary }}
+              trackColor={{ true: colors.primary }}
             />
           </View>
           <View style={styles.row}>
@@ -160,8 +157,32 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): React.JSX.E
             <Switch
               value={settings.vibrationEnabled}
               onValueChange={(v) => handleSaveSettings({ ...settings, vibrationEnabled: v })}
-              trackColor={{ true: Colors.primary }}
+              trackColor={{ true: colors.primary }}
             />
+          </View>
+          {/* Theme selection */}
+          <View style={styles.row}>
+            <Text style={styles.label}>Theme</Text>
+            <View style={styles.langSelector}>
+              <TouchableOpacity
+                style={[styles.langBtn, themeType === 'system' && styles.langBtnActive]}
+                onPress={() => setThemeType('system')}
+              >
+                <Text style={[styles.langBtnText, themeType === 'system' && styles.langBtnTextActive]}>System</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.langBtn, themeType === 'light' && styles.langBtnActive]}
+                onPress={() => setThemeType('light')}
+              >
+                <Text style={[styles.langBtnText, themeType === 'light' && styles.langBtnTextActive]}>Light</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.langBtn, themeType === 'dark' && styles.langBtnActive]}
+                onPress={() => setThemeType('dark')}
+              >
+                <Text style={[styles.langBtnText, themeType === 'dark' && styles.langBtnTextActive]}>Dark</Text>
+              </TouchableOpacity>
+            </View>
           </View>
           {/* Language selection */}
           <View style={styles.row}>
@@ -242,10 +263,10 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): React.JSX.E
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -254,7 +275,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: colors.border,
   },
   backBtn: {
     minWidth: 44,
@@ -263,12 +284,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backBtnText: {
-    color: Colors.primaryLight,
+    color: colors.primaryLight,
     fontSize: FontSize.xxl,
     fontWeight: '700',
   },
   headerTitle: {
-    color: Colors.primaryLight,
+    color: colors.primaryLight,
     fontSize: FontSize.lg,
     fontWeight: '700',
   },
@@ -284,14 +305,14 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.huge,
   },
   section: {
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: Radius.xl,
     padding: Spacing.lg,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   sectionTitle: {
-    color: Colors.primaryLight,
+    color: colors.primaryLight,
     fontSize: FontSize.sm,
     fontWeight: '600',
     marginBottom: Spacing.md,
@@ -303,24 +324,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: colors.border,
   },
   label: {
     fontSize: FontSize.md,
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
   },
   input: {
     fontSize: FontSize.md,
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: colors.border,
     paddingVertical: Spacing.xs,
     minWidth: 150,
     textAlign: 'right',
   },
   emptyText: {
     fontSize: FontSize.sm,
-    color: Colors.textDark,
+    color: colors.textDark,
     fontStyle: 'italic',
   },
   deviceRow: {
@@ -328,37 +349,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: colors.border,
   },
   deviceInfo: {
     flex: 1,
   },
   deviceName: {
     fontSize: FontSize.md,
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
   },
   deviceId: {
     fontSize: FontSize.xs,
-    color: Colors.textDark,
+    color: colors.textDark,
   },
   removeBtn: {
     fontSize: FontSize.sm,
-    color: Colors.error,
+    color: colors.error,
   },
   dangerBtn: {
-    backgroundColor: Colors.error,
+    backgroundColor: colors.error,
     padding: Spacing.md,
     borderRadius: Radius.md,
     alignItems: 'center',
   },
   dangerBtnText: {
-    color: Colors.white,
+    color: colors.white,
     fontSize: FontSize.md,
     fontWeight: '600',
   },
   version: {
     fontSize: FontSize.xs,
-    color: Colors.textDark,
+    color: colors.textDark,
     textAlign: 'center',
     marginTop: Spacing.xl,
     marginBottom: Spacing.xl,
@@ -368,23 +389,23 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
   langBtn: {
-    backgroundColor: Colors.backgroundTertiary,
+    backgroundColor: colors.backgroundTertiary,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     borderRadius: Radius.sm,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
   },
   langBtnActive: {
-    backgroundColor: Colors.primaryMuted,
-    borderColor: Colors.primary,
+    backgroundColor: colors.primaryMuted,
+    borderColor: colors.primary,
   },
   langBtnText: {
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     fontSize: FontSize.sm,
     fontWeight: '600',
   },
   langBtnTextActive: {
-    color: Colors.primary,
+    color: colors.primary,
   },
 });

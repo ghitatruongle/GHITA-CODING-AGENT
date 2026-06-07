@@ -11,6 +11,11 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 const mockExecute = vi.fn();
 const mockSetTerminalCwd = vi.fn();
+let mockIsWindows = true;
+
+vi.mock('@ghita/shared', () => ({
+  isWindows: () => mockIsWindows,
+}));
 
 vi.mock('@tauri-apps/plugin-shell', () => ({
   Command: {
@@ -55,6 +60,7 @@ import { Command } from '@tauri-apps/plugin-shell';
 describe('Terminal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockIsWindows = true;
     mockExecute.mockResolvedValue({ stdout: '', stderr: '', code: 0 });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (Command.create as any).mockImplementation((_cmd: string, args: string[]) => {
@@ -72,44 +78,44 @@ describe('Terminal', () => {
   // ────────────────────────────────────────────────────────────────────────
 
   describe('shell toggle', () => {
-    it('shows cmd.exe by default', async () => {
+    it('shows PowerShell by default on Windows', async () => {
       render(<Terminal />);
       await waitFor(() => {
-        expect(screen.getByText('cmd.exe')).toBeInTheDocument();
+        expect(screen.getByText('PowerShell')).toBeInTheDocument();
       });
     });
 
-    it('toggles to PowerShell on click', async () => {
+    it('toggles to cmd.exe on click on Windows', async () => {
       render(<Terminal />);
       await waitFor(() => {
-        expect(screen.getByText('cmd.exe')).toBeInTheDocument();
+        expect(screen.getByText('PowerShell')).toBeInTheDocument();
       });
-
-      fireEvent.click(screen.getByText('cmd.exe'));
-      expect(screen.getByText('PowerShell')).toBeInTheDocument();
-    });
-
-    it('toggles back to cmd.exe on second click', async () => {
-      render(<Terminal />);
-      await waitFor(() => {
-        expect(screen.getByText('cmd.exe')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('cmd.exe'));
-      expect(screen.getByText('PowerShell')).toBeInTheDocument();
 
       fireEvent.click(screen.getByText('PowerShell'));
       expect(screen.getByText('cmd.exe')).toBeInTheDocument();
     });
 
-    it('shows switch message in history when toggling', async () => {
+    it('toggles back to PowerShell on second click on Windows', async () => {
       render(<Terminal />);
       await waitFor(() => {
-        expect(screen.getByText('cmd.exe')).toBeInTheDocument();
+        expect(screen.getByText('PowerShell')).toBeInTheDocument();
       });
 
+      fireEvent.click(screen.getByText('PowerShell'));
+      expect(screen.getByText('cmd.exe')).toBeInTheDocument();
+
       fireEvent.click(screen.getByText('cmd.exe'));
-      expect(screen.getByText(/Switched to PowerShell/)).toBeInTheDocument();
+      expect(screen.getByText('PowerShell')).toBeInTheDocument();
+    });
+
+    it('shows switch message in history when toggling on Windows', async () => {
+      render(<Terminal />);
+      await waitFor(() => {
+        expect(screen.getByText('PowerShell')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('PowerShell'));
+      expect(screen.getByText(/Switched to cmd.exe/)).toBeInTheDocument();
     });
   });
 
@@ -121,7 +127,7 @@ describe('Terminal', () => {
     it('executes command on Enter key', async () => {
       render(<Terminal />);
       await waitFor(() => {
-        expect(screen.getByText('cmd.exe')).toBeInTheDocument();
+        expect(screen.getByText('PowerShell')).toBeInTheDocument();
       });
       mockExecute.mockResolvedValue({ stdout: 'hello world', stderr: '', code: 0 });
 
@@ -137,7 +143,7 @@ describe('Terminal', () => {
     it('displays command in history with prompt', async () => {
       render(<Terminal />);
       await waitFor(() => {
-        expect(screen.getByText('cmd.exe')).toBeInTheDocument();
+        expect(screen.getByText('PowerShell')).toBeInTheDocument();
       });
 
       const input = screen.getByPlaceholderText('Type a command...');
@@ -152,7 +158,7 @@ describe('Terminal', () => {
     it('displays stderr output', async () => {
       render(<Terminal />);
       await waitFor(() => {
-        expect(screen.getByText('cmd.exe')).toBeInTheDocument();
+        expect(screen.getByText('PowerShell')).toBeInTheDocument();
       });
       mockExecute.mockResolvedValue({ stdout: '', stderr: 'error message', code: 1 });
 
@@ -168,7 +174,7 @@ describe('Terminal', () => {
     it('displays exit code on non-zero exit', async () => {
       render(<Terminal />);
       await waitFor(() => {
-        expect(screen.getByText('cmd.exe')).toBeInTheDocument();
+        expect(screen.getByText('PowerShell')).toBeInTheDocument();
       });
       mockExecute.mockResolvedValue({ stdout: '', stderr: '', code: 1 });
 
@@ -184,7 +190,7 @@ describe('Terminal', () => {
     it('does not execute empty commands', async () => {
       render(<Terminal />);
       await waitFor(() => {
-        expect(screen.getByText('cmd.exe')).toBeInTheDocument();
+        expect(screen.getByText('PowerShell')).toBeInTheDocument();
       });
 
       const input = screen.getByPlaceholderText('Type a command...');
@@ -221,7 +227,7 @@ describe('Terminal', () => {
 
       render(<Terminal />);
       await waitFor(() => {
-        expect(screen.getByText('cmd.exe')).toBeInTheDocument();
+        expect(screen.getByText('PowerShell')).toBeInTheDocument();
       });
 
       const input = screen.getByPlaceholderText('Type a command...');
@@ -246,7 +252,7 @@ describe('Terminal', () => {
 
       render(<Terminal />);
       await waitFor(() => {
-        expect(screen.getByText('cmd.exe')).toBeInTheDocument();
+        expect(screen.getByText('PowerShell')).toBeInTheDocument();
       });
 
       const input = screen.getByPlaceholderText('Type a command...');
@@ -267,7 +273,7 @@ describe('Terminal', () => {
     it('clears history on "clear" command', async () => {
       render(<Terminal />);
       await waitFor(() => {
-        expect(screen.getByText('cmd.exe')).toBeInTheDocument();
+        expect(screen.getByText('PowerShell')).toBeInTheDocument();
       });
 
       // First add some output
@@ -291,7 +297,7 @@ describe('Terminal', () => {
     it('clears history on "cls" command', async () => {
       render(<Terminal />);
       await waitFor(() => {
-        expect(screen.getByText('cmd.exe')).toBeInTheDocument();
+        expect(screen.getByText('PowerShell')).toBeInTheDocument();
       });
 
       const input = screen.getByPlaceholderText('Type a command...');
@@ -325,6 +331,82 @@ describe('Terminal', () => {
     it('has an input field', async () => {
       render(<Terminal />);
       expect(screen.getByPlaceholderText('Type a command...')).toBeInTheDocument();
+    });
+  });
+
+  // ────────────────────────────────────────────────────────────────────────
+  //  Unix/Linux shell toggle and behavior
+  // ────────────────────────────────────────────────────────────────────────
+
+  describe('Unix/Linux shell toggle and behavior', () => {
+    beforeEach(() => {
+      mockIsWindows = false;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (Command.create as any).mockImplementation((_cmd: string, args: string[]) => {
+        if (args.includes('echo $HOME')) {
+          return {
+            execute: () => Promise.resolve({ stdout: '/home/user', stderr: '', code: 0 }),
+          };
+        }
+        return { execute: mockExecute };
+      });
+    });
+
+    it('shows Bash by default on Unix/Linux', async () => {
+      render(<Terminal />);
+      await waitFor(() => {
+        expect(screen.getByText('Bash')).toBeInTheDocument();
+      });
+    });
+
+    it('toggles to sh on click on Unix/Linux', async () => {
+      render(<Terminal />);
+      await waitFor(() => {
+        expect(screen.getByText('Bash')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Bash'));
+      expect(screen.getByText('sh')).toBeInTheDocument();
+    });
+
+    it('toggles back to Bash on second click on Unix/Linux', async () => {
+      render(<Terminal />);
+      await waitFor(() => {
+        expect(screen.getByText('Bash')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Bash'));
+      expect(screen.getByText('sh')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByText('sh'));
+      expect(screen.getByText('Bash')).toBeInTheDocument();
+    });
+
+    it('resolves Unix paths correctly during cd', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (Command.create as any).mockImplementation((_cmd: string, args: string[]) => {
+        if (args.some((a: string) => a.includes('pwd'))) {
+          return {
+            execute: () => Promise.resolve({ stdout: '/home/user/projects/ghita', stderr: '', code: 0 }),
+          };
+        }
+        return {
+          execute: () => Promise.resolve({ stdout: '/home/user', stderr: '', code: 0 }),
+        };
+      });
+
+      render(<Terminal />);
+      await waitFor(() => {
+        expect(screen.getByText('Bash')).toBeInTheDocument();
+      });
+
+      const input = screen.getByPlaceholderText('Type a command...');
+      fireEvent.change(input, { target: { value: 'cd /home/user/projects/ghita' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+
+      await waitFor(() => {
+        expect(mockSetTerminalCwd).toHaveBeenCalledWith('/home/user/projects/ghita');
+      });
     });
   });
 });

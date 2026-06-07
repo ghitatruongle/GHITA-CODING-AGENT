@@ -385,7 +385,24 @@ textarea::placeholder {
 
 /* --- View transitions --- */
 .view-enter {
-  animation: fadeIn 200ms ease forwards;
+  animation: fadeIn var(--transition-normal) ease forwards, slideUp var(--transition-normal) ease forwards;
+}
+
+/* --- Premium Glassmorphism Cards --- */
+.glass-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+
+.glass-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg), var(--shadow-glow);
+  border-color: rgba(168, 85, 247, 0.2);
 }
 
 /* --- Interactive elements with hover states --- */

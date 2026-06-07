@@ -5,7 +5,8 @@
 
 import React, { useState, useCallback } from 'react';
 import { View, TextInput, TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { Colors } from '../theme/colors';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { FontSize, Spacing, Radius } from '../theme/styles';
 import { useTranslation } from '../i18n/context';
 
@@ -20,6 +21,8 @@ export function ChatInput({
   onSend,
   placeholder,
 }: ChatInputProps): React.JSX.Element {
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const { t } = useTranslation();
   const [text, setText] = useState('');
 
@@ -39,7 +42,7 @@ export function ChatInput({
         value={text}
         onChangeText={setText}
         placeholder={defaultPlaceholder}
-        placeholderTextColor={Colors.textDark}
+        placeholderTextColor={colors.textDark}
         editable={!disabled}
         returnKeyType="send"
         onSubmitEditing={handleSend}
@@ -60,7 +63,7 @@ export function ChatInput({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     gap: Spacing.md,
@@ -70,18 +73,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderWidth: 1,
-    borderColor: Colors.borderPrimary,
+    borderColor: colors.borderPrimary,
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     fontSize: FontSize.md,
   },
   inputDisabled: {
     opacity: 0.5,
   },
   sendButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: colors.primary,
     borderRadius: Radius.md,
     minWidth: 48,
     minHeight: 48,
@@ -92,7 +95,7 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   sendIcon: {
-    color: Colors.white,
+    color: colors.white,
     fontSize: FontSize.lg,
   },
 });

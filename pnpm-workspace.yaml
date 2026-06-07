@@ -4,11 +4,12 @@ packages:
   - docs
   - docs
 
-onlyBuiltDependencies:
-  - esbuild
-  - better-sqlite3
-  - node-pty
-  - cpu-features
-  - protobufjs
-  - sharp
-  - ssh2
+allowBuilds:
+  better-sqlite3: true
+  core-js: true
+  cpu-features: true
+  esbuild: true
+  node-pty: true
+  protobufjs: true
+  sharp: true
+  ssh2: true

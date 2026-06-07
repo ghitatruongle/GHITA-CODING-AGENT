@@ -196,7 +196,9 @@ export class Orchestrator {
       if (cached) {
         return cached as ChatResponse;
       }
-    } catch {}
+    } catch (err) {
+      console.warn('[SemanticCache] get error:', err);
+    }
 
     const provider = this.resolveProvider(options?.provider, options?.agentRole);
     this.budgetManager.checkBudget(0);
@@ -211,7 +213,9 @@ export class Orchestrator {
 
     try {
       await this.semanticCache.set(cacheKey, response);
-    } catch {}
+    } catch (err) {
+      console.warn('[SemanticCache] set error:', err);
+    }
 
     return response;
   }
@@ -237,7 +241,9 @@ export class Orchestrator {
         };
         return;
       }
-    } catch {}
+    } catch (err) {
+      console.warn('[SemanticCache] get stream error:', err);
+    }
 
     const provider = this.resolveProvider(options?.provider, options?.agentRole);
     this.budgetManager.checkBudget(0);
@@ -299,7 +305,10 @@ export class Orchestrator {
             yield chunk;
           }
           success = true;
-        } catch {
+        } catch (err) {
+          if (err instanceof Error && err.message !== String(lastError)) {
+             console.warn('[Fallback Provider] stream error:', err);
+          }
           throw lastError;
         }
       } else {
@@ -318,7 +327,9 @@ export class Orchestrator {
 
     try {
       await this.semanticCache.set(cacheKey, completeResponse);
-    } catch {}
+    } catch (err) {
+      console.warn('[SemanticCache] set stream error:', err);
+    }
   }
 
   /** Tạo cấu trúc đầu ra (structured output) theo schema của Zod */

@@ -13,6 +13,8 @@
 import { useEffect, useRef, useState, useCallback, memo } from 'react';
 import { useTranslation } from '../i18n';
 import { useAppStore } from '../stores/appStore';
+import { throttle } from '../utils/throttle';
+import { isWindows } from '@ghita/shared';
 import '@xterm/xterm/css/xterm.css';
 
 // Dynamic imports for xterm.js (browser-only)
@@ -40,7 +42,7 @@ async function loadXterm() {
 // Types
 // ---------------------------------------------------------------------------
 
-type ShellType = 'cmd' | 'powershell';
+type ShellType = 'cmd' | 'powershell' | 'bash' | 'sh';
 
 interface ShellConfig {
   name: string;
@@ -65,12 +67,30 @@ const SHELL_CONFIGS: Record<ShellType, ShellConfig> = {
   powershell: {
     name: 'PowerShell',
     cmdName: 'powershell',
-    args: ['-NoProfile', '-Command'],
+    args: ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command'],
     homeCmd: '$env:USERPROFILE',
     resolveCmd: (path) =>
       `if (Test-Path -Path "${path}" -PathType Container) { (Get-Item "${path}").FullName } else { write-error 'not found' }`,
     prompt: '>',
     color: '#3b82f6',
+  },
+  bash: {
+    name: 'Bash',
+    cmdName: 'bash',
+    args: ['-c'],
+    homeCmd: 'echo $HOME',
+    resolveCmd: (path) => `cd "${path}" && pwd`,
+    prompt: '$',
+    color: '#a78bfa',
+  },
+  sh: {
+    name: 'sh',
+    cmdName: 'sh',
+    args: ['-c'],
+    homeCmd: 'echo $HOME',
+    resolveCmd: (path) => `cd "${path}" && pwd`,
+    prompt: '$',
+    color: '#60a5fa',
   },
 };
 
@@ -105,9 +125,15 @@ function lineColor(type: TermLine['type']): string {
 }
 
 function shortCwd(cwd: string): string {
-  const parts = cwd.replace(/\//g, '\\').split('\\').filter(Boolean);
-  if (parts.length <= 2) return cwd;
-  return parts.slice(-2).join('\\');
+  if (isWindows()) {
+    const parts = cwd.replace(/\//g, '\\').split('\\').filter(Boolean);
+    if (parts.length <= 2) return cwd;
+    return parts.slice(-2).join('\\');
+  } else {
+    const parts = cwd.replace(/\\/g, '/').split('/').filter(Boolean);
+    if (parts.length <= 2) return cwd;
+    return parts.slice(-2).join('/');
+  }
 }
 
 function generateTabId(): string {
@@ -277,12 +303,16 @@ function XtermPane({
       });
 
     // Fit on resize
-    const resizeObs = new ResizeObserver(() => {
+    const throttledFit = throttle(() => {
       try {
         fit.fit();
       } catch {
         /* ignore during unmount */
       }
+    }, 60);
+
+    const resizeObs = new ResizeObserver(() => {
+      throttledFit();
     });
     resizeObs.observe(containerRef.current);
 
@@ -354,9 +384,51 @@ function setupFallbackInput(
           : cmd.match(/^(?:cd|Set-Location|sl)(?:\s+(.+))?$/i);
 
       if (cdMatch) {
-        const target = (cdMatch[1] || '').trim().replace(/^"(.*)"$/, '$1');
+        let target = (cdMatch[1] || '').trim().replace(/^"(.*)"$/, '$1');
+        if (isWindows()) {
+          target = target.replace(/\//g, '\\');
+        } else {
+          target = target.replace(/\\/g, '/');
+        }
+
+        if (!target || target === '~') {
+          if (isWindows()) {
+            if (shell === 'cmd') {
+              term.write(`\r\n${currentCwd}`);
+              writePrompt();
+              return;
+            }
+            if (shell === 'powershell') target = currentCwd || 'C:\\Users';
+          } else {
+            try {
+              const { Command } = await import('@tauri-apps/plugin-shell');
+              const res = await Command.create(config.cmdName, [...config.args, config.homeCmd]).execute();
+              const home = res.stdout.trim();
+              target = home || '/';
+            } catch {
+              target = '/';
+            }
+          }
+        } else if (!isWindows() && target.startsWith('~/')) {
+          try {
+            const { Command } = await import('@tauri-apps/plugin-shell');
+            const res = await Command.create(config.cmdName, [...config.args, config.homeCmd]).execute();
+            const home = res.stdout.trim();
+            if (home) {
+              target = home + target.slice(1);
+            }
+          } catch {
+            // ignore
+          }
+        }
+
         if (target) {
-          const resolved = /^[a-zA-Z]:\\/.test(target) ? target : currentCwd + '\\' + target;
+          let resolved: string;
+          if (isWindows()) {
+            resolved = /^[a-zA-Z]:\\/.test(target) ? target : (currentCwd.endsWith('\\') ? currentCwd : currentCwd + '\\') + target;
+          } else {
+            resolved = target.startsWith('/') ? target : (currentCwd.endsWith('/') ? currentCwd : currentCwd + '/') + target;
+          }
           try {
             const { Command } = await import('@tauri-apps/plugin-shell');
             const result = await Command.create(config.cmdName, [
@@ -494,40 +566,77 @@ function LegacyTerminal({ shell }: { shell: ShellType }) {
           .trim()
           .replace(/^"(.*)"$/, '$1')
           .replace(/^'(.*)'$/, '$1');
-        if (!target && shell === 'cmd') {
-          addLines([{ text: cwd, type: 'stdout' }]);
-          return;
-        }
-        if (!target && shell === 'powershell') target = cwd || 'C:\\Users';
-        if (!target) {
-          if (shell === 'cmd') addLines([{ text: cwd, type: 'stdout' }]);
-          return;
+
+        if (isWindows()) {
+          target = target.replace(/\//g, '\\');
+        } else {
+          target = target.replace(/\\/g, '/');
         }
 
-        let resolved: string;
-        if (/^[a-zA-Z]:\\/.test(target) || target.startsWith('\\\\'))
-          resolved = target.replace(/^(.):$/, '$1:\\');
-        else if (/^[a-zA-Z]:$/.test(target)) resolved = target + '\\';
-        else resolved = (cwd.endsWith('\\') ? cwd : cwd + '\\') + target;
-        if (shell === 'cmd' && (resolved.startsWith('/d ') || resolved.startsWith('/D ')))
-          resolved = resolved.slice(3).trim();
-
-        try {
-          const { Command } = await import('@tauri-apps/plugin-shell');
-          const verify = await Command.create(cfg.cmdName, [
-            ...cfg.args,
-            cfg.resolveCmd(resolved),
-          ]).execute();
-          const newCwd = verify.stdout.trim();
-          if (verify.code === 0 && newCwd && newCwd.length > 2) {
-            setCwd(newCwd);
-            setTerminalCwd(newCwd);
-            addLines([{ text: '', type: 'stdout' }]);
+        if (!target || target === '~') {
+          if (isWindows()) {
+            if (shell === 'cmd') {
+              addLines([{ text: cwd, type: 'stdout' }]);
+              return;
+            }
+            if (shell === 'powershell') target = cwd || 'C:\\Users';
           } else {
-            addLines([{ text: t('terminal.pathNotFound', { path: resolved }), type: 'stderr' }]);
+            try {
+              const { Command } = await import('@tauri-apps/plugin-shell');
+              const res = await Command.create(cfg.cmdName, [...cfg.args, cfg.homeCmd]).execute();
+              const home = res.stdout.trim();
+              target = home || '/';
+            } catch {
+              target = '/';
+            }
           }
-        } catch (e) {
-          addLines([{ text: `Error: ${String(e)}`, type: 'error' }]);
+        } else if (!isWindows() && target.startsWith('~/')) {
+          try {
+            const { Command } = await import('@tauri-apps/plugin-shell');
+            const res = await Command.create(cfg.cmdName, [...cfg.args, cfg.homeCmd]).execute();
+            const home = res.stdout.trim();
+            if (home) {
+              target = home + target.slice(1);
+            }
+          } catch {
+            // ignore
+          }
+        }
+
+        if (target) {
+          let resolved: string;
+          if (isWindows()) {
+            if (/^[a-zA-Z]:\\/.test(target) || target.startsWith('\\\\'))
+              resolved = target.replace(/^(.):$/, '$1:\\');
+            else if (/^[a-zA-Z]:$/.test(target)) resolved = target + '\\';
+            else resolved = (cwd.endsWith('\\') ? cwd : cwd + '\\') + target;
+            if (shell === 'cmd' && (resolved.startsWith('/d ') || resolved.startsWith('/D ')))
+              resolved = resolved.slice(3).trim();
+          } else {
+            if (target.startsWith('/')) {
+              resolved = target;
+            } else {
+              resolved = (cwd.endsWith('/') ? cwd : cwd + '/') + target;
+            }
+          }
+
+          try {
+            const { Command } = await import('@tauri-apps/plugin-shell');
+            const verify = await Command.create(cfg.cmdName, [
+              ...cfg.args,
+              cfg.resolveCmd(resolved),
+            ]).execute();
+            const newCwd = verify.stdout.trim();
+            if (verify.code === 0 && newCwd && newCwd.length > 2) {
+              setCwd(newCwd);
+              setTerminalCwd(newCwd);
+              addLines([{ text: '', type: 'stdout' }]);
+            } else {
+              addLines([{ text: t('terminal.pathNotFound', { path: resolved }), type: 'stderr' }]);
+            }
+          } catch (e) {
+            addLines([{ text: `Error: ${String(e)}`, type: 'error' }]);
+          }
         }
         return;
       }
@@ -667,8 +776,9 @@ function LegacyTerminal({ shell }: { shell: ShellType }) {
 
 function TerminalInner() {
   const { t } = useTranslation();
+  const defaultShell: ShellType = isWindows() ? 'powershell' : 'bash';
   const [tabs, setTabs] = useState<TerminalTab[]>([
-    { id: generateTabId(), label: 'Terminal 1', shell: 'cmd' },
+    { id: generateTabId(), label: 'Terminal 1', shell: defaultShell },
   ]);
   const [activeTabId, setActiveTabId] = useState(tabs[0]!.id);
   const [useXterm, setUseXterm] = useState(false);
@@ -688,11 +798,11 @@ function TerminalInner() {
     const newTab: TerminalTab = {
       id: generateTabId(),
       label: `Terminal ${tabs.length + 1}`,
-      shell: 'cmd',
+      shell: defaultShell,
     };
     setTabs((prev) => [...prev, newTab]);
     setActiveTabId(newTab.id);
-  }, [tabs.length]);
+  }, [tabs.length, defaultShell]);
 
   const closeTab = useCallback(
     (tabId: string) => {
@@ -708,9 +818,16 @@ function TerminalInner() {
 
   const switchShellInTab = useCallback((tabId: string) => {
     setTabs((prev) =>
-      prev.map((tab) =>
-        tab.id === tabId ? { ...tab, shell: tab.shell === 'cmd' ? 'powershell' : 'cmd' } : tab,
-      ),
+      prev.map((tab) => {
+        if (tab.id !== tabId) return tab;
+        let nextShell: ShellType;
+        if (isWindows()) {
+          nextShell = tab.shell === 'cmd' ? 'powershell' : 'cmd';
+        } else {
+          nextShell = tab.shell === 'bash' ? 'sh' : 'bash';
+        }
+        return { ...tab, shell: nextShell };
+      }),
     );
   }, []);
 
@@ -813,9 +930,8 @@ function TerminalInner() {
             onClick={() => switchShellInTab(activeTab.id)}
             style={{
               marginLeft: 'auto',
-              background:
-                activeTab.shell === 'cmd' ? 'rgba(34,197,94,0.15)' : 'rgba(59,130,246,0.15)',
-              border: `1px solid ${activeTab.shell === 'cmd' ? 'rgba(34,197,94,0.3)' : 'rgba(59,130,246,0.3)'}`,
+              background: `${SHELL_CONFIGS[activeTab.shell].color}26`,
+              border: `1px solid ${SHELL_CONFIGS[activeTab.shell].color}4d`,
               borderRadius: '4px',
               padding: '2px 10px',
               color: SHELL_CONFIGS[activeTab.shell].color,

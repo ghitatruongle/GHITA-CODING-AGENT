@@ -17,6 +17,7 @@
   "dependencies": {
     "@babel/runtime": "^7.29.2",
     "@ghita/shared": "workspace:*",
+    "@notifee/react-native": "^9.1.8",
     "@react-native-async-storage/async-storage": "^2.1.0",
     "@react-navigation/native": "^6.1.18",
     "@react-navigation/native-stack": "^6.11.0",

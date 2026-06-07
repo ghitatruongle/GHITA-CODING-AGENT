@@ -590,6 +590,16 @@ const PTY_SESSION_MAX_IDLE_MS = 900_000;
 /** Periodic cleanup interval reference so we can unref() it */
 let ptyCleanupInterval = null;
 
+/** Grace-period timers for PTY sessions whose socket just disconnected.
+ *  Key: PTY session id, Value: setTimeout reference.
+ *  If the client reconnects within the grace window, the timer is cancelled
+ *  and the session is reclaimed instead of killed. */
+const pendingPtyCleanup = new Map();
+
+/** How long (ms) to wait after socket disconnect before killing PTY sessions.
+ *  This gives Socket.IO auto-reconnect and Vite HMR reload time to recover. */
+const PTY_DISCONNECT_GRACE_MS = 6000;
+
 function startPtyCleanupInterval() {
   if (ptyCleanupInterval) return;
   ptyCleanupInterval = setInterval(() => {
@@ -1575,6 +1585,10 @@ ${result.output}`
     if (!id) return;
 
     // Clean up existing session with the same id if any
+    if (pendingPtyCleanup.has(id)) {
+      clearTimeout(pendingPtyCleanup.get(id));
+      pendingPtyCleanup.delete(id);
+    }
     if (terminalSessions.has(id)) {
       const existing = terminalSessions.get(id);
       try {
@@ -1633,6 +1647,11 @@ ${result.output}`
 
     // ── Filter #6: Skip empty / non-string input at server level ──
     if (!inputData || typeof inputData !== 'string') return;
+
+    // ── Filter #7: Skip xterm.js focus in/out events (\x1b[I, \x1b[O) ──
+    // These are browser focus notifications, not real user input.
+    // Forwarding them to the PTY causes noise and unnecessary logging.
+    if (inputData === '\x1b[I' || inputData === '\x1b[O') return;
 
     log(`PTY Input [${id}]: ${JSON.stringify(inputData)}`);
     const session = terminalSessions.get(id);
@@ -1695,13 +1714,27 @@ ${result.output}`
   });
 
   socket.on('disconnect', () => {
+    // ── Grace-period cleanup: don't kill PTY sessions immediately. ──
+    // Socket.IO auto-reconnect or Vite HMR may bring the client back within
+    // a few seconds.  Schedule the kill on a timer that can be cancelled.
     for (const [id, session] of terminalSessions.entries()) {
       if (session.socketId === socket.id) {
-        try {
-          session.ptyProcess.kill();
-        } catch (err) {}
-        terminalSessions.delete(id);
-        log(`Cleaned up PTY session ${id} due to socket disconnect`);
+        // Cancel any previously scheduled timer for this session (idempotent)
+        if (pendingPtyCleanup.has(id)) {
+          clearTimeout(pendingPtyCleanup.get(id));
+        }
+        const timer = setTimeout(() => {
+          pendingPtyCleanup.delete(id);
+          const sess = terminalSessions.get(id);
+          if (sess) {
+            try { sess.ptyProcess.kill(); } catch (err) {}
+            terminalSessions.delete(id);
+            log(`Cleaned up PTY session ${id} after grace period (${PTY_DISCONNECT_GRACE_MS / 1000}s)`);
+          }
+        }, PTY_DISCONNECT_GRACE_MS);
+        // Don't block Node exit on this timer
+        if (typeof timer.unref === 'function') timer.unref();
+        pendingPtyCleanup.set(id, timer);
       }
     }
   });
@@ -1709,6 +1742,24 @@ ${result.output}`
 
 io.on('connection', (socket) => {
   log(`New connection: ${socket.id}`);
+
+  // ── Cancel all pending PTY grace-period timers on new connection. ──
+  // A reconnecting desktop client invalidates the pending cleanup of
+  // sessions from the previous (now-dead) socket.  Orphaned sessions
+  // that the client does NOT reclaim will be swept by the periodic
+  // idle-cleanup interval (15 min timeout).
+  for (const [id, timer] of pendingPtyCleanup.entries()) {
+    clearTimeout(timer);
+    pendingPtyCleanup.delete(id);
+    // Re-bind the orphaned session so a future disconnect can track it
+    const sess = terminalSessions.get(id);
+    if (sess) {
+      sess.socketId = socket.id;
+      sess.lastActivity = Date.now();
+      log(`Reclaimed orphaned PTY session ${id} for new socket`);
+    }
+  }
+
   if (isTrustedDesktopSocket(socket)) {
     socket.join('desktop');
   }
@@ -1961,6 +2012,12 @@ function shutdown(signal) {
     } catch (err) {}
   }
   terminalSessions.clear();
+
+  // Cancel all pending grace-period timers
+  for (const [id, timer] of pendingPtyCleanup.entries()) {
+    clearTimeout(timer);
+    pendingPtyCleanup.delete(id);
+  }
 
   // Clear the PTY idle-cleanup interval
   if (ptyCleanupInterval) {

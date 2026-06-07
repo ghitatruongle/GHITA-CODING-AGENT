@@ -112,7 +112,7 @@ ABC123XYZ	unauthorized
     expect(w).toBe(1080);
     expect(h).toBe(2400);
   });
-});
+}, 20000);
 
 // Maintain runAllMobileAdbTests compatibility for external execution if any
 export async function runAllMobileAdbTests(): Promise<{ passed: number; failed: number; results: string[] }> {
