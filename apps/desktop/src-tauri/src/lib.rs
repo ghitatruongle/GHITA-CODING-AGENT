@@ -9,6 +9,9 @@ use tokio::sync::RwLock;
 mod proxy;
 use proxy::{ProxyState, start_proxy_server, stop_proxy_server, get_proxy_port};
 
+mod computer_use;
+use computer_use::ComputerUseState;
+
 // --- Server sidecar state ---
 struct ServerState {
     child: Option<std::process::Child>,
@@ -384,6 +387,7 @@ pub fn run() {
                 .expect("Failed to create HTTP client"),
         }))
         .manage(Arc::new(RwLock::new(ProxyState::default())))
+        .manage(ComputerUseState::new())
         .invoke_handler(tauri::generate_handler![
             greet,
             check_update,
@@ -404,6 +408,14 @@ pub fn run() {
             get_sandbox_containers,
             get_sandbox_summary,
             get_sandbox_logs,
+            // Phase 1: Native computer-use (Rust screenshot + input + resize)
+            computer_use::computer_screenshot,
+            computer_use::computer_get_screen_size,
+            computer_use::computer_move_mouse,
+            computer_use::computer_click,
+            computer_use::computer_type_text,
+            computer_use::computer_press_key,
+            computer_use::computer_health_check,
         ])
         .setup(|app| {
             // Get splash and main windows — gracefully handle if not found

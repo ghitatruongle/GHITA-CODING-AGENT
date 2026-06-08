@@ -33,7 +33,7 @@ import type {
 } from './types.js';
 import type { ScreenCapture, ScreenSize } from '../index.js';
 import { ActionParser } from '../actionParser.js';
-import { buildScreenshotBundle, mockScreenshot } from './nutjs.js';
+import { buildScreenshotBundle, mockScreenshot } from './utils.js';
 
 export const DEFAULT_MAX_ITERATIONS = 25;
 export const DEFAULT_ITERATION_TIMEOUT_MS = 60_000;
@@ -215,20 +215,39 @@ export async function runReActLoop(options: ReActOptions): Promise<ReActRunResul
   const steps: ReActStep[] = [];
   let stopReason: ReActStopReason = 'completed';
 
+  // Track the loop guard timer so we can clean it up on normal completion.
+  let loopGuardTimer: ReturnType<typeof setTimeout> | undefined;
+  let loopGuardAbortCleanup: (() => void) | undefined;
+
   const loopGuard = new Promise<never>((_, reject) => {
-    const timer = setTimeout(
+    loopGuardTimer = setTimeout(
       () => reject(new Error(`ReAct loop timed out after ${loopTimeoutMs}ms`)),
       loopTimeoutMs,
     );
     if (signal) {
       const onAbort = () => {
-        clearTimeout(timer);
+        clearTimeout(loopGuardTimer);
         reject(new Error('ReAct loop aborted by signal'));
       };
       if (signal.aborted) onAbort();
-      else signal.addEventListener('abort', onAbort, { once: true });
+      else {
+        signal.addEventListener('abort', onAbort, { once: true });
+        loopGuardAbortCleanup = () => signal.removeEventListener('abort', onAbort);
+      }
     }
   });
+  // Suppress unhandled rejection — the timer is always cleaned up in the
+  // finally block below, so the reject callback will never fire after cleanup.
+  loopGuard.catch(() => {});
+
+  const cleanupLoopGuard = () => {
+    if (loopGuardTimer !== undefined) {
+      clearTimeout(loopGuardTimer);
+      loopGuardTimer = undefined;
+    }
+    loopGuardAbortCleanup?.();
+    loopGuardAbortCleanup = undefined;
+  };
 
   const iteration = async (i: number): Promise<void> => {
     if (Date.now() - startedAt > loopTimeoutMs) {
@@ -354,12 +373,10 @@ export async function runReActLoop(options: ReActOptions): Promise<ReActRunResul
       error: (e as Error).message,
       durationMs: 0,
     });
+  } finally {
+    // Always clean up the loop guard timer to prevent 5-minute dangling timers.
+    cleanupLoopGuard();
   }
-
-  // Race against the loop guard so the timer is cleared on success.
-  await Promise.race([loopGuard, Promise.resolve()]).catch(() => {
-    stopReason = 'error';
-  });
 
   return {
     steps,

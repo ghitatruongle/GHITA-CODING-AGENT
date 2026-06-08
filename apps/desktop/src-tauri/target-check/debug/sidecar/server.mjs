@@ -15,7 +15,7 @@ import { execSync } from 'node:child_process';
 import { GrpcServer, Orchestrator, ConfigLoader, RalphLoopManager, SecurityGuard } from '@ghita/ai-engine';
 import { createNodeSkillRegistry } from '@ghita/skills/node';
 import { createComputerUseSkills, ComputerUseController } from '@ghita/computer-use';
-import { createNutJsAdapter } from '@ghita/computer-use/node';
+import { createTauriAdapter } from '@ghita/computer-use/node';
 import { createBrowserControlSkills, BrowserController } from '@ghita/browser-control';
 import { createPlaywrightAdapter } from '@ghita/browser-control/node';
 import { createReActAgent, AIMessage } from '@ghita/agents';
@@ -674,10 +674,10 @@ async function getOrCreateNodeRegistry() {
   const registry = createNodeSkillRegistry();
   
   try {
-    const nutAdapter = await createNutJsAdapter();
-    computerController = new ComputerUseController(nutAdapter);
+    const tauriAdapter = await createTauriAdapter();
+    computerController = new ComputerUseController(tauriAdapter);
     registry.registerMany(createComputerUseSkills(computerController));
-    log("Loaded computer-use host OS automation adapter.");
+    log("Loaded computer-use Tauri native adapter.");
   } catch (e) {
     log(`Failed to load computer-use node adapter: ${e.message}`);
     computerController = new ComputerUseController();

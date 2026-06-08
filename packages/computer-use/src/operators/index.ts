@@ -1,25 +1,21 @@
 // ==============================================================================
-// GHITA CODING AGENT - Operator Barrel (Phase 18: Screenshot Pipeline)
+// GHITA CODING AGENT - Operator Barrel (Phase 1 Rust Rewrite)
 // ==============================================================================
 
 export * from './types.js';
 export {
   MAX_EDGE_DEFAULT,
-  type BackendProbe,
-  type CaptureOptions,
-  type ScreenshotBackend,
-  captureScreen,
-  detectScreenshotBackend,
-  finalizeCapture,
+  buildScreenshotBundle,
   mockScreenshot,
   resizeIfNeeded,
   undoDpiScale,
-} from './screenshot.js';
+} from './utils.js';
 export {
-  buildScreenshotBundle,
-  NutJSOperator,
-  tryCreateNutJSOperator,
-} from './nutjs.js';
+  TauriOperator,
+  createTauriAdapter,
+  isTauriAvailable,
+  tryCreateTauriOperator,
+} from './tauri.js';
 export {
   DEFAULT_ITERATION_TIMEOUT_MS,
   DEFAULT_LOOP_TIMEOUT_MS,

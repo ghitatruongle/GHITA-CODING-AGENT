@@ -204,6 +204,7 @@ pnpm dev:android
 | Update 0.0.2 beta2 | 22/05/2026 | Sandboxed workspace tools (CRUD, pure-Node grep search, block traversal), Socket.IO live telemetry and terminal command approval consent gate, integration testing and compilation                                                                                                        |
 | Update 0.0.2       | 26/05/2026 | Added 6 breakthrough features: SCTI trajectory self-healing, AST-Lock method protection, Live Telepresence stream, Rust memory addon, AHPI performance heatmap, DebateEngine reviewer panel, and /deep-research command                                                                   |
 | Update 0.0.3 beta1 | 02/06/2026 | Real Terminal PTY (node-pty sidecar), Playwright-Stealth multi-tab browser, Agentic Observe & Act layer, Sandbox guardrails, VS Code extension WebSocket sync, Monaco linter diagnostics & diff view, Mobile touch remote control, Embedded Tauri webview, E2E integration & CI benchmark |
+| Update 0.0.3       | 07-08/06/2026 | Native AI agent runtime, skills & memory graph, tool-calling engine, performance layer. Critical security hardening (shell injection, Tauri permissions). Production-ready debug→test→publish CI pipeline. |
 
 ---
 

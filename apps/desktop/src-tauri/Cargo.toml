@@ -30,3 +30,9 @@ hyper-util = { version = "0.1", features = ["tokio", "http1", "http2", "server"]
 http-body-util = "0.1"
 bytes = "1"
 futures-util = "0.3"
+
+# Phase 1: Computer-Use Rust backend (native screenshot + input + image resize)
+screenshots = "0.8"
+enigo = "0.2"
+image = "0.24"
+base64 = "0.22"
