@@ -1,36 +1,13 @@
 // ==============================================================================
-// GHITA CODING AGENT - Operators / Screenshot Pipeline unit tests (Phase 18)
+// GHITA CODING AGENT - Operators / Screenshot Pipeline unit tests (Phase 1 Rust Rewrite)
 // ==============================================================================
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-
-vi.mock('@nut-tree/nut-js', () => {
-  return {
-    screen: {
-      width: 1920,
-      height: 1080,
-    },
-    mouse: {
-      setPosition: vi.fn(),
-      click: vi.fn(),
-    },
-    keyboard: {
-      type: vi.fn(),
-      pressKey: vi.fn(),
-    },
-    Button: {
-      LEFT: 0,
-      RIGHT: 1,
-      MIDDLE: 2,
-    },
-  };
-});
 
 import {
   buildScreenshotBundle,
   mockScreenshot,
   resizeIfNeeded,
-  tryCreateNutJSOperator,
   undoDpiScale,
   runReActLoop,
   type Operator,
@@ -175,14 +152,6 @@ describe('buildScreenshotBundle', () => {
     const bundle = await buildScreenshotBundle(op, { maxEdge: 1920 });
     expect(bundle.resize.needsResize).toBe(true);
     expect(bundle.resize.target).toEqual({ width: 1920, height: 1080 });
-  });
-});
-
-describe('tryCreateNutJSOperator', () => {
-  it('returns null when the native module is not available', async () => {
-    // In CI / sandbox the import will fail; this is the realistic path.
-    const op = await tryCreateNutJSOperator();
-    expect(op === null || typeof op.screenshot === 'function').toBe(true);
   });
 });
 

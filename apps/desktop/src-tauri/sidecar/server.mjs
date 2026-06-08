@@ -777,11 +777,11 @@ async function getOrCreateNodeRegistry() {
   const registry = createNodeSkillRegistry();
 
   try {
-    const { createNutJsAdapter } = await loadComputerUseNode();
-    const nutAdapter = await createNutJsAdapter();
-    computerController = new ComputerUseController(nutAdapter);
+    const { createTauriAdapter } = await loadComputerUseNode();
+    const tauriAdapter = await createTauriAdapter();
+    computerController = new ComputerUseController(tauriAdapter);
     registry.registerMany(createComputerUseSkills(computerController));
-    log("Loaded computer-use host OS automation adapter.");
+    log("Loaded computer-use Tauri native adapter.");
   } catch (e) {
     log(`Failed to load computer-use node adapter: ${e.message}`);
     computerController = new ComputerUseController();

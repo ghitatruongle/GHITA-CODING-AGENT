@@ -1,5 +1,5 @@
 import { createNodeSkillRegistry } from '../packages/skills/src/node.js';
-import { createNutJsAdapter } from '../packages/computer-use/src/node.js';
+import { createTauriAdapter } from '../packages/computer-use/src/node.js';
 import { createPlaywrightAdapter } from '../packages/browser-control/src/node.js';
 
 async function main() {
@@ -38,13 +38,13 @@ async function main() {
   }
   console.log('');
 
-  // 3. Nut.js Wrapper
+  // 3. Tauri Native Wrapper
   try {
-    const nutAdapter = await createNutJsAdapter();
-    const size = await nutAdapter.getScreenSize();
-    console.log(`[Nut.js] Screen Size: ${size.width}x${size.height} -> SUCCESS`);
+    const tauriAdapter = await createTauriAdapter();
+    const size = await tauriAdapter.getScreenSize();
+    console.log(`[Tauri] Screen Size: ${size.width}x${size.height} -> SUCCESS`);
   } catch (e) {
-    console.error('[Nut.js] ERROR:', e);
+    console.error('[Tauri] ERROR:', e);
   }
   console.log('');
 
