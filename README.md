@@ -402,6 +402,7 @@ pnpm dev:android
 | Cập nhật 0.0.2 beta2 | 22/05/2026 | Các công cụ không gian làm việc an toàn (CRUD, tìm kiếm grep thuần Node, duyệt khối), Kết nối Socket.IO trực tiếp và cơ chế phê duyệt lệnh terminal, kiểm thử tích hợp và biên dịch                                                                                                 |
 | Cập nhật 0.0.2       | 26/05/2026 | Thêm 6 tính năng đột phá: Tự chữa lành quỹ đạo SCTI, Bảo vệ phương thức AST-Lock, Stream hiện diện trực tiếp, Addon bộ nhớ Rust, Bản đồ nhiệt hiệu năng AHPI, Bảng đánh giá tranh biện DebateEngine và lệnh /deep-research                                                          |
 | Cập nhật 0.0.3 beta1 | 02/06/2026 | Terminal PTY thật (node-pty sidecar), Trình duyệt Playwright-Stealth đa thẻ, Lớp Agentic Observe & Act, Bảo vệ sandbox, VS Code extension đồng bộ WebSocket, Monaco chẩn đoán linter & diff view, Mobile điều khiển cảm ứng từ xa, Tauri webview nhúng, Tích hợp E2E & CI benchmark |
+| Cập nhật 0.0.3       | 07-08/06/2026 | Runtime AI agent gốc, đồ thị kỹ năng & bộ nhớ, công cụ gọi tool, lớp hiệu năng. Tăng cường bảo mật quan trọng (shell injection, quyền Tauri). Pipeline CI debug→test→publish sẵn sàng production. |
 
 ---
 
@@ -599,6 +600,7 @@ pnpm dev:android
 | 更新 0.0.2 beta2 | 22/05/2026 | 安全的工作区工具(CRUD、纯 Node grep 搜索、区块遍历)、Socket.IO 实时遥测与终端命令审批同意机制、集成测试与编译                                                                                                                                |
 | 更新 0.0.2       | 26/05/2026 | 新增 6 项突破性功能:SCTI 轨迹自愈、AST-Lock 方法保护、实时远程呈现流、Rust 内存插件、AHPI 性能热力图、DebateEngine 评审面板以及 /deep-research 命令                                                                                          |
 | 更新 0.0.3 beta1 | 02/06/2026 | 真实终端 PTY(node-pty sidecar)、Playwright-Stealth 多标签页浏览器、Agentic Observe & Act 层、Sandbox 安全护栏、VS Code 扩展 WebSocket 同步、Monaco linter 诊断与 diff 视图、移动端触摸远程控制、嵌入式 Tauri webview、E2E 集成与 CI 基准测试 |
+| 更新 0.0.3       | 07-08/06/2026 | 原生 AI 代理运行时、技能与记忆图谱、工具调用引擎、性能层。关键安全加固(shell 注入、Tauri 权限)。生产就绪的 debug→test→publish CI 流水线。 |
 
 ---
 
