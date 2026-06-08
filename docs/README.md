@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA Documentation Site
-// ==============================================================================
-
 # GHITA Documentation
 
-Đây là Docusaurus site cho GHITA CODING AGENT (v0.0.3).
+This is the Docusaurus documentation site for GHITA CODING AGENT (v0.0.3).
 
 ## Develop
 
@@ -13,7 +9,7 @@ pnpm install
 pnpm start
 ```
 
-Site mở ở http://localhost:3000.
+Site opens at http://localhost:3000.
 
 ## Build
 
@@ -21,13 +17,13 @@ Site mở ở http://localhost:3000.
 pnpm build
 ```
 
-Output ở `build/`.
+Output goes to `build/`.
 
-## Cấu trúc
+## Structure
 
 ```
 docs/
-├── docusaurus.config.ts   # Cấu hình chính
+├── docusaurus.config.ts   # Main configuration
 ├── sidebars.ts            # Sidebar definitions
 ├── package.json
 ├── tsconfig.json
@@ -45,9 +41,9 @@ docs/
 └── README.md
 ```
 
-## Thêm page mới
+## Adding a New Page
 
-1. Tạo `docs/<section>/<page>.md` với frontmatter:
+1. Create `docs/<section>/<page>.md` with frontmatter:
 
 ```markdown
 ---
@@ -62,7 +58,7 @@ sidebar_position: 1
 Content...
 ```
 
-2. Thêm vào `sidebars.ts` nếu cần explicit registration.
+2. Add to `sidebars.ts` if explicit registration is needed.
 
 ## Deploy
 
@@ -72,7 +68,7 @@ Build static files:
 pnpm build
 ```
 
-Deploy `build/` lên:
+Deploy `build/` to:
 - Vercel: `vercel deploy --prebuilt`
-- Netlify: drag `build/` vào dashboard
-- GitHub Pages: copy `build/` vào `gh-pages` branch
+- Netlify: drag `build/` into dashboard
+- GitHub Pages: copy `build/` to `gh-pages` branch
