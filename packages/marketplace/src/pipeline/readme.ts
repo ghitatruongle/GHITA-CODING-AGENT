@@ -24,7 +24,9 @@ export class ReadmeGenerator {
     lines.push('');
 
     if (options.badges) {
-      lines.push(`![Version](https://img.shields.io/badge/version-${version}-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![GHITA](https://img.shields.io/badge/ghita-skill-purple)`);
+      lines.push(
+        `![Version](https://img.shields.io/badge/version-${version}-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![GHITA](https://img.shields.io/badge/ghita-skill-purple)`,
+      );
       lines.push('');
     }
 
@@ -41,7 +43,7 @@ export class ReadmeGenerator {
       lines.push('## Installation');
       lines.push('');
       lines.push('```bash');
-      lines.push('ghita skills install @ghita/skills/' + this.slug(skillId));
+      lines.push(`ghita skills install @ghita/skills/${this.slug(skillId)}`);
       lines.push('```');
       lines.push('');
     }

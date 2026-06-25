@@ -175,7 +175,10 @@ export class SearchEngine {
     }
 
     // 5. Fuzzy / camelCase match
-    const camelParts = pattern.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().split(/\s+/);
+    const camelParts = pattern
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      .toLowerCase()
+      .split(/\s+/);
     if (camelParts.length > 1) {
       for (const node of this.nodes) {
         if (!seen.has(node.id) && this.passesFilters(node, kindFilter, filePrefix)) {

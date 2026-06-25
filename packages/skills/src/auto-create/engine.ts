@@ -144,11 +144,11 @@ export class SkillAutoCreator {
    * Tìm kiếm các skill tương tự để tránh trùng lặp
    */
   findSimilarSkills(candidate: SkillCandidate, existingSkills: SkillTemplate[]): SkillTemplate[] {
-    const queryTokens = this.tokenize(candidate.name + ' ' + candidate.description);
+    const queryTokens = this.tokenize(`${candidate.name  } ${  candidate.description}`);
 
     return existingSkills.filter((skill) => {
       if (skill.category !== candidate.category) return false;
-      const skillTokens = this.tokenize(skill.name + ' ' + skill.description);
+      const skillTokens = this.tokenize(`${skill.name  } ${  skill.description}`);
 
       let matchCount = 0;
       for (const token of queryTokens) {

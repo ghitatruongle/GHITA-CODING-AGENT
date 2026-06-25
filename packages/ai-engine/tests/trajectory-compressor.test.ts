@@ -137,7 +137,12 @@ describe('TrajectoryCompressor', () => {
     it('10. compression reduces message count', () => {
       const messages: ChatMessage[] = [];
       for (let i = 0; i < 50; i++) {
-        messages.push(msg('user', `This is message number ${i} with some padding text to make it longer`.repeat(3)));
+        messages.push(
+          msg(
+            'user',
+            `This is message number ${i} with some padding text to make it longer`.repeat(3),
+          ),
+        );
         messages.push(msg('assistant', `Response to message ${i} with explanation`.repeat(3)));
       }
       const result = comp.compress(messages);
@@ -162,9 +167,7 @@ describe('TrajectoryCompressor', () => {
     });
 
     it('12. system messages preserved', () => {
-      const messages: ChatMessage[] = [
-        msg('system', 'You are an expert developer'),
-      ];
+      const messages: ChatMessage[] = [msg('system', 'You are an expert developer')];
       for (let i = 0; i < 30; i++) {
         messages.push(msg('user', `filler message ${i} that should be compressed eventually`));
       }
@@ -259,7 +262,9 @@ describe('TrajectoryCompressor', () => {
       messages.push(msg('user', 'r3'));
 
       const result = await comp.compressAsync(messages, async () => 'compressed summary');
-      const sysMsgs = result.messages.filter((m) => m.role === 'system' && m.content.includes('Trajectory Summary'));
+      const sysMsgs = result.messages.filter(
+        (m) => m.role === 'system' && m.content.includes('Trajectory Summary'),
+      );
       expect(sysMsgs.length).toBe(1);
     });
   });

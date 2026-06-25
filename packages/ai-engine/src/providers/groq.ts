@@ -6,12 +6,7 @@
 // ==============================================================================
 
 import type { AIStreamChunk } from '@ghita/shared';
-import type {
-  ChatMessage,
-  ChatOptions,
-  ChatResponse,
-  ProviderConfig,
-} from '../types.js';
+import type { ChatMessage, ChatOptions, ChatResponse, ProviderConfig } from '../types.js';
 import { BaseProvider } from './base.js';
 import type { ProviderCapabilities } from './types.js';
 

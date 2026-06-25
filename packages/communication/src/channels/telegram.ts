@@ -1,4 +1,4 @@
-import type { ChannelAdapter } from '../channel-plugin-contract.js';
+import type { ChannelAdapter, ChannelHealthStatus } from '../channel-plugin-contract.js';
 import { safeFetch } from '../utils/security.js';
 
 interface GrammyBot {
@@ -106,7 +106,10 @@ export class TelegramAdapter implements ChannelAdapter {
   /**
    * Webhook handler helper (standard express-like req/res)
    */
-  async handleWebhook(req: { body?: { message?: unknown } }, res: { status: (code: number) => { send: (msg: string) => void } }): Promise<void> {
+  async handleWebhook(
+    req: { body?: { message?: unknown } },
+    res: { status: (code: number) => { send: (msg: string) => void } },
+  ): Promise<void> {
     const body = req.body;
     if (body && body.message && this.messageHandler) {
       try {
@@ -135,7 +138,10 @@ export class TelegramAdapter implements ChannelAdapter {
       const url = `https://api.telegram.org/bot${this.token}/getUpdates?offset=${this.offset}&timeout=30`;
       const response = await safeFetch(url);
       if (response.ok) {
-        const data = await response.json() as { ok?: boolean; result?: Array<{ update_id: number; message?: unknown }> };
+        const data = (await response.json()) as {
+          ok?: boolean;
+          result?: Array<{ update_id: number; message?: unknown }>;
+        };
         if (data.ok && Array.isArray(data.result)) {
           for (const update of data.result) {
             this.offset = Math.max(this.offset, update.update_id + 1);
@@ -266,5 +272,25 @@ export class TelegramAdapter implements ChannelAdapter {
         text,
       });
     }
+  }
+
+  /**
+   * Probe Telegram connection health by checking polling state or bot client.
+   */
+  async healthCheck(): Promise<ChannelHealthStatus> {
+    const start = Date.now();
+    const grammyConnected = this.grammyBot !== null;
+    const pollingConnected = this.isPolling && this.grammyBot === null;
+    const connected = grammyConnected || pollingConnected;
+
+    return {
+      channelId: this.id,
+      connected,
+      latencyMs: Date.now() - start,
+      message: connected
+        ? `Telegram ${grammyConnected ? 'grammY bot' : 'long-poll'} active`
+        : 'Telegram not connected',
+      checkedAt: Date.now(),
+    };
   }
 }

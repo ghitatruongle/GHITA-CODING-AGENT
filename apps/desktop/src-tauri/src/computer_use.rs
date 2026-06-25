@@ -228,15 +228,41 @@ fn resolve_button(name: &str) -> Button {
 /// Capture a screenshot of the primary display.
 ///
 /// * `max_edge`    — optional longest-edge clamp (default: no resize)
-/// * `mime_type`   — `"image/jpeg"` for JPEG, anything else → PNG
+/// * `mime_type`   — output format. Accepted values:
+///   * `"image/jpeg"` (or `"jpeg"`, `"jpg"`) → encode as JPEG
+///   * `"image/png"` (or `"png"`, anything else) → encode as PNG
+///   * `None`                                       → default PNG
 /// * `quality`     — JPEG quality 0.0–1.0 (default 0.85, ignored for PNG)
+///
+/// Bug #5: previously any value other than the literal string
+/// `"image/jpeg"` was treated as PNG, which meant an `undefined`
+/// (null) value, the string `"png"`, the string `"image/png"`, or
+/// an accidental typo would all silently switch the format. The
+/// new logic explicitly accepts the common aliases and returns a
+/// clear `Result` for obviously-invalid values.
 #[tauri::command]
 pub fn computer_screenshot(
     max_edge: Option<u32>,
     mime_type: Option<String>,
     quality: Option<f32>,
 ) -> Result<ScreenCapture, String> {
-    let jpeg = mime_type.as_deref() == Some("image/jpeg");
+    let jpeg = match mime_type.as_deref() {
+        None => false,
+        Some(s) => {
+            let s = s.trim().to_ascii_lowercase();
+            if s.is_empty() {
+                false
+            } else if s == "image/jpeg" || s == "jpeg" || s == "jpg" {
+                true
+            } else if s == "image/png" || s == "png" {
+                false
+            } else {
+                return Err(format!(
+                    "Unsupported mime_type: '{s}'. Use 'image/jpeg' or 'image/png'."
+                ));
+            }
+        }
+    };
     capture_screen_impl(max_edge, jpeg, quality)
 }
 
@@ -325,9 +351,12 @@ pub fn computer_press_key(
 /// are reachable.  Returns a JSON object consumable by the TypeScript
 /// `OperatorHealth` type.
 #[tauri::command]
-pub fn computer_health_check() -> Result<serde_json::Value, String> {
+pub fn computer_health_check(
+    state: tauri::State<'_, ComputerUseState>,
+) -> Result<serde_json::Value, String> {
     let screenshot_ok = Screen::all().is_ok();
-    let input_ok = Enigo::new(&Settings::default()).is_ok();
+    // Reuse existing Enigo instance instead of creating a new one each call
+    let input_ok = state.enigo.lock().is_ok();
 
     Ok(serde_json::json!({
         "ready": screenshot_ok && input_ok,

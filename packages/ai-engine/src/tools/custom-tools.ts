@@ -259,7 +259,7 @@ export function compileDeclarativeTool(spec: DeclarativeTool): CustomTool {
           throw new Error(`HTTP ${res.status} ${res.statusText}`);
         }
         const text = await res.text();
-        return text.length > 8000 ? text.substring(0, 8000) + '...[truncated]' : text;
+        return text.length > 8000 ? `${text.substring(0, 8000)  }...[truncated]` : text;
       };
       break;
     }
@@ -276,20 +276,21 @@ export function compileDeclarativeTool(spec: DeclarativeTool): CustomTool {
         }
         return new Promise<string>((resolve, reject) => {
           const proc = spawn(program, argv.slice(1), { shell: false });
+          const emitter = proc as unknown as NodeJS.EventEmitter;
           let stdout = '';
           let stderr = '';
           const timer = setTimeout(() => proc.kill(), shellHandler.timeoutMs ?? 30_000);
-          proc.stdout?.on('data', (d: Buffer) => (stdout += d.toString()));
-          proc.stderr?.on('data', (d: Buffer) => (stderr += d.toString()));
-          proc.on('close', (code: number | null) => {
-            clearTimeout(timer);
-            if (code === 0) resolve(stdout);
-            else reject(new Error(`Command failed (${code}): ${stderr}`));
-          });
-          proc.on('error', (err: Error) => {
-            clearTimeout(timer);
-            reject(err);
-          });
+          (proc.stdout as unknown as NodeJS.ReadableStream)?.on('data', (d: Buffer) => (stdout += d.toString()));
+          (proc.stderr as unknown as NodeJS.ReadableStream)?.on('data', (d: Buffer) => (stderr += d.toString()));
+          emitter.on('close', (code: number | null) => {
+              clearTimeout(timer);
+              if (code === 0) resolve(stdout);
+              else reject(new Error(`Command failed (${code}): ${stderr}`));
+            });
+            emitter.on('error', (err: Error) => {
+              clearTimeout(timer);
+              reject(err);
+            });
         });
       };
       break;

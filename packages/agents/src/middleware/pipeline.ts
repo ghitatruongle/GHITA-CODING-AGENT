@@ -95,6 +95,7 @@ export class MiddlewarePipeline {
     context: MiddlewareContext;
     shortCircuit?: BaseMessage;
   }> {
+    if (context.skipMiddlewares) return { context };
     let currentContext = { ...context };
 
     for (const mw of this.middlewares) {
@@ -134,6 +135,7 @@ export class MiddlewarePipeline {
     context: MiddlewareContext,
     stepResult: AgentStepResult,
   ): Promise<{ result: AgentStepResult; retry: boolean; retryReason?: string }> {
+    if (context.skipMiddlewares) return { result: stepResult, retry: false };
     const currentResult = { ...stepResult };
     let retry = false;
     let retryReason: string | undefined;
@@ -173,6 +175,7 @@ export class MiddlewarePipeline {
     args: Record<string, unknown>,
     context: MiddlewareContext,
   ): Promise<{ proceed: boolean; args: Record<string, unknown>; reason?: string }> {
+    if (context.skipMiddlewares) return { proceed: true, args };
     let currentArgs = { ...args };
 
     for (const mw of this.middlewares) {
@@ -207,6 +210,7 @@ export class MiddlewarePipeline {
 
   /** Run all postTool hooks */
   async runPostTool(toolName: string, result: string, context: MiddlewareContext): Promise<string> {
+    if (context.skipMiddlewares) return result;
     let currentResult = result;
 
     for (const mw of this.middlewares) {
@@ -234,6 +238,7 @@ export class MiddlewarePipeline {
 
   /** Run all onError hooks */
   async runOnError(error: Error, context: MiddlewareContext): Promise<{ retry: boolean }> {
+    if (context.skipMiddlewares) return { retry: false };
     let shouldRetry = false;
 
     for (const mw of this.middlewares) {
@@ -257,6 +262,7 @@ export class MiddlewarePipeline {
 
   /** Run all onComplete hooks */
   async runOnComplete(context: MiddlewareContext, finalResponse: BaseMessage): Promise<void> {
+    if (context.skipMiddlewares) return;
     for (const mw of this.middlewares) {
       if (!mw.onComplete) continue;
 

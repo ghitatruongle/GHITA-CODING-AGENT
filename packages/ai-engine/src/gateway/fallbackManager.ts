@@ -41,6 +41,11 @@ export const MODEL_PRICING: Record<string, { input: number; output: number }> = 
   'deepseek-chat': { input: 0.00014, output: 0.00028 },
   'deepseek-reasoner': { input: 0.00055, output: 0.00219 },
   'deepseek-r1': { input: 0.00055, output: 0.00219 },
+  'gpt-4': { input: 0.03, output: 0.06 },
+  'gpt-4-turbo': { input: 0.01, output: 0.03 },
+  'gpt-3.5-turbo': { input: 0.0005, output: 0.0015 },
+  'claude-3-opus': { input: 0.015, output: 0.075 },
+  'claude-3-haiku': { input: 0.00025, output: 0.00125 },
   ollama: { input: 0.0, output: 0.0 },
 };
 
@@ -275,11 +280,18 @@ budget:
   public calculateCost(model: string, promptTokens: number, completionTokens: number): number {
     // Lấy pricing theo model name gần nhất (loại bỏ provider prefix)
     const modelKey = model.split('/').pop()?.toLowerCase() || '';
-    const pricing = MODEL_PRICING[modelKey] ?? MODEL_PRICING['ollama'];
+    let pricing = MODEL_PRICING[modelKey];
+    if (!pricing) {
+      // Fallback to ollama pricing (free) for unknown models
+      console.warn(
+        `[FallbackManager] Unknown model "${modelKey}" – using ollama (free) pricing as fallback.`,
+      );
+      pricing = MODEL_PRICING['ollama'];
+    }
     if (!pricing) return 0;
 
-    const inputCost = (promptTokens / 1000) * (pricing?.input ?? 0);
-    const outputCost = (completionTokens / 1000) * (pricing?.output ?? 0);
+    const inputCost = (promptTokens / 1000) * (pricing.input ?? 0);
+    const outputCost = (completionTokens / 1000) * (pricing.output ?? 0);
     return inputCost + outputCost;
   }
 
@@ -340,6 +352,18 @@ budget:
     return row?.total ?? 0;
   }
 
+  public getBudgetConfig(): BudgetConfig {
+    return { ...this.budgetConfig };
+  }
+
+  public getSessionId(): string {
+    return this.sessionId;
+  }
+
+  public getFallbackChain(): string[] {
+    return [...this.fallbackChain];
+  }
+
   private checkBudgetAlerts(): void {
     const sessionCost = this.getSessionTotalCost();
     const dayCost = this.getDayTotalCost();
@@ -376,8 +400,21 @@ budget:
   // =========================================================================
   // API Call execution with Fallback Manager
   // =========================================================================
+  /**
+   * Execute a chat call against a list of fallback models with timeout
+   * and circuit-breaker health tracking.
+   *
+   * SECURITY (audit fix 2.10): each call is wrapped in an `AbortController`
+   * that is fired on timeout. The signal is forwarded to the call function
+   * so underlying HTTP clients (fetch / axios / SDKs) can cancel their
+   * request immediately instead of leaking in-flight sockets.
+   *
+   * The `callFn` parameter now accepts an optional second argument — the
+   * AbortSignal. Existing callers that ignore the second argument continue
+   * to work; new callers should propagate it to their HTTP client.
+   */
   public async executeWithFailover(
-    callFn: (model: string) => Promise<ChatResponse>,
+    callFn: (model: string, signal?: AbortSignal) => Promise<ChatResponse>,
     messages: ChatMessage[],
     options?: ChatOptions,
   ): Promise<ChatResponse> {
@@ -419,19 +456,27 @@ budget:
       if (!model) continue;
       const timeoutMs = this.modelTimeouts[model] || 15000;
 
-      let timer: NodeJS.Timeout | null = null;
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        timer = setTimeout(() => {
-          reject(
-            new Error(`[Timeout] API call to model ${model} exceeded limit of ${timeoutMs}ms`),
-          );
-        }, timeoutMs);
-      });
+      // Per-attempt AbortController — fired on timeout so the HTTP request
+      // is cancelled at the network layer instead of leaking a connection
+      // while the timeout race rejects the wrapping promise.
+      const ac = new AbortController();
+      const timeoutHandle = setTimeout(() => {
+        ac.abort(new Error(`[Timeout] API call to model ${model} exceeded limit of ${timeoutMs}ms`));
+      }, timeoutMs);
 
       try {
-        // Thực thi gọi API với cơ chế Timeout Race
-        const response = await Promise.race([callFn(model), timeoutPromise]);
-        if (timer) clearTimeout(timer);
+        // Thực thi gọi API với cơ chế Timeout Race + AbortSignal
+        const callPromise = Promise.race([
+          callFn(model, ac.signal),
+          new Promise<never>((_, reject) => {
+            // Also surface a Promise.race rejection so legacy callers that
+            // don't pass the signal still see a timeout error promptly.
+            ac.signal.addEventListener('abort', () => reject(ac.signal.reason), { once: true });
+          }),
+        ]);
+        const response = await callPromise;
+        clearTimeout(timeoutHandle);
+        ac.abort(); // release resources; the call already resolved
 
         // Thành công: Reset số lần lỗi liên tiếp và sức khỏe của model
         this.consecutiveModelFailures.set(model, 0);
@@ -460,7 +505,10 @@ budget:
 
         return response;
       } catch (err: unknown) {
-        if (timer) clearTimeout(timer);
+        // Always release the timeout handle and the AbortController so a
+        // hung HTTP request can't outlive the failover loop iteration.
+        clearTimeout(timeoutHandle);
+        if (!ac.signal.aborted) ac.abort();
         _lastError = err instanceof Error ? err : new Error(String(err));
 
         // Ghi nhận lỗi cho Circuit Breaker

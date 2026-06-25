@@ -2,7 +2,8 @@
 // GHITA CODING AGENT - Built-in Slash Commands
 // ==============================================================================
 
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import type { SlashCommand } from './registry.js';
 import { createGrillMeCommand } from '../engineering/docsGriller.js';
 import { SkillHub } from '../registry/hub.js';
@@ -16,6 +17,19 @@ import {
   GoogleProvider,
   OllamaProvider,
 } from '@ghita/ai-engine';
+
+const SAFE_PATH_RE = /^[a-zA-Z0-9_\-./\\@: ]+$/;
+
+function assertSafePath(p: string, label: string): void {
+  if (!SAFE_PATH_RE.test(p)) {
+    throw new Error(`Unsafe ${label}: contains disallowed characters`);
+  }
+}
+
+function readSafeFile(file: string): string {
+  assertSafePath(file, 'file path');
+  return readFileSync(file, 'utf8');
+}
 
 /**
  * Reconstruct abstract string from OpenAlex's inverted index format.
@@ -94,11 +108,11 @@ export function createBuiltinSlashCommands(): SlashCommand[] {
 
         let diff = '';
         try {
-          diff = execSync(`git diff ${target}`, { encoding: 'utf8', timeout: 5000 }).trim();
+          diff = execFileSync('git', ['diff', target], { encoding: 'utf8', timeout: 5000 }).trim();
           if (!diff) {
             diff =
-              'No changes found against target. Current status:\n' +
-              execSync('git status -s', { encoding: 'utf8' }).trim();
+              `No changes found against target. Current status:\n${ 
+              execFileSync('git', ['status', '-s'], { encoding: 'utf8' }).trim()}`;
           }
         } catch (err: unknown) {
           diff = `// Git diff failed: ${(err as Error).message}\nShowing mock code diff:\n+ export function profileFunction() {\n- export function wrap() {\n+ console.log("AHPI wrap");\n+ }`;
@@ -292,16 +306,23 @@ Provide a structured review including:
         const framework = (parsed?.flags['framework'] as string) ?? 'vitest';
         const path = parsed?.flags['path'] as string | undefined;
         const watch = parsed?.flags['watch'] === true;
-        let cmd =
-          framework === 'vitest'
-            ? 'npx vitest run'
-            : framework === 'jest'
-              ? 'npx jest'
-              : `${framework}`;
-        if (path) cmd += ` ${path}`;
-        if (watch) cmd += ' --watch';
+        const allowedFrameworks: Record<string, string[]> = {
+          vitest: ['npx', 'vitest', 'run'],
+          jest: ['npx', 'jest'],
+        };
+        const args = allowedFrameworks[framework];
+        if (!args) {
+          return `Unsupported test framework: "${framework}". Allowed: ${Object.keys(allowedFrameworks).join(', ')}`;
+        }
+        if (path) {
+          assertSafePath(path, 'test path');
+          args.push(path);
+        }
+        if (watch) args.push('--watch');
+        const [cmd, ...cmdArgs] = args;
+        if (!cmd) return 'No command resolved';
         try {
-          const result = execSync(cmd, { encoding: 'utf8', timeout: 60000 });
+          const result = execFileSync(cmd, cmdArgs, { encoding: 'utf8', timeout: 60000 });
           return `\`\`\`\n${result.slice(0, 3000)}\n\`\`\``;
         } catch (err: unknown) {
           const e = err as { stdout?: string; stderr?: string; message?: string };
@@ -333,9 +354,14 @@ Provide a structured review including:
       execute: async (_args, parsed) => {
         const path = parsed?.flags['path'] as string;
         if (!path) return 'Missing required flag: --path';
+        assertSafePath(path, 'format path');
         const formatter = (parsed?.flags['formatter'] as string) ?? 'prettier';
+        const allowedFormatters = ['prettier', 'black', 'rustfmt'];
+        if (!allowedFormatters.includes(formatter)) {
+          return `Unsupported formatter: ${formatter}. Allowed: ${allowedFormatters.join(', ')}`;
+        }
         try {
-          const result = execSync(`${formatter} --write ${path}`, {
+          const result = execFileSync(formatter, ['--write', path], {
             encoding: 'utf8',
             timeout: 30000,
           });
@@ -371,12 +397,17 @@ Provide a structured review including:
       execute: async (_args, parsed) => {
         const path = parsed?.flags['path'] as string;
         if (!path) return 'Missing required flag: --path';
+        assertSafePath(path, 'lint path');
         const linter = (parsed?.flags['linter'] as string) ?? 'eslint';
+        const allowedLinters = ['eslint', 'flake8', 'ruff'];
+        if (!allowedLinters.includes(linter)) {
+          return `Unsupported linter: ${linter}. Allowed: ${allowedLinters.join(', ')}`;
+        }
         const fix = parsed?.flags['fix'] === true;
-        let cmd = `${linter} ${path}`;
-        if (fix) cmd += ' --fix';
+        const args = [path];
+        if (fix) args.push('--fix');
         try {
-          const result = execSync(cmd, { encoding: 'utf8', timeout: 30000 });
+          const result = execFileSync(linter, args, { encoding: 'utf8', timeout: 30000 });
           return `Lint results for \`${path}\`:\n\`\`\`\n${result.slice(0, 3000)}\n\`\`\``;
         } catch (err: unknown) {
           const e = err as { stdout?: string; stderr?: string; message?: string };
@@ -403,7 +434,7 @@ Provide a structured review including:
         const file = parsed?.flags['file'] as string;
         if (!file) return 'Missing required flag: --file';
         try {
-          let content = execSync(`cat ${file}`, { encoding: 'utf8' });
+          let content = readSafeFile(file);
           const lines = parsed?.flags['lines'] as string | undefined;
           if (lines) {
             const parts = lines.split('-').map(Number);
@@ -450,7 +481,7 @@ Provide a structured review including:
         if (!file) return 'Missing required flag: --file';
         const refactorType = (parsed?.flags['type'] as string) ?? 'simplify';
         try {
-          const content = execSync(`cat ${file}`, { encoding: 'utf8' });
+          const content = readSafeFile(file);
           const model = await getUniversalModel();
           const resp = await model.chat(
             [
@@ -486,7 +517,7 @@ Provide a structured review including:
         const file = parsed?.flags['file'] as string;
         if (!file) return 'Missing required flag: --file';
         try {
-          const content = execSync(`cat ${file}`, { encoding: 'utf8' });
+          const content = readSafeFile(file);
           const model = await getUniversalModel();
           const resp = await model.chat(
             [
@@ -524,7 +555,7 @@ Provide a structured review including:
         if (!file) return 'Missing required flag: --file';
         const format = (parsed?.flags['format'] as string) ?? 'md';
         try {
-          const content = execSync(`cat ${file}`, { encoding: 'utf8' });
+          const content = readSafeFile(file);
           const model = await getUniversalModel();
           const resp = await model.chat(
             [
@@ -558,10 +589,11 @@ Provide a structured review including:
       ],
       execute: async (_args, parsed) => {
         const auditPath = (parsed?.flags['path'] as string) ?? '.';
+        assertSafePath(auditPath, 'audit path');
         const results: string[] = [];
         // npm audit
         try {
-          const npmResult = execSync('npm audit --json 2>/dev/null', {
+          const npmResult = execFileSync('npm', ['audit', '--json'], {
             encoding: 'utf8',
             timeout: 30000,
             cwd: auditPath,
@@ -572,12 +604,14 @@ Provide a structured review including:
         }
         // Check for common secrets in code
         try {
-          const grepResult = execSync(
-            `grep -rn "password\\|secret\\|api_key\\|token" ${auditPath}/src/ 2>/dev/null | head -20`,
+          const grepResult = execFileSync(
+            'grep',
+            ['-rn', 'password\\|secret\\|api_key\\|token', `${auditPath}/src/`],
             { encoding: 'utf8', timeout: 10000 },
           );
-          if (grepResult.trim()) {
-            results.push(`Potential secrets found:\n\`\`\`\n${grepResult}\n\`\`\``);
+          const lines = grepResult.trim().split('\n').slice(0, 20).join('\n');
+          if (lines) {
+            results.push(`Potential secrets found:\n\`\`\`\n${lines}\n\`\`\``);
           }
         } catch {
           /* no matches or grep not available */
@@ -601,12 +635,11 @@ Provide a structured review including:
       ],
       execute: async (_args, parsed) => {
         const analysisType = (parsed?.flags['type'] as string) ?? 'outdated';
+        const allowedTypes = ['outdated', 'tree'];
+        const type = allowedTypes.includes(analysisType) ? analysisType : 'outdated';
         try {
-          let cmd: string;
-          if (analysisType === 'outdated') cmd = 'npm outdated 2>&1';
-          else if (analysisType === 'tree') cmd = 'npm ls --depth=1 2>&1';
-          else cmd = 'npm outdated 2>&1';
-          const result = execSync(cmd, { encoding: 'utf8', timeout: 30000 });
+          const args = type === 'tree' ? ['ls', '--depth=1'] : ['outdated'];
+          const result = execFileSync('npm', args, { encoding: 'utf8', timeout: 30000 });
           return `### Dependencies (${analysisType}):\n\`\`\`\n${result.slice(0, 3000)}\n\`\`\``;
         } catch (err: unknown) {
           const e = err as { stdout?: string; message?: string };
@@ -659,10 +692,11 @@ Provide a structured review including:
         const path = parsed?.flags['path'] as string | undefined;
         const iterations = parseInt((parsed?.flags['iterations'] as string) ?? '10', 10);
         if (!path) return 'Missing required flag: --path (benchmark script)';
+        assertSafePath(path, 'benchmark script');
         try {
           const start = Date.now();
           for (let i = 0; i < iterations; i++) {
-            execSync(`node ${path}`, { encoding: 'utf8', timeout: 30000 });
+            execFileSync('node', [path], { encoding: 'utf8', timeout: 30000 });
           }
           const elapsed = Date.now() - start;
           const avg = elapsed / iterations;

@@ -22,7 +22,7 @@ export class CustomProvider extends BaseProvider {
 
   async isReady(): Promise<boolean> {
     const needsNoKey = this.type === 'opencode-zen';
-    return !!this.config.baseUrl && (needsNoKey || this.keyManager.size > 0);
+    return Boolean(this.config.baseUrl) && (needsNoKey || this.keyManager.size > 0);
   }
 
   async chat(messages: ChatMessage[], options?: ChatOptions): Promise<ChatResponse> {
@@ -40,7 +40,11 @@ export class CustomProvider extends BaseProvider {
     }
 
     let signal = options?.signal;
-    if (!signal && typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+    if (
+      !signal &&
+      typeof AbortSignal !== 'undefined' &&
+      typeof AbortSignal.timeout === 'function'
+    ) {
       signal = AbortSignal.timeout(60000);
     }
 
@@ -58,8 +62,22 @@ export class CustomProvider extends BaseProvider {
     });
 
     if (!response.ok) {
-      this.reportKeyFailure(apiKey, response.status);
       const error = await response.text();
+      let statusToReport = response.status;
+      if (statusToReport === 401 || statusToReport === 403) {
+        const lower = error.toLowerCase();
+        if (
+          lower.includes('modelerror') ||
+          lower.includes('model error') ||
+          lower.includes('not supported') ||
+          lower.includes('unsupported') ||
+          lower.includes('not found') ||
+          lower.includes('invalid_model')
+        ) {
+          statusToReport = 500;
+        }
+      }
+      this.reportKeyFailure(apiKey, statusToReport);
       throw new Error(`Custom API error (${response.status}): ${error}`);
     }
 
@@ -99,7 +117,11 @@ export class CustomProvider extends BaseProvider {
     }
 
     let signal = options?.signal;
-    if (!signal && typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+    if (
+      !signal &&
+      typeof AbortSignal !== 'undefined' &&
+      typeof AbortSignal.timeout === 'function'
+    ) {
       signal = AbortSignal.timeout(60000);
     }
 
@@ -118,8 +140,22 @@ export class CustomProvider extends BaseProvider {
     });
 
     if (!response.ok) {
-      this.reportKeyFailure(apiKey, response.status);
       const error = await response.text();
+      let statusToReport = response.status;
+      if (statusToReport === 401 || statusToReport === 403) {
+        const lower = error.toLowerCase();
+        if (
+          lower.includes('modelerror') ||
+          lower.includes('model error') ||
+          lower.includes('not supported') ||
+          lower.includes('unsupported') ||
+          lower.includes('not found') ||
+          lower.includes('invalid_model')
+        ) {
+          statusToReport = 500;
+        }
+      }
+      this.reportKeyFailure(apiKey, statusToReport);
       throw new Error(`Custom API error (${response.status}): ${error}`);
     }
 

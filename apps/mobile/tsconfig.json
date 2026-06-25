@@ -16,7 +16,7 @@
     "declaration": false,
     "declarationMap": false,
     "sourceMap": true,
-    "types": ["node"],
+    "types": ["node", "jest"],
     "baseUrl": ".",
     "paths": {
       "@ghita/shared": ["../../packages/shared/src"],
@@ -24,5 +24,13 @@
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],
-  "exclude": ["node_modules", "android", "ios"]
+  "exclude": [
+    "node_modules",
+    "android",
+    "ios",
+    "src/**/__tests__/**",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "tests/**"
+  ]
 }

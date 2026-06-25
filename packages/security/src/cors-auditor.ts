@@ -33,7 +33,8 @@ export class CorsAuditor {
         category: 'cors',
         severity: 'critical',
         title: 'Wildcard origin with credentials',
-        description: 'Allowing credentials with `*` origin is forbidden by spec and creates CSRF risk.',
+        description:
+          'Allowing credentials with `*` origin is forbidden by spec and creates CSRF risk.',
         location,
         evidence: 'origins=["*"], credentials=true',
         remediation: 'Replace "*" with explicit origin allowlist when credentials=true.',
@@ -132,7 +133,8 @@ export class CorsAuditor {
           category: 'cors',
           severity: 'medium',
           title: `Subdomain wildcard: ${origin}`,
-          description: 'Wildcard subdomain allows any subdomain (including attacker-controlled if subdomain takeover).',
+          description:
+            'Wildcard subdomain allows any subdomain (including attacker-controlled if subdomain takeover).',
           location,
           evidence: `origins includes "${origin}"`,
           remediation: 'List explicit subdomains.',

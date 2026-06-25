@@ -169,7 +169,19 @@ export class AdvancedWorkflowEngine {
           throw new Error(`Circular dependency detected at step ${step.id}`);
         }
         inProgress.add(step.id);
+        try {
+          await runStep(step);
+        } finally {
+          // RESILIENCE (audit fix 2.4): always clear `inProgress` even on
+          // throw, otherwise a failed step leaves the marker in the set
+          // and the next retry run reports a spurious "Circular
+          // dependency detected" error. The original code only cleared
+          // inProgress inside the conditional-skip branch.
+          inProgress.delete(step.id);
+        }
+      };
 
+      const runStep = async (step: AdvancedWorkflowStep): Promise<void> => {
         for (const depId of step.dependsOn ?? []) {
           const depStep = this.steps.find((s) => s.id === depId);
           if (depStep) await tryStep(depStep);
@@ -183,7 +195,6 @@ export class AdvancedWorkflowEngine {
             this.stepResults[step.id] = { status: 'skipped', durationMs: 0 };
             await callbacks.onStepSkip?.(step.id, 'when() returned false');
             await callbacks.onStepFinish?.(step.id, 'skipped', undefined, 0);
-            inProgress.delete(step.id);
             executed.add(step.id);
             return;
           }
@@ -199,6 +210,8 @@ export class AdvancedWorkflowEngine {
           const stepStart = Date.now();
           const stepController = new AbortController();
           const onAbort = () => stepController.abort();
+          // Hoisted so `finally` can release the timer on every exit path.
+          let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
           overallController.signal.addEventListener('abort', onAbort, { once: true });
           await callbacks.onStepStart?.(step.id, attempt);
 
@@ -212,12 +225,17 @@ export class AdvancedWorkflowEngine {
             const value = timeoutMs
               ? await Promise.race([
                   runOnce,
-                  new Promise<never>((_, reject) =>
-                    setTimeout(() => {
+                  new Promise<never>((_, reject) => {
+                    // RESILIENCE (audit fix 2.3): keep a handle on the
+                    // timer so we can clear it once the step resolves
+                    // successfully OR fails. Previously the timer kept
+                    // running in the background and leaked CPU/RAM for
+                    // every step that finished before its timeout.
+                    timeoutHandle = setTimeout(() => {
                       stepController.abort();
                       reject(new Error(`step ${step.id} timed out after ${timeoutMs}ms`));
-                    }, timeoutMs),
-                  ),
+                    }, timeoutMs);
+                  }),
                 ])
               : await runOnce;
             state[step.id] = value;
@@ -243,11 +261,17 @@ export class AdvancedWorkflowEngine {
             await callbacks.onStepFinish?.(step.id, 'failed', undefined, dur);
             throw error;
           } finally {
+            // RESILIENCE (audit fix 2.3): always release the timer —
+            // whether the step succeeded, failed, or was retried — so
+            // the rejected Promise + setTimeout closure is GC-eligible.
+            if (timeoutHandle !== null) {
+              clearTimeout(timeoutHandle);
+              timeoutHandle = null;
+            }
             overallController.signal.removeEventListener('abort', onAbort);
           }
         }
 
-        inProgress.delete(step.id);
         executed.add(step.id);
         void lastError; // silence unused
       };

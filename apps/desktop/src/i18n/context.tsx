@@ -8,12 +8,14 @@ import { vi } from './vi';
 import { en } from './en';
 import { zh } from './zh';
 import { ru } from './ru';
+import { ja } from './ja';
+import { ko } from './ko';
 import type { TranslationKeys } from './types';
 
 type Translations = TranslationKeys;
 type TFunction = (key: string, params?: Record<string, string | number>) => string;
 
-const translations: Record<string, Translations> = { vi, en, zh, ru };
+const translations: Record<string, Translations> = { vi, en, zh, ru, ja, ko };
 
 const I18nContext = createContext<{ t: TFunction; lang: string }>({
   // BUG FIX #10: the previous default swallowed params entirely, so
@@ -35,16 +37,48 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const language = useAppStore((s) => s.language);
 
   const value = useMemo(() => {
-    const dict = translations[language] || translations.vi;
+    const dict = translations[language] || vi;
 
     const t: TFunction = (key, params) => {
       const parts = key.split('.');
-      let result: unknown = dict as unknown;
-      for (const part of parts) {
-        if (result != null && typeof result === 'object') {
-          result = (result as Record<string, unknown>)[part];
-        } else {
-          return key;
+
+      const resolveKey = (dictionary: Translations): unknown => {
+        let res: unknown = dictionary as unknown;
+        for (const part of parts) {
+          if (res != null && typeof res === 'object') {
+            res = (res as Record<string, unknown>)[part];
+          } else {
+            return undefined;
+          }
+        }
+        return res;
+      };
+
+      let result = resolveKey(dict);
+      if (result === undefined && language !== 'vi') {
+        result = resolveKey(vi);
+      }
+
+      if (result === undefined) {
+        return key;
+      }
+
+      // Support pluralization when { count: number } is passed
+      if (
+        params &&
+        typeof params.count === 'number' &&
+        result != null &&
+        typeof result === 'object'
+      ) {
+        const pluralRules = new Intl.PluralRules(language || 'vi');
+        const pluralForm = pluralRules.select(params.count);
+        const pluralKey = params.count === 0 ? 'zero' : pluralForm;
+        let pluralResult = (result as Record<string, unknown>)[pluralKey];
+        if (typeof pluralResult !== 'string') {
+          pluralResult = (result as Record<string, unknown>)['other'];
+        }
+        if (typeof pluralResult === 'string') {
+          result = pluralResult;
         }
       }
       if (typeof result !== 'string') return key;

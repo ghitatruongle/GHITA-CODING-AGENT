@@ -1,0 +1,49 @@
+# ─────────────────────────────────────────────────────────────
+# CODEOWNERS — requires review for each area
+# ─────────────────────────────────────────────────────────────
+
+# Global fallback: project owner reviews everything
+* @ghitatruongle
+
+# ── Apps ──────────────────────────────────────────────────
+/apps/desktop/          @ghitatruongle
+/apps/mobile/           @ghitatruongle
+/apps/vscode-extension/ @ghitatruongle
+
+# ── Core packages ─────────────────────────────────────────
+/packages/ai-engine/        @ghitatruongle
+/packages/agents/           @ghitatruongle
+/packages/skills/           @ghitatruongle
+/packages/shared/           @ghitatruongle
+/packages/communication/    @ghitatruongle
+/packages/memory/           @ghitatruongle
+
+# ── Infrastructure ────────────────────────────────────────
+/packages/computer-use/     @ghitatruongle
+/packages/browser-control/  @ghitatruongle
+/packages/voice/            @ghitatruongle
+/packages/code-graph/       @ghitatruongle
+/packages/gui/              @ghitatruongle
+/packages/i18n/             @ghitatruongle
+/packages/a11y/             @ghitatruongle
+
+# ── Security & Compliance ─────────────────────────────────
+/packages/security/         @ghitatruongle
+/packages/monitoring/       @ghitatruongle
+/packages/quotas/           @ghitatruongle
+
+# ── Marketplace & Plugins ─────────────────────────────────
+/packages/marketplace/           @ghitatruongle
+/packages/migration/             @ghitatruongle
+/packages/integration/           @ghitatruongle
+/packages/relay-server/          @ghitatruongle
+/packages/mobile-companion/      @ghitatruongle
+
+# ── CI/CD & Config ────────────────────────────────────────
+/.github/               @ghitatruongle
+/.husky/                @ghitatruongle
+
+# ── Docs ──────────────────────────────────────────────────
+/docs/                  @ghitatruongle
+/README.md              @ghitatruongle
+/CONTRIBUTING.md        @ghitatruongle

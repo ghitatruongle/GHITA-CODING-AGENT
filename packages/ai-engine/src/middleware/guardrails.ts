@@ -3,7 +3,7 @@
 // Phase 3.3: Content filter, PII detector, secret detector, rate limiter, audit logger
 // ==============================================================================
 
-import type { AIProviderType } from '@ghita/shared';
+import type { AIProviderType, AIStreamChunk } from '@ghita/shared';
 import type { ChatMiddleware, ChatStreamMiddleware } from '../utils/middleware.js';
 import type { ChatMessage } from '../types.js';
 
@@ -238,14 +238,169 @@ export function createPIIDetectorStreamMiddleware(config: PIIDetectorConfig): Ch
     });
     const gen = await next(maskedMessages);
     return (async function* () {
+      // SECURITY (audit fix 2.7): use a sliding window buffer that retains
+      // enough trailing text to catch PII patterns split across chunk
+      // boundaries. The previous implementation only kept a 50-char TAIL_DELAY,
+      // which is shorter than a typical email address (~254 chars max) and
+      // leaked PII whenever a match straddled the boundary.
+      //
+      // Window size = max plausible PII match length across all patterns
+      // (email RFC 5321 = 254, plus a small safety margin).
+      const WINDOW_SIZE = 320;
+      // Hard cap on the buffer to prevent unbounded growth if upstream
+      // streams never terminate.
+      const MAX_BUFFER = 1024 * 1024;
+      let buffer = '';
+      let yieldedLength = 0;
+      const blockedEmitted = false;
+
+      const tryFlush = function* (force: boolean) {
+        // We can safely emit everything except the trailing WINDOW_SIZE
+        // chars; those need to stay in the buffer in case a PII match
+        // straddles the boundary.
+        const safeEnd = force
+          ? buffer.length
+          : Math.max(0, buffer.length - WINDOW_SIZE);
+        if (safeEnd > yieldedLength) {
+          const out = buffer.slice(yieldedLength, safeEnd);
+          yieldedLength = safeEnd;
+          if (out.length > 0) {
+            const { masked } = detectPII(out, config);
+            yield { content: masked, done: false } as AIStreamChunk;
+          }
+        }
+      };
+
       for await (const chunk of gen) {
         if (chunk.content) {
-          const { masked } = detectPII(chunk.content, config);
-          yield { ...chunk, content: masked };
-        } else {
+          buffer += chunk.content;
+          if (buffer.length > MAX_BUFFER) {
+            // Defensive: if upstream misbehaves and we keep accumulating,
+            // forcibly flush a portion so we don't OOM the client. We mask
+            // the discarded portion in-place so PII is never exposed.
+            const { masked } = detectPII(buffer, config);
+            buffer = masked;
+            const safeEnd = Math.max(0, buffer.length - WINDOW_SIZE);
+            if (safeEnd > yieldedLength) {
+              yield { content: buffer.slice(yieldedLength, safeEnd), done: false } as AIStreamChunk;
+              yieldedLength = safeEnd;
+            }
+          }
+          const iterator = tryFlush(false);
+          for (const ev of iterator) yield ev as AIStreamChunk;
+        } else if (!blockedEmitted) {
           yield chunk;
         }
       }
+
+      // Final pass: re-mask the whole remaining buffer in case the last
+      // WINDOW_SIZE chars contained a complete PII match that the rolling
+      // pass couldn't yet see.
+      const { masked: finalMasked } = detectPII(buffer, config);
+      buffer = finalMasked;
+      const finalIter = tryFlush(true);
+      for (const ev of finalIter) yield ev as AIStreamChunk;
+      yield { content: '', done: true } as AIStreamChunk;
+    })();
+  };
+}
+
+export function createContentFilterStreamMiddleware(
+  config: ContentFilterConfig,
+): ChatStreamMiddleware {
+  return async ({ messages }, next) => {
+    const maskedMessages: ChatMessage[] = messages.map((msg) => {
+      if (msg.role === 'user') {
+        const result = filterContent(msg.content ?? '', config);
+        if (result.blocked) {
+          return {
+            ...msg,
+            content: `[BLOCKED] ${result.reason ?? 'content filter'}`,
+          };
+        }
+      }
+      return msg;
+    });
+    const gen = await next(maskedMessages);
+    return (async function* () {
+      let buffer = '';
+      const WINDOW = 128;
+      let yielded = 0;
+      let blocked = false;
+      for await (const chunk of gen) {
+        if (blocked) continue;
+        if (!chunk.content) {
+          yield chunk;
+          continue;
+        }
+        buffer += chunk.content;
+        // Inspect a sliding window for blocked patterns.
+        if (filterContent(buffer, config).blocked) {
+          blocked = true;
+          yield { content: '[BLOCKED] content filter triggered', done: false } as AIStreamChunk;
+          continue;
+        }
+        const safeEnd = Math.max(0, buffer.length - WINDOW);
+        if (safeEnd > yielded) {
+          yield { content: buffer.slice(yielded, safeEnd), done: false } as AIStreamChunk;
+          yielded = safeEnd;
+        }
+      }
+      if (!blocked && buffer.length > yielded) {
+        yield { content: buffer.slice(yielded), done: false } as AIStreamChunk;
+      }
+      yield { content: '', done: true } as AIStreamChunk;
+    })();
+  };
+}
+
+export function createSecretDetectorStreamMiddleware(
+  config: SecretDetectorConfig,
+): ChatStreamMiddleware {
+  return async ({ messages }, next) => {
+    const maskedMessages: ChatMessage[] = messages.map((msg) => {
+      if (config.blockOnDetection) {
+        const { detected, names } = detectSecrets(msg.content ?? '', config);
+        if (detected) {
+          return {
+            ...msg,
+            content: `[BLOCKED] Secrets detected: ${names.join(', ')}`,
+          };
+        }
+      }
+      return msg;
+    });
+    const gen = await next(maskedMessages);
+    return (async function* () {
+      let buffer = '';
+      const WINDOW = 320; // longest secret prefix in our patterns
+      let yielded = 0;
+      let blocked = false;
+      for await (const chunk of gen) {
+        if (blocked) continue;
+        if (!chunk.content) {
+          yield chunk;
+          continue;
+        }
+        buffer += chunk.content;
+        if (config.blockOnDetection) {
+          const { detected } = detectSecrets(buffer, config);
+          if (detected) {
+            blocked = true;
+            yield { content: '[BLOCKED] secret detected in stream', done: false } as AIStreamChunk;
+            continue;
+          }
+        }
+        const safeEnd = Math.max(0, buffer.length - WINDOW);
+        if (safeEnd > yielded) {
+          yield { content: buffer.slice(yielded, safeEnd), done: false } as AIStreamChunk;
+          yielded = safeEnd;
+        }
+      }
+      if (!blocked && buffer.length > yielded) {
+        yield { content: buffer.slice(yielded), done: false } as AIStreamChunk;
+      }
+      yield { content: '', done: true } as AIStreamChunk;
     })();
   };
 }
@@ -332,9 +487,11 @@ export function createGuardrailsMiddlewares(config: GuardrailsConfig): {
 
   if (config.contentFilter?.enabled) {
     chat.push(createContentFilterMiddleware(config.contentFilter));
+    chatStream.push(createContentFilterStreamMiddleware(config.contentFilter));
   }
   if (config.secretDetector?.enabled) {
     chat.push(createSecretDetectorMiddleware(config.secretDetector));
+    chatStream.push(createSecretDetectorStreamMiddleware(config.secretDetector));
   }
   if (config.piiDetector?.enabled) {
     chat.push(createPIIDetectorMiddleware(config.piiDetector));

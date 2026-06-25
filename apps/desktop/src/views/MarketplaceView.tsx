@@ -297,9 +297,9 @@ export function MarketplaceView() {
           {(['all', 'code', 'bundle', 'installed'] as const).map((type) => {
             const label = {
               all: t('marketplace.filterAll'),
-              code: t('marketplace.filterCode') + ' ⚙️',
-              bundle: t('marketplace.filterBundle') + ' 📦',
-              installed: t('marketplace.filterInstalled') + ' ✅',
+              code: `${t('marketplace.filterCode')  } ⚙️`,
+              bundle: `${t('marketplace.filterBundle')  } 📦`,
+              installed: `${t('marketplace.filterInstalled')  } ✅`,
             }[type];
 
             const active = filterType === type;

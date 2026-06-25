@@ -17,9 +17,13 @@ export type {
 
 // --- Modules ---
 export { PriorityRouter } from './priority.js';
-export { ChannelRouter, InMemorySink } from './channel.js';
+export { ChannelRouter, InMemorySink, TauriNotificationSink } from './channel.js';
 export type { NotificationSink } from './channel.js';
 export { DndScheduler } from './dnd.js';
 export { NotificationHistory } from './history.js';
+export { BatchDeliveryService } from './batch.js';
+export type { BatchConfig, BatchFlushListener } from './batch.js';
+export { NotificationTemplate } from './template.js';
+export type { TemplateContext, TemplateOptions } from './template.js';
 
-export const NOTIFICATION_VERSION = '0.0.3';
+export const NOTIFICATION_VERSION = '0.0.4';

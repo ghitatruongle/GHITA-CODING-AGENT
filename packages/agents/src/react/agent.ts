@@ -2,7 +2,7 @@
 // GHITA CODING AGENT - ReAct Agent Implementation
 // ==============================================================================
 
-import { HumanMessage, SystemMessage, ToolMessage } from '../messages/message.js';
+import { HumanMessage, SystemMessage, ToolMessage, messageFromData } from '../messages/message.js';
 import type { BaseMessage } from '../messages/message.js';
 import { MiddlewarePipeline } from '../middleware/pipeline.js';
 import type { MiddlewareContext } from '../middleware/types.js';
@@ -129,6 +129,30 @@ export class ReActAgent {
       const toolCalls = this.parseToolCalls
         ? this.parseToolCalls(response)
         : this.defaultParseToolCalls(response);
+
+      // If tool calls were parsed but the message does not yet carry them in
+      // metadata, attach them now so subsequent LLM calls (which receive
+      // the full conversation history) can match each tool result back to
+      // the tool call that produced it. This is essential for providers
+      // that use native function calling (OpenAI, Anthropic, etc.).
+      if (toolCalls.length > 0) {
+        const existing = response.metadata?.toolCalls;
+        if (!Array.isArray(existing) || existing.length === 0) {
+          const newMeta = { ...(response.metadata ?? {}), toolCalls };
+          // Replace the message at the end of `messages` with a clone that
+          // has the new metadata. (BaseMessage instances are treated as
+          // immutable; we rebuild via the messageFromData helper.)
+          const lastIdx = messages.length - 1;
+          const data = response.toData();
+          data.metadata = newMeta;
+          const cloned = messageFromData({
+            ...data,
+            // Re-attach toolCalls on the assistant data variant
+            ...(data.role === 'assistant' ? { toolCalls } : {}),
+          } as never);
+          messages[lastIdx] = cloned;
+        }
+      }
 
       if (toolCalls.length === 0) {
         // No tool calls → agent is done

@@ -12,8 +12,8 @@ const DEFAULT_PRICING: Record<string, ModelPricing> = {
   'gemini-1.5-pro': { promptPer1k: 0.00125, completionPer1k: 0.005 },
   'gemini-1.5-flash': { promptPer1k: 0.000075, completionPer1k: 0.0003 },
   'deepseek-chat': { promptPer1k: 0.00014, completionPer1k: 0.00028 },
-  'kimi': { promptPer1k: 0.001, completionPer1k: 0.001 },
-  'minimax': { promptPer1k: 0.001, completionPer1k: 0.001 },
+  kimi: { promptPer1k: 0.001, completionPer1k: 0.001 },
+  minimax: { promptPer1k: 0.001, completionPer1k: 0.001 },
 };
 
 /**
@@ -30,7 +30,10 @@ export class UsageTracker {
   private readonly onLog?: (message: string, level: 'debug' | 'info' | 'warn' | 'error') => void;
   private idCounter = 0;
 
-  constructor(config: Partial<QuotaConfig> & { pricing?: Record<string, ModelPricing> } = {}, maxRecords = 100_000) {
+  constructor(
+    config: Partial<QuotaConfig> & { pricing?: Record<string, ModelPricing> } = {},
+    maxRecords = 100_000,
+  ) {
     this.maxRecords = maxRecords;
     this.pricing = { ...DEFAULT_PRICING, ...config.pricing };
     this.onLog = config.logger;
@@ -39,7 +42,12 @@ export class UsageTracker {
   /**
    * Ghi nhận 1 usage event.
    */
-  record(input: Omit<UsageRecord, 'id' | 'costUsd' | 'totalTokens' | 'timestamp'> & { timestamp?: number; id?: string }): UsageRecord {
+  record(
+    input: Omit<UsageRecord, 'id' | 'costUsd' | 'totalTokens' | 'timestamp'> & {
+      timestamp?: number;
+      id?: string;
+    },
+  ): UsageRecord {
     const totalTokens = input.promptTokens + input.completionTokens;
     const costUsd = this.calculateCost(input.model, input.promptTokens, input.completionTokens);
     this.idCounter++;
@@ -69,7 +77,13 @@ export class UsageTracker {
   /**
    * Lấy records theo user trong khoảng thời gian.
    */
-  query(userId: string, periodStart: number, periodEnd: number, provider?: string, model?: string): UsageRecord[] {
+  query(
+    userId: string,
+    periodStart: number,
+    periodEnd: number,
+    provider?: string,
+    model?: string,
+  ): UsageRecord[] {
     return this.records.filter((r) => {
       if (r.userId !== userId) return false;
       if (r.timestamp < periodStart || r.timestamp > periodEnd) return false;

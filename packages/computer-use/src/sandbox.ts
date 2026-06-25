@@ -225,14 +225,14 @@ async function runInDocker(
     child.stdout?.on('data', (chunk: Buffer) => {
       stdout += chunk.toString();
       if (stdout.length > 1_048_576) {
-        stdout = stdout.slice(0, 1_048_576) + '\n... (output truncated)';
+        stdout = `${stdout.slice(0, 1_048_576)  }\n... (output truncated)`;
       }
     });
 
     child.stderr?.on('data', (chunk: Buffer) => {
       stderr += chunk.toString();
       if (stderr.length > 1_048_576) {
-        stderr = stderr.slice(0, 1_048_576) + '\n... (output truncated)';
+        stderr = `${stderr.slice(0, 1_048_576)  }\n... (output truncated)`;
       }
     });
 
@@ -304,8 +304,16 @@ async function runInLocal(code: string, config: SandboxConfig = {}): Promise<San
         ? [...buildSpawnArgs(config), ...runner.args(file.path)]
         : runner.args(file.path);
 
+    // Build a minimal environment for the sandbox child process.
+    // Only pass safe, necessary vars — NOT secrets like API keys or tokens.
+    const SAFE_ENV_KEYS = [
+      'PATH', 'HOME', 'USER', 'USERNAME', 'LANG', 'LC_ALL', 'LC_MESSAGES',
+      'TERM', 'SHELL', 'TMPDIR', 'TEMP', 'TMP',
+      'SYSTEMROOT', 'OS', 'COMSPEC', // Windows essentials
+    ];
     const cleanEnv: Record<string, string> = {};
-    for (const [key, value] of Object.entries(process.env)) {
+    for (const key of SAFE_ENV_KEYS) {
+      const value = process.env[key];
       if (value !== undefined) {
         cleanEnv[key] = value;
       }
@@ -341,8 +349,8 @@ async function runInLocal(code: string, config: SandboxConfig = {}): Promise<San
       settled = true;
       await file.cleanup();
       try {
-        const { rmdir } = await import('node:fs/promises');
-        await rmdir(tempDir, { recursive: true });
+        const { rm } = await import('node:fs/promises');
+        await rm(tempDir, { recursive: true, force: true });
       } catch {
         // ignore cleanup errors
       }
@@ -351,14 +359,14 @@ async function runInLocal(code: string, config: SandboxConfig = {}): Promise<San
     child.stdout?.on('data', (chunk: Buffer) => {
       stdout += chunk.toString();
       if (stdout.length > 1_048_576) {
-        stdout = stdout.slice(0, 1_048_576) + '\n... (output truncated)';
+        stdout = `${stdout.slice(0, 1_048_576)  }\n... (output truncated)`;
       }
     });
 
     child.stderr?.on('data', (chunk: Buffer) => {
       stderr += chunk.toString();
       if (stderr.length > 1_048_576) {
-        stderr = stderr.slice(0, 1_048_576) + '\n... (output truncated)';
+        stderr = `${stderr.slice(0, 1_048_576)  }\n... (output truncated)`;
       }
     });
 
@@ -444,8 +452,8 @@ export async function runInSandbox(
         // Always cleanup temp files regardless of Docker success/failure
         await file?.cleanup();
         try {
-          const { rmdir } = await import('node:fs/promises');
-          await rmdir(tempDir, { recursive: true });
+          const { rm } = await import('node:fs/promises');
+          await rm(tempDir, { recursive: true, force: true, maxRetries: 3 });
         } catch {
           // ignore cleanup errors
         }

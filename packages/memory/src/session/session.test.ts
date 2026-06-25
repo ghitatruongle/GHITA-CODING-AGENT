@@ -2,11 +2,7 @@
 // GHITA CODING AGENT - Session Management Tests (Phase 24 — Update 0.0.3)
 // ==============================================================================
 
-import {
-  SessionManager,
-  InMemorySessionStore,
-  type SessionStore,
-} from './session.js';
+import { SessionManager, InMemorySessionStore, type SessionStore } from './session.js';
 
 // ----- Test 1: Create session -----
 export async function testCreateSession() {
@@ -44,7 +40,9 @@ export async function testLifecycle() {
 export async function testAddMessage() {
   const mgr = new SessionManager();
   const s = await mgr.createSession('Messages Test');
-  const msg = await mgr.addMessage(s.id, 'user', 'hello world', { tokens: { input: 5, output: 0 } });
+  const msg = await mgr.addMessage(s.id, 'user', 'hello world', {
+    tokens: { input: 5, output: 0 },
+  });
   if (!msg.id) throw new Error('message id missing');
   if (msg.role !== 'user') throw new Error('role mismatch');
   if (msg.content !== 'hello world') throw new Error('content mismatch');
@@ -77,7 +75,8 @@ export async function testSearch() {
   await mgr.addMessage(s2.id, 'user', 'apple pie recipe');
 
   const results = await mgr.search('apple');
-  if (results.length !== 2) throw new Error(`expected 2 results for 'apple', got ${results.length}`);
+  if (results.length !== 2)
+    throw new Error(`expected 2 results for 'apple', got ${results.length}`);
 
   const banana = await mgr.search('banana');
   if (banana.length !== 1) throw new Error(`expected 1 result for 'banana'`);
@@ -125,7 +124,8 @@ export async function testExportAll() {
   await mgr.createSession('B');
   const all = await mgr.exportAll();
   const parsed = JSON.parse(all);
-  if (parsed.sessions.length !== 2) throw new Error(`expected 2 sessions, got ${parsed.sessions.length}`);
+  if (parsed.sessions.length !== 2)
+    throw new Error(`expected 2 sessions, got ${parsed.sessions.length}`);
   if (parsed.version !== 1) throw new Error('version missing');
   return 'PASS: export all';
 }
@@ -147,15 +147,20 @@ export async function testPersistentBackendHook() {
   const saved: string[] = [];
   const fakeBackend: SessionStore = {
     load: async (_id) => null,
-    save: async (s) => { saved.push(s.id); },
-    delete: async (id) => { saved.push(`DELETE:${id}`); },
+    save: async (s) => {
+      saved.push(s.id);
+    },
+    delete: async (id) => {
+      saved.push(`DELETE:${id}`);
+    },
     listIds: async () => [],
     search: async () => [],
   };
   const store = new InMemorySessionStore(fakeBackend);
   const mgr = new SessionManager(store);
   const s = await mgr.createSession('Persistence Test');
-  if (saved.length !== 1 || saved[0] !== s.id) throw new Error('expected save to propagate to backend');
+  if (saved.length !== 1 || saved[0] !== s.id)
+    throw new Error('expected save to propagate to backend');
   return 'PASS: persistent backend hook';
 }
 
@@ -185,7 +190,11 @@ export async function testInvalidImport() {
 }
 
 // ----- Runner -----
-export async function runAllSessionTests(): Promise<{ passed: number; failed: number; results: string[] }> {
+export async function runAllSessionTests(): Promise<{
+  passed: number;
+  failed: number;
+  results: string[];
+}> {
   const tests = [
     testCreateSession,
     testLifecycle,

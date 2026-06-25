@@ -8,18 +8,10 @@
 import { io } from 'socket.io-client';
 import type { Socket } from 'socket.io-client';
 import { invoke } from '@tauri-apps/api/core';
+import { useAppStore } from '../stores/appStore';
 
 let socket: Socket | null = null;
 let connectionPromise: Promise<Socket | null> | null = null;
-
-// Generate a session token for basic socket-level auth/CSRF protection
-function generateSessionToken(): string {
-  const array = new Uint8Array(32);
-  crypto.getRandomValues(array);
-  return Array.from(array, (b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-const SESSION_TOKEN = generateSessionToken();
 
 /**
  * Get or create the shared socket connection to the sidecar server.
@@ -41,7 +33,9 @@ export async function getSharedSocket(): Promise<Socket | null> {
   connectionPromise = (async () => {
     try {
       const status = await invoke<{ port: number }>('get_server_status');
-      const port = status.port || 8080;
+      const port = status.port || 39001;
+
+      const sessionToken = await invoke<string>('get_session_token').catch(() => '');
 
       socket = io(`http://127.0.0.1:${port}`, {
         transports: ['websocket'],
@@ -49,7 +43,15 @@ export async function getSharedSocket(): Promise<Socket | null> {
         reconnectionAttempts: 20,
         reconnectionDelay: 1000,
         reconnectionDelayMax: 30000,
-        auth: { token: SESSION_TOKEN },
+        auth: { token: sessionToken },
+      });
+
+      // Automatically sync active workspace on connection/reconnection
+      socket.on('connect', () => {
+        const cwd = useAppStore.getState().terminalCwd;
+        if (socket) {
+          socket.emit('set_workspace', { path: cwd || null });
+        }
       });
 
       const sock = socket;

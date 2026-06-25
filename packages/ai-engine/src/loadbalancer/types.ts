@@ -263,10 +263,7 @@ export interface LoadBalancedAdapter {
   /** Make a chat call to this provider. */
   chat(messages: ChatMessage[], options?: ChatOptions): Promise<ChatResponse>;
   /** Optional streaming call. */
-  chatStream?(
-    messages: ChatMessage[],
-    options?: ChatOptions,
-  ): AsyncGenerator<AIStreamChunk>;
+  chatStream?(messages: ChatMessage[], options?: ChatOptions): AsyncGenerator<AIStreamChunk>;
   /** Probe /models endpoint for health check. Should throw on failure. */
   healthCheck?(timeoutMs: number): Promise<void>;
 }

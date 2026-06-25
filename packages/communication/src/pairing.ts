@@ -15,6 +15,10 @@ export class PairingManager {
   private refreshTimer: ReturnType<typeof setInterval> | null = null;
   private onCodeChange?: (code: string) => void;
   private disposed = false;
+  private failedAttempts = 0;
+  private lockoutUntil = 0;
+  private readonly maxFailedAttempts = 10;
+  private readonly lockoutDurationMs = 5 * 60 * 1000; // 5 min lockout
 
   constructor(ttlMs = DEFAULT_TTL_MS) {
     this.ttlMs = ttlMs;
@@ -44,13 +48,32 @@ export class PairingManager {
   }
 
   /**
-   * Validate a code submitted by mobile device
+   * Validate a code submitted by mobile device.
+   * Enforces rate limiting: lockout after maxFailedAttempts within TTL window.
    */
   validate(code: string): boolean {
-    if (Date.now() >= this.expiresAt) {
+    const now = Date.now();
+
+    // Check lockout
+    if (now < this.lockoutUntil) {
+      return false;
+    }
+
+    if (now >= this.expiresAt) {
       return false; // Code expired
     }
-    return code.toUpperCase() === this.currentCode;
+
+    if (code.toUpperCase() === this.currentCode) {
+      this.failedAttempts = 0; // Reset on success
+      return true;
+    }
+
+    this.failedAttempts++;
+    if (this.failedAttempts >= this.maxFailedAttempts) {
+      this.lockoutUntil = now + this.lockoutDurationMs;
+      this.failedAttempts = 0;
+    }
+    return false;
   }
 
   /**

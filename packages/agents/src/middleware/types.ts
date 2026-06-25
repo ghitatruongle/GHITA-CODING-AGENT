@@ -30,6 +30,8 @@ export interface MiddlewareContext {
   temperature?: number;
   maxTokens?: number;
   metadata: Record<string, unknown>;
+  /** Bypasses all middlewares if true, optimizing latency for simple tasks */
+  skipMiddlewares?: boolean;
 }
 
 export interface PreModelResult {

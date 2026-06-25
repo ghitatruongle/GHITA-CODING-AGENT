@@ -62,6 +62,7 @@ export function useChatSessions() {
   const [currentView, setCurrentView] = useState<'chat' | 'history'>('chat');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const isSwitchingRef = useRef(false);
+  const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const persist = useCallback(async (s: ChatSession[], activeId: string | null) => {
     try {
@@ -94,12 +95,19 @@ export function useChatSessions() {
         }
       } catch (e) {
         console.error('[useChatSessions] Load failed, resetting to fresh state:', e);
-        // If load crashes completely (e.g. catastrophic corruption), clear all data
+        // If load crashes completely (e.g. catastrophic corruption), do
+        // NOT clear localStorage — the Tauri file-backed store
+        // (`chat-sessions.json`) may still contain valid data. Bug #23:
+        // the previous behaviour wiped both stores, which left users
+        // with sessions on disk that no longer appear in the UI. We
+        // log the error and let the user re-import manually if needed.
+        // Optionally: surface a recovery option via a toast/banner.
         try {
-          localStorage.removeItem('ghita_chat_sessions');
-          localStorage.removeItem('ghita_active_session_id');
+          window.dispatchEvent(
+            new CustomEvent('ghita:chat-sessions-corrupted', { detail: { error: String(e) } }),
+          );
         } catch {
-          /* ignore */
+          /* SSR / no window — ignore */
         }
       }
       if (!active) return;
@@ -127,26 +135,45 @@ export function useChatSessions() {
     // This prevents 30+ Tauri IPC calls per second during AI streaming
     const hasStreaming = messages.some((m) => m.id === 'streaming-message');
     if (hasStreaming) return;
-    setSessions((prev) => {
-      const updated = prev.map((s) => {
-        if (s.id !== activeSessionId) return s;
-        let newTitle = s.title;
-        const isDefault = KNOWN_DEFAULT_TITLES.some(
-          (dt) => dt === s.title || dt === s.title.trim(),
-        );
-        if (isDefault) {
-          const firstUser = messages.find((m) => m.role === 'user');
-          if (firstUser?.content.trim()) {
-            const txt = firstUser.content.trim();
-            newTitle = txt.length > 25 ? txt.substring(0, 25) + '...' : txt;
+
+    // Debounce the persist call so back-to-back state changes (e.g. user
+    // appends several messages in quick succession) coalesce into a
+    // single Tauri IPC write. Persist fires at most once per 500 ms.
+    if (persistTimerRef.current) {
+      clearTimeout(persistTimerRef.current);
+    }
+    persistTimerRef.current = setTimeout(() => {
+      persistTimerRef.current = null;
+      setSessions((prev) => {
+        const updated = prev.map((s) => {
+          if (s.id !== activeSessionId) return s;
+          let newTitle = s.title;
+          const isDefault = KNOWN_DEFAULT_TITLES.some(
+            (dt) => dt === s.title || dt === s.title.trim(),
+          );
+          if (isDefault) {
+            const firstUser = messages.find((m) => m.role === 'user');
+            if (firstUser?.content.trim()) {
+              const txt = firstUser.content.trim();
+              newTitle = txt.length > 25 ? `${txt.substring(0, 25)  }...` : txt;
+            }
           }
-        }
-        return { ...s, messages, title: newTitle, timestamp: Date.now() };
+          return { ...s, messages, title: newTitle, timestamp: Date.now() };
+        });
+        const sorted = [...updated].sort((a, b) => b.timestamp - a.timestamp);
+        void persist(sorted, activeSessionId);
+        return sorted;
       });
-      const sorted = [...updated].sort((a, b) => b.timestamp - a.timestamp);
-      void persist(sorted, activeSessionId);
-      return sorted;
-    });
+    }, 500);
+
+    return () => {
+      // If a new render happens before the timer fires, the cleanup
+      // of the previous effect will clear the timer so we don't double-persist.
+      if (persistTimerRef.current) {
+        clearTimeout(persistTimerRef.current);
+        persistTimerRef.current = null;
+      }
+    };
   }, [messages, activeSessionId]);
 
   const selectSession = useCallback(

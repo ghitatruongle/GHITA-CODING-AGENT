@@ -47,6 +47,96 @@ function isDangerousCommand(command: string): boolean {
 }
 
 /**
+ * Tokenize a shell-style command line, respecting single quotes, double quotes,
+ * and backslash escapes. Returns an array of arguments (whitespace-separated
+ * tokens with quoting stripped). Throws on unterminated quotes.
+ *
+ * Examples:
+ *   `echo hello`                    -> ['echo', 'hello']
+ *   `echo "hello world"`            -> ['echo', 'hello world']
+ *   `git log --pretty=format:'%H'`  -> ['git', 'log', '--pretty=format:%H']
+ *   `cmd "a\"b"`                    -> ['cmd', 'a"b']
+ */
+export function tokenizeShellCommand(input: string): string[] {
+  // Reject unsupported shell constructs that could execute arbitrary code
+  if (input.includes('`') || input.includes("$'") || input.includes('$(')) {
+    throw new Error(
+      'Unsupported shell syntax detected: backticks, command substitution ($()), or ANSI-C quotes are not allowed.',
+    );
+  }
+  const tokens: string[] = [];
+  let current = '';
+  let inSingle = false;
+  let inDouble = false;
+  let hasToken = false;
+
+  for (let i = 0; i < input.length; i++) {
+    const ch = input[i] as string;
+
+    if (inSingle) {
+      if (ch === "'") {
+        inSingle = false;
+      } else {
+        current += ch;
+      }
+      continue;
+    }
+
+    if (inDouble) {
+      if (ch === '"') {
+        inDouble = false;
+      } else if (ch === '\\' && i + 1 < input.length) {
+        // Backslash escapes the next char inside double quotes (preserves it literally)
+        const next = input[i + 1];
+        if (next === '"' || next === '\\' || next === '$' || next === '`' || next === '\n') {
+          current += next;
+          i += 1;
+        } else {
+          current += ch;
+        }
+      } else {
+        current += ch;
+      }
+      continue;
+    }
+
+    if (ch === "'") {
+      inSingle = true;
+      hasToken = true;
+      continue;
+    }
+    if (ch === '"') {
+      inDouble = true;
+      hasToken = true;
+      continue;
+    }
+    if (ch === '\\' && i + 1 < input.length) {
+      // Backslash escapes the next char outside any quotes
+      current += input[i + 1];
+      i += 1;
+      hasToken = true;
+      continue;
+    }
+    if (/\s/.test(ch)) {
+      if (hasToken) {
+        tokens.push(current);
+        current = '';
+        hasToken = false;
+      }
+      continue;
+    }
+    current += ch;
+    hasToken = true;
+  }
+
+  if (inSingle || inDouble) {
+    throw new Error('Unterminated quote in command');
+  }
+  if (hasToken) tokens.push(current);
+  return tokens;
+}
+
+/**
  * Validates that the targeted path lies inside the workspace sandbox
  */
 export function ensureInSandbox(filePath: string, sandboxRoot?: string): string {
@@ -60,7 +150,8 @@ export function ensureInSandbox(filePath: string, sandboxRoot?: string): string 
     ? path.resolve(filePath)
     : path.resolve(resolvedRoot, filePath);
 
-  if (!resolvedPath.startsWith(resolvedRoot)) {
+  const relative = path.relative(resolvedRoot, resolvedPath);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
     throw new Error(
       `Security Exception: Access denied. Path "${resolvedPath}" lies outside the active workspace sandbox "${resolvedRoot}".`,
     );
@@ -322,7 +413,10 @@ export async function runCommand(args: { command: string; timeoutMs?: number }):
     }
   }
 
-  const parts = command.trim().split(/\s+/).filter(Boolean);
+  // Tokenize the command line so quoted arguments are preserved.
+  // Examples: `echo "hello world"` -> ['echo', 'hello world']
+  //           `git log --pretty=format:'%H %s'` -> ['git', 'log', '--pretty=format:%H %s']
+  const parts = tokenizeShellCommand(command);
   if (parts.length === 0) throw new Error('Empty command');
   const spawnCmd = parts[0] as string;
   const spawnArgs = parts.slice(1);
@@ -331,27 +425,43 @@ export async function runCommand(args: { command: string; timeoutMs?: number }):
     const child = spawn(spawnCmd, spawnArgs, {
       cwd: sandbox,
       timeout,
+      killSignal: 'SIGTERM',
       stdio: ['ignore', 'pipe', 'pipe'],
     });
+    // Hard-kill fallback if the process ignores SIGTERM (Bug #19)
+    const hardKillTimer = setTimeout(() => {
+      try {
+        child.kill('SIGKILL');
+      } catch {
+        /* ignore if already exited */
+      }
+    }, timeout + 5000);
+    // Register the child in a global registry so the sidecar can kill
+    // orphaned child processes if the agent run is aborted (timeout,
+    // user cancel, etc.).
+    const registry = (globalThis as { __activeChildProcs?: Set<NodeJS.EventEmitter> })
+      .__activeChildProcs;
+    const emitter = child as unknown as NodeJS.EventEmitter;
+    if (registry) registry.add(emitter);
     let stdout = '';
     let stderr = '';
-    const proc = child as unknown as NodeJS.EventEmitter & {
-      stdout: NodeJS.ReadableStream | null;
-      stderr: NodeJS.ReadableStream | null;
-    };
-    proc.stdout?.on('data', (d: Buffer) => {
+    (child.stdout as unknown as NodeJS.ReadableStream)?.on('data', (d: Buffer) => {
       stdout += d.toString();
     });
-    proc.stderr?.on('data', (d: Buffer) => {
+    (child.stderr as unknown as NodeJS.ReadableStream)?.on('data', (d: Buffer) => {
       stderr += d.toString();
     });
-    proc.on('error', (error: Error) => {
+    emitter.on('error', (error: Error) => {
+      clearTimeout(hardKillTimer);
+      if (registry) registry.delete(emitter);
       let output = '';
       if (stdout) output += `STDOUT:\n${stdout}\n`;
       if (stderr) output += `STDERR:\n${stderr}\n`;
       return resolve(`${output}ERROR: Command failed: ${error.message}`);
     });
-    proc.on('close', (code: number | null) => {
+    emitter.on('close', (code: number | null) => {
+      clearTimeout(hardKillTimer);
+      if (registry) registry.delete(emitter);
       let output = '';
       if (stdout) output += `STDOUT:\n${stdout}\n`;
       if (stderr) output += `STDERR:\n${stderr}\n`;

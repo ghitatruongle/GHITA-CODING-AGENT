@@ -106,7 +106,10 @@ export class MixedStrategy {
     return 'gui';
   }
 
-  async execute(task: MixedTask, action: MixedAction): Promise<{
+  async execute(
+    task: MixedTask,
+    action: MixedAction,
+  ): Promise<{
     strategy: 'browser' | 'gui';
     result: unknown;
   }> {

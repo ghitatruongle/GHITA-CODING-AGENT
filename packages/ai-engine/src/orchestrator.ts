@@ -1,9 +1,12 @@
 // ==============================================================================
-// GHITA CODING AGENT - AI Orchestrator
+// GHITA CODING AGENT - AI Orchestrator (Facade)
+// ==============================================================================
+// Thin facade that composes sub-modules: chat, tool-calling, embedding.
+// Constructor initializes all modules; public methods delegate to sub-modules.
 // ==============================================================================
 
 import type { AIProviderType, AIStreamChunk } from '@ghita/shared';
-import { retry, sleep } from '@ghita/shared';
+import { retry } from '@ghita/shared';
 import type {
   AIProvider,
   ChatMessage,
@@ -24,8 +27,8 @@ import { ContextManager } from './context/manager.js';
 import { PermissionManager } from './security/permissions.js';
 import { SecurityChecker } from './hooks/security-checkers.js';
 import type { z } from 'zod';
-import { generateObject, type GenerateObjectResponse } from './utils/structured.js';
-import { SemanticCache } from './utils/cache.js';
+import type { GenerateObjectResponse } from './utils/structured.js';
+import { SemanticCache } from './cache/semantic-cache.js';
 import { CostTracker, BudgetManager, createCostMiddleware } from './cost/index.js';
 import { wrapProvider } from './utils/middleware.js';
 import { SmartRouter } from './routing/smart-router.js';
@@ -33,11 +36,28 @@ import type { RoutingDecision } from './routing/types.js';
 import { ModelDiscovery } from './discovery/model-discovery.js';
 import type { DiscoveryResult } from './discovery/types.js';
 
+// Decomposed sub-modules
+import type { OrchestratorContext } from './orchestrator/types.js';
+import { orchestratorChat, orchestratorChatStream } from './orchestrator/chat.js';
+import {
+  getMCPTools, callMCPTool, loadHooks, runPreToolHooks, runPostToolHooks,
+  getBuiltInTool, callBuiltInTool,
+  needsContextCompact, compactContext, getContextUsage,
+} from './orchestrator/tool-calling.js';
+import {
+  orchestratorEmbed, orchestratorEmbedMany, orchestratorGenerateObject,
+  orchestratorGenerateImage, orchestratorGenerateSpeech,
+  orchestratorGenerateVideo, orchestratorTranscribe,
+} from './orchestrator/embedding.js';
+
+// Re-export helpers for backward compatibility
+export { stableMessageKey } from './orchestrator/helpers.js';
+
 export class Orchestrator {
-  private registry: ProviderRegistry;
-  private config: OrchestratorConfig;
-  private defaultProvider: AIProviderType | null = null;
-  private fallbackOrder: AIProviderType[] = [];
+  private _registry: ProviderRegistry;
+  private _config: OrchestratorConfig;
+  private _defaultProvider: AIProviderType | null = null;
+  private _fallbackOrder: AIProviderType[] = [];
 
   // Phase 5-7 modules
   readonly mcpClient: MCPClient;
@@ -57,637 +77,237 @@ export class Orchestrator {
   readonly smartRouter: SmartRouter | null = null;
 
   constructor(config: OrchestratorConfig) {
-    this.config = config;
-    this.registry = new ProviderRegistry();
+    this._config = config;
+    this._registry = new ProviderRegistry();
 
-    // Đăng ký tất cả providers từ config
     for (const providerConfig of config.providers) {
-      this.registry.registerFromConfig(providerConfig);
+      this._registry.registerFromConfig(providerConfig);
     }
 
-    this.defaultProvider = config.defaultProvider ?? null;
-    this.fallbackOrder = config.fallbackOrder ?? [];
+    this._defaultProvider = config.defaultProvider ?? null;
+    this._fallbackOrder = config.fallbackOrder ?? [];
 
-    // Phase 5A: MCP Client
     this.mcpClient = new MCPClient();
     if (config.mcpServers) {
       for (const server of config.mcpServers) {
         this.mcpClient.addServer({
-          name: server.name,
-          command: server.command,
-          args: server.args,
-          url: server.url,
-          transport: server.transport,
-          env: server.env,
-          enabled: server.enabled,
+          name: server.name, command: server.command, args: server.args,
+          url: server.url, transport: server.transport, env: server.env, enabled: server.enabled,
         });
       }
     }
 
-    // Phase 5B: Hook Runner
     this.hookRunner = new HookRunner();
     this.hookRunner.addHook(new SecurityChecker().createPreToolHook());
-
-    // Phase 5C: Built-in Tools
     this.builtInTools = createBuiltInTools();
-
-    // Phase 6B: Context Manager
     this.contextManager = new ContextManager();
-
-    // Phase 6D: Permission Manager
     this.permissionManager = new PermissionManager();
 
-    // Phase 8: Cost tracking & Budget management
     this.costTracker = new CostTracker();
-    const limit = config.costLimitUsd ?? 5.0; // Default budget limit e.g. $5.00
+    const limit = config.costLimitUsd ?? 5.0;
     this.budgetManager = new BudgetManager({
-      limit,
-      period: 'monthly',
+      limit, period: 'monthly',
       onAlert: (spent, limit, percentage) => {
         console.warn(
           `[Orchestrator] AI budget alert: spent $${spent.toFixed(4)} of $${limit.toFixed(4)} (${(percentage * 100).toFixed(1)}%)`,
         );
       },
     });
-
     this.costMiddleware = createCostMiddleware({
-      costTracker: this.costTracker,
-      budgetManager: this.budgetManager,
+      costTracker: this.costTracker, budgetManager: this.budgetManager,
     });
 
-    // Phase 8: Semantic prompt cache
     this.semanticCache = new SemanticCache(
+      { embed: async (text) => { const emb = await this.embed(text); return { embedding: emb.embedding }; } },
       {
-        embed: async (text) => {
-          const emb = await this.embed(text);
-          return { embedding: emb.embedding };
-        },
-      },
-      {
-        qdrantUrl: config.qdrantUrl,
-        collectionName: config.collectionName,
-        threshold: config.cacheThreshold ?? 0.95,
-        fallbackToInMemory: true,
+        qdrantUrl: config.qdrantUrl, collectionName: config.collectionName,
+        threshold: config.cacheThreshold ?? 0.95, fallbackToInMemory: true,
       },
     );
 
-    // Phase 1.3: Model Discovery
     this.modelDiscovery = new ModelDiscovery();
-
-    // Phase 1.4: Smart Router
     if (config.smartRouting) {
       this.smartRouter = new SmartRouter({
-        strategy: config.smartRouting.strategy,
-        maxCostPerRequest: config.smartRouting.maxCostPerRequest,
-        maxLatencyMs: config.smartRouting.maxLatencyMs,
-        minQualityScore: config.smartRouting.minQualityScore,
+        strategy: config.smartRouting.strategy, maxCostPerRequest: config.smartRouting.maxCostPerRequest,
+        maxLatencyMs: config.smartRouting.maxLatencyMs, minQualityScore: config.smartRouting.minQualityScore,
       });
     }
   }
 
-  /** Lấy registry để truy cập providers trực tiếp */
-  getRegistry(): ProviderRegistry {
-    return this.registry;
+  /** Internal context for sub-modules */
+  private get ctx(): OrchestratorContext {
+    return {
+      config: this._config, registry: this._registry,
+      defaultProvider: this._defaultProvider, fallbackOrder: this._fallbackOrder,
+      mcpClient: this.mcpClient, hookRunner: this.hookRunner,
+      builtInTools: this.builtInTools, contextManager: this.contextManager,
+      permissionManager: this.permissionManager,
+      costTracker: this.costTracker, budgetManager: this.budgetManager,
+      semanticCache: this.semanticCache, modelDiscovery: this.modelDiscovery,
+      smartRouter: this.smartRouter,
+      resolveProvider: (p, a) => this.resolveProvider(p, a),
+      findFallbackProvider: (t) => this.findFallbackProvider(t),
+      executeWithFallback: (fn, p, m) => this.executeWithFallback(fn, p, m),
+    };
   }
 
-  /** Phase 1.3: Discover models từ provider API */
+  // --- Registry & Routing ---
+
+  getRegistry(): ProviderRegistry { return this._registry; }
+
   async discoverModels(providerType?: AIProviderType): Promise<DiscoveryResult> {
-    const config = this.config.providers.find((p) => p.type === providerType);
+    const config = this._config.providers.find((p) => p.type === providerType);
     if (!config) throw new Error(`Provider ${providerType} not configured`);
     return this.modelDiscovery.discoverModels({
-      baseUrl: config.baseUrl ?? '',
-      apiKey: config.apiKey,
-      providerType: providerType as string,
-      authStyle: 'bearer',
+      baseUrl: config.baseUrl ?? '', apiKey: config.apiKey,
+      providerType: providerType as string, authStyle: 'bearer',
       parseResponse: (data: unknown) => {
         const d = data as { data?: { id: string }[] };
-        return (d.data ?? []).map((m) => ({
-          id: m.id,
-          name: m.id,
-          provider: providerType as string,
-        }));
+        return (d.data ?? []).map((m) => ({ id: m.id, name: m.id, provider: providerType as string }));
       },
     });
   }
 
-  /** Phase 1.4: Get routing metrics */
-  getRoutingMetrics() {
-    return this.smartRouter?.getMetrics() ?? [];
-  }
+  getRoutingMetrics() { return this.smartRouter?.getMetrics() ?? []; }
 
-  /** Phase 1.4: Get routing decision */
   getRoutingDecision(_preferred?: AIProviderType, _agentRole?: string): RoutingDecision | null {
     if (!this.smartRouter) return null;
-    const available = this.registry.getAll().map((p) => ({ type: p.type, model: p.defaultModel }));
+    const available = this._registry.getAll().map((p) => ({ type: p.type, model: p.defaultModel }));
     return this.smartRouter.route(available);
   }
 
-  /** Chat với provider ưu tiên, fallback nếu lỗi */
-  async chat(
-    messages: ChatMessage[],
-    options?: ChatOptions & { provider?: AIProviderType },
-  ): Promise<ChatResponse> {
-    const serializeMessages = (msgs: ChatMessage[]): string =>
-      msgs.map((m) => `[${m.role}]: ${m.content}`).join('\n');
-    const cacheKey = serializeMessages(messages);
+  // --- Chat (delegates to orchestrator/chat.ts) ---
 
-    try {
-      const cached = await this.semanticCache.get(cacheKey);
-      if (cached) {
-        return cached as ChatResponse;
-      }
-    } catch (err) {
-      console.warn('[SemanticCache] get error:', err);
-    }
-
-    const provider = this.resolveProvider(options?.provider, options?.agentRole);
-    this.budgetManager.checkBudget(0);
-
-    const maxAttempts = this.config.retryAttempts ?? 2;
-
-    const response = await this.executeWithFallback(
-      (p) => p.chat(messages, options),
-      provider,
-      maxAttempts,
-    );
-
-    try {
-      await this.semanticCache.set(cacheKey, response);
-    } catch (err) {
-      console.warn('[SemanticCache] set error:', err);
-    }
-
-    return response;
+  async chat(messages: ChatMessage[], options?: ChatOptions & { provider?: AIProviderType }): Promise<ChatResponse> {
+    return orchestratorChat(this.ctx, messages, options);
   }
 
-  /** Chat streaming với provider ưu tiên, fallback nếu lỗi */
-  async *chatStream(
-    messages: ChatMessage[],
-    options?: ChatOptions & { provider?: AIProviderType },
-  ): AsyncGenerator<AIStreamChunk> {
-    const serializeMessages = (msgs: ChatMessage[]): string =>
-      msgs.map((m) => `[${m.role}]: ${m.content}`).join('\n');
-    const cacheKey = serializeMessages(messages);
-
-    try {
-      const cached = (await this.semanticCache.get(cacheKey)) as ChatResponse | null;
-      if (cached) {
-        yield {
-          content: cached.content,
-          done: true,
-          provider: cached.provider,
-          model: cached.model,
-          usage: cached.usage,
-        };
-        return;
-      }
-    } catch (err) {
-      console.warn('[SemanticCache] get stream error:', err);
-    }
-
-    const provider = this.resolveProvider(options?.provider, options?.agentRole);
-    this.budgetManager.checkBudget(0);
-
-    const maxAttempts = this.config.retryAttempts ?? 2;
-    let accumulatedContent = '';
-    let resolvedProvider = provider.type;
-    let resolvedModel = options?.model || provider.defaultModel || 'default';
-    let finalUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
-    let success = false;
-    let lastError: Error | undefined;
-
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        accumulatedContent = '';
-        const stream = provider.chatStream(messages, options);
-        for await (const chunk of stream) {
-          accumulatedContent += chunk.content;
-          if (chunk.provider) resolvedProvider = chunk.provider;
-          if (chunk.model) resolvedModel = chunk.model;
-          if (chunk.usage) {
-            finalUsage = {
-              promptTokens: chunk.usage.promptTokens,
-              completionTokens: chunk.usage.completionTokens,
-              totalTokens: chunk.usage.totalTokens,
-            };
-          }
-          yield chunk;
-        }
-        success = true;
-        break;
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error(String(error));
-        if (attempt < maxAttempts) {
-          await sleep(this.config.retryDelayMs ?? 1000);
-        }
-      }
-    }
-
-    if (!success) {
-      const fallback = this.findFallbackProvider(provider.type);
-      if (fallback) {
-        try {
-          accumulatedContent = '';
-          resolvedProvider = fallback.type;
-          resolvedModel = options?.model || fallback.defaultModel || 'default';
-          const stream = fallback.chatStream(messages, options);
-          for await (const chunk of stream) {
-            accumulatedContent += chunk.content;
-            if (chunk.provider) resolvedProvider = chunk.provider;
-            if (chunk.model) resolvedModel = chunk.model;
-            if (chunk.usage) {
-              finalUsage = {
-                promptTokens: chunk.usage.promptTokens,
-                completionTokens: chunk.usage.completionTokens,
-                totalTokens: chunk.usage.totalTokens,
-              };
-            }
-            yield chunk;
-          }
-          success = true;
-        } catch (err) {
-          if (err instanceof Error && err.message !== String(lastError)) {
-             console.warn('[Fallback Provider] stream error:', err);
-          }
-          throw lastError;
-        }
-      } else {
-        throw lastError;
-      }
-    }
-
-    // Cache the fully compiled response
-    const completeResponse: ChatResponse = {
-      content: accumulatedContent,
-      model: resolvedModel,
-      provider: resolvedProvider,
-      usage: finalUsage,
-      finishReason: 'stop',
-    };
-
-    try {
-      await this.semanticCache.set(cacheKey, completeResponse);
-    } catch (err) {
-      console.warn('[SemanticCache] set stream error:', err);
-    }
+  async *chatStream(messages: ChatMessage[], options?: ChatOptions & { provider?: AIProviderType }): AsyncGenerator<AIStreamChunk> {
+    yield* orchestratorChatStream(this.ctx, messages, options);
   }
 
-  /** Tạo cấu trúc đầu ra (structured output) theo schema của Zod */
-  async generateObject<T>(
-    schema: z.ZodType<T>,
-    messages: ChatMessage[],
-    options?: ChatOptions & { provider?: AIProviderType },
-  ): Promise<GenerateObjectResponse<T>> {
-    return generateObject(this, schema, messages, options);
+  // --- Embedding & Media (delegates to orchestrator/embedding.ts) ---
+
+  async generateObject<T>(schema: z.ZodType<T>, messages: ChatMessage[], options?: ChatOptions & { provider?: AIProviderType }): Promise<GenerateObjectResponse<T>> {
+    return orchestratorGenerateObject(this.ctx, this, schema, messages, options);
   }
 
-  /** Tạo vector embedding cho một chuỗi text */
-  async embed(
-    text: string,
-    options?: { model?: string; provider?: AIProviderType },
-  ): Promise<EmbeddingResponse> {
-    const provider = this.resolveProvider(options?.provider);
-    const maxAttempts = this.config.retryAttempts ?? 2;
-
-    return await this.executeWithFallback((p) => p.embed(text, options), provider, maxAttempts);
+  async embed(text: string, options?: { model?: string; provider?: AIProviderType }): Promise<EmbeddingResponse> {
+    return orchestratorEmbed(this.ctx, text, options);
   }
 
-  /** Tạo vector embedding cho danh sách các chuỗi text */
-  async embedMany(
-    texts: string[],
-    options?: { model?: string; provider?: AIProviderType },
-  ): Promise<EmbeddingManyResponse> {
-    const provider = this.resolveProvider(options?.provider);
-    const maxAttempts = this.config.retryAttempts ?? 2;
-
-    return await this.executeWithFallback(
-      (p) => p.embedMany(texts, options),
-      provider,
-      maxAttempts,
-    );
+  async embedMany(texts: string[], options?: { model?: string; provider?: AIProviderType }): Promise<EmbeddingManyResponse> {
+    return orchestratorEmbedMany(this.ctx, texts, options);
   }
 
-  /** Sinh ảnh từ văn bản */
-  async generateImage(
-    prompt: string,
-    options?: Record<string, unknown> & { provider?: AIProviderType },
-  ): Promise<{ url: string; b64?: string }> {
-    const provider = this.resolveProvider(options?.provider);
-    const maxAttempts = this.config.retryAttempts ?? 2;
-
-    return await this.executeWithFallback(
-      (p) => {
-        if (!p.generateImage) {
-          throw new Error(`${p.name} does not support generateImage`);
-        }
-        return p.generateImage(prompt, options);
-      },
-      provider,
-      maxAttempts,
-    );
+  async generateImage(prompt: string, options?: Record<string, unknown> & { provider?: AIProviderType }): Promise<{ url: string; b64?: string }> {
+    return orchestratorGenerateImage(this.ctx, prompt, options);
   }
 
-  /** Chuyển văn bản thành giọng nói */
-  async generateSpeech(
-    text: string,
-    options?: Record<string, unknown> & { provider?: AIProviderType },
-  ): Promise<{ audio: Buffer; contentType: string }> {
-    const provider = this.resolveProvider(options?.provider);
-    const maxAttempts = this.config.retryAttempts ?? 2;
-
-    return await this.executeWithFallback(
-      (p) => {
-        if (!p.generateSpeech) {
-          throw new Error(`${p.name} does not support generateSpeech`);
-        }
-        return p.generateSpeech(text, options);
-      },
-      provider,
-      maxAttempts,
-    );
+  async generateSpeech(text: string, options?: Record<string, unknown> & { provider?: AIProviderType }): Promise<{ audio: Buffer; contentType: string }> {
+    return orchestratorGenerateSpeech(this.ctx, text, options);
   }
 
-  /** Sinh video từ văn bản */
-  async generateVideo(
-    prompt: string,
-    options?: Record<string, unknown> & { provider?: AIProviderType },
-  ): Promise<{ url: string }> {
-    const provider = this.resolveProvider(options?.provider);
-    const maxAttempts = this.config.retryAttempts ?? 2;
-
-    return await this.executeWithFallback(
-      (p) => {
-        if (!p.generateVideo) {
-          throw new Error(`${p.name} does not support generateVideo`);
-        }
-        return p.generateVideo(prompt, options);
-      },
-      provider,
-      maxAttempts,
-    );
+  async generateVideo(prompt: string, options?: Record<string, unknown> & { provider?: AIProviderType }): Promise<{ url: string }> {
+    return orchestratorGenerateVideo(this.ctx, prompt, options);
   }
 
-  /** Chuyển giọng nói thành văn bản */
-  async transcribe(
-    audio: Buffer,
-    options?: Record<string, unknown> & { provider?: AIProviderType },
-  ): Promise<{ text: string }> {
-    const provider = this.resolveProvider(options?.provider);
-    const maxAttempts = this.config.retryAttempts ?? 2;
-
-    return await this.executeWithFallback(
-      (p) => {
-        if (!p.transcribe) {
-          throw new Error(`${p.name} does not support transcribe`);
-        }
-        return p.transcribe(audio, options);
-      },
-      provider,
-      maxAttempts,
-    );
+  async transcribe(audio: Buffer, options?: Record<string, unknown> & { provider?: AIProviderType }): Promise<{ text: string }> {
+    return orchestratorTranscribe(this.ctx, audio, options);
   }
 
-  /** Test tất cả providers */
+  // --- Status & Config ---
+
   async testAll(): Promise<Array<{ type: AIProviderType; ok: boolean; error?: string }>> {
     const results: Array<{ type: AIProviderType; ok: boolean; error?: string }> = [];
-
-    for (const provider of this.registry.getAll()) {
-      try {
-        const ok = await provider.test();
-        results.push({ type: provider.type, ok });
-      } catch (error) {
-        results.push({
-          type: provider.type,
-          ok: false,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
+    for (const provider of this._registry.getAll()) {
+      try { const ok = await provider.test(); results.push({ type: provider.type, ok }); }
+      catch (error) { results.push({ type: provider.type, ok: false, error: error instanceof Error ? error.message : String(error) }); }
     }
-
     return results;
   }
 
-  /** Lấy status tổng quan */
   async getStatus(): Promise<OrchestratorStatus> {
-    const allProviders = this.registry.getAll();
-    const statuses = await Promise.all(
-      allProviders.map(async (p) => ({
-        type: p.type,
-        ready: await p.isReady(),
-      })),
-    );
-
+    const allProviders = this._registry.getAll();
+    const statuses = await Promise.all(allProviders.map(async (p) => ({ type: p.type, ready: await p.isReady() })));
     const readyProviders = statuses.filter((s) => s.ready);
-
     return {
       availableProviders: readyProviders.map((s) => s.type),
-      defaultProvider: this.defaultProvider,
-      totalProviders: allProviders.length,
-      readyProviders: readyProviders.length,
+      defaultProvider: this._defaultProvider,
+      totalProviders: allProviders.length, readyProviders: readyProviders.length,
     };
   }
 
-  /** Đổi default provider */
-  setDefaultProvider(type: AIProviderType | null): void {
-    this.defaultProvider = type;
-  }
+  setDefaultProvider(type: AIProviderType | null): void { this._defaultProvider = type; }
+  setFallbackOrder(order: AIProviderType[]): void { this._fallbackOrder = order; }
 
-  /** Đổi fallback order */
-  setFallbackOrder(order: AIProviderType[]): void {
-    this.fallbackOrder = order;
-  }
+  // --- Tool-Calling (delegates to orchestrator/tool-calling.ts) ---
 
-  // --- Phase 5A: MCP ---
-
-  /** Lấy tất cả MCP tools */
-  getMCPTools(): MCPTool[] {
-    return this.mcpClient.getAllTools();
-  }
-
-  /** Gọi MCP tool */
-  async callMCPTool(
-    serverName: string,
-    toolName: string,
-    args: Record<string, unknown>,
-  ): Promise<MCPToolResult> {
-    return this.mcpClient.callTool(serverName, toolName, args);
-  }
-
-  // --- Phase 5B: Hooks ---
-
-  /** Load hooks config */
-  loadHooks(hooks: HookConfig[]): void {
-    this.hookRunner.loadHooks(hooks);
-  }
-
-  /** Chạy pre-tool hooks */
-  async runPreToolHooks(
-    toolName: string,
-    toolArgs?: Record<string, unknown>,
-  ): Promise<HookResult[]> {
-    return this.hookRunner.runPreTool(toolName, toolArgs);
-  }
-
-  /** Chạy post-tool hooks */
-  async runPostToolHooks(
-    toolName: string,
-    toolArgs?: Record<string, unknown>,
-    toolResult?: string,
-  ): Promise<HookResult[]> {
-    return this.hookRunner.runPostTool(toolName, toolArgs, toolResult);
-  }
-
-  // --- Phase 5C: Built-in Tools ---
-
-  /** Lấy built-in tool theo tên */
-  getBuiltInTool(name: string): BuiltInTool | undefined {
-    return this.builtInTools.find((t) => t.name === name);
-  }
-
-  /** Gọi built-in tool */
-  async callBuiltInTool(name: string, args: Record<string, unknown>): Promise<string> {
-    const tool = this.getBuiltInTool(name);
-    if (!tool) throw new Error(`Built-in tool "${name}" not found`);
-    return tool.execute(args);
-  }
-
-  // --- Phase 6B: Context ---
-
-  /** Kiểm tra context có cần compact không */
-  needsContextCompact(messages: ChatMessage[]): boolean {
-    return this.contextManager.needsCompact(messages);
-  }
-
-  /** Compact messages */
-  compactContext(messages: ChatMessage[]): ChatMessage[] {
-    return this.contextManager.compact(messages);
-  }
-
-  /** Lấy context usage */
-  getContextUsage(messages: ChatMessage[]): { used: number; max: number; percentage: number } {
-    return this.contextManager.getUsage(messages);
-  }
+  getMCPTools(): MCPTool[] { return getMCPTools(this.ctx); }
+  async callMCPTool(serverName: string, toolName: string, args: Record<string, unknown>): Promise<MCPToolResult> { return callMCPTool(this.ctx, serverName, toolName, args); }
+  loadHooks(hooks: HookConfig[]): void { loadHooks(this.ctx, hooks); }
+  async runPreToolHooks(toolName: string, toolArgs?: Record<string, unknown>): Promise<HookResult[]> { return runPreToolHooks(this.ctx, toolName, toolArgs); }
+  async runPostToolHooks(toolName: string, toolArgs?: Record<string, unknown>, toolResult?: string): Promise<HookResult[]> { return runPostToolHooks(this.ctx, toolName, toolArgs, toolResult); }
+  getBuiltInTool(name: string): BuiltInTool | undefined { return getBuiltInTool(this.ctx, name); }
+  async callBuiltInTool(name: string, args: Record<string, unknown>): Promise<string> { return callBuiltInTool(this.ctx, name, args); }
+  needsContextCompact(messages: ChatMessage[]): boolean { return needsContextCompact(this.ctx, messages); }
+  compactContext(messages: ChatMessage[]): ChatMessage[] { return compactContext(this.ctx, messages); }
+  getContextUsage(messages: ChatMessage[]): { used: number; max: number; percentage: number } { return getContextUsage(this.ctx, messages); }
 
   // --- Private ---
 
   private mapModelKeyToProviderType(modelKey: string): AIProviderType | null {
     const key = modelKey.toLowerCase();
-
-    // Direct type match first
     const allTypes: AIProviderType[] = [
-      'openai',
-      'anthropic',
-      'google',
-      'ollama',
-      'custom',
-      'opengateway',
-      'mimo',
-      'openrouter',
-      'deepseek',
-      'groq',
-      'mistral',
-      'hicap',
-      'github-models',
-      'cerebras',
-      'together',
-      'fireworks',
-      'cohere',
-      'xai',
-      'replicate',
-      'perplexity',
-      'voyage',
-      'ai21',
-      'sambanova',
-      'novita',
-      'opencode-zen',
-      'nvidia-nim',
+      'openai', 'anthropic', 'google', 'ollama', 'custom', 'opengateway', 'mimo',
+      'openrouter', 'deepseek', 'groq', 'mistral', 'hicap', 'github-models',
+      'cerebras', 'together', 'fireworks', 'cohere', 'xai', 'replicate',
+      'perplexity', 'voyage', 'ai21', 'sambanova', 'novita', 'opencode-zen', 'nvidia-nim',
     ];
     for (const type of allTypes) {
       if (key === type || key.includes(type)) return type;
     }
-
-    // Legacy keyword matching
     if (key.includes('claude')) return 'anthropic';
     if (key.includes('gemini')) return 'google';
     return null;
   }
 
   private resolveProvider(preferred?: AIProviderType, agentRole?: string): AIProvider {
-    // 1. Ưu tiên cao nhất: Preferred provider do người dùng chỉ định thủ công
-    if (preferred) {
-      const p = this.registry.get(preferred);
-      if (p) return this.wrapWithCostMiddleware(p);
-    }
-
-    // 2. Định tuyến theo agentRole nếu có cấu hình routing
-    if (agentRole && this.config.routing) {
-      const modelKey = this.config.routing[agentRole] || this.config.routing['default'];
+    if (preferred) { const p = this._registry.get(preferred); if (p) return this.wrapWithCostMiddleware(p); }
+    if (agentRole && this._config.routing) {
+      const modelKey = this._config.routing[agentRole] || this._config.routing['default'];
       if (modelKey) {
         const providerType = this.mapModelKeyToProviderType(modelKey);
-        if (providerType) {
-          const p = this.registry.get(providerType);
-          if (p) return this.wrapWithCostMiddleware(p);
-        }
+        if (providerType) { const p = this._registry.get(providerType); if (p) return this.wrapWithCostMiddleware(p); }
       }
     }
-
-    // 3. Ưu tiên tiếp theo: defaultProvider > fallback đầu tiên > bất kỳ sẵn sàng
-    if (this.defaultProvider) {
-      const p = this.registry.get(this.defaultProvider);
-      if (p) return this.wrapWithCostMiddleware(p);
+    if (this._defaultProvider) { const p = this._registry.get(this._defaultProvider); if (p) return this.wrapWithCostMiddleware(p); }
+    if (this._fallbackOrder.length > 0) {
+      for (const type of this._fallbackOrder) { const p = this._registry.get(type); if (p) return this.wrapWithCostMiddleware(p); }
     }
-
-    if (this.fallbackOrder.length > 0) {
-      for (const type of this.fallbackOrder) {
-        const p = this.registry.get(type);
-        if (p) return this.wrapWithCostMiddleware(p);
-      }
-    }
-
-    // Lấy bất kỳ provider nào
-    const all = this.registry.getAll();
-    if (all.length > 0) {
-      const first = all[0];
-      if (first) return this.wrapWithCostMiddleware(first);
-    }
-
+    const all = this._registry.getAll();
+    if (all.length > 0 && all[0]) return this.wrapWithCostMiddleware(all[0]);
     throw new Error('No AI providers registered');
   }
 
   private wrapWithCostMiddleware(provider: AIProvider): AIProvider {
-    return wrapProvider(provider, {
-      chat: [this.costMiddleware.chat],
-      chatStream: [this.costMiddleware.chatStream],
-    });
+    return wrapProvider(provider, { chat: [this.costMiddleware.chat], chatStream: [this.costMiddleware.chatStream] });
   }
 
   private findFallbackProvider(currentType: AIProviderType): AIProvider | null {
-    for (const type of this.fallbackOrder) {
+    for (const type of this._fallbackOrder) {
       if (type === currentType) continue;
-      const p = this.registry.get(type);
+      const p = this._registry.get(type);
       if (p) return this.wrapWithCostMiddleware(p);
     }
     return null;
   }
 
-  private async executeWithFallback<T>(
-    fn: (provider: AIProvider) => Promise<T>,
-    primary: AIProvider,
-    maxAttempts: number,
-  ): Promise<T> {
-    // Thử primary provider
-    try {
-      return await retry(() => fn(primary), maxAttempts, this.config.retryDelayMs ?? 1000);
-    } catch (primaryError) {
-      // Thử fallback
+  private async executeWithFallback<T>(fn: (provider: AIProvider) => Promise<T>, primary: AIProvider, maxAttempts: number): Promise<T> {
+    try { return await retry(() => fn(primary), maxAttempts, this._config.retryDelayMs ?? 1000); }
+    catch (primaryError) {
       const fallback = this.findFallbackProvider(primary.type);
-      if (fallback) {
-        try {
-          return await fn(fallback);
-        } catch {
-          throw primaryError; // Throw lỗi của primary
-        }
-      }
+      if (fallback) { try { return await fn(fallback); } catch { throw primaryError; } }
       throw primaryError;
     }
   }

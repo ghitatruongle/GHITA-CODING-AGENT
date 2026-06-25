@@ -126,7 +126,7 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
               }
             }}
           >
-            {copied ? '✓ Copied' : '📋 Copy'}
+            {copied ? `✓ ${t('common.copied')}` : `📋 ${t('common.copy')}`}
           </button>
           {isRunnable && (
             <button
@@ -143,7 +143,7 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
                 fontWeight: 600,
               }}
             >
-              {isRunning ? `⏳ ${t('chat.runningCmd')}` : '▶ Run'}
+              {isRunning ? `⏳ ${t('chat.runningCmd')}` : `▶ ${t('common.run')}`}
             </button>
           )}
         </div>

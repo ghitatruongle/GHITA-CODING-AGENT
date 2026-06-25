@@ -1,6 +1,6 @@
 [package]
 name = "ghita-coding-agent"
-version = "0.1.0"
+version = "0.0.4"
 description = "GHITA CODING AGENT Desktop"
 authors = ["ghitatruongle"]
 edition = "2021"
@@ -36,3 +36,11 @@ screenshots = "0.8"
 enigo = "0.2"
 image = "0.24"
 base64 = "0.22"
+
+# Phase 2: Native PTY terminal (replaces node-pty sidecar)
+portable-pty = "0.8"
+dashmap = "6"
+
+# Security & Utils
+rand = "0.8"
+percent-encoding = "2.3"

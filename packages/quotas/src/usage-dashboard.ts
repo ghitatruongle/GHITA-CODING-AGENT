@@ -44,7 +44,12 @@ export class UsageDashboard {
   /**
    * Time series chia bucket.
    */
-  timeSeries(userId: string, start: number, end: number, bucket: TimeBucket = 'day'): TimeSeriesPoint[] {
+  timeSeries(
+    userId: string,
+    start: number,
+    end: number,
+    bucket: TimeBucket = 'day',
+  ): TimeSeriesPoint[] {
     const records = this.tracker.query(userId, start, end);
     const bucketMs = this.bucketToMs(bucket);
     const buckets = new Map<number, TimeSeriesPoint>();
@@ -64,7 +69,12 @@ export class UsageDashboard {
   /**
    * Top models theo token usage.
    */
-  topModels(userId: string, start: number, end: number, n = 5): Array<{ model: string; tokens: number; cost: number }> {
+  topModels(
+    userId: string,
+    start: number,
+    end: number,
+    n = 5,
+  ): Array<{ model: string; tokens: number; cost: number }> {
     const summary = this.tracker.summary(userId, start, end);
     return Object.entries(summary.byModel)
       .map(([model, v]) => ({ model, tokens: v.tokens, cost: v.cost }))

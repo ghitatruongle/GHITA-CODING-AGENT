@@ -50,10 +50,7 @@ describe('MemorySummarizer', () => {
     });
 
     it('3. handles two entries (below minGroupSize)', async () => {
-      const result = await summarizer.summarize([
-        makeEntry({ id: 'e1' }),
-        makeEntry({ id: 'e2' }),
-      ]);
+      const result = await summarizer.summarize([makeEntry({ id: 'e1' }), makeEntry({ id: 'e2' })]);
       expect(result.before).toBe(2);
       expect(result.groups).toHaveLength(0);
     });
@@ -79,9 +76,27 @@ describe('MemorySummarizer', () => {
       const custom = new MemorySummarizer({ preserveTopN: 0, minGroupSize: 3 });
       const base = Date.now();
       const entries = [
-        makeEntry({ id: 'e1', timestamp: base, content: 'TypeScript setup config', importance: 0.2, tags: ['setup'] }),
-        makeEntry({ id: 'e2', timestamp: base + 60000, content: 'TypeScript tsconfig created', importance: 0.2, tags: ['setup'] }),
-        makeEntry({ id: 'e3', timestamp: base + 120000, content: 'TypeScript strict mode enabled', importance: 0.2, tags: ['setup'] }),
+        makeEntry({
+          id: 'e1',
+          timestamp: base,
+          content: 'TypeScript setup config',
+          importance: 0.2,
+          tags: ['setup'],
+        }),
+        makeEntry({
+          id: 'e2',
+          timestamp: base + 60000,
+          content: 'TypeScript tsconfig created',
+          importance: 0.2,
+          tags: ['setup'],
+        }),
+        makeEntry({
+          id: 'e3',
+          timestamp: base + 120000,
+          content: 'TypeScript strict mode enabled',
+          importance: 0.2,
+          tags: ['setup'],
+        }),
       ];
       const result = await custom.summarize(entries);
       expect(result.groups.length).toBeGreaterThanOrEqual(1);
@@ -91,9 +106,27 @@ describe('MemorySummarizer', () => {
     it('6. summary contains key topics', async () => {
       const base = Date.now();
       const entries = [
-        makeEntry({ id: 'e1', timestamp: base, content: 'React hooks useState useEffect', importance: 0.2, tags: ['react'] }),
-        makeEntry({ id: 'e2', timestamp: base + 60000, content: 'React hooks useCallback useMemo', importance: 0.2, tags: ['react'] }),
-        makeEntry({ id: 'e3', timestamp: base + 120000, content: 'React hooks useRef custom hooks', importance: 0.2, tags: ['react'] }),
+        makeEntry({
+          id: 'e1',
+          timestamp: base,
+          content: 'React hooks useState useEffect',
+          importance: 0.2,
+          tags: ['react'],
+        }),
+        makeEntry({
+          id: 'e2',
+          timestamp: base + 60000,
+          content: 'React hooks useCallback useMemo',
+          importance: 0.2,
+          tags: ['react'],
+        }),
+        makeEntry({
+          id: 'e3',
+          timestamp: base + 120000,
+          content: 'React hooks useRef custom hooks',
+          importance: 0.2,
+          tags: ['react'],
+        }),
       ];
       const result = await summarizer.summarize(entries);
       if (result.groups.length > 0) {
@@ -104,7 +137,13 @@ describe('MemorySummarizer', () => {
     it('7. compression ratio is between 0 and 1', async () => {
       const base = Date.now();
       const entries = Array.from({ length: 5 }, (_, i) =>
-        makeEntry({ id: `e${i}`, timestamp: base + i * 60000, content: `Entry ${i} about testing and quality assurance`, importance: 0.2, tags: ['testing'] }),
+        makeEntry({
+          id: `e${i}`,
+          timestamp: base + i * 60000,
+          content: `Entry ${i} about testing and quality assurance`,
+          importance: 0.2,
+          tags: ['testing'],
+        }),
       );
       const result = await summarizer.summarize(entries);
       expect(result.compressionRatio).toBeGreaterThanOrEqual(0);
@@ -124,9 +163,27 @@ describe('MemorySummarizer', () => {
     it('9. summaries have correct sourceIds', async () => {
       const base = Date.now();
       const entries = [
-        makeEntry({ id: 'a', timestamp: base, content: 'first entry about deployment', importance: 0.2, tags: ['deploy'] }),
-        makeEntry({ id: 'b', timestamp: base + 60000, content: 'second entry about deployment', importance: 0.2, tags: ['deploy'] }),
-        makeEntry({ id: 'c', timestamp: base + 120000, content: 'third entry about deployment', importance: 0.2, tags: ['deploy'] }),
+        makeEntry({
+          id: 'a',
+          timestamp: base,
+          content: 'first entry about deployment',
+          importance: 0.2,
+          tags: ['deploy'],
+        }),
+        makeEntry({
+          id: 'b',
+          timestamp: base + 60000,
+          content: 'second entry about deployment',
+          importance: 0.2,
+          tags: ['deploy'],
+        }),
+        makeEntry({
+          id: 'c',
+          timestamp: base + 120000,
+          content: 'third entry about deployment',
+          importance: 0.2,
+          tags: ['deploy'],
+        }),
       ];
       const result = await summarizer.summarize(entries);
       if (result.summaries.length > 0) {
@@ -138,9 +195,27 @@ describe('MemorySummarizer', () => {
     it('10. summary entry is marked as isSummary', async () => {
       const base = Date.now();
       const entries = [
-        makeEntry({ id: 'x1', timestamp: base, content: 'entry one about CI/CD', importance: 0.2, tags: ['ci'] }),
-        makeEntry({ id: 'x2', timestamp: base + 60000, content: 'entry two about CI/CD', importance: 0.2, tags: ['ci'] }),
-        makeEntry({ id: 'x3', timestamp: base + 120000, content: 'entry three about CI/CD', importance: 0.2, tags: ['ci'] }),
+        makeEntry({
+          id: 'x1',
+          timestamp: base,
+          content: 'entry one about CI/CD',
+          importance: 0.2,
+          tags: ['ci'],
+        }),
+        makeEntry({
+          id: 'x2',
+          timestamp: base + 60000,
+          content: 'entry two about CI/CD',
+          importance: 0.2,
+          tags: ['ci'],
+        }),
+        makeEntry({
+          id: 'x3',
+          timestamp: base + 120000,
+          content: 'entry three about CI/CD',
+          importance: 0.2,
+          tags: ['ci'],
+        }),
       ];
       const result = await summarizer.summarize(entries);
       for (const s of result.summaries) {
@@ -155,11 +230,39 @@ describe('MemorySummarizer', () => {
     it('11. high-importance entries are preserved, not summarized', async () => {
       const base = Date.now();
       const entries = [
-        makeEntry({ id: 'h1', timestamp: base, importance: 0.9, content: 'critical decision made' }),
-        makeEntry({ id: 'h2', timestamp: base + 60000, importance: 0.95, content: 'another critical decision' }),
-        makeEntry({ id: 'l1', timestamp: base + 120000, importance: 0.1, content: 'low value log', tags: ['log'] }),
-        makeEntry({ id: 'l2', timestamp: base + 180000, importance: 0.1, content: 'another low value', tags: ['log'] }),
-        makeEntry({ id: 'l3', timestamp: base + 240000, importance: 0.1, content: 'yet another low value', tags: ['log'] }),
+        makeEntry({
+          id: 'h1',
+          timestamp: base,
+          importance: 0.9,
+          content: 'critical decision made',
+        }),
+        makeEntry({
+          id: 'h2',
+          timestamp: base + 60000,
+          importance: 0.95,
+          content: 'another critical decision',
+        }),
+        makeEntry({
+          id: 'l1',
+          timestamp: base + 120000,
+          importance: 0.1,
+          content: 'low value log',
+          tags: ['log'],
+        }),
+        makeEntry({
+          id: 'l2',
+          timestamp: base + 180000,
+          importance: 0.1,
+          content: 'another low value',
+          tags: ['log'],
+        }),
+        makeEntry({
+          id: 'l3',
+          timestamp: base + 240000,
+          importance: 0.1,
+          content: 'yet another low value',
+          tags: ['log'],
+        }),
       ];
       const result = await summarizer.summarize(entries);
       // High importance entries should NOT appear in summarized sourceIds
@@ -173,9 +276,27 @@ describe('MemorySummarizer', () => {
       const custom = new MemorySummarizer({ importanceThreshold: 0.3 });
       const base = Date.now();
       const entries = [
-        makeEntry({ id: 'm1', timestamp: base, importance: 0.4, content: 'medium importance', tags: ['med'] }),
-        makeEntry({ id: 'm2', timestamp: base + 60000, importance: 0.4, content: 'medium importance too', tags: ['med'] }),
-        makeEntry({ id: 'm3', timestamp: base + 120000, importance: 0.4, content: 'medium importance three', tags: ['med'] }),
+        makeEntry({
+          id: 'm1',
+          timestamp: base,
+          importance: 0.4,
+          content: 'medium importance',
+          tags: ['med'],
+        }),
+        makeEntry({
+          id: 'm2',
+          timestamp: base + 60000,
+          importance: 0.4,
+          content: 'medium importance too',
+          tags: ['med'],
+        }),
+        makeEntry({
+          id: 'm3',
+          timestamp: base + 120000,
+          importance: 0.4,
+          content: 'medium importance three',
+          tags: ['med'],
+        }),
       ];
       const result = await custom.summarize(entries);
       // With threshold 0.3, entries with importance 0.4 are NOT candidates
@@ -196,8 +317,20 @@ describe('MemorySummarizer', () => {
       const base = Date.now();
       const entries = [
         makeEntry({ id: 'g1', timestamp: base, importance: 0.3, content: 'a', tags: ['t'] }),
-        makeEntry({ id: 'g2', timestamp: base + 60000, importance: 0.3, content: 'b', tags: ['t'] }),
-        makeEntry({ id: 'g3', timestamp: base + 120000, importance: 0.3, content: 'c', tags: ['t'] }),
+        makeEntry({
+          id: 'g2',
+          timestamp: base + 60000,
+          importance: 0.3,
+          content: 'b',
+          tags: ['t'],
+        }),
+        makeEntry({
+          id: 'g3',
+          timestamp: base + 120000,
+          importance: 0.3,
+          content: 'c',
+          tags: ['t'],
+        }),
       ];
       const result = await summarizer.summarize(entries);
       if (result.summaries.length > 0) {
@@ -215,8 +348,18 @@ describe('MemorySummarizer', () => {
       const base = Date.now();
       const entries = [
         makeEntry({ id: 's1', sessionId: 'sess1', timestamp: base, content: 'Session entry 1' }),
-        makeEntry({ id: 's2', sessionId: 'sess1', timestamp: base + 60000, content: 'Session entry 2' }),
-        makeEntry({ id: 's3', sessionId: 'sess1', timestamp: base + 120000, content: 'Session entry 3' }),
+        makeEntry({
+          id: 's2',
+          sessionId: 'sess1',
+          timestamp: base + 60000,
+          content: 'Session entry 2',
+        }),
+        makeEntry({
+          id: 's3',
+          sessionId: 'sess1',
+          timestamp: base + 120000,
+          content: 'Session entry 3',
+        }),
       ];
       const result = await summarizer.summarizeSession('sess1', entries);
       expect(result).not.toBeNull();
@@ -237,7 +380,12 @@ describe('MemorySummarizer', () => {
       const entries = [
         makeEntry({ id: 'a1', sessionId: 'sess1', timestamp: base, content: 'Session A' }),
         makeEntry({ id: 'b1', sessionId: 'sess2', timestamp: base + 60000, content: 'Session B' }),
-        makeEntry({ id: 'a2', sessionId: 'sess1', timestamp: base + 120000, content: 'Session A2' }),
+        makeEntry({
+          id: 'a2',
+          sessionId: 'sess1',
+          timestamp: base + 120000,
+          content: 'Session A2',
+        }),
       ];
       const result = await summarizer.summarizeSession('sess1', entries);
       // Only 2 entries match sess1, below minGroupSize=3
@@ -265,9 +413,27 @@ describe('MemorySummarizer', () => {
       const custom = new MemorySummarizer({ maxSummaryLength: 50, minGroupSize: 3 });
       const base = Date.now();
       const entries = [
-        makeEntry({ id: 'e1', timestamp: base, content: 'A'.repeat(200), importance: 0.2, tags: ['x'] }),
-        makeEntry({ id: 'e2', timestamp: base + 60000, content: 'B'.repeat(200), importance: 0.2, tags: ['x'] }),
-        makeEntry({ id: 'e3', timestamp: base + 120000, content: 'C'.repeat(200), importance: 0.2, tags: ['x'] }),
+        makeEntry({
+          id: 'e1',
+          timestamp: base,
+          content: 'A'.repeat(200),
+          importance: 0.2,
+          tags: ['x'],
+        }),
+        makeEntry({
+          id: 'e2',
+          timestamp: base + 60000,
+          content: 'B'.repeat(200),
+          importance: 0.2,
+          tags: ['x'],
+        }),
+        makeEntry({
+          id: 'e3',
+          timestamp: base + 120000,
+          content: 'C'.repeat(200),
+          importance: 0.2,
+          tags: ['x'],
+        }),
       ];
       const result = await custom.summarize(entries);
       for (const s of result.summaries) {
@@ -286,9 +452,27 @@ describe('MemorySummarizer', () => {
       const custom = new MemorySummarizer({ minGroupSize: 3 }, embedder);
       const base = Date.now();
       const entries = [
-        makeEntry({ id: 'e1', timestamp: base, content: 'embed test 1', importance: 0.2, tags: ['emb'] }),
-        makeEntry({ id: 'e2', timestamp: base + 60000, content: 'embed test 2', importance: 0.2, tags: ['emb'] }),
-        makeEntry({ id: 'e3', timestamp: base + 120000, content: 'embed test 3', importance: 0.2, tags: ['emb'] }),
+        makeEntry({
+          id: 'e1',
+          timestamp: base,
+          content: 'embed test 1',
+          importance: 0.2,
+          tags: ['emb'],
+        }),
+        makeEntry({
+          id: 'e2',
+          timestamp: base + 60000,
+          content: 'embed test 2',
+          importance: 0.2,
+          tags: ['emb'],
+        }),
+        makeEntry({
+          id: 'e3',
+          timestamp: base + 120000,
+          content: 'embed test 3',
+          importance: 0.2,
+          tags: ['emb'],
+        }),
       ];
       await custom.summarize(entries, { includeEmbeddings: true });
       // If groups were formed, embedding should have been called
@@ -297,14 +481,34 @@ describe('MemorySummarizer', () => {
 
     it('21. no embeddings when includeEmbeddings is false', async () => {
       const embedder: EmbeddingProvider = {
-        async embed() { return new Array(10).fill(0); },
+        async embed() {
+          return new Array(10).fill(0);
+        },
       };
       const custom = new MemorySummarizer({ minGroupSize: 3 }, embedder);
       const base = Date.now();
       const entries = [
-        makeEntry({ id: 'e1', timestamp: base, content: 'no embed 1', importance: 0.2, tags: ['ne'] }),
-        makeEntry({ id: 'e2', timestamp: base + 60000, content: 'no embed 2', importance: 0.2, tags: ['ne'] }),
-        makeEntry({ id: 'e3', timestamp: base + 120000, content: 'no embed 3', importance: 0.2, tags: ['ne'] }),
+        makeEntry({
+          id: 'e1',
+          timestamp: base,
+          content: 'no embed 1',
+          importance: 0.2,
+          tags: ['ne'],
+        }),
+        makeEntry({
+          id: 'e2',
+          timestamp: base + 60000,
+          content: 'no embed 2',
+          importance: 0.2,
+          tags: ['ne'],
+        }),
+        makeEntry({
+          id: 'e3',
+          timestamp: base + 120000,
+          content: 'no embed 3',
+          importance: 0.2,
+          tags: ['ne'],
+        }),
       ];
       const result = await custom.summarize(entries, { includeEmbeddings: false });
       for (const s of result.summaries) {
@@ -315,9 +519,27 @@ describe('MemorySummarizer', () => {
     it('22. tier option is applied to summary entries', async () => {
       const base = Date.now();
       const entries = [
-        makeEntry({ id: 'e1', timestamp: base, content: 'cold tier 1', importance: 0.2, tags: ['c'] }),
-        makeEntry({ id: 'e2', timestamp: base + 60000, content: 'cold tier 2', importance: 0.2, tags: ['c'] }),
-        makeEntry({ id: 'e3', timestamp: base + 120000, content: 'cold tier 3', importance: 0.2, tags: ['c'] }),
+        makeEntry({
+          id: 'e1',
+          timestamp: base,
+          content: 'cold tier 1',
+          importance: 0.2,
+          tags: ['c'],
+        }),
+        makeEntry({
+          id: 'e2',
+          timestamp: base + 60000,
+          content: 'cold tier 2',
+          importance: 0.2,
+          tags: ['c'],
+        }),
+        makeEntry({
+          id: 'e3',
+          timestamp: base + 120000,
+          content: 'cold tier 3',
+          importance: 0.2,
+          tags: ['c'],
+        }),
       ];
       const result = await summarizer.summarize(entries, { tier: 'cold' });
       for (const s of result.summaries) {
@@ -332,9 +554,27 @@ describe('MemorySummarizer', () => {
     it('23. entries with different sessions do not group', async () => {
       const base = Date.now();
       const entries = [
-        makeEntry({ id: 'e1', timestamp: base, sessionId: 's1', content: 'session one', importance: 0.2 }),
-        makeEntry({ id: 'e2', timestamp: base + 60000, sessionId: 's2', content: 'session two', importance: 0.2 }),
-        makeEntry({ id: 'e3', timestamp: base + 120000, sessionId: 's3', content: 'session three', importance: 0.2 }),
+        makeEntry({
+          id: 'e1',
+          timestamp: base,
+          sessionId: 's1',
+          content: 'session one',
+          importance: 0.2,
+        }),
+        makeEntry({
+          id: 'e2',
+          timestamp: base + 60000,
+          sessionId: 's2',
+          content: 'session two',
+          importance: 0.2,
+        }),
+        makeEntry({
+          id: 'e3',
+          timestamp: base + 120000,
+          sessionId: 's3',
+          content: 'session three',
+          importance: 0.2,
+        }),
       ];
       const result = await summarizer.summarize(entries);
       // Different sessions, no tags in common -> no groups
@@ -345,8 +585,20 @@ describe('MemorySummarizer', () => {
       const base = Date.now();
       const entries = [
         makeEntry({ id: 'e1', timestamp: base, content: 'day one', importance: 0.2, tags: ['t'] }),
-        makeEntry({ id: 'e2', timestamp: base + 2 * 60 * 60 * 1000, content: 'day two', importance: 0.2, tags: ['t'] }),
-        makeEntry({ id: 'e3', timestamp: base + 4 * 60 * 60 * 1000, content: 'day three', importance: 0.2, tags: ['t'] }),
+        makeEntry({
+          id: 'e2',
+          timestamp: base + 2 * 60 * 60 * 1000,
+          content: 'day two',
+          importance: 0.2,
+          tags: ['t'],
+        }),
+        makeEntry({
+          id: 'e3',
+          timestamp: base + 4 * 60 * 60 * 1000,
+          content: 'day three',
+          importance: 0.2,
+          tags: ['t'],
+        }),
       ];
       const result = await summarizer.summarize(entries);
       // Gaps > 1 hour → separate groups, each with only 1 entry (below minGroupSize)
@@ -355,14 +607,34 @@ describe('MemorySummarizer', () => {
 
     it('25. embedder error is handled gracefully', async () => {
       const badEmbedder: EmbeddingProvider = {
-        async embed() { throw new Error('embedding failed'); },
+        async embed() {
+          throw new Error('embedding failed');
+        },
       };
       const custom = new MemorySummarizer({ minGroupSize: 3 }, badEmbedder);
       const base = Date.now();
       const entries = [
-        makeEntry({ id: 'e1', timestamp: base, content: 'error test 1', importance: 0.2, tags: ['err'] }),
-        makeEntry({ id: 'e2', timestamp: base + 60000, content: 'error test 2', importance: 0.2, tags: ['err'] }),
-        makeEntry({ id: 'e3', timestamp: base + 120000, content: 'error test 3', importance: 0.2, tags: ['err'] }),
+        makeEntry({
+          id: 'e1',
+          timestamp: base,
+          content: 'error test 1',
+          importance: 0.2,
+          tags: ['err'],
+        }),
+        makeEntry({
+          id: 'e2',
+          timestamp: base + 60000,
+          content: 'error test 2',
+          importance: 0.2,
+          tags: ['err'],
+        }),
+        makeEntry({
+          id: 'e3',
+          timestamp: base + 120000,
+          content: 'error test 3',
+          importance: 0.2,
+          tags: ['err'],
+        }),
       ];
       const result = await custom.summarize(entries, { includeEmbeddings: true });
       // Should not throw; summaries should have undefined embedding

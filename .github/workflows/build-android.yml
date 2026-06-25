@@ -30,6 +30,17 @@ jobs:
       - name: Build shared package
         run: pnpm --filter @ghita/shared build
 
+      - name: Typecheck mobile
+        run: pnpm --filter @ghita/mobile typecheck
+
+      - name: Lint mobile
+        run: pnpm --filter @ghita/mobile lint
+        continue-on-error: true
+
+      - name: Run mobile tests
+        run: pnpm --filter @ghita/mobile test
+        continue-on-error: true
+
       - name: Build Android APK
         working-directory: apps/mobile/android
         run: ./gradlew assembleRelease

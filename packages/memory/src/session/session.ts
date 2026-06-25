@@ -9,6 +9,13 @@
 // - Export/import as JSON
 // ==============================================================================
 
+// SECURITY (audit fix 2.15): use the `node:crypto` module directly instead
+// of relying on the global `crypto` object. The global is only available
+// from Node 19+ and on certain runtimes (Deno, Bun, browsers); importing
+// it explicitly keeps the session manager portable across Node 16, 18 and
+// the React Native JS engine.
+import nodeCrypto from 'node:crypto';
+
 // ----- Types -----
 
 export type SessionStatus = 'active' | 'paused' | 'archived' | 'closed';
@@ -107,7 +114,10 @@ export class InMemorySessionStore implements SessionStore {
   }
 
   async search(query: string, limit = 20): Promise<SessionSearchResult[]> {
-    const terms = query.toLowerCase().split(/\s+/).filter((t) => t.length > 0);
+    const terms = query
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((t) => t.length > 0);
     if (terms.length === 0) return [];
 
     // Score: count of matching terms per message
@@ -127,9 +137,7 @@ export class InMemorySessionStore implements SessionStore {
       const session = this.cache.get(sessionId);
       const msg = session?.messages.find((m) => m.id === msgId);
       if (!msg) continue;
-      const snippet = msg.content.length > 120
-        ? msg.content.slice(0, 120) + '…'
-        : msg.content;
+      const snippet = msg.content.length > 120 ? `${msg.content.slice(0, 120)  }…` : msg.content;
       results.push({ sessionId, messageId: msgId, snippet, score });
     }
     results.sort((a, b) => b.score - a.score);
@@ -139,7 +147,10 @@ export class InMemorySessionStore implements SessionStore {
   private indexForFts(session: Session): void {
     for (const msg of session.messages) {
       this.messageToSession.set(msg.id, session.id);
-      const words = msg.content.toLowerCase().split(/\W+/).filter((w) => w.length > 1);
+      const words = msg.content
+        .toLowerCase()
+        .split(/\W+/)
+        .filter((w) => w.length > 1);
       for (const word of words) {
         let set = this.fts.get(word);
         if (!set) {
@@ -154,7 +165,10 @@ export class InMemorySessionStore implements SessionStore {
   private deindexForFts(session: Session): void {
     for (const msg of session.messages) {
       this.messageToSession.delete(msg.id);
-      const words = msg.content.toLowerCase().split(/\W+/).filter((w) => w.length > 1);
+      const words = msg.content
+        .toLowerCase()
+        .split(/\W+/)
+        .filter((w) => w.length > 1);
       for (const word of words) {
         this.fts.get(word)?.delete(msg.id);
       }
@@ -164,12 +178,26 @@ export class InMemorySessionStore implements SessionStore {
 
 // ----- Session Manager (lifecycle + multi-session) -----
 
-let _idCounter = 0;
+/**
+ * Generate a UUID v4 string, preferring `node:crypto.randomUUID` and
+ * falling back to a `Math.random`-based generator for runtimes that
+ * pre-date Node 19 (where `crypto.randomUUID` was first exposed globally).
+ */
+function uuidv4(): string {
+  if (typeof nodeCrypto.randomUUID === 'function') {
+    return nodeCrypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
 function generateId(): string {
-  return `sess-${Date.now().toString(36)}-${(++_idCounter).toString(36)}`;
+  return `sess-${uuidv4().slice(0, 12)}`;
 }
 function generateMessageId(): string {
-  return `msg-${Date.now().toString(36)}-${(++_idCounter).toString(36)}`;
+  return `msg-${uuidv4().slice(0, 12)}`;
 }
 
 export class SessionManager {

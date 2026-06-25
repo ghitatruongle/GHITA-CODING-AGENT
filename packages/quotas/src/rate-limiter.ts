@@ -140,7 +140,12 @@ export class RateLimiter {
   /**
    * Stats tổng quan.
    */
-  stats(): { totalChecks: number; totalBlocked: number; uniqueUsers: number; registeredLimits: number } {
+  stats(): {
+    totalChecks: number;
+    totalBlocked: number;
+    uniqueUsers: number;
+    registeredLimits: number;
+  } {
     const userSet = new Set<string>();
     for (const key of this.buckets.keys()) {
       const userId = key.split(':')[0];

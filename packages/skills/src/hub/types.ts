@@ -8,18 +8,18 @@ import type { SkillCategory } from '@ghita/shared';
 
 // --- Trust Levels ---
 export type TrustLevel =
-  | 'trusted'      // Verified source, content-hash matched
-  | 'verified'     // From known repo, hash verified
-  | 'unverified'   // Unknown source, needs review
-  | 'restricted';  // Explicitly restricted / blocked
+  | 'trusted' // Verified source, content-hash matched
+  | 'verified' // From known repo, hash verified
+  | 'unverified' // Unknown source, needs review
+  | 'restricted'; // Explicitly restricted / blocked
 
 // --- Skill Source ---
 export type SkillSource =
-  | 'local'        // Created locally
-  | 'hub'          // From GHITA Skills Hub
-  | 'npm'          // From npm package
-  | 'git'          // From git repository
-  | 'imported';    // Imported from file
+  | 'local' // Created locally
+  | 'hub' // From GHITA Skills Hub
+  | 'npm' // From npm package
+  | 'git' // From git repository
+  | 'imported'; // Imported from file
 
 // --- Skill Meta (extended metadata for Hub) ---
 export interface SkillMeta {
@@ -173,13 +173,10 @@ export interface HubStats {
 
 // --- Default Hub Config ---
 export const DEFAULT_HUB_CONFIG: HubConfig = {
-  hubPath: '',   // Will be resolved to ~/.ghita/skills-hub
+  hubPath: '', // Will be resolved to ~/.ghita/skills-hub
   lockfilePath: '', // Will be resolved to hubPath/lock.json
   auditLogPath: '', // Will be resolved to hubPath/audit-log.json
-  trustedRepos: [
-    'ghita-corp/ghita-skills',
-    'ghita-corp/official-skills',
-  ],
+  trustedRepos: ['ghita-corp/ghita-skills', 'ghita-corp/official-skills'],
   autoVerify: true,
   maxAuditEntries: 1000,
 };

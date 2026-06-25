@@ -61,9 +61,16 @@ export function parseBoxToScreenCoords(
   let coords: number[] = [];
 
   // Pattern 1: <bbox>x1 y1 x2 y2</bbox>
-  const bboxMatch = boxStr.match(/<bbox>\s*(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s*<\/bbox>/i);
+  const bboxMatch = boxStr.match(
+    /<bbox>\s*(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s*<\/bbox>/i,
+  );
   if (bboxMatch) {
-    coords = [Number(bboxMatch[1]), Number(bboxMatch[2]), Number(bboxMatch[3]), Number(bboxMatch[4])];
+    coords = [
+      Number(bboxMatch[1]),
+      Number(bboxMatch[2]),
+      Number(bboxMatch[3]),
+      Number(bboxMatch[4]),
+    ];
   } else {
     // Pattern 2: <point>x y</point>
     const pointMatch = boxStr.match(/<point>\s*(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s*<\/point>/i);
@@ -73,15 +80,29 @@ export function parseBoxToScreenCoords(
       coords = [p1, p2, p1, p2];
     } else {
       // Pattern 3: [y1, x1, y2, x2] or [x1, y1, x2, y2]
-      const bracketsMatch = boxStr.match(/\[\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*\]/);
+      const bracketsMatch = boxStr.match(
+        /\[\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*\]/,
+      );
       if (bracketsMatch) {
-        coords = [Number(bracketsMatch[1]), Number(bracketsMatch[2]), Number(bracketsMatch[3]), Number(bracketsMatch[4])];
+        coords = [
+          Number(bracketsMatch[1]),
+          Number(bracketsMatch[2]),
+          Number(bracketsMatch[3]),
+          Number(bracketsMatch[4]),
+        ];
       } else {
         // Pattern 4: (x1, y1, x2, y2) or (x, y)
-        const parensMatch = boxStr.match(/\(\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*(?:,\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*)?\)/);
+        const parensMatch = boxStr.match(
+          /\(\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*(?:,\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*)?\)/,
+        );
         if (parensMatch) {
           if (parensMatch[3] !== undefined && parensMatch[4] !== undefined) {
-            coords = [Number(parensMatch[1]), Number(parensMatch[2]), Number(parensMatch[3]), Number(parensMatch[4])];
+            coords = [
+              Number(parensMatch[1]),
+              Number(parensMatch[2]),
+              Number(parensMatch[3]),
+              Number(parensMatch[4]),
+            ];
           } else {
             const px = Number(parensMatch[1]);
             const py = Number(parensMatch[2]);
@@ -117,7 +138,10 @@ export function parseBoxToScreenCoords(
 
   const maxVal = isRange1000 ? 1000 : 1.0;
 
-  let x1_norm = 0, y1_norm = 0, x2_norm = 0, y2_norm = 0;
+  let x1_norm = 0,
+    y1_norm = 0,
+    x2_norm = 0,
+    y2_norm = 0;
   if (coordsOrder === 'yxyx') {
     const [y1 = 0, x1 = 0, y2 = 0, x2 = 0] = coords;
     x1_norm = x1 / maxVal;
@@ -217,9 +241,7 @@ export async function smartResizeForV15(
   const resizedWidth = Math.round(width * ratio);
   const resizedHeight = Math.round(height * ratio);
 
-  const resizedBuffer = await image
-    .resize(resizedWidth, resizedHeight)
-    .toBuffer();
+  const resizedBuffer = await image.resize(resizedWidth, resizedHeight).toBuffer();
 
   return {
     resizedBuffer,
@@ -298,7 +320,12 @@ export class VisionGrounder {
       coordsOrder?: 'xyxy' | 'yxyx';
       maxPixels?: number;
     } = {},
-  ): Promise<GroundingResult & { logical?: { box: BoundingBox; point: Point }; physical?: { box: BoundingBox; point: Point } }> {
+  ): Promise<
+    GroundingResult & {
+      logical?: { box: BoundingBox; point: Point };
+      physical?: { box: BoundingBox; point: Point };
+    }
+  > {
     const apiConfig = this.loadConfig();
     if (!apiConfig) {
       throw new Error('[VisionGrounder] API Key configuration is missing in ~/.openclaude.json');
@@ -344,10 +371,10 @@ Only output the Action. Do not write any HTML tags, explainers or other text.`;
     imageBase64: string,
     prompt: string,
   ): Promise<string> {
-    const url = config.baseUrl.endsWith('/') ? config.baseUrl : config.baseUrl + '/';
+    const url = config.baseUrl.endsWith('/') ? config.baseUrl : `${config.baseUrl  }/`;
 
     if (config.type === 'openai') {
-      const response = await fetch(url + 'chat/completions', {
+      const response = await fetch(`${url  }chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -383,7 +410,7 @@ Only output the Action. Do not write any HTML tags, explainers or other text.`;
       };
       return res.choices?.[0]?.message?.content || '';
     } else if (config.type === 'anthropic') {
-      const response = await fetch(url + 'messages', {
+      const response = await fetch(`${url  }messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -414,7 +441,9 @@ Only output the Action. Do not write any HTML tags, explainers or other text.`;
       });
 
       if (!response.ok) {
-        throw new Error(`Anthropic Vision API Error (${response.status}): ${await response.text()}`);
+        throw new Error(
+          `Anthropic Vision API Error (${response.status}): ${await response.text()}`,
+        );
       }
 
       const res = (await response.json()) as { content?: Array<{ text?: string }> };

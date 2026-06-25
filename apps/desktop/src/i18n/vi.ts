@@ -30,10 +30,12 @@ export const vi: TranslationKeys = {
     uninstall: 'Gỡ cài đặt',
     add: 'Thêm',
     delete: 'Xóa',
+    copied: 'Đã sao chép',
+    run: 'Chạy',
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v0.0.3',
+    version: 'v0.0.4',
     deviceReconnected: 'Khôi phục kết nối với thiết bị: {{name}}',
     devicePaired: 'Đã ghép đôi thành công thiết bị: {{name}}',
     commandReceived: 'Đã nhận lệnh từ thiết bị: {{action}}',

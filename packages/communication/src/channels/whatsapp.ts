@@ -1,4 +1,5 @@
-import type { ChannelAdapter } from '../channel-plugin-contract.js';
+import type { ChannelAdapter, ChannelHealthStatus } from '../channel-plugin-contract.js';
+import * as crypto from 'node:crypto';
 
 interface WSClient {
   close(): void;
@@ -14,6 +15,9 @@ export class WhatsAppAdapter implements ChannelAdapter {
   private isRunning = false;
   private ws: WSClient | null = null;
   private pairingStatus = 'UNLINKED';
+  private retryCount = 0;
+  private readonly maxRetryDelay = 30000;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(wsUrl = 'ws://localhost:9000/whatsapp') {
     this.wsUrl = wsUrl;
@@ -43,7 +47,7 @@ export class WhatsAppAdapter implements ChannelAdapter {
 
     // Fallback: POST request to gateway REST API
     try {
-      const httpUrl = this.wsUrl.replace(/^ws/, 'http') + '/send';
+      const httpUrl = `${this.wsUrl.replace(/^ws/, 'http')  }/send`;
       const response = await fetch(httpUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -73,6 +77,10 @@ export class WhatsAppAdapter implements ChannelAdapter {
    */
   async stop(): Promise<void> {
     this.isRunning = false;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
     if (this.ws) {
       try {
         this.ws.close();
@@ -92,7 +100,8 @@ export class WhatsAppAdapter implements ChannelAdapter {
    */
   simulatePairingCode(): string {
     this.pairingStatus = 'PAIRING';
-    const code = Math.random().toString(36).substring(2, 10).toUpperCase();
+    const bytes = crypto.randomBytes(4).toString('hex').toUpperCase();
+    const code = bytes.substring(0, 8);
     console.info(`[WhatsAppAdapter] Link device pairing code: ${code}`);
     return code;
   }
@@ -101,13 +110,17 @@ export class WhatsAppAdapter implements ChannelAdapter {
     if (!this.isRunning) return;
 
     try {
-      let WebSocketCtor: new (url: string) => WSClient = (globalThis as unknown as { WebSocket?: new (url: string) => WSClient }).WebSocket as new (url: string) => WSClient;
+      let WebSocketCtor: new (url: string) => WSClient = (
+        globalThis as unknown as { WebSocket?: new (url: string) => WSClient }
+      ).WebSocket as new (url: string) => WSClient;
       if (!WebSocketCtor) {
         try {
           const wsModule = await import('ws');
           WebSocketCtor = wsModule.default as new (url: string) => WSClient;
         } catch {
-          console.warn('[WhatsAppAdapter] WebSocket not available in host environment. Connection skipped.');
+          console.warn(
+            '[WhatsAppAdapter] WebSocket not available in host environment. Connection skipped.',
+          );
           return;
         }
       }
@@ -118,6 +131,7 @@ export class WhatsAppAdapter implements ChannelAdapter {
       socket.on('open', () => {
         console.info('[WhatsAppAdapter] Connected to linked-device gateway');
         this.pairingStatus = 'LINKED';
+        this.retryCount = 0;
       });
 
       socket.on('message', async (rawData: unknown) => {
@@ -139,7 +153,9 @@ export class WhatsAppAdapter implements ChannelAdapter {
       socket.on('close', () => {
         this.pairingStatus = 'UNLINKED';
         if (this.isRunning) {
-          setTimeout(() => this.connectWS(), 5000); // Reconnect
+          const delay = Math.min(1000 * Math.pow(2, this.retryCount), this.maxRetryDelay);
+          this.retryCount++;
+          this.reconnectTimer = setTimeout(() => this.connectWS(), delay);
         }
       });
 
@@ -163,5 +179,24 @@ export class WhatsAppAdapter implements ChannelAdapter {
         timestamp: Date.now(),
       });
     }
+  }
+
+  /**
+   * Probe WhatsApp connection health by checking WS and pairing state.
+   */
+  async healthCheck(): Promise<ChannelHealthStatus> {
+    const start = Date.now();
+    const wsOpen = this.ws?.readyState === 1;
+    const linked = this.pairingStatus === 'LINKED';
+
+    return {
+      channelId: this.id,
+      connected: wsOpen && linked,
+      latencyMs: Date.now() - start,
+      message: wsOpen && linked
+        ? 'WhatsApp linked device connected'
+        : `WhatsApp ${this.pairingStatus.toLowerCase()}${wsOpen ? '' : ', WS disconnected'}`,
+      checkedAt: Date.now(),
+    };
   }
 }

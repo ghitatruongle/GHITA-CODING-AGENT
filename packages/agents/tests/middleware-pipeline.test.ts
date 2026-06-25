@@ -33,7 +33,11 @@ function makeResult(overrides?: Partial<AgentStepResult>): AgentStepResult {
   };
 }
 
-function makeMiddleware(name: string, priority: number, hooks?: Partial<AgentMiddleware>): AgentMiddleware {
+function makeMiddleware(
+  name: string,
+  priority: number,
+  hooks?: Partial<AgentMiddleware>,
+): AgentMiddleware {
   return { name, priority, ...hooks } as AgentMiddleware;
 }
 
@@ -123,10 +127,18 @@ describe('MiddlewarePipeline', () => {
     it('10. runs middlewares in priority order', async () => {
       const order: string[] = [];
       pipeline.use(
-        makeMiddleware('first', 1, { async preModel() { order.push('first'); } }),
+        makeMiddleware('first', 1, {
+          async preModel() {
+            order.push('first');
+          },
+        }),
       );
       pipeline.use(
-        makeMiddleware('second', 10, { async preModel() { order.push('second'); } }),
+        makeMiddleware('second', 10, {
+          async preModel() {
+            order.push('second');
+          },
+        }),
       );
       await pipeline.runPreModel(makeCtx());
       expect(order).toEqual(['first', 'second']);
@@ -297,8 +309,20 @@ describe('MiddlewarePipeline', () => {
 
     it('25. runs all onComplete hooks in order', async () => {
       const order: string[] = [];
-      pipeline.use(makeMiddleware('a', 1, { async onComplete() { order.push('a'); } }));
-      pipeline.use(makeMiddleware('b', 2, { async onComplete() { order.push('b'); } }));
+      pipeline.use(
+        makeMiddleware('a', 1, {
+          async onComplete() {
+            order.push('a');
+          },
+        }),
+      );
+      pipeline.use(
+        makeMiddleware('b', 2, {
+          async onComplete() {
+            order.push('b');
+          },
+        }),
+      );
       await pipeline.runOnComplete(makeCtx(), { role: 'assistant', content: 'done' } as any);
       expect(order).toEqual(['a', 'b']);
     });
@@ -344,7 +368,10 @@ describe('MiddlewarePipeline', () => {
 
   describe('error boundary', () => {
     it('29. error boundary re-throws middleware errors', async () => {
-      const strictPipeline = new MiddlewarePipeline({ errorBoundary: true, middlewareTimeoutMs: 1000 });
+      const strictPipeline = new MiddlewarePipeline({
+        errorBoundary: true,
+        middlewareTimeoutMs: 1000,
+      });
       strictPipeline.use(
         makeMiddleware('broken', 1, {
           async preModel() {
@@ -397,7 +424,9 @@ describe('MiddlewarePipeline', () => {
     it('33. records metrics for failed calls', async () => {
       pipeline.use(
         makeMiddleware('fail', 1, {
-          async preModel() { throw new Error('x'); },
+          async preModel() {
+            throw new Error('x');
+          },
         }),
       );
       await pipeline.runPreModel(makeCtx());

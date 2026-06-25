@@ -39,9 +39,8 @@ export class PluginCLI {
    * Install a plugin by ID (optionally at a specific version).
    */
   async install(pluginId: string, versionOrOptions?: string | InstallOptions): Promise<CLIResult> {
-    const options: InstallOptions = typeof versionOrOptions === 'string'
-      ? {}
-      : versionOrOptions ?? {};
+    const options: InstallOptions =
+      typeof versionOrOptions === 'string' ? {} : (versionOrOptions ?? {});
     const targetVersion = typeof versionOrOptions === 'string' ? versionOrOptions : undefined;
     const dir = options.installDir ?? this.installDir;
 
@@ -51,7 +50,10 @@ export class PluginCLI {
         const existing = await this.getInstalled(pluginId);
         if (existing) {
           if (!targetVersion || existing.version === targetVersion) {
-            return { success: false, message: `Plugin ${pluginId}@${existing.version} is already installed.` };
+            return {
+              success: false,
+              message: `Plugin ${pluginId}@${existing.version} is already installed.`,
+            };
           }
         }
       }
@@ -65,7 +67,11 @@ export class PluginCLI {
       }
 
       if (!manifest) {
-        return { success: false, message: `Plugin ${pluginId} not found in registry.`, errors: ['NOT_FOUND'] };
+        return {
+          success: false,
+          message: `Plugin ${pluginId} not found in registry.`,
+          errors: ['NOT_FOUND'],
+        };
       }
 
       // Validate manifest
@@ -94,7 +100,11 @@ export class PluginCLI {
       this.lockfile.upsertEntry(validated, this.registry['config'].registryUrl);
       await this.lockfile.save();
 
-      return { success: true, message: `Installed ${pluginId}@${validated.version}`, plugin: installed };
+      return {
+        success: true,
+        message: `Installed ${pluginId}@${validated.version}`,
+        plugin: installed,
+      };
     } catch (err) {
       return {
         success: false,
@@ -143,7 +153,10 @@ export class PluginCLI {
     }
 
     if (compareSemver(latest.version, current.version) <= 0) {
-      return { success: true, message: `${pluginId}@${current.version} is already the latest version.` };
+      return {
+        success: true,
+        message: `${pluginId}@${current.version} is already the latest version.`,
+      };
     }
 
     // Uninstall old, install new
@@ -245,8 +258,16 @@ export class PluginCLI {
         localPath: pluginDir,
       };
 
-      await writeFile(join(pluginDir, 'manifest.json'), JSON.stringify(installed, null, 2), 'utf-8');
-      return { success: true, message: `Installed ${validated.id}@${validated.version} from local`, plugin: installed };
+      await writeFile(
+        join(pluginDir, 'manifest.json'),
+        JSON.stringify(installed, null, 2),
+        'utf-8',
+      );
+      return {
+        success: true,
+        message: `Installed ${validated.id}@${validated.version} from local`,
+        plugin: installed,
+      };
     } catch (err) {
       return {
         success: false,

@@ -72,7 +72,9 @@ export class Leaderboard {
    * Top N contributors, highest score first.
    */
   top(n: number): Contributor[] {
-    return Array.from(this.contributors.values()).sort((a, b) => b.score - a.score).slice(0, n);
+    return Array.from(this.contributors.values())
+      .sort((a, b) => b.score - a.score)
+      .slice(0, n);
   }
 
   /**
@@ -86,7 +88,12 @@ export class Leaderboard {
    * Build a snapshot by walking forum/threads/replies/bug-reports/feature-requests in bulk.
    * Helper to avoid the caller having to aggregate themselves.
    */
-  ingest(threads: ForumThread[], replies: ForumReply[], bugs: BugReport[], features: FeatureRequest[]): void {
+  ingest(
+    threads: ForumThread[],
+    replies: ForumReply[],
+    bugs: BugReport[],
+    features: FeatureRequest[],
+  ): void {
     const userThreads = new Map<string, number>();
     const userReplies = new Map<string, number>();
     const userAccepted = new Map<string, number>();
@@ -112,7 +119,12 @@ export class Leaderboard {
       names.set(f.authorId, names.get(f.authorId) ?? `user-${f.authorId.slice(-4)}`);
     }
 
-    const allUsers = new Set<string>([...userThreads.keys(), ...userReplies.keys(), ...userBugs.keys(), ...userFeats.keys()]);
+    const allUsers = new Set<string>([
+      ...userThreads.keys(),
+      ...userReplies.keys(),
+      ...userBugs.keys(),
+      ...userFeats.keys(),
+    ]);
     for (const u of allUsers) {
       this.record({
         userId: u,

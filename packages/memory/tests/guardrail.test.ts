@@ -50,7 +50,12 @@ describe('LLMGuardrail', () => {
     it('4. detects credit card numbers', () => {
       const guard = new LLMGuardrail({
         piiEntities: [
-          { name: 'credit_card', patterns: [/(?:\d{4}[-\s]?){3}\d{4}/g], replacement: '[CARD_REDACTED]', severity: 'high' },
+          {
+            name: 'credit_card',
+            patterns: [/(?:\d{4}[-\s]?){3}\d{4}/g],
+            replacement: '[CARD_REDACTED]',
+            severity: 'high',
+          },
         ],
       });
       const result = guard.scanPII('Card: 4111-1111-1111-1111');
@@ -150,7 +155,12 @@ describe('LLMGuardrail', () => {
     it('15. custom PII entities work', async () => {
       const guard = new LLMGuardrail({
         piiEntities: [
-          { name: 'employee_id', patterns: [/\bEMP-\d{5}\b/g], replacement: '[EMP_ID]', severity: 'medium' },
+          {
+            name: 'employee_id',
+            patterns: [/\bEMP-\d{5}\b/g],
+            replacement: '[EMP_ID]',
+            severity: 'medium',
+          },
         ],
       });
       const result = guard.scanPII('Employee EMP-12345 reported issue');
@@ -168,7 +178,12 @@ describe('LLMGuardrail', () => {
         llmJudge: {
           criteria: ['Must be professional', 'No offensive language'],
           threshold: 0.7,
-          llmCall: async () => JSON.stringify({ passed: false, score: 0.3, reason: 'Contains unprofessional language' }),
+          llmCall: async () =>
+            JSON.stringify({
+              passed: false,
+              score: 0.3,
+              reason: 'Contains unprofessional language',
+            }),
         },
       });
       const result = await guard.check('This is terrible and stupid');
@@ -194,7 +209,9 @@ describe('LLMGuardrail', () => {
         llmJudge: {
           criteria: ['Test'],
           threshold: 0.5,
-          llmCall: async () => { throw new Error('LLM unavailable'); },
+          llmCall: async () => {
+            throw new Error('LLM unavailable');
+          },
         },
       });
       const result = await guard.check('Some content');
@@ -207,7 +224,14 @@ describe('LLMGuardrail', () => {
   describe('rule management', () => {
     it('19. addRule adds custom rule', async () => {
       const guard = new LLMGuardrail();
-      guard.addRule(makeRule('custom1', 10, { passed: false, action: 'block', reason: 'Custom block', confidence: 1 }));
+      guard.addRule(
+        makeRule('custom1', 10, {
+          passed: false,
+          action: 'block',
+          reason: 'Custom block',
+          confidence: 1,
+        }),
+      );
       const result = await guard.check('anything');
       expect(result.passed).toBe(false);
       expect(result.reason).toBe('Custom block');
@@ -222,7 +246,9 @@ describe('LLMGuardrail', () => {
 
     it('21. setRuleEnabled toggles rule', async () => {
       const guard = new LLMGuardrail();
-      guard.addRule(makeRule('toggle', 5, { passed: false, action: 'block', reason: 'blocked', confidence: 1 }));
+      guard.addRule(
+        makeRule('toggle', 5, { passed: false, action: 'block', reason: 'blocked', confidence: 1 }),
+      );
       guard.setRuleEnabled('toggle', false);
       const result = await guard.check('test');
       expect(result.passed).toBe(true); // Disabled rule doesn't trigger
@@ -231,7 +257,14 @@ describe('LLMGuardrail', () => {
     it('22. rules are sorted by priority', async () => {
       const guard = new LLMGuardrail();
       guard.addRule(makeRule('low', 100, null));
-      guard.addRule(makeRule('high', 1, { passed: false, action: 'block', reason: 'high priority', confidence: 1 }));
+      guard.addRule(
+        makeRule('high', 1, {
+          passed: false,
+          action: 'block',
+          reason: 'high priority',
+          confidence: 1,
+        }),
+      );
       const rules = guard.listRules();
       expect(rules[0]!.id).toBe('high');
     });

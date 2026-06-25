@@ -46,7 +46,12 @@ export class AuditRunner {
   private readonly rotator: SecretRotator;
   private readonly onLog?: (message: string, level: 'debug' | 'info' | 'warn' | 'error') => void;
 
-  constructor(rotator?: SecretRotator, options: { logger?: (message: string, level: 'debug' | 'info' | 'warn' | 'error') => void } = {}) {
+  constructor(
+    rotator?: SecretRotator,
+    options: {
+      logger?: (message: string, level: 'debug' | 'info' | 'warn' | 'error') => void;
+    } = {},
+  ) {
     this.sanitizer = new InputSanitizer();
     this.corsAuditor = new CorsAuditor();
     this.rotator = rotator ?? new SecretRotator();

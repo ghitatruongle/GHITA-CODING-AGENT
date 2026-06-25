@@ -221,19 +221,57 @@ Please output the JSON object containing consensusScore and the finalized spec.`
     const text = response.getText();
 
     function extractFirstJSON(str: string): { spec?: string; consensusScore?: number } | null {
+      // ROBUSTNESS (audit fix 2.1): the previous implementation tracked
+      // `{` / `}` depth naively without honouring JSON string literals.
+      // An LLM response containing prose like:
+      //   "the schema looks like { foo: 'bar' } so I propose: { … }"
+      // would have its depth bumped by the braces inside the string,
+      // causing the wrong substring (or nothing at all) to be returned.
+      // We now walk the string while tracking whether we are inside a
+      // double-quoted JSON string and honouring the JSON escape rules
+      // (`\"` and `\\`).
       let depth = 0;
       let start = -1;
+      let inString = false;
+      let escapeNext = false;
       for (let i = 0; i < str.length; i++) {
-        if (str[i] === '{') {
+        const ch = str[i];
+        if (escapeNext) {
+          escapeNext = false;
+          continue;
+        }
+        if (inString) {
+          if (ch === '\\') {
+            escapeNext = true;
+          } else if (ch === '"') {
+            inString = false;
+          }
+          continue;
+        }
+        if (ch === '"') {
+          inString = true;
+          continue;
+        }
+        if (ch === '{') {
           if (start === -1) start = i;
           depth++;
-        } else if (str[i] === '}') {
+        } else if (ch === '}') {
           depth--;
           if (depth === 0 && start !== -1) {
             try {
-              return JSON.parse(str.substring(start, i + 1)) as { spec?: string; consensusScore?: number };
+              const candidate = str.substring(start, i + 1);
+              const parsed = JSON.parse(candidate) as {
+                spec?: string;
+                consensusScore?: number;
+              };
+              return parsed;
             } catch {
-              return null;
+              // Not valid JSON — reset and keep looking. The naive
+              // version returned `null` immediately on a parse failure
+              // which meant a balanced `{ … }` containing prose was
+              // reported as "no JSON found".
+              start = -1;
+              depth = 0;
             }
           }
         }

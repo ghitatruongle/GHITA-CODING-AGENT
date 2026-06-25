@@ -67,7 +67,12 @@ export class QuotaManager {
           tokenLimit: Infinity,
           window: 'month',
           resetAt: 0,
-          overage: { allowOverage: true, maxOveragePercent: 0, overagePricePer1k: 0, blockAtMax: false },
+          overage: {
+            allowOverage: true,
+            maxOveragePercent: 0,
+            overagePricePer1k: 0,
+            blockAtMax: false,
+          },
         },
         tokensUsed: 0,
         tokensRemaining: Infinity,
@@ -109,7 +114,8 @@ export class QuotaManager {
           tokensRemaining: 0,
           inOverage: true,
           overageTokens: used + tokens - quota.tokenLimit,
-          overageCost: ((used + tokens - quota.tokenLimit) / 1000) * quota.overage.overagePricePer1k,
+          overageCost:
+            ((used + tokens - quota.tokenLimit) / 1000) * quota.overage.overagePricePer1k,
         };
       }
       if (quota.overage.blockAtMax) {
@@ -143,7 +149,12 @@ export class QuotaManager {
   /**
    * Ghi nhận sử dụng token và trigger overage event nếu cần.
    */
-  async consume(userId: string, tokens: number, provider = 'unknown', model = 'unknown'): Promise<void> {
+  async consume(
+    userId: string,
+    tokens: number,
+    provider = 'unknown',
+    model = 'unknown',
+  ): Promise<void> {
     const quota = this.quotas.get(userId);
     if (!quota) return;
 
@@ -162,7 +173,10 @@ export class QuotaManager {
         timestamp: Date.now(),
       };
       this.totalOverageEvents++;
-      this.onLog?.(`[Quota] User ${userId} overage: ${overTokens} tokens ($${event.billingAmount.toFixed(4)})`, 'warn');
+      this.onLog?.(
+        `[Quota] User ${userId} overage: ${overTokens} tokens ($${event.billingAmount.toFixed(4)})`,
+        'warn',
+      );
       if (quota.overage.onOverage) {
         try {
           await quota.overage.onOverage(event);
@@ -207,7 +221,8 @@ export class QuotaManager {
 
   private tokensUsedInWindow(userId: string, resetAt: number): number {
     const now = Date.now();
-    const windowStart = Math.min(now, resetAt) - this.windowLengthMs(this.quotas.get(userId)?.window ?? 'month');
+    const windowStart =
+      Math.min(now, resetAt) - this.windowLengthMs(this.quotas.get(userId)?.window ?? 'month');
     const records = this.tracker.query(userId, windowStart, now);
     return records.reduce((sum, r) => sum + r.totalTokens, 0);
   }

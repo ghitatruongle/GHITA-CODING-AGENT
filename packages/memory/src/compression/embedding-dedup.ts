@@ -9,26 +9,7 @@ import type {
   EmbeddingDedupConfig,
   EmbeddingProvider,
 } from './types.js';
-
-// ---------------------------------------------------------------------------
-// Cosine similarity
-// ---------------------------------------------------------------------------
-
-function cosineSimilarity(a: number[], b: number[]): number {
-  if (a.length !== b.length || a.length === 0) return 0;
-  let dot = 0;
-  let magA = 0;
-  let magB = 0;
-  for (let i = 0; i < a.length; i++) {
-    const valA = a[i] ?? 0;
-    const valB = b[i] ?? 0;
-    dot += valA * valB;
-    magA += valA * valA;
-    magB += valB * valB;
-  }
-  const denom = Math.sqrt(magA) * Math.sqrt(magB);
-  return denom === 0 ? 0 : dot / denom;
-}
+import { cosineSimilarityJS } from '../semantic/rustAddon.js';
 
 // ---------------------------------------------------------------------------
 // Embedding Dedup Engine
@@ -42,10 +23,7 @@ export class EmbeddingDedup {
   /** Reverse: id → entry metadata (for kept/removed decisions) */
   private meta: Map<string, CompressableMemoryEntry> = new Map();
 
-  constructor(
-    config?: Partial<EmbeddingDedupConfig>,
-    embedder?: EmbeddingProvider,
-  ) {
+  constructor(config?: Partial<EmbeddingDedupConfig>, embedder?: EmbeddingProvider) {
     this.config = {
       similarityThreshold: config?.similarityThreshold ?? 0.92,
       maxIndexSize: config?.maxIndexSize ?? 50_000,
@@ -162,7 +140,7 @@ export class EmbeddingDedup {
     let bestScore = -1;
 
     for (const [id, vec] of this.index) {
-      const score = cosineSimilarity(embedding, vec);
+      const score = cosineSimilarityJS(embedding, vec);
       if (score > bestScore) {
         bestScore = score;
         bestId = id;

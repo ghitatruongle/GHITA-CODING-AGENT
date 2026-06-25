@@ -477,7 +477,7 @@ export class SandboxSecurityFilter {
 
     const maxSeverity = this.getMaxSeverity(threats);
     const safe = threats.length === 0;
-    
+
     let requiresApproval = false;
     if (this.config.executionMode === 'dev') {
       requiresApproval = true;

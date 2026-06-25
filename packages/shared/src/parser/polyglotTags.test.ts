@@ -314,7 +314,7 @@ func main() {
       expect(cachedFetch?.[0]?.name).toBe('UserService');
 
       // 3. Thay đổi nội dung tệp (hash thay đổi) để kiểm chứng cache miss
-      const newHash = cache.calculateHash(content + '\n// modification');
+      const newHash = cache.calculateHash(`${content}\n// modification`);
       const missFetch = cache.getCachedSymbols(filePath, newHash);
       expect(missFetch).toBeNull();
     });

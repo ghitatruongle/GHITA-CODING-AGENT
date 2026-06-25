@@ -12,7 +12,6 @@ import fs from 'fs';
 import * as path from 'path';
 import type { AgentMiddleware, MiddlewareContext } from '../middleware/types.js';
 
-
 /**
  * Parse a shell-style command string into argv array for execFile.
  * Hỗ trợ simple quoted segments; KHÔNG hỗ trợ command substitution/redirects.
@@ -24,11 +23,22 @@ function tokenizeCommand(cmd: string): string[] {
   for (let i = 0; i < cmd.length; i++) {
     const ch = cmd[i];
     if (quote) {
-      if (ch === quote) { quote = null; } else { cur += ch; }
+      if (ch === quote) {
+        quote = null;
+      } else {
+        cur += ch;
+      }
       continue;
     }
-    if (ch === '"' || ch === "'") { quote = ch; continue; }
-    if ((ch === ' ' || ch === '\t') && cur) { tokens.push(cur); cur = ''; continue; }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      continue;
+    }
+    if ((ch === ' ' || ch === '\t') && cur) {
+      tokens.push(cur);
+      cur = '';
+      continue;
+    }
     cur += ch;
   }
   if (cur) tokens.push(cur);
@@ -39,9 +49,8 @@ function tokenizeCommand(cmd: string): string[] {
  * Escape một string để dùng an toàn trong shell argv (single-quote escape).
  */
 function shellEscape(value: string): string {
-  return "'" + value.replace(/'/g, "'\\''") + "'";
+  return `'${  value.replace(/'/g, "'\\''")  }'`;
 }
-
 
 // ==============================================================================
 // GitSafePointManager — Quản lý điểm neo và khôi phục an toàn (Tác vụ 1, 2, 3, 4, 5, 6, 7, 8, 10)
@@ -95,7 +104,9 @@ export class GitSafePointManager {
         throw lastError;
       }
     }
-    throw new Error(`Git command failed after ${retries} attempts: ${cmd}. Error: ${lastError?.message}`);
+    throw new Error(
+      `Git command failed after ${retries} attempts: ${cmd}. Error: ${lastError?.message}`,
+    );
   }
 
   /**
@@ -119,12 +130,14 @@ export class GitSafePointManager {
       // 3. Stash hoặc tạo commit nháp. Ở đây ta dùng commit nháp ẩn ghita-temp-safepoint
       this.execGit('git add -A', cwd);
       this.execGit(`git commit -m ${shellEscape('ghita-temp-safepoint')} --no-verify`, cwd);
-      
+
       // Ghi log tĩnh hành vi tạo điểm neo
       this.logGitAction(cwd, 'CREATE_SAFEPOINT', 'Created temporary safepoint successfully');
       return true;
- } catch (err: unknown) {
- console.warn(`[GitSafePoint] Failed to create safe-point: ${err instanceof Error ? err.message : String(err)}`);
+    } catch (err: unknown) {
+      console.warn(
+        `[GitSafePoint] Failed to create safe-point: ${err instanceof Error ? err.message : String(err)}`,
+      );
       return false;
     }
   }
@@ -143,7 +156,7 @@ export class GitSafePointManager {
 
       // 2. Xem commit gần nhất có phải là ghita-temp-safepoint không
       const lastCommitMsg = this.execGit('git log -1 --pretty=%s', cwd).trim();
-      
+
       if (lastCommitMsg === 'ghita-temp-safepoint') {
         // Thực hiện rollback cứng hủy bỏ commit nháp và dọn dẹp các tệp tin mới phát sinh
         this.execGit('git reset --hard HEAD~1', cwd);
@@ -157,8 +170,10 @@ export class GitSafePointManager {
         this.logGitAction(cwd, 'ROLLBACK', 'Cleaned working directory (no safepoint found)');
         return true;
       }
- } catch (err: unknown) {
- console.error(`[GitSafePoint] Rollback failed: ${err instanceof Error ? err.message : String(err)}`);
+    } catch (err: unknown) {
+      console.error(
+        `[GitSafePoint] Rollback failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
       return false;
     }
   }
@@ -198,9 +213,14 @@ export class GitSafePointMiddleware implements AgentMiddleware {
   async preTool(
     toolName: string,
     _args: Record<string, unknown>,
-    _context: MiddlewareContext
+    _context: MiddlewareContext,
   ): Promise<{ proceed: boolean; reason?: string } | void> {
-    const writeTools = ['writeFile', 'write_to_file', 'replace_file_content', 'multi_replace_file_content'];
+    const writeTools = [
+      'writeFile',
+      'write_to_file',
+      'replace_file_content',
+      'multi_replace_file_content',
+    ];
     if (!writeTools.includes(toolName)) return;
 
     const cwd = process.cwd();
@@ -219,7 +239,7 @@ export class GitSafePointMiddleware implements AgentMiddleware {
   async postTool(
     toolName: string,
     result: string,
-    _context: MiddlewareContext
+    _context: MiddlewareContext,
   ): Promise<{ modifiedResult?: string } | void> {
     // Chỉ bắt lỗi từ các tool thực thi lệnh terminal (kiểm thử, build)
     if (toolName !== 'run_command' && toolName !== 'runCommand') return;
@@ -239,11 +259,11 @@ export class GitSafePointMiddleware implements AgentMiddleware {
       'exit status 2',
       'failed with exit code',
       'npm err!',
-      'command failed'
+      'command failed',
     ];
 
     const lowerResult = result.toLowerCase();
-    const hasError = errorKeywords.some(keyword => lowerResult.includes(keyword));
+    const hasError = errorKeywords.some((keyword) => lowerResult.includes(keyword));
 
     if (hasError) {
       const cwd = process.cwd();
@@ -252,7 +272,7 @@ export class GitSafePointMiddleware implements AgentMiddleware {
 
       if (rolledBack) {
         return {
-          modifiedResult: `[GIT SAFE-ROLLBACK GATES ACTIVATED]\nBiên dịch hoặc kiểm thử bị lỗi đỏ. Hệ thống tự động kích hoạt chế độ khôi phục (Hard Rollback) đưa mã nguồn về trạng thái an toàn gần nhất để phòng tránh hỏng hóc.\nKết quả lỗi terminal gốc:\n${result}`
+          modifiedResult: `[GIT SAFE-ROLLBACK GATES ACTIVATED]\nBiên dịch hoặc kiểm thử bị lỗi đỏ. Hệ thống tự động kích hoạt chế độ khôi phục (Hard Rollback) đưa mã nguồn về trạng thái an toàn gần nhất để phòng tránh hỏng hóc.\nKết quả lỗi terminal gốc:\n${result}`,
         };
       }
     }

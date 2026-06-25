@@ -16,12 +16,14 @@ import { vi } from './vi';
 import { en } from './en';
 import { zh } from './zh';
 import { ru } from './ru';
+import { ja } from './ja';
+import { ko } from './ko';
 import type { TranslationKeys } from './types';
 
 type Translations = TranslationKeys;
 type TFunction = (key: string, params?: Record<string, string | number>) => string;
 
-const translations: Record<string, Translations> = { vi, en, zh, ru };
+const translations: Record<string, Translations> = { vi, en, zh, ru, ja, ko };
 
 interface I18nContextProps {
   t: TFunction;
@@ -79,14 +81,25 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
     const t: TFunction = (key, params) => {
       const parts = key.split('.');
-      let result: unknown = dict as unknown;
-      for (const part of parts) {
-        if (result != null && typeof result === 'object') {
-          result = (result as Record<string, unknown>)[part];
-        } else {
-          return key;
+
+      const resolveKey = (dictionary: Translations): unknown => {
+        let res: unknown = dictionary as unknown;
+        for (const part of parts) {
+          if (res != null && typeof res === 'object') {
+            res = (res as Record<string, unknown>)[part];
+          } else {
+            return undefined;
+          }
         }
+        return res;
+      };
+
+      let result = resolveKey(dict);
+      if (result === undefined && lang !== 'vi') {
+        result = resolveKey(translations.vi);
       }
+
+      if (result === undefined) return key;
       if (Array.isArray(result)) return key;
       if (typeof result !== 'string') return key;
 

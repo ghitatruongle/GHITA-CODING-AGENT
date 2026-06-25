@@ -65,7 +65,10 @@ export class BugReportTracker {
   /**
    * List reports for a product.
    */
-  listForProduct(productId: string, filter?: { status?: BugReport['status']; severity?: BugReport['severity'] }): BugReport[] {
+  listForProduct(
+    productId: string,
+    filter?: { status?: BugReport['status']; severity?: BugReport['severity'] },
+  ): BugReport[] {
     const ids = this.byProduct.get(productId) ?? new Set();
     return Array.from(ids)
       .flatMap((id) => this.reports.get(id) ?? [])

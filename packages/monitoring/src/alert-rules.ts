@@ -25,7 +25,11 @@ export class AlertEngine {
   private alertsTriggered = 0;
   private readonly onLog?: (message: string, level: 'debug' | 'info' | 'warn' | 'error') => void;
 
-  constructor(options: { logger?: (message: string, level: 'debug' | 'info' | 'warn' | 'error') => void } = {}) {
+  constructor(
+    options: {
+      logger?: (message: string, level: 'debug' | 'info' | 'warn' | 'error') => void;
+    } = {},
+  ) {
     this.onLog = options.logger;
   }
 
@@ -96,13 +100,19 @@ export class AlertEngine {
           triggered.push(alert);
           state.lastFiredAt = now;
           this.alertsTriggered++;
-          this.log('warn', `[Alert] ${rule.name} fired (count=${state.occurrences.length}, severity=${event.severity})`);
+          this.log(
+            'warn',
+            `[Alert] ${rule.name} fired (count=${state.occurrences.length}, severity=${event.severity})`,
+          );
 
           if (rule.onTrigger) {
             try {
               await rule.onTrigger(alert);
             } catch (err) {
-              this.log('error', `[Alert] onTrigger callback failed for ${rule.id}: ${(err as Error).message}`);
+              this.log(
+                'error',
+                `[Alert] onTrigger callback failed for ${rule.id}: ${(err as Error).message}`,
+              );
             }
           }
         }

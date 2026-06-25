@@ -119,6 +119,9 @@ export class ObservabilityManager {
 
     if (this.config.enabled && this.config.flushIntervalMs) {
       this.flushTimer = setInterval(() => this.flush(), this.config.flushIntervalMs);
+      if (this.flushTimer && typeof this.flushTimer === 'object' && 'unref' in this.flushTimer) {
+        this.flushTimer.unref();
+      }
     }
   }
 

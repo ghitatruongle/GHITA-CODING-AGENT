@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -14,7 +14,7 @@
     <script>
       window.global = window;
       window.process = {
-        env: { NODE_ENV: 'production' },
+        env: { NODE_ENV: typeof window !== 'undefined' && window.__TAURI__ ? 'production' : (location.hostname === 'localhost' ? 'development' : 'production') },
         platform: 'browser',
         browser: true,
         cwd: () => '/',

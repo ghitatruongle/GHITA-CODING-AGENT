@@ -29,7 +29,7 @@ export async function loadSettings(): Promise<MobileSettings> {
       return { ...DEFAULT_MOBILE_SETTINGS, ...JSON.parse(raw) } as MobileSettings;
     }
   } catch (error) {
-    console.warn('[Storage] Failed to load settings:', error);
+    if (__DEV__) console.warn('[Storage] Failed to load settings:', error);
   }
   return { ...DEFAULT_MOBILE_SETTINGS };
 }
@@ -38,7 +38,7 @@ export async function saveSettings(settings: MobileSettings): Promise<void> {
   try {
     await AsyncStorage.setItem(KEYS.SETTINGS, JSON.stringify(settings));
   } catch (error) {
-    console.error('[Storage] Failed to save settings:', error);
+    if (__DEV__) console.error('[Storage] Failed to save settings:', error);
   }
 }
 
@@ -56,7 +56,7 @@ export async function saveLastServer(address: string): Promise<void> {
   try {
     await AsyncStorage.setItem(KEYS.LAST_SERVER, address);
   } catch (error) {
-    console.error('[Storage] Failed to save last server:', error);
+    if (__DEV__) console.error('[Storage] Failed to save last server:', error);
   }
 }
 
@@ -69,7 +69,7 @@ export async function loadPairedDevices(): Promise<PairedDevice[]> {
       return JSON.parse(raw) as PairedDevice[];
     }
   } catch (error) {
-    console.warn('[Storage] Failed to load paired devices:', error);
+    if (__DEV__) console.warn('[Storage] Failed to load paired devices:', error);
   }
   return [];
 }
@@ -85,7 +85,7 @@ export async function savePairedDevice(device: PairedDevice): Promise<void> {
     }
     await AsyncStorage.setItem(KEYS.PAIRED_DEVICES, JSON.stringify(devices));
   } catch (error) {
-    console.error('[Storage] Failed to save paired device:', error);
+    if (__DEV__) console.error('[Storage] Failed to save paired device:', error);
   }
 }
 
@@ -95,7 +95,7 @@ export async function removePairedDevice(deviceId: string): Promise<void> {
     const filtered = devices.filter((d) => d.id !== deviceId);
     await AsyncStorage.setItem(KEYS.PAIRED_DEVICES, JSON.stringify(filtered));
   } catch (error) {
-    console.error('[Storage] Failed to remove paired device:', error);
+    if (__DEV__) console.error('[Storage] Failed to remove paired device:', error);
   }
 }
 
@@ -121,7 +121,7 @@ export async function getAuthToken(): Promise<string | null> {
     });
     return creds ? creds.password : null;
   } catch (error) {
-    console.error('[Storage] Failed to get auth token from Keychain:', error);
+    if (__DEV__) console.error('[Storage] Failed to get auth token from Keychain:', error);
     return null;
   }
 }
@@ -132,7 +132,7 @@ export async function saveAuthToken(token: string): Promise<void> {
       service: KEYCHAIN_SERVICE,
     });
   } catch (error) {
-    console.error('[Storage] Failed to save auth token to Keychain:', error);
+    if (__DEV__) console.error('[Storage] Failed to save auth token to Keychain:', error);
   }
 }
 
@@ -142,7 +142,7 @@ export async function clearAuthToken(): Promise<void> {
       service: KEYCHAIN_SERVICE,
     });
   } catch (error) {
-    console.error('[Storage] Failed to clear auth token from Keychain:', error);
+    if (__DEV__) console.error('[Storage] Failed to clear auth token from Keychain:', error);
   }
 }
 
@@ -165,19 +165,19 @@ export async function saveTelemetry(tokens: number, cost: number): Promise<void>
   try {
     const today = new Date();
     const dateStr = today.toISOString().split('T')[0]; // "YYYY-MM-DD"
-    
+
     const raw = await AsyncStorage.getItem(KEYS.TELEMETRY);
     const data: Record<string, TelemetryRecord> = raw ? JSON.parse(raw) : {};
-    
+
     const existing = data[dateStr] || { tokens: 0, cost: 0 };
     data[dateStr] = {
       tokens: existing.tokens + tokens,
       cost: existing.cost + cost,
     };
-    
+
     await AsyncStorage.setItem(KEYS.TELEMETRY, JSON.stringify(data));
   } catch (error) {
-    console.error('[Storage] Failed to save telemetry:', error);
+    if (__DEV__) console.error('[Storage] Failed to save telemetry:', error);
   }
 }
 
@@ -185,17 +185,17 @@ export async function loadTelemetryHistory(): Promise<TelemetryDayData[]> {
   try {
     const raw = await AsyncStorage.getItem(KEYS.TELEMETRY);
     const data: Record<string, TelemetryRecord> = raw ? JSON.parse(raw) : {};
-    
+
     const history: TelemetryDayData[] = [];
     const today = new Date();
-    
+
     // Generate records for the last 7 days (including today) in chronological order
     for (let i = 6; i >= 0; i--) {
       const targetDate = new Date(today);
       targetDate.setDate(today.getDate() - i);
       const dateStr = targetDate.toISOString().split('T')[0];
       const dayName = DAYS_OF_WEEK[targetDate.getDay()];
-      
+
       const record = data[dateStr] || { tokens: 0, cost: 0 };
       history.push({
         day: dayName,
@@ -203,10 +203,10 @@ export async function loadTelemetryHistory(): Promise<TelemetryDayData[]> {
         cost: record.cost,
       });
     }
-    
+
     return history;
   } catch (error) {
-    console.warn('[Storage] Failed to load telemetry history:', error);
+    if (__DEV__) console.warn('[Storage] Failed to load telemetry history:', error);
     return [];
   }
 }
@@ -215,7 +215,7 @@ export async function clearTelemetryHistory(): Promise<void> {
   try {
     await AsyncStorage.removeItem(KEYS.TELEMETRY);
   } catch (error) {
-    console.error('[Storage] Failed to clear telemetry history:', error);
+    if (__DEV__) console.error('[Storage] Failed to clear telemetry history:', error);
   }
 }
 
@@ -227,6 +227,6 @@ export async function clearAllData(): Promise<void> {
     await AsyncStorage.multiRemove(allKeys);
     await clearAuthToken();
   } catch (error) {
-    console.error('[Storage] Failed to clear all data:', error);
+    if (__DEV__) console.error('[Storage] Failed to clear all data:', error);
   }
 }

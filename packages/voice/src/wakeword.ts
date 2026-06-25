@@ -76,7 +76,11 @@ export class WakeWordDetector {
   private computeRms(chunk: AudioChunk): number {
     if (chunk.data.byteLength === 0) return 0;
     let acc = 0;
-    const view = new Int16Array(chunk.data.buffer, chunk.data.byteOffset, chunk.data.byteLength / 2);
+    const view = new Int16Array(
+      chunk.data.buffer,
+      chunk.data.byteOffset,
+      chunk.data.byteLength / 2,
+    );
     for (let i = 0; i < view.length; i++) {
       const v = (view[i] ?? 0) / 32768;
       acc += v * v;

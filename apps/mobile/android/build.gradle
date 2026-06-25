@@ -1,25 +1,42 @@
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-    }
-    dependencies {
-        classpath("com.android.tools.build:gradle")
-        classpath("com.facebook.react:react-native-gradle-plugin")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
-    }
+// ==============================================================================
+// GHITA CODING AGENT — Android root build file (React Native 0.76+ layout)
+//
+// Constraint (Gradle 8.10): `plugins {}` block MUST come immediately
+// after the file header — no `ext {}`, no `allprojects {}`, no
+// anything else. (See:
+// https://docs.gradle.org/8.10.2/userguide/plugins.html#sec:plugins_block).
+// The `ext {}` block therefore lives BELOW the `plugins` block.
+//
+// Why `plugins { ... apply false }` (RN 0.76+ layout): the React Native
+// gradle plugin is NOT published as a normal Maven artifact — it lives
+// in `apps/mobile/node_modules/@react-native/gradle-plugin`. The
+// `pluginManagement.includeBuild(...)` in `settings.gradle` makes it
+// visible to *this* build, so we declare it without a Maven coordinate
+// here. AGP (Android) and Kotlin plugins are pulled from the gradle
+// plugin portal / Google Maven (see `settings.gradle`'s
+// `pluginManagement.repositories`).
+// ==============================================================================
+
+plugins {
+    id "com.android.application" version "8.7.0" apply false
+    id "org.jetbrains.kotlin.android" version "1.9.24" apply false
+    id "com.facebook.react.rootproject" apply false
 }
 
 ext {
     buildToolsVersion = "35.0.0"
-    minSdkVersion = 24
+    minSdkVersion = 28
     compileSdkVersion = 35
     targetSdkVersion = 34
     ndkVersion = "26.1.10909125"
     kotlinVersion = "1.9.24"
 }
 
-// Suppress jcenter() deprecation warnings from subprojects (libraries)
+// Make available to the repository search for all subprojects (libraries
+// we depend on — RN, Hermes, …). Already declared in
+// `settings.gradle` `dependencyResolutionManagement` but kept here for
+// backwards compatibility with subprojects that read it from the root
+// project's allprojects/repositories.
 allprojects {
     repositories {
         google()
@@ -37,19 +54,10 @@ subprojects { subproject ->
             }
         }
     }
-
-    // Force all subprojects to use mavenCentral (not jcenter)
-    repositories {
-        google()
-        mavenCentral()
-    }
-
-    // Suppress warnings from RN codegen in subproject libraries
-    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-        compilerOptions {
-            suppressWarnings.set(true)
-        }
-    }
 }
 
+// Wire the React Native "rootproject" plugin so its configuration
+// (autolinking helpers, monorepo-wide settings) applies here.
+// We use `apply plugin:` here because we already declared it with
+// `apply false` in the `plugins {}` block above.
 apply plugin: "com.facebook.react.rootproject"

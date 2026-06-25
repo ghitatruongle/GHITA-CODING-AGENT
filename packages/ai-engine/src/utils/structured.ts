@@ -142,7 +142,7 @@ ${schemaStr}
   if (systemMessageIdx !== -1) {
     modifiedMessages[systemMessageIdx] = {
       role: 'system',
-      content: modifiedMessages[systemMessageIdx]?.content + '\n' + systemInstruction,
+      content: `${modifiedMessages[systemMessageIdx]?.content  }\n${  systemInstruction}`,
     };
   } else {
     modifiedMessages.unshift({

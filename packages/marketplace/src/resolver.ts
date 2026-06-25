@@ -4,7 +4,12 @@
 // ==============================================================================
 
 import { compareSemver, satisfiesRange } from './manifest.js';
-import type { ResolvedDependency, DependencyGraph, DependencyConflict, PluginManifest } from './types.js';
+import type {
+  ResolvedDependency,
+  DependencyGraph,
+  DependencyConflict,
+  PluginManifest,
+} from './types.js';
 
 /**
  * Resolve all dependencies for a set of root plugins.
@@ -17,7 +22,8 @@ export function resolveDependencies(
   const resolved = new Map<string, string>();
   const conflicts: DependencyConflict[] = [];
   const visited = new Set<string>();
-  const queue: Array<{ name: string; range: string; requestedBy: string; transitive: boolean }> = [];
+  const queue: Array<{ name: string; range: string; requestedBy: string; transitive: boolean }> =
+    [];
 
   // Seed queue from root plugins
   for (const root of roots) {
@@ -151,9 +157,7 @@ export function resolveConflicts(
  * Detect circular dependencies in a plugin set.
  * Returns array of cycles found (each cycle is a list of plugin IDs).
  */
-export function detectCircularDependencies(
-  plugins: PluginManifest[],
-): string[][] {
+export function detectCircularDependencies(plugins: PluginManifest[]): string[][] {
   const adj = new Map<string, string[]>();
   for (const p of plugins) {
     const deps = Object.keys(p.dependencies ?? {});

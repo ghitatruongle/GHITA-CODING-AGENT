@@ -1,6 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT — Communication Server Sidecar
-// Standalone Socket.io server for Desktop ↔ Mobile communication
+﻿// ==============================================================================
+// GHITA CODING AGENT â€” Communication Server Sidecar
+// Standalone Socket.io server for Desktop â†” Mobile communication
 // ==============================================================================
 
 import { createServer } from 'node:http';
@@ -58,31 +58,17 @@ async function loadAgents() {
   return _agents;
 }
 
-// node-pty: lazy load native addon (saves 50-150ms at startup)
-let _pty = null;
-function loadPty() {
-  if (!_pty) {
-    const sidecarRequire = sidecarCreateRequire(import.meta.url);
-    _pty = sidecarRequire('node-pty');
-  }
-  return _pty;
-}
 
 // --- Config ---
-const PORT = parseInt(process.env.GHITA_PORT || '8080', 10);
+let activePort = parseInt(process.env.GHITA_PORT || '8080', 10);
 const LAN_ENABLED = process.env.GHITA_LAN_ENABLED === '1';
 const HOST = process.env.GHITA_BIND_HOST || (LAN_ENABLED ? '0.0.0.0' : '127.0.0.1');
 const CLOUD_DISCOVERY_ENABLED = process.env.GHITA_CLOUD_DISCOVERY === '1';
 const AUTO_LIBERATE_PORTS = process.env.GHITA_LIBERATE_PORTS === '1';
-const CLOUD_RELAY_ENABLED = false; // Tạm vô hiệu hóa — Render.com relay đã bị xóa
-const CLOUD_RELAY_URL = process.env.GHITA_RELAY_URL || 'https://ghita-relay-server.onrender.com';
-let cloudSocket = null;
+// Cloud relay code removed â€” was disabled (CLOUD_RELAY_ENABLED=false, initCloudSocket commented out)
 
 function broadcast(event, data) {
   io.to(['desktop', 'paired-devices']).emit(event, data);
-  if (cloudSocket && cloudSocket.connected) {
-    cloudSocket.emit(event, data);
-  }
 }
 
 function normalizeAddress(address = '') {
@@ -153,6 +139,29 @@ const pendingApprovals = new Map();
 
 // Global workspace root initialization
 globalThis.ghitaWorkspaceRoot = globalThis.ghitaWorkspaceRoot || null;
+
+function findWorkspaceRoot(startDir = process.cwd()) {
+  let dir = path.resolve(startDir);
+  while (true) {
+    if (fs.existsSync(path.join(dir, 'pnpm-workspace.yaml')) || fs.existsSync(path.join(dir, '.git'))) {
+      return dir;
+    }
+
+    const parent = path.dirname(dir);
+    if (parent === dir) return null;
+    dir = parent;
+  }
+}
+
+function getEffectiveWorkspaceRoot() {
+  const configured = globalThis.ghitaWorkspaceRoot || process.env.GHITA_WORKSPACE;
+  if (configured && fs.existsSync(configured) && fs.statSync(configured).isDirectory()) {
+    return path.resolve(configured);
+  }
+
+  const detected = findWorkspaceRoot();
+  return detected || process.cwd();
+}
 
 // Approval timeout: auto-reject after 60 seconds
 const APPROVAL_TIMEOUT_MS = 60000;
@@ -335,27 +344,21 @@ function publishToCloud(key, value) {
 
 
 function publishToCloudDiscovery() {
-  if (!CLOUD_DISCOVERY_ENABLED && !CLOUD_RELAY_ENABLED) {
+  if (!CLOUD_DISCOVERY_ENABLED) {
     return;
   }
 
   try {
     const formattedIps = getAllLocalIPs().map(ip => ip.replace(/\./g, '-'));
-    const value = `${formattedIps.join('_')}_${PORT}`;
-    
+    const value = `${formattedIps.join('_')}_${activePort}`;
+
     // 1. Publish under the 6-character pairing code
     publishToCloud(currentCode, value);
-    
+
     // 2. Publish under the PC Hostname/Bluetooth name
     const pcName = hostname().toUpperCase().replace(/[^A-Z0-9-]/g, '');
     if (pcName) {
       publishToCloud(pcName, value);
-    }
-
-    // 3. Register to Cloud Relay (tạm vô hiệu hóa)
-    if (CLOUD_RELAY_ENABLED && cloudSocket && cloudSocket.connected) {
-      log(`Registering code ${currentCode} to Cloud Relay...`);
-      cloudSocket.emit('register_desktop', { pairingCode: currentCode });
     }
   } catch (e) {
     log(`Cloud discovery preparation exception: ${e.message}`);
@@ -447,7 +450,7 @@ const httpServer = createServer((req, res) => {
       pairedDevices: connectedDevices.size,
       uptime: process.uptime(),
       localIP: getLocalIP(),
-      port: PORT,
+      port: activePort,
       ...(isLoopback ? { pairingCode: getCode(), codeExpiresAt } : {}),
       hostname: hostname().toUpperCase().replace(/[^A-Z0-9-]/g, ''),
       ...(isLoopback ? {
@@ -474,7 +477,7 @@ const httpServer = createServer((req, res) => {
     res.end(JSON.stringify({
       code: getCode(),
       expiresAt: codeExpiresAt,
-      port: PORT,
+      port: activePort,
       localIP: getLocalIP(),
     }));
     return;
@@ -524,7 +527,7 @@ const httpServer = createServer((req, res) => {
       return;
     }
 
-    const urlObj = new URL(req.url, `http://localhost:${PORT}`);
+    const urlObj = new URL(req.url, `http://localhost:${activePort}`);
     const deviceId = urlObj.searchParams.get('deviceId');
     if (!deviceId) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -578,47 +581,19 @@ const io = new Server(httpServer, {
   pingTimeout: 20000,
 });
 
+const SESSION_TOKEN = process.env.GHITA_SESSION_TOKEN;
+if (SESSION_TOKEN) {
+  io.use((socket, next) => {
+    const token = socket.handshake.auth?.token;
+    if (token && token === SESSION_TOKEN) {
+      return next();
+    }
+    return next(new Error('Unauthorized: Invalid session token'));
+  });
+}
+
 // --- Connected devices ---
 const connectedDevices = new Map();
-
-// --- Terminal PTY sessions ---
-const terminalSessions = new Map();
-
-/** Max age (ms) for a PTY session before it is force-killed (15 minutes idle) */
-const PTY_SESSION_MAX_IDLE_MS = 900_000;
-
-/** Periodic cleanup interval reference so we can unref() it */
-let ptyCleanupInterval = null;
-
-/** Grace-period timers for PTY sessions whose socket just disconnected.
- *  Key: PTY session id, Value: setTimeout reference.
- *  If the client reconnects within the grace window, the timer is cancelled
- *  and the session is reclaimed instead of killed. */
-const pendingPtyCleanup = new Map();
-
-/** How long (ms) to wait after socket disconnect before killing PTY sessions.
- *  This gives Socket.IO auto-reconnect and Vite HMR reload time to recover. */
-const PTY_DISCONNECT_GRACE_MS = 6000;
-
-function startPtyCleanupInterval() {
-  if (ptyCleanupInterval) return;
-  ptyCleanupInterval = setInterval(() => {
-    const now = Date.now();
-    for (const [id, session] of terminalSessions.entries()) {
-      // Kill sessions that have been idle too long
-      if (session.lastActivity && (now - session.lastActivity) > PTY_SESSION_MAX_IDLE_MS) {
-        try {
-          session.ptyProcess.kill();
-          log(`Force-killed idle PTY session: ${id} (idle ${Math.round((now - session.lastActivity) / 1000)}s)`);
-        } catch (err) {}
-        terminalSessions.delete(id);
-      }
-    }
-  }, 60_000); // check every 60 seconds
-  if (typeof ptyCleanupInterval.unref === 'function') {
-    ptyCleanupInterval.unref();
-  }
-}
 
 // --- Persistent Paired Devices Storage ---
 const DATA_DIR = process.env.GHITA_DATA_DIR || homedir();
@@ -667,7 +642,7 @@ function loadPairedDevices() {
 function savePairedDevices() {
   try {
     const list = Array.from(connectedDevices.values())
-      .filter(d => d.id && d.id !== 'cloud_session') // Chỉ lưu thiết bị LAN thực tế, bỏ cloud
+      .filter(d => d.id && d.id !== 'cloud_session') // Chá»‰ lÆ°u thiáº¿t bá»‹ LAN thá»±c táº¿, bá» cloud
       .map(d => ({
         id: d.id,
         name: d.name,
@@ -765,6 +740,44 @@ function syncApiConfigToOrchestrator(preferredProvider) {
 let nodeRegistry = null;
 let computerController = null; // Phase 8: expose for mobile remote touch
 
+function createLazyBrowserAdapter(defaultOptions = {}) {
+  let adapterPromise = null;
+
+  async function getAdapter() {
+    if (!adapterPromise) {
+      adapterPromise = (async () => {
+        const { createPlaywrightAdapter } = await loadBrowserControlNode();
+        return createPlaywrightAdapter(defaultOptions);
+      })().catch((error) => {
+        adapterPromise = null;
+        throw error;
+      });
+    }
+
+    return adapterPromise;
+  }
+
+  const call = async (method, ...args) => {
+    const adapter = await getAdapter();
+    const handler = adapter?.[method];
+    if (typeof handler !== 'function') {
+      throw new Error(`Browser adapter method is not available: ${method}`);
+    }
+    return handler(...args);
+  };
+
+  return {
+    launch: (options) => call('launch', options),
+    close: () => call('close'),
+    navigate: (url) => call('navigate', url),
+    click: (selector) => call('click', selector),
+    type: (selector, value) => call('type', selector, value),
+    fill: (selector, value) => call('fill', selector, value),
+    extractText: (selector) => call('extractText', selector),
+    screenshot: () => call('screenshot'),
+  };
+}
+
 async function getOrCreateNodeRegistry() {
   if (nodeRegistry) return nodeRegistry;
   log("Initializing host Node-capable Skill Registry...");
@@ -774,7 +787,9 @@ async function getOrCreateNodeRegistry() {
   const { createComputerUseSkills, ComputerUseController } = await loadComputerUse();
   const { createBrowserControlSkills, BrowserController } = await loadBrowserControl();
 
-  const registry = createNodeSkillRegistry();
+  const workspaceRoot = getEffectiveWorkspaceRoot();
+  const registry = createNodeSkillRegistry({ defaultCwd: workspaceRoot });
+  log(`Node skill registry workspace: ${workspaceRoot}`);
 
   try {
     const { createTauriAdapter } = await loadComputerUseNode();
@@ -788,17 +803,9 @@ async function getOrCreateNodeRegistry() {
     registry.registerMany(createComputerUseSkills(computerController));
   }
 
-  try {
-    const { createPlaywrightAdapter } = await loadBrowserControlNode();
-    const playwrightAdapter = await createPlaywrightAdapter({ headless: false });
-    const browserController = new BrowserController(playwrightAdapter);
-    registry.registerMany(createBrowserControlSkills(browserController));
-    log("Loaded browser-control host OS automation adapter.");
-  } catch (e) {
-    log(`Failed to load browser-control node adapter: ${e.message}`);
-    const browserController = new BrowserController();
-    registry.registerMany(createBrowserControlSkills(browserController));
-  }
+  const browserController = new BrowserController(createLazyBrowserAdapter({ headless: false }));
+  registry.registerMany(createBrowserControlSkills(browserController));
+  log("Registered browser-control skills with lazy Playwright adapter.");
 
   nodeRegistry = registry;
   return nodeRegistry;
@@ -808,7 +815,7 @@ async function getOrCreateNodeRegistry() {
 
 function registerSocketEvents(socket, isCloud = false) {
   const getDevice = () => {
-    return isCloud ? findCloudDevice() : findDeviceBySocket(socket.id);
+    return findDeviceBySocket(socket.id);
   };
 
   const getAuthorizedClient = (options = {}) => {
@@ -835,8 +842,8 @@ function registerSocketEvents(socket, isCloud = false) {
 
     log(`Running Ralph Loop for task: "${task}"`);
     
-    // Gửi tín hiệu bắt đầu
-    broadcast('chat_start', { text: `[Ralph Loop] Đang khởi động vòng lặp tự sửa sai cho tác vụ: "${task}"`, senderId: 'system', senderName: 'GHITA Engine' });
+    // Gá»­i tÃ­n hiá»‡u báº¯t Ä‘áº§u
+    broadcast('chat_start', { text: `[Ralph Loop] Äang khá»Ÿi Ä‘á»™ng vÃ²ng láº·p tá»± sá»­a sai cho tÃ¡c vá»¥: "${task}"`, senderId: 'system', senderName: 'GHITA Engine' });
 
     try {
       if (grpcServerInstance && grpcServerInstance.orchestrator) {
@@ -846,20 +853,20 @@ function registerSocketEvents(socket, isCloud = false) {
           costLimitUsd,
         });
 
-        // Giả lập một hàm thực thi (mock compiler) để mô phỏng tự sửa sai
+        // Giáº£ láº­p má»™t hÃ m thá»±c thi (mock compiler) Ä‘á»ƒ mÃ´ phá»ng tá»± sá»­a sai
         let compileAttempts = 0;
         const mockExecute = async (code) => {
           compileAttempts++;
-          await new Promise(r => setTimeout(r, 2000)); // Delay mô phỏng build 2s
+          await new Promise(r => setTimeout(r, 2000)); // Delay mÃ´ phá»ng build 2s
           
           if (compileAttempts < 2) {
-            // Lần 1: Giả lập lỗi cú pháp
+            // Láº§n 1: Giáº£ láº­p lá»—i cÃº phÃ¡p
             return {
               success: false,
               logs: `ERROR in src/app.tsx: L32 - Type 'string' is not assignable to type 'number'. Cannot assign value: "${code.substring(0, 15)}..." to count.`,
             };
           } else {
-            // Lần 2: Thành công
+            // Láº§n 2: ThÃ nh cÃ´ng
             return {
               success: true,
               logs: `Successfully compiled 1 TS file in 420ms. Zero errors detected.`,
@@ -876,8 +883,8 @@ function registerSocketEvents(socket, isCloud = false) {
             code: progress.code,
           });
           
-          // Gửi text tiến trình vào chat panel
-          broadcast('chat_chunk', { text: `\n🔄 **[Vòng lặp ${progress.iteration}]** ${progress.message}\n` });
+          // Gá»­i text tiáº¿n trÃ¬nh vÃ o chat panel
+          broadcast('chat_chunk', { text: `\nðŸ”„ **[VÃ²ng láº·p ${progress.iteration}]** ${progress.message}\n` });
           if (progress.code) {
             broadcast('chat_chunk', { text: `\`\`\`tsx\n${progress.code}\n\`\`\`\n` });
           }
@@ -892,16 +899,16 @@ function registerSocketEvents(socket, isCloud = false) {
         });
         
         broadcast('chat_done', {
-          text: `### 🎉 Ralph Loop Hoàn Tất!
-- **Trạng thái:** ${result.success ? 'Thành công ✨' : 'Thất bại ❌'}
-- **Số lượt sửa lỗi:** ${result.currentIteration} lần
-- **Tổng lượng token:** ${result.totalTokensUsed.totalTokens} tokens
-- **Tổng chi phí ước tính:** $${result.totalCostUsd.toFixed(5)} USD
-- **Giải pháp cuối cùng:** Đã được đồng bộ hóa thành công!`
+          text: `### ðŸŽ‰ Ralph Loop HoÃ n Táº¥t!
+- **Tráº¡ng thÃ¡i:** ${result.success ? 'ThÃ nh cÃ´ng âœ¨' : 'Tháº¥t báº¡i âŒ'}
+- **Sá»‘ lÆ°á»£t sá»­a lá»—i:** ${result.currentIteration} láº§n
+- **Tá»•ng lÆ°á»£ng token:** ${result.totalTokensUsed.totalTokens} tokens
+- **Tá»•ng chi phÃ­ Æ°á»›c tÃ­nh:** $${result.totalCostUsd.toFixed(5)} USD
+- **Giáº£i phÃ¡p cuá»‘i cÃ¹ng:** ÄÃ£ Ä‘Æ°á»£c Ä‘á»“ng bá»™ hÃ³a thÃ nh cÃ´ng!`
         });
 
       } else {
-        socket.emit('chat_error', { message: '⚙️ AI Orchestrator chưa được cấu hình. Vui lòng mở tab API Manager, thêm API Key và bật Active cho ít nhất 1 provider.' });
+        socket.emit('chat_error', { message: 'âš™ï¸ AI Orchestrator chÆ°a Ä‘Æ°á»£c cáº¥u hÃ¬nh. Vui lÃ²ng má»Ÿ tab API Manager, thÃªm API Key vÃ  báº­t Active cho Ã­t nháº¥t 1 provider.' });
       }
     } catch (err) {
       log(`Error in Ralph Loop execution: ${err.message}`);
@@ -952,6 +959,45 @@ function registerSocketEvents(socket, isCloud = false) {
     }
   });
 
+  // Skill enablement sync. Only the trusted desktop UI may toggle host-side
+  // disabled skills; paired devices can run enabled skills but cannot enable
+  // disabled capabilities by themselves.
+  socket.on('set_skill_enabled', async (data, callback) => {
+    if (!getAuthorizedClient({ allowDevice: false })) {
+      const errResult = { success: false, error: 'Unauthorized: desktop client required' };
+      if (typeof callback === 'function') callback(errResult);
+      return;
+    }
+
+    const skillId = data?.id;
+    const enabled = data?.enabled;
+    if (typeof skillId !== 'string' || skillId.trim().length === 0 || typeof enabled !== 'boolean') {
+      const errResult = { success: false, error: 'Missing required inputs: id and enabled' };
+      if (typeof callback === 'function') callback(errResult);
+      return;
+    }
+
+    try {
+      const registry = await getOrCreateNodeRegistry();
+      const skill = registry.setEnabled(skillId, enabled);
+      log(`[set_skill_enabled] ${skillId} enabled=${skill.enabled}`);
+      const result = { success: true, skill: { id: skill.id, enabled: skill.enabled, status: skill.status } };
+      if (typeof callback === 'function') {
+        callback(result);
+      } else {
+        socket.emit('set_skill_enabled_result', result);
+      }
+    } catch (e) {
+      log(`[set_skill_enabled] Error: ${e.message}`);
+      const errResult = { success: false, error: e.message };
+      if (typeof callback === 'function') {
+        callback(errResult);
+      } else {
+        socket.emit('set_skill_enabled_result', errResult);
+      }
+    }
+  });
+
   // List available skills (for mobile remote skill browsing)
   socket.on('list_skills', async (data, callback) => {
     if (!getAuthorizedClient()) {
@@ -994,7 +1040,7 @@ function registerSocketEvents(socket, isCloud = false) {
       return;
     }
 
-    const root = data?.path || null;
+    const root = data?.path ? path.resolve(data.path) : null;
     // Validate workspace path
     if (root) {
       try {
@@ -1013,6 +1059,11 @@ function registerSocketEvents(socket, isCloud = false) {
     } else {
       delete process.env.GHITA_WORKSPACE;
     }
+    // Invalidate the skill registry so it is recreated with the new workspace
+    // on the next getOrCreateNodeRegistry() call. This is safe because Node.js
+    // is single-threaded: any in-flight run_skill handler has already captured
+    // its own registry reference before this synchronous handler runs.
+    nodeRegistry = null;
     log(`Workspace set to: ${root}`);
     if (typeof callback === 'function') {
       callback({ success: true, path: root });
@@ -1077,7 +1128,7 @@ function registerSocketEvents(socket, isCloud = false) {
     const baseUrl = data?.baseUrl;
 
     log(`Running Agentic ReAct loop for task: "${task}"`);
-    broadcast('chat_start', { text: `🤖 [GHITA ReAct] Đang bắt đầu thực hiện vòng lặp Agentic ReAct cho tác vụ: "${task}"`, senderId: 'system', senderName: 'GHITA ReAct' });
+    broadcast('chat_start', { text: `ðŸ¤– [GHITA ReAct] Äang báº¯t Ä‘áº§u thá»±c hiá»‡n vÃ²ng láº·p Agentic ReAct cho tÃ¡c vá»¥: "${task}"`, senderId: 'system', senderName: 'GHITA ReAct' });
 
     try {
       if (grpcServerInstance && grpcServerInstance.orchestrator) {
@@ -1105,86 +1156,131 @@ function registerSocketEvents(socket, isCloud = false) {
           execute: t.execute,
         }));
 
-        // Implement custom parseToolCalls to extract XML and JSON format outputs stably
+        // Implement custom parseToolCalls to extract XML and JSON format outputs stably.
+        // Bug #15 fixes: the original implementation reused the same regex objects
+        // (`g`/`gi` flag) and called `regex.exec()` in a loop, which mutates
+        // `regex.lastIndex`. If the function ever threw mid-loop on a later
+        // call, the next invocation would start from a stale offset and skip
+        // matches. We now allocate fresh regex objects per call.
+        //
+        // Bug #24: validate the parsed tool name against the tool registry
+        // before returning actions. LLM-hallucinated tool names are dropped
+        // with a console.warn instead of being executed (the previous code
+        // pushed every parsed name to the action list, even if it did not
+        // exist in `this.tools`, which made the agent loop forever waiting
+        // for a tool that would never resolve).
+        const knownTools = new Set(
+          Object.keys(grpcServerInstance.orchestrator.builtInTools || {}),
+        );
+
+        /** Generate a stable, sortable, unique tool-call id. */
+        const newToolCallId = () =>
+          `call_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 9)}`;
+
+        /** Tokenize XML key/value pairs from a tag body. */
+        const parseKeyValTags = (body) => {
+          const input = {};
+          // Build a fresh regex each call to avoid `lastIndex` pollution
+          const kvRegex = /<([A-Za-z_][A-Za-z0-9_-]*)\s*>([\s\S]*?)<\/\1>/g;
+          let kvMatch;
+          while ((kvMatch = kvRegex.exec(body)) !== null) {
+            input[kvMatch[1].trim()] = kvMatch[2].trim();
+          }
+          return input;
+        };
+
         const customParseToolCalls = (message) => {
           const text = message.getText();
           const actions = [];
 
-          // 1. Try native toolCalls if present in metadata
+          // 1. Native toolCalls from metadata
           if (message.metadata?.toolCalls && Array.isArray(message.metadata.toolCalls)) {
-            return message.metadata.toolCalls.map(tc => ({
-              tool: tc.name,
-              toolCallId: tc.id || `call_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
-              input: tc.arguments,
-            }));
+            for (const tc of message.metadata.toolCalls) {
+              if (!tc.name) continue;
+              if (knownTools.size > 0 && !knownTools.has(tc.name)) {
+                console.warn(`[parseToolCalls] Unknown tool "${tc.name}" dropped`);
+                continue;
+              }
+              actions.push({
+                tool: tc.name,
+                toolCallId: tc.id || newToolCallId(),
+                input: tc.arguments,
+              });
+            }
+            if (actions.length > 0) return actions;
           }
 
-          // 2. Parser for XML tags like: <tool_call name="...">{"filePath": "..."}</tool_call>
-          const xmlRegex = /<tool_call\s+name="([^"]+)"[^>]*>([\s\S]*?)<\/tool_call>/gi;
-          let match;
-          while ((match = xmlRegex.exec(text)) !== null) {
-            const toolName = match[1].trim();
-            const body = match[2].trim();
-            let input = {};
-            try {
-              if (body.startsWith('{')) {
-                input = JSON.parse(body);
-              } else {
-                // Nested keys like <filePath>somefile.txt</filePath>
-                const keyValRegex = /<([^>]+)>([\s\S]*?)<\/ \1>/g;
-                const keyValRegex2 = /<([^>]+)>([\s\S]*?)<\/\1>/g;
-                let kvMatch;
-                while ((kvMatch = keyValRegex2.exec(body)) !== null) {
-                  input[kvMatch[1].trim()] = kvMatch[2].trim();
-                }
+          // 2. XML tags â€” `<tool_call name="...">{json}</tool_call>`
+          //    Allocate a fresh regex on every call.
+          {
+            const xmlRegex = /<tool_call\s+name="([A-Za-z_][A-Za-z0-9_-]*)"[^>]*>([\s\S]*?)<\/tool_call>/gi;
+            let match;
+            while ((match = xmlRegex.exec(text)) !== null) {
+              const toolName = match[1].trim();
+              const body = match[2].trim();
+              if (knownTools.size > 0 && !knownTools.has(toolName)) {
+                console.warn(`[parseToolCalls] Unknown tool "${toolName}" dropped`);
+                continue;
               }
-            } catch (err) {
-              log(`Failed to parse XML tool call body: ${body}. Error: ${err.message}`);
+              let input = {};
+              try {
+                if (body.startsWith('{')) {
+                  input = JSON.parse(body);
+                } else {
+                  input = parseKeyValTags(body);
+                }
+              } catch (err) {
+                log(`Failed to parse XML tool call body for "${toolName}": ${body}. Error: ${err.message}`);
+                continue;
+              }
+              actions.push({
+                tool: toolName,
+                toolCallId: newToolCallId(),
+                input,
+              });
             }
-            actions.push({
-              tool: toolName,
-              toolCallId: `call_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
-              input,
-            });
           }
           if (actions.length > 0) return actions;
 
-          // 3. Parser for Markdown JSON blocks
-          const markdownJsonRegex = /```json\s*([\s\S]*?)```/gi;
-          let mdMatch;
-          while ((mdMatch = markdownJsonRegex.exec(text)) !== null) {
-            try {
-              const parsed = JSON.parse(mdMatch[1].trim());
-              if (Array.isArray(parsed)) {
-                for (const item of parsed) {
+          // 3. Markdown JSON blocks
+          {
+            const markdownJsonRegex = /```json\s*([\s\S]*?)```/gi;
+            let mdMatch;
+            while ((mdMatch = markdownJsonRegex.exec(text)) !== null) {
+              try {
+                const parsed = JSON.parse(mdMatch[1].trim());
+                const collect = (item) => {
                   const name = item.name || item.tool;
-                  if (name) {
-                    actions.push({
-                      tool: name,
-                      toolCallId: item.toolCallId || `call_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
-                      input: item.arguments || item.input || {},
-                    });
+                  if (!name) return null;
+                  if (knownTools.size > 0 && !knownTools.has(name)) {
+                    console.warn(`[parseToolCalls] Unknown tool "${name}" dropped`);
+                    return null;
                   }
-                }
-              } else if (parsed && typeof parsed === 'object') {
-                const name = parsed.name || parsed.tool;
-                if (name) {
-                  actions.push({
+                  return {
                     tool: name,
-                    toolCallId: parsed.toolCallId || `call_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
-                    input: parsed.arguments || parsed.input || {},
-                  });
+                    toolCallId: item.toolCallId || newToolCallId(),
+                    input: item.arguments || item.input || {},
+                  };
+                };
+                if (Array.isArray(parsed)) {
+                  for (const item of parsed) {
+                    const a = collect(item);
+                    if (a) actions.push(a);
+                  }
+                } else if (parsed && typeof parsed === 'object') {
+                  const a = collect(parsed);
+                  if (a) actions.push(a);
                 }
+              } catch {
+                // Ignore invalid JSON inside markdown blocks
               }
-            } catch (e) {
-              // Ignore invalid JSON inside markdown blocks
             }
           }
 
           return actions;
         };
 
-        const { createReActAgent, AIMessage } = await loadAgents();
+        const { createReActAgent, AIMessage, ToolMessage } = await loadAgents();
         const agent = createReActAgent({
           config: {
             name: 'GHITA-ReAct-Local',
@@ -1218,14 +1314,82 @@ State your reasoning step by step, then invoke a tool call. Repeat this cycle un
             provider,
           },
           llmCall: async (messages) => {
-            const chatMessages = messages.map(msg => ({
-              role: msg.role === 'assistant' ? 'assistant' : msg.role === 'system' ? 'system' : 'user',
-              content: msg.getText(),
-            }));
-            // Timeout 60s cho mỗi LLM call để tránh bị treo vô hạn
+            // Truncate long observations to avoid blowing the LLM context window.
+            // Keep the original full text for the UI broadcast (in onStepEnd),
+            // but only feed a bounded-size version back to the model.
+            const LLM_MAX_OBSERVATION_CHARS = 8_000;
+            const truncatedMessages = messages.map((m) => {
+              if (m.role !== 'tool' && m.role !== 'user') return m;
+              const txt = m.getText();
+              if (txt.length <= LLM_MAX_OBSERVATION_CHARS) return m;
+              const head = txt.slice(0, LLM_MAX_OBSERVATION_CHARS);
+              const tail = `\n\n... [truncated ${txt.length - LLM_MAX_OBSERVATION_CHARS} chars] ...`;
+              // Build a shallow clone with truncated content to avoid mutating originals.
+              const Cls = m.constructor;
+              try {
+                if (m.role === 'tool') {
+                  return new Cls(head + tail, m.toolCallId, m.toolName, { id: m.id, timestamp: m.timestamp, metadata: m.metadata });
+                }
+                return new Cls(head + tail, { id: m.id, name: m.name, timestamp: m.timestamp, metadata: m.metadata });
+              } catch {
+                return m; // fallback: original
+              }
+            });
+
+            // Map internal BaseMessage to OpenAI chat format, preserving
+            // `role: 'tool'` and `tool_call_id` so the model can match each
+            // observation back to the tool call that produced it. Also forward
+            // `tool_calls` on assistant messages.
+            const chatMessages = truncatedMessages.map((msg) => {
+              const role = msg.role;
+              if (role === 'tool') {
+                return {
+                  role: 'tool',
+                  tool_call_id: msg.toolCallId,
+                  content: msg.getText(),
+                };
+              }
+              if (role === 'assistant') {
+                const base = { role: 'assistant', content: msg.getText() };
+                if (Array.isArray(msg.toolCalls) && msg.toolCalls.length > 0) {
+                  base.tool_calls = msg.toolCalls.map((tc) => ({
+                    id: tc.id,
+                    type: 'function',
+                    function: {
+                      name: tc.name,
+                      arguments: typeof tc.arguments === 'string'
+                        ? tc.arguments
+                        : JSON.stringify(tc.arguments ?? {}),
+                    },
+                  }));
+                } else if (msg.metadata && Array.isArray(msg.metadata.toolCalls) && msg.metadata.toolCalls.length > 0) {
+                  // Fallback: some providers put tool calls in metadata
+                  base.tool_calls = msg.metadata.toolCalls.map((tc) => ({
+                    id: tc.id || `call_${Math.random().toString(36).slice(2, 10)}`,
+                    type: 'function',
+                    function: {
+                      name: tc.name,
+                      arguments: typeof tc.arguments === 'string'
+                        ? tc.arguments
+                        : JSON.stringify(tc.arguments ?? {}),
+                    },
+                  }));
+                }
+                return base;
+              }
+              if (role === 'system') {
+                return { role: 'system', content: msg.getText() };
+              }
+              if (role === 'function') {
+                return { role: 'function', name: msg.functionName, content: msg.getText() };
+              }
+              return { role: 'user', content: msg.getText() };
+            });
+
+            // Timeout 60s cho má»—i LLM call Ä‘á»ƒ trÃ¡nh bá»‹ treo vÃ´ háº¡n
             const LLM_TIMEOUT_MS = 60_000;
             const timeoutPromise = new Promise((_, reject) =>
-              setTimeout(() => reject(new Error('LLM call timeout after 60s - Opengateway không phản hồi')), LLM_TIMEOUT_MS)
+              setTimeout(() => reject(new Error('LLM call timeout after 60s - Opengateway khÃ´ng pháº£n há»“i')), LLM_TIMEOUT_MS)
             );
             const res = await Promise.race([
               grpcServerInstance.orchestrator.chat(chatMessages, { provider, model }),
@@ -1240,17 +1404,40 @@ State your reasoning step by step, then invoke a tool call. Repeat this cycle un
           parseToolCalls: customParseToolCalls,
         });
 
-        // Run agent with 3-minute overall timeout to prevent UI hang
+        // Run agent with 3-minute overall timeout to prevent UI hang.
+        // Bug #19: also kill any child processes spawned by tools
+        // (e.g. `runCommand`) so a hung process cannot keep running
+        // after the agent run was aborted. We expose a Set on
+        // `globalThis.__activeChildProcs` that the workspace-tools
+        // package populates.
         const AGENT_TIMEOUT_MS = 180_000;
+        const childRegistry = new Set();
+        const previousRegistry = globalThis.__activeChildProcs;
+        globalThis.__activeChildProcs = childRegistry;
+
+        /** Kill all tracked child processes; safe to call repeatedly. */
+        const killAllChildren = () => {
+          for (const child of childRegistry) {
+            try {
+              if (typeof child.kill === 'function') {
+                child.kill('SIGTERM');
+              }
+            } catch {
+              // Ignore â€” child may have already exited
+            }
+          }
+          childRegistry.clear();
+        };
+
         const agentPromise = agent.run(task, {
           onStepStart: (step, action) => {
             broadcast('agent_step_start', { step, action });
-            broadcast('chat_chunk', { text: `\n🤔 *[Bước ${step + 1}] Suy nghĩ...* Gọi công cụ \`${action.tool}\`...\n` });
+            broadcast('chat_chunk', { text: `\nðŸ¤” *[BÆ°á»›c ${step + 1}] Suy nghÄ©...* Gá»i cÃ´ng cá»¥ \`${action.tool}\`...\n` });
           },
           onStepEnd: (step, observation) => {
             broadcast('agent_step_end', { step, observation });
-            const preview = observation.length > 500 ? observation.slice(0, 500) + '... (trực quan hóa bị rút gọn)' : observation;
-            broadcast('chat_chunk', { text: `\n📝 *Kết quả công cụ:* \n\`\`\`\n${preview}\n\`\`\`\n` });
+            const preview = observation.length > 500 ? observation.slice(0, 500) + '... (trá»±c quan hÃ³a bá»‹ rÃºt gá»n)' : observation;
+            broadcast('chat_chunk', { text: `\nðŸ“ *Káº¿t quáº£ cÃ´ng cá»¥:* \n\`\`\`\n${preview}\n\`\`\`\n` });
           },
           onToolCall: (tool, input) => {
             broadcast('agent_tool_call', { tool, input });
@@ -1260,10 +1447,23 @@ State your reasoning step by step, then invoke a tool call. Repeat this cycle un
           },
         });
         const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Agent timeout after 3 minutes - quá thời gian chờ')), AGENT_TIMEOUT_MS)
+          setTimeout(() => reject(new Error('Agent timeout after 3 minutes - quÃ¡ thá»i gian chá»')), AGENT_TIMEOUT_MS)
         );
-        const result = await Promise.race([agentPromise, timeoutPromise]);
+        let result;
+        try {
+          result = await Promise.race([agentPromise, timeoutPromise]);
+        } catch (err) {
+          // Bug #19: kill any running child processes on error/timeout
+          killAllChildren();
+          throw err;
+        } finally {
+          // Restore previous registry so concurrent agent runs don't share state
+          globalThis.__activeChildProcs = previousRegistry;
+        }
 
+        // Bug #18: emit `agent_run_done` *before* `chat_done` and tag
+        // the final chat message with a `kind` so the React side knows
+        // it is the agent-final message and does not double-render.
         broadcast('agent_run_done', {
           output: result.output,
           iterations: result.iterations,
@@ -1272,17 +1472,18 @@ State your reasoning step by step, then invoke a tool call. Repeat this cycle un
         });
 
         broadcast('chat_done', {
-          text: `### ✅ Hoàn thành tác vụ Agentic ReAct!
-${result.output}`
+          text: `### âœ… HoÃ n thÃ nh tÃ¡c vá»¥ Agentic ReAct!
+${result.output}`,
+          kind: 'agent_final',
         });
 
       } else {
-        socket.emit('chat_error', { message: '⚙️ AI Orchestrator chưa được cấu hình. Vui lòng mở tab API Manager, thêm API Key và bật Active cho ít nhất 1 provider.' });
+        socket.emit('chat_error', { message: 'âš™ï¸ AI Orchestrator chÆ°a Ä‘Æ°á»£c cáº¥u hÃ¬nh. Vui lÃ²ng má»Ÿ tab API Manager, thÃªm API Key vÃ  báº­t Active cho Ã­t nháº¥t 1 provider.' });
       }
     } catch (err) {
       log(`Error in agent run: ${err.message}`);
       socket.emit('chat_error', { message: `ReAct Agent Exception: ${err.message}` });
-      broadcast('chat_done', { text: `❌ Vòng lặp Agentic ReAct gặp lỗi: ${err.message}` });
+      broadcast('chat_done', { text: `âŒ VÃ²ng láº·p Agentic ReAct gáº·p lá»—i: ${err.message}` });
     }
   });
 
@@ -1296,35 +1497,35 @@ ${result.output}`
     if (data?.text) {
       log(`Chat from ${senderName}: ${data.text}`);
 
-      // Nếu từ Mobile, emit lên Tauri qua stdout
+      // Náº¿u tá»« Mobile, emit lÃªn Tauri qua stdout
       if (!isDesktop) {
         ipcEmit(EVENTS.CHAT, { deviceId: senderId, text: data.text });
       }
 
-      // Rà quét bảo mật PreToolUse Hook cho các lệnh CLI tự chạy hoặc các từ khóa nhạy cảm
+      // RÃ  quÃ©t báº£o máº­t PreToolUse Hook cho cÃ¡c lá»‡nh CLI tá»± cháº¡y hoáº·c cÃ¡c tá»« khÃ³a nháº¡y cáº£m
       if (data.text.startsWith('/') || data.text.includes('rm ') || data.text.includes('bash ') || data.text.includes('curl ') || data.text.includes('nc ')) {
         const { SecurityGuard } = await loadAiEngine();
         const securityResult = SecurityGuard.scanCommand(data.text);
         if (!securityResult.safe) {
-          // Kích hoạt ngay popup duyệt tool cảnh báo nguy hại cao độ (Human-in-the-loop)
+          // KÃ­ch hoáº¡t ngay popup duyá»‡t tool cáº£nh bÃ¡o nguy háº¡i cao Ä‘á»™ (Human-in-the-loop)
           socket.emit('action_required', {
             toolCallId: `sec_${Date.now()}`,
             name: 'execute_dangerous_command',
             arguments: JSON.stringify({ command: data.text }, null, 2),
-            warningMessage: securityResult.reason || 'Lệnh này chứa mẫu mã độc nguy hiểm bị cấm thực thi trực tiếp!',
+            warningMessage: securityResult.reason || 'Lá»‡nh nÃ y chá»©a máº«u mÃ£ Ä‘á»™c nguy hiá»ƒm bá»‹ cáº¥m thá»±c thi trá»±c tiáº¿p!',
           });
-          return; // Chặn đứng tiến trình
+          return; // Cháº·n Ä‘á»©ng tiáº¿n trÃ¬nh
         }
       }
 
-      // Phát sự kiện bắt đầu streaming token cho cả hai thiết bị
+      // PhÃ¡t sá»± kiá»‡n báº¯t Ä‘áº§u streaming token cho cáº£ hai thiáº¿t bá»‹
       broadcast('chat_start', { text: data.text, senderId, senderName });
 
       let fullResponse = '';
       try {
         const messages = [];
 
-        // Nếu có history gửi kèm theo
+        // Náº¿u cÃ³ history gá»­i kÃ¨m theo
         if (data.history && Array.isArray(data.history)) {
           messages.push(...data.history.map(msg => ({
             role: msg.role,
@@ -1380,16 +1581,16 @@ ${result.output}`
             },
           });
         } else {
-          // Fallback response nếu orchestrator chưa sẵn sàng
-          const fallbackText = `⚙️ **AI Engine chưa sẵn sàng.**\n\nHệ thống nhận được tin nhắn: "${data.text}"\n\nĐể sử dụng Chat AI, vui lòng:\n1. Mở tab **API Manager** (🔑) trên ứng dụng Desktop\n2. Thêm ít nhất 1 nhà cung cấp AI và nhập API Key\n3. Bật **Active** cho provider đó\n\nSau đó hãy thử lại!`;
+          // Fallback response náº¿u orchestrator chÆ°a sáºµn sÃ ng
+          const fallbackText = `âš™ï¸ **AI Engine chÆ°a sáºµn sÃ ng.**\n\nHá»‡ thá»‘ng nháº­n Ä‘Æ°á»£c tin nháº¯n: "${data.text}"\n\nÄá»ƒ sá»­ dá»¥ng Chat AI, vui lÃ²ng:\n1. Má»Ÿ tab **API Manager** (ðŸ”‘) trÃªn á»©ng dá»¥ng Desktop\n2. ThÃªm Ã­t nháº¥t 1 nhÃ  cung cáº¥p AI vÃ  nháº­p API Key\n3. Báº­t **Active** cho provider Ä‘Ã³\n\nSau Ä‘Ã³ hÃ£y thá»­ láº¡i!`;
           broadcast('chat_chunk', { text: fallbackText });
           broadcast('chat_done', { text: fallbackText });
         }
       } catch (err) {
         log(`Error generating AI streaming: ${err.message}`);
         broadcast('chat_error', { message: err.message });
-        // Luôn phát chat_done để giải phóng trạng thái UI trên client
-        broadcast('chat_done', { text: fullResponse || `Lỗi: ${err.message}` });
+        // LuÃ´n phÃ¡t chat_done Ä‘á»ƒ giáº£i phÃ³ng tráº¡ng thÃ¡i UI trÃªn client
+        broadcast('chat_done', { text: fullResponse || `Lá»—i: ${err.message}` });
       }
     }
   });
@@ -1556,16 +1757,10 @@ ${result.output}`
         log(`Unpairing device via socket event: ${device.name} (${device.id})`);
         const sId = device.socketId;
         if (sId) {
-          if (sId === 'cloud_relay') {
-            if (cloudSocket) {
-              cloudSocket.emit('disconnect_peer', { reason: 'Unpaired by desktop' });
-            }
-          } else {
-            const activeSocket = io.sockets.sockets.get(sId);
-            if (activeSocket) {
-              activeSocket.emit('unpaired');
-              activeSocket.disconnect(true);
-            }
+          const activeSocket = io.sockets.sockets.get(sId);
+          if (activeSocket) {
+            activeSocket.emit('unpaired');
+            activeSocket.disconnect(true);
           }
         }
         connectedDevices.delete(deviceId);
@@ -1573,122 +1768,6 @@ ${result.output}`
         sendStatus();
         ipcEmit('unpaired', { deviceId });
       }
-    }
-  });
-
-  // --- PTY Terminal Handlers ---
-  socket.on('terminal_create', (data) => {
-    const auth = getAuthorizedClient({ allowDevice: false });
-    if (!auth) return;
-
-    const { id, cols, rows, shellType, cwd } = data;
-    if (!id) return;
-
-    // Clean up existing session with the same id if any
-    if (pendingPtyCleanup.has(id)) {
-      clearTimeout(pendingPtyCleanup.get(id));
-      pendingPtyCleanup.delete(id);
-    }
-    if (terminalSessions.has(id)) {
-      const existing = terminalSessions.get(id);
-      try {
-        existing.ptyProcess.kill();
-      } catch (err) {}
-      terminalSessions.delete(id);
-    }
-
-    try {
-      const shell = process.platform === 'win32'
-        ? (shellType === 'powershell' ? 'powershell.exe' : 'cmd.exe')
-        : 'bash';
-
-      const ptyModule = loadPty();
-      const safeCols = Math.min(Math.max(Number(cols) || 80, 20), 500);
-      const safeRows = Math.min(Math.max(Number(rows) || 24, 5), 200);
-      const ptyProcess = ptyModule.spawn(shell, [], {
-        name: 'xterm-color',
-        cols: safeCols,
-        rows: safeRows,
-        cwd: cwd || globalThis.ghitaWorkspaceRoot || process.env.USERPROFILE || process.cwd(),
-        env: process.env,
-      });
-
-      ptyProcess.onData((chunk) => {
-        // Update lastActivity so the idle-killer won't touch this session
-        const sess = terminalSessions.get(id);
-        if (sess) sess.lastActivity = Date.now();
-
-        // Only log PTY output in verbose/debug mode to avoid leaking sensitive data
-        if (process.env.GHITA_DEBUG) log(`PTY Output [${id}]: ${JSON.stringify(chunk)}`);
-        socket.emit('terminal_data', { id, data: chunk });
-      });
-
-      ptyProcess.onExit(({ exitCode, signal }) => {
-        socket.emit('terminal_exit', { id, exitCode, signal });
-        terminalSessions.delete(id);
-      });
-
-      terminalSessions.set(id, { ptyProcess, socketId: socket.id, lastActivity: Date.now() });
-      log(`PTY session created: ${id} (${shell})`);
-
-      // Ensure the periodic cleanup interval is running
-      startPtyCleanupInterval();
-    } catch (err) {
-      log(`Failed to spawn PTY: ${err.message}`);
-      socket.emit('terminal_data', { id, data: `\r\nError: Failed to spawn PTY: ${err.message}\r\n` });
-    }
-  });
-
-  socket.on('terminal_data', (data) => {
-    const auth = getAuthorizedClient({ allowDevice: false });
-    if (!auth) return;
-
-    const { id, data: inputData } = data;
-
-    // ── Filter #6: Skip empty / non-string input at server level ──
-    if (!inputData || typeof inputData !== 'string') return;
-
-    // ── Filter #7: Skip xterm.js focus in/out events (\x1b[I, \x1b[O) ──
-    // These are browser focus notifications, not real user input.
-    // Forwarding them to the PTY causes noise and unnecessary logging.
-    if (inputData === '\x1b[I' || inputData === '\x1b[O') return;
-
-    log(`PTY Input [${id}]: ${JSON.stringify(inputData)}`);
-    const session = terminalSessions.get(id);
-    if (session && session.socketId === socket.id) {
-      // Track activity to prevent idle-kill of active sessions
-      session.lastActivity = Date.now();
-      session.ptyProcess.write(inputData);
-    }
-  });
-
-  socket.on('terminal_resize', (data) => {
-    const auth = getAuthorizedClient({ allowDevice: false });
-    if (!auth) return;
-
-    const { id, cols, rows } = data;
-    const session = terminalSessions.get(id);
-    if (session && session.socketId === socket.id) {
-      try {
-        session.ptyProcess.resize(cols, rows);
-      } catch (err) {
-        log(`Failed to resize PTY: ${err.message}`);
-      }
-    }
-  });
-
-  socket.on('terminal_close', (data) => {
-    const auth = getAuthorizedClient({ allowDevice: false });
-    if (!auth) return;
-
-    const { id } = data;
-    const session = terminalSessions.get(id);
-    if (session && session.socketId === socket.id) {
-      try {
-        session.ptyProcess.kill();
-      } catch (err) {}
-      terminalSessions.delete(id);
-      log(`PTY session closed: ${id}`);
     }
   });
 
@@ -1714,51 +1793,13 @@ ${result.output}`
   });
 
   socket.on('disconnect', () => {
-    // ── Grace-period cleanup: don't kill PTY sessions immediately. ──
-    // Socket.IO auto-reconnect or Vite HMR may bring the client back within
-    // a few seconds.  Schedule the kill on a timer that can be cancelled.
-    for (const [id, session] of terminalSessions.entries()) {
-      if (session.socketId === socket.id) {
-        // Cancel any previously scheduled timer for this session (idempotent)
-        if (pendingPtyCleanup.has(id)) {
-          clearTimeout(pendingPtyCleanup.get(id));
-        }
-        const timer = setTimeout(() => {
-          pendingPtyCleanup.delete(id);
-          const sess = terminalSessions.get(id);
-          if (sess) {
-            try { sess.ptyProcess.kill(); } catch (err) {}
-            terminalSessions.delete(id);
-            log(`Cleaned up PTY session ${id} after grace period (${PTY_DISCONNECT_GRACE_MS / 1000}s)`);
-          }
-        }, PTY_DISCONNECT_GRACE_MS);
-        // Don't block Node exit on this timer
-        if (typeof timer.unref === 'function') timer.unref();
-        pendingPtyCleanup.set(id, timer);
-      }
-    }
+    // Terminal sessions are now managed natively by Rust PTY (terminal.rs).
+    // No Socket.IO-side cleanup needed.
   });
 }
 
 io.on('connection', (socket) => {
   log(`New connection: ${socket.id}`);
-
-  // ── Cancel all pending PTY grace-period timers on new connection. ──
-  // A reconnecting desktop client invalidates the pending cleanup of
-  // sessions from the previous (now-dead) socket.  Orphaned sessions
-  // that the client does NOT reclaim will be swept by the periodic
-  // idle-cleanup interval (15 min timeout).
-  for (const [id, timer] of pendingPtyCleanup.entries()) {
-    clearTimeout(timer);
-    pendingPtyCleanup.delete(id);
-    // Re-bind the orphaned session so a future disconnect can track it
-    const sess = terminalSessions.get(id);
-    if (sess) {
-      sess.socketId = socket.id;
-      sess.lastActivity = Date.now();
-      log(`Reclaimed orphaned PTY session ${id} for new socket`);
-    }
-  }
 
   if (isTrustedDesktopSocket(socket)) {
     socket.join('desktop');
@@ -1854,13 +1895,6 @@ function findDeviceBySocket(socketId) {
   return undefined;
 }
 
-function findCloudDevice() {
-  for (const device of connectedDevices.values()) {
-    if (device.socketId === 'cloud_relay') return device;
-  }
-  return undefined;
-}
-
 function sendStatus() {
   const devices = [...connectedDevices.values()].map((d) => ({
     id: d.id,
@@ -1874,109 +1908,6 @@ function sendStatus() {
     deviceCount: connectedCount,
     devices,
   });
-
-  if (cloudSocket && cloudSocket.connected) {
-    cloudSocket.emit(EVENTS.STATUS, {
-      deviceCount: connectedCount,
-      devices,
-    });
-  }
-}
-
-let keepAliveInterval = null;
-
-function startKeepAlivePing() {
-  if (keepAliveInterval) {
-    clearInterval(keepAliveInterval);
-  }
-
-  log(`[Cloud] Starting Keep-Alive self-pings every 10 minutes.`);
-  keepAliveInterval = setInterval(async () => {
-    if (!cloudSocket || !cloudSocket.connected) return;
-    
-    const pingUrl = `${CLOUD_RELAY_URL}/health`;
-    log(`[Cloud] Sending self-ping to ${pingUrl} to prevent sleep...`);
-    
-    try {
-      const res = await fetch(pingUrl);
-      log(`[Cloud] Ping response status: ${res.status}`);
-    } catch (e) {
-      log(`[Cloud] Ping error: ${e.message}`);
-    }
-  }, 600_000); // 10 minutes
-  
-  if (typeof keepAliveInterval.unref === 'function') {
-    keepAliveInterval.unref();
-  }
-}
-
-function initCloudSocket() {
-  if (cloudSocket) {
-    try {
-      cloudSocket.removeAllListeners();
-      cloudSocket.disconnect();
-    } catch (e) {}
-  }
-
-  log(`Initializing Cloud Relay client connection to: ${CLOUD_RELAY_URL}`);
-  cloudSocket = ioClient(CLOUD_RELAY_URL, {
-    transports: ['websocket'],
-    reconnection: true,
-    reconnectionDelay: 2000,
-    reconnectionDelayMax: 10000,
-    timeout: 10000,
-  });
-
-  cloudSocket.on('connect', () => {
-    log(`[Cloud] Connected to Cloud Relay! Registering code: ${currentCode}`);
-    cloudSocket.emit('register_desktop', { pairingCode: currentCode });
-  });
-
-  cloudSocket.on('disconnect', (reason) => {
-    log(`[Cloud] Disconnected from Cloud Relay: ${reason}`);
-    // Clean up cloud device
-    const device = findCloudDevice();
-    if (device) {
-      device.connected = false;
-      log(`[Cloud] Virtual Cloud Device disconnected.`);
-      ipcEmit(EVENTS.DISCONNECT, { deviceId: device.id, name: device.name, reason });
-      sendStatus();
-    }
-  });
-
-  cloudSocket.on('pair_confirm', (data) => {
-    log(`[Cloud] Paired with Mobile via Cloud Relay! Peer socket: ${data.peerId}`);
-    
-    // Create virtual cloud device
-    const device = {
-      id: 'cloud_session',
-      name: 'Mobile (Cloud)',
-      platform: 'android',
-      connected: true,
-      lastSeen: Date.now(),
-      socketId: 'cloud_relay',
-      pairedAt: Date.now(),
-    };
-
-    connectedDevices.set(device.id, device);
-    log(`[Cloud] Paired successfully: ${device.name} (${device.id})`);
-    ipcEmit(EVENTS.PAIR_CONFIRM, { deviceId: device.id, name: device.name, platform: device.platform });
-    sendStatus();
-  });
-
-  cloudSocket.on('disconnect_peer', (data) => {
-    log(`[Cloud] Mobile peer disconnected via Cloud Relay: ${data?.reason || 'No reason'}`);
-    const device = findCloudDevice();
-    if (device) {
-      device.connected = false;
-      connectedDevices.delete(device.id);
-      ipcEmit(EVENTS.DISCONNECT, { deviceId: device.id, name: device.name, reason: data?.reason || 'Mobile offline' });
-      sendStatus();
-    }
-  });
-
-  registerSocketEvents(cloudSocket, true);
-  startKeepAlivePing();
 }
 
 function log(msg) {
@@ -2005,30 +1936,10 @@ function shutdown(signal) {
   log(`Shutting down (${signal})...`);
 
   // Kill all PTY sessions to prevent zombie processes
-  for (const [id, session] of terminalSessions.entries()) {
-    try {
-      session.ptyProcess.kill();
-      log(`Killed PTY session: ${id}`);
-    } catch (err) {}
-  }
-  terminalSessions.clear();
-
-  // Cancel all pending grace-period timers
-  for (const [id, timer] of pendingPtyCleanup.entries()) {
-    clearTimeout(timer);
-    pendingPtyCleanup.delete(id);
-  }
-
-  // Clear the PTY idle-cleanup interval
-  if (ptyCleanupInterval) {
-    clearInterval(ptyCleanupInterval);
-    ptyCleanupInterval = null;
-  }
-
   io.disconnectSockets(true);
   io.close();
 
-  // Đặt timeout cưỡng chế 1.5 giây để tránh zombie process chạy ngầm
+  // Äáº·t timeout cÆ°á»¡ng cháº¿ 1.5 giÃ¢y Ä‘á»ƒ trÃ¡nh zombie process cháº¡y ngáº§m
   const forceExitTimeout = setTimeout(() => {
     log(`Shutdown timed out, forcing process exit.`);
     process.exit(signal === 'SIGINT' || signal === 'SIGTERM' ? 0 : 1);
@@ -2059,16 +1970,10 @@ function shutdown(signal) {
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
 
-// Kill remaining PTY zombies on unexpected exit (synchronous, best-effort)
-process.on('exit', () => {
-  for (const [, session] of terminalSessions) {
-    try { session.ptyProcess.kill(); } catch (_) {}
-  }
-});
 
 // --- Global Exception & Rejection Shield ---
 process.on('uncaughtException', (err) => {
-  // Ignore EPIPE errors — they occur when the Tauri parent process closes
+  // Ignore EPIPE errors â€” they occur when the Tauri parent process closes
   // and the stdout pipe breaks. Logging would cause infinite EPIPE spam.
   if (err?.code === 'EPIPE' || err?.message?.includes('EPIPE')) return;
   log(`CRITICAL SHIELD: Uncaught Exception: ${err.message}`);
@@ -2087,30 +1992,35 @@ process.on('unhandledRejection', (reason, promise) => {
 
 // --- Start ---
 log(`Preparing ports...`);
-if (AUTO_LIBERATE_PORTS) {
-  liberatePort(PORT);
-  liberatePort(50051); // Legacy opt-in: force-close processes that own GHITA ports.
-} else {
-  log('Port auto-liberation disabled. Set GHITA_LIBERATE_PORTS=1 to enable legacy kill-on-port behavior.');
-}
+log('Port auto-liberation bypassed to prevent process termination. Sidecar will scan for available ports starting from ' + activePort);
 
 httpServer.on('error', (err) => {
-  log(`CRITICAL: HTTP Server failed to start: ${err.message}`);
-  ipcEmit('server_error', { type: 'httpServerError', message: err.message });
-  process.exit(1);
+  if (err.code === 'EADDRINUSE') {
+    log(`Port ${activePort} is busy, trying ${activePort + 1}...`);
+    activePort++;
+    if (activePort < 8100) {
+      httpServer.listen(activePort, HOST);
+    } else {
+      log(`CRITICAL: HTTP Server failed to find an available port: ${err.message}`);
+      ipcEmit('server_error', { type: 'httpServerError', message: err.message });
+      process.exit(1);
+    }
+  } else {
+    log(`CRITICAL: HTTP Server failed to start: ${err.message}`);
+    ipcEmit('server_error', { type: 'httpServerError', message: err.message });
+    process.exit(1);
+  }
 });
 
-httpServer.listen(PORT, HOST, async () => {
+httpServer.on('listening', async () => {
   loadPairedDevices();
   const ip = getLocalIP();
-  log(`Server listening on ${HOST}:${PORT}`);
+  log(`Server listening on ${HOST}:${activePort}`);
   log(`Local IP: ${ip}`);
   const code = getCode();
   log(`Pairing code: ${code}`);
   publishToCloudDiscovery();
-  // initCloudSocket(); // Cloud Relay tạm vô hiệu hóa — Render.com relay đã bị xóa
-
-  // Khởi động gRPC Server (lazy-load ai-engine)
+  // Khá»Ÿi Ä‘á»™ng gRPC Server (lazy-load ai-engine)
   try {
     const { ConfigLoader, Orchestrator, GrpcServer } = await loadAiEngine();
     const configLoader = new ConfigLoader();
@@ -2126,7 +2036,7 @@ httpServer.listen(PORT, HOST, async () => {
     grpcServerInstance = new GrpcServer(orchestrator);
     syncApiConfigToOrchestrator();
     
-    // Cố gắng khởi động gRPC, tự động thử cổng tiếp theo nếu bận
+    // Cá»‘ gáº¯ng khá»Ÿi Ä‘á»™ng gRPC, tá»± Ä‘á»™ng thá»­ cá»•ng tiáº¿p theo náº¿u báº­n
     let grpcPort = 50051;
     let grpcStarted = false;
     let actualGrpcPort = 50051;
@@ -2150,6 +2060,9 @@ httpServer.listen(PORT, HOST, async () => {
   }
 
   if (process.send) {
-    process.send({ type: 'started', port: PORT, localIP: ip, pairingCode: code });
+    process.send({ type: 'started', port: activePort, localIP: ip, pairingCode: code });
   }
 });
+
+// Start listening
+httpServer.listen(activePort, HOST);

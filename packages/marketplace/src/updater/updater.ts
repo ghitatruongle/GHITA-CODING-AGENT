@@ -102,7 +102,10 @@ export class PluginUpdater {
    */
   async applyUpdate(pluginId: string, targetVersion: string): Promise<UpdateJob> {
     const job: UpdateJob = {
-      id: createHash('sha1').update(`${pluginId}:${targetVersion}:${Date.now()}`).digest('hex').slice(0, 12),
+      id: createHash('sha1')
+        .update(`${pluginId}:${targetVersion}:${Date.now()}`)
+        .digest('hex')
+        .slice(0, 12),
       pluginId,
       targetVersion,
       status: 'checking',

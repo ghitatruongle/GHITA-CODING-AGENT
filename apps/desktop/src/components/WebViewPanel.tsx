@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { QuickAccessLinks } from './QuickAccessLinks';
 
 interface BrowserTab {
   id: string;
@@ -31,7 +32,7 @@ function normalizeUrl(raw: string): string {
   if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
     try {
       // Thử parse xem có phải domain không
-      const withHttps = 'https://' + trimmed;
+      const withHttps = `https://${  trimmed}`;
       new URL(withHttps);
       // Phải có dấu chấm thì mới là domain
       if (trimmed.includes('.') && !trimmed.includes(' ')) {
@@ -95,7 +96,7 @@ export function WebViewPanel() {
           proxyPortRef.current = s.port;
         }
       })
-      .catch(() => {});
+      .catch((err) => console.warn('[WebViewPanel] get_proxy_status failed:', err));
   }, []);
 
   // ─── Điều hướng ───────────────────────────────────────────────────────
@@ -598,7 +599,7 @@ export function WebViewPanel() {
 
         {activeTab?.url ? (
           <iframe
-            key={activeTab.id + '_' + activeTab.url}
+            key={`${activeTab.id  }_${  activeTab.url}`}
             ref={iframeRef}
             src={activeTab.url}
             style={{ width: '100%', height: '100%', border: 'none', background: 'white' }}
@@ -638,53 +639,11 @@ export function WebViewPanel() {
             </div>
 
             {/* Quick access links */}
-            <div
-              style={{
-                display: 'flex',
-                gap: 12,
-                flexWrap: 'wrap',
-                justifyContent: 'center',
-                marginTop: 8,
-              }}
-            >
-              {[
-                { label: 'Google', url: 'https://google.com', icon: '🔍' },
-                { label: 'GitHub', url: 'https://github.com', icon: '🐙' },
-                { label: 'MDN Docs', url: 'https://developer.mozilla.org', icon: '📚' },
-                { label: 'Stack Overflow', url: 'https://stackoverflow.com', icon: '💡' },
-              ].map((site) => (
-                <button
-                  key={site.url}
-                  onClick={() => navigateTo(site.url)}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 6,
-                    padding: '14px 18px',
-                    background: 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${BORDER}`,
-                    borderRadius: 12,
-                    color: TEXT_PRIMARY,
-                    cursor: 'pointer',
-                    fontSize: 12,
-                    transition: 'all 0.15s',
-                    minWidth: 90,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(59,130,246,0.1)';
-                    e.currentTarget.style.borderColor = 'rgba(59,130,246,0.3)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
-                    e.currentTarget.style.borderColor = BORDER;
-                  }}
-                >
-                  <span style={{ fontSize: 24 }}>{site.icon}</span>
-                  {site.label}
-                </button>
-              ))}
-            </div>
+            <QuickAccessLinks
+              onNavigate={navigateTo}
+              border={BORDER}
+              textPrimary={TEXT_PRIMARY}
+            />
           </div>
         )}
       </div>

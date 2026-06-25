@@ -159,9 +159,7 @@ export function parseFile(filePath: string, options?: ParseOptions): ParseResult
     content,
     ts.ScriptTarget.Latest,
     true,
-    filePath.endsWith('.tsx') || filePath.endsWith('.jsx')
-      ? ts.ScriptKind.TSX
-      : ts.ScriptKind.TS,
+    filePath.endsWith('.tsx') || filePath.endsWith('.jsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
   );
 
   const nodes: CodeNode[] = [];
@@ -238,9 +236,7 @@ export function parseFile(filePath: string, options?: ParseOptions): ParseResult
 
           if (isFunc) {
             const name = decl.name.text;
-            const qualifiedName = parentQualifiedName
-              ? `${parentQualifiedName}.${name}`
-              : name;
+            const qualifiedName = parentQualifiedName ? `${parentQualifiedName}.${name}` : name;
             const nodeId = makeNodeId(absolutePath, qualifiedName);
 
             nodes.push({
@@ -266,9 +262,7 @@ export function parseFile(filePath: string, options?: ParseOptions): ParseResult
           } else {
             // Plain variable/const
             const name = decl.name.text;
-            const qualifiedName = parentQualifiedName
-              ? `${parentQualifiedName}.${name}`
-              : name;
+            const qualifiedName = parentQualifiedName ? `${parentQualifiedName}.${name}` : name;
             const nodeId = makeNodeId(absolutePath, qualifiedName);
 
             nodes.push({
@@ -359,9 +353,7 @@ export function parseFile(filePath: string, options?: ParseOptions): ParseResult
     // Class methods
     if (ts.isMethodDeclaration(node) && node.name) {
       const name = node.name.getText(sourceFile);
-      const qualifiedName = parentQualifiedName
-        ? `${parentQualifiedName}.${name}`
-        : name;
+      const qualifiedName = parentQualifiedName ? `${parentQualifiedName}.${name}` : name;
       const nodeId = makeNodeId(absolutePath, qualifiedName);
 
       nodes.push({
@@ -391,9 +383,7 @@ export function parseFile(filePath: string, options?: ParseOptions): ParseResult
     // Class properties
     if (ts.isPropertyDeclaration(node) && node.name) {
       const name = node.name.getText(sourceFile);
-      const qualifiedName = parentQualifiedName
-        ? `${parentQualifiedName}.${name}`
-        : name;
+      const qualifiedName = parentQualifiedName ? `${parentQualifiedName}.${name}` : name;
       const nodeId = makeNodeId(absolutePath, qualifiedName);
 
       nodes.push({
@@ -543,7 +533,10 @@ function buildTags(name: string, qualifiedName: string, kind: CodeNodeKind): str
   tags.add(kind);
 
   // Split camelCase / PascalCase into words
-  const words = name.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().split(/\s+/);
+  const words = name
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .toLowerCase()
+    .split(/\s+/);
   for (const w of words) {
     if (w.length > 1) tags.add(w);
   }
@@ -564,11 +557,7 @@ function extractImport(
 ): void {
   const moduleSpecifier = node.moduleSpecifier.getText().replace(/['"]/g, '');
   const isTypeOnly = node.importClause?.isTypeOnly ?? false;
-  const line =
-    ts.getLineAndCharacterOfPosition(
-      node.getSourceFile(),
-      node.getStart(),
-    ).line + 1;
+  const line = ts.getLineAndCharacterOfPosition(node.getSourceFile(), node.getStart()).line + 1;
 
   const namedImports: string[] = [];
   let defaultImport: string | undefined;

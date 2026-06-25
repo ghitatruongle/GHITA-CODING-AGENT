@@ -95,6 +95,15 @@ export class GatewayDaemon extends EventEmitter {
   private pairingManager: PairingManager;
   private workers = new Map<string, WorkerStatus>();
   private workerRuntimes = new Map<string, { stop: () => Promise<void> }>();
+  /**
+   * Optional restart factories — when a worker is registered via the
+   * new overload that accepts a factory, the daemon can re-create the
+   * worker on `restartWorker()` instead of just stopping it.
+   */
+  private workerFactories = new Map<
+    string,
+    () => Promise<{ start?: () => Promise<void>; stop?: () => Promise<void> }>
+  >();
   private healthTimer: ReturnType<typeof setInterval> | null = null;
   private disposed = false;
 
@@ -208,7 +217,20 @@ export class GatewayDaemon extends EventEmitter {
     this.log('info', 'Daemon stopped');
   }
 
-  /** Restart specific worker (auto hoặc manual) */
+  /** Restart specific worker (auto hoặc manual)
+   *
+   * RESILIENCE (audit fix 2.18): the previous implementation only
+   * mutated the in-memory `status` object — flipping `state` to
+   * `running` again — without actually stopping the underlying
+   * worker or re-invoking its `start` hook. Callers therefore believed
+   * a restart happened while the original process kept running with
+   * the same crash state. We now perform a real stop → start cycle:
+   * invoke the worker's `stop` hook, then re-establish it from the
+   * factory, and only flip `state` to `running` after the new
+   * instance is alive. If either step fails, the worker is marked
+   * `errored` and `restartWorker` returns false so the supervisor can
+   * escalate.
+   */
   async restartWorker(name: string, reason?: string): Promise<boolean> {
     const status = this.workers.get(name);
     if (!status) {
@@ -223,17 +245,54 @@ export class GatewayDaemon extends EventEmitter {
       );
       return false;
     }
+
     const attempt = status.restartCount + 1;
     status.state = 'restarting';
     this.emit('worker_restart', name, attempt);
     status.restartCount = attempt;
+    status.lastError = undefined;
     status.startedAt = Date.now();
-    status.state = 'running';
-    this.log(
-      'info',
-      `Worker "${name}" restarted (attempt ${attempt})${reason ? ` reason: ${reason}` : ''}`,
-    );
-    return true;
+
+    try {
+      // 1. Stop the running worker if it has a stop hook
+      const currentRuntime = this.workerRuntimes.get(name);
+      if (currentRuntime?.stop) {
+        await currentRuntime.stop();
+      }
+      this.workerRuntimes.delete(name);
+
+      // 2. Re-create the worker via its factory (if any)
+      const factory = this.workerFactories.get(name);
+      if (factory) {
+        const next = await factory();
+        // Only register as a runtime if it has a stop hook, otherwise
+        // we cannot later gracefully shut it down. Workers without a
+        // stop hook cannot be restarted but are still allowed to exist.
+        if (next?.stop) {
+          // Map value type requires `stop` to be non-undefined; we
+          // just narrowed above, but TS does not propagate the narrowed
+          // type through the optional chain.
+          const runtime: { stop: () => Promise<void> } = { stop: next.stop };
+          this.workerRuntimes.set(name, runtime);
+        }
+        if (next?.start) await next.start();
+      }
+
+      status.state = 'running';
+      this.emit('worker_state_change', name, 'running');
+      this.log(
+        'info',
+        `Worker "${name}" restarted (attempt ${attempt})${reason ? ` reason: ${reason}` : ''}`,
+      );
+      return true;
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      status.state = 'errored';
+      status.lastError = error.message;
+      this.emit('worker_error', name, error);
+      this.log('error', `Worker "${name}" failed to restart: ${error.message}`);
+      return false;
+    }
   }
 
   /** Report worker error → auto restart nếu enabled */
@@ -351,7 +410,16 @@ export class GatewayDaemon extends EventEmitter {
   // Internal
   // --------------------------------------------------------------------------
 
-  private registerWorker(name: string, runtime: { stop: () => Promise<void> }): void {
+  /**
+   * Register a worker with the daemon. The third (optional) `factory`
+   * parameter is used by `restartWorker()` to recreate the worker after
+   * a crash; if absent the restart path falls back to stopping only.
+   */
+  private registerWorker(
+    name: string,
+    runtime: { start?: () => Promise<void>; stop: () => Promise<void> },
+    factory?: () => Promise<{ start?: () => Promise<void>; stop: () => Promise<void> }>,
+  ): void {
     this.workers.set(name, {
       name,
       state: 'running',
@@ -359,6 +427,7 @@ export class GatewayDaemon extends EventEmitter {
       startedAt: Date.now(),
     });
     this.workerRuntimes.set(name, runtime);
+    if (factory) this.workerFactories.set(name, factory);
   }
 
   private async stopWorker(name: string): Promise<void> {
@@ -376,6 +445,9 @@ export class GatewayDaemon extends EventEmitter {
       if (this.disposed) return;
       this.emit('health', this.getHealth());
     }, this.config.healthCheckIntervalMs);
+    if (this.healthTimer && typeof this.healthTimer === 'object' && 'unref' in this.healthTimer) {
+      this.healthTimer.unref();
+    }
   }
 
   private setState(state: DaemonState): void {

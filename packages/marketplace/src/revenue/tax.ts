@@ -46,7 +46,9 @@ export class TaxReporter {
     currency: { code: string; symbol: string; decimals: number },
   ): TaxReport {
     const rule = this.ruleFor(countryCode);
-    const inPeriod = payouts.filter((p) => p.paidAt !== undefined && p.paidAt >= periodStart && p.paidAt <= periodEnd);
+    const inPeriod = payouts.filter(
+      (p) => p.paidAt !== undefined && p.paidAt >= periodStart && p.paidAt <= periodEnd,
+    );
     const gross = inPeriod.reduce((acc, p) => acc + p.amount, 0);
     const taxWithheld = Math.floor((gross * rule.withholdBps) / 10_000);
     const net = gross - taxWithheld;
@@ -77,8 +79,12 @@ export class TaxReporter {
       new Date(report.periodStart).toISOString(),
       new Date(report.periodEnd).toISOString(),
       report.countryCode,
-      (report.grossAmount / Math.pow(10, report.currency.decimals)).toFixed(report.currency.decimals),
-      (report.taxWithheld / Math.pow(10, report.currency.decimals)).toFixed(report.currency.decimals),
+      (report.grossAmount / Math.pow(10, report.currency.decimals)).toFixed(
+        report.currency.decimals,
+      ),
+      (report.taxWithheld / Math.pow(10, report.currency.decimals)).toFixed(
+        report.currency.decimals,
+      ),
       (report.netAmount / Math.pow(10, report.currency.decimals)).toFixed(report.currency.decimals),
       report.thresholdMet ? 'YES' : 'NO',
     ].join(',');

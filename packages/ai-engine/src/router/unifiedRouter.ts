@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import https from 'https';
 import http from 'http';
+import YAML from 'yaml';
 import type { AIProviderType, AIStreamChunk } from '@ghita/shared';
 import type {
   AIProvider,
@@ -103,7 +104,8 @@ export class UnifiedRouter implements AIProvider {
       }
 
       const content = fs.readFileSync(this.configPath, 'utf-8');
-      const configs = this.parseSimpleYaml(content);
+      const doc = YAML.parse(content) as { providers?: ProviderConfig[] } | null;
+      const configs = doc?.providers ?? [];
 
       if (configs.length === 0) {
         this.loadFromEnv();
@@ -129,71 +131,6 @@ export class UnifiedRouter implements AIProvider {
       console.error('Failed to load .ghita/models.yaml, falling back to environment:', err);
       this.loadFromEnv();
     }
-  }
-
-  /**
-   * Phân tích cú pháp YAML đơn giản không dùng thư viện ngoài
-   */
-  private parseSimpleYaml(content: string): ProviderConfig[] {
-    const configs: ProviderConfig[] = [];
-    const lines = content.split(/\r?\n/);
-    let currentConfig: Partial<ProviderConfig> | null = null;
-    let inProvidersSection = false;
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith('#')) continue;
-
-      const indent = line.length - line.trimStart().length;
-
-      if (trimmed.startsWith('providers:')) {
-        inProvidersSection = true;
-        continue;
-      }
-
-      if (inProvidersSection) {
-        // If indent returns to 0 and does not start with dash, we exited the block
-        if (indent === 0 && !trimmed.startsWith('-')) {
-          inProvidersSection = false;
-          continue;
-        }
-
-        if (trimmed.startsWith('-')) {
-          if (currentConfig && currentConfig.type) {
-            configs.push(currentConfig as ProviderConfig);
-          }
-          currentConfig = {};
-          const rest = trimmed.substring(1).trim();
-          if (rest.includes(':')) {
-            const [k, ...v] = rest.split(':');
-            const key = (k ?? '').trim();
-            const val = v
-              .join(':')
-              .trim()
-              .replace(/^['"]|['"]$/g, '');
-            (currentConfig as Record<string, unknown>)[key] = val;
-          }
-        } else if (trimmed.includes(':') && currentConfig) {
-          const [k, ...v] = trimmed.split(':');
-          const key = (k ?? '').trim();
-          const val = v
-            .join(':')
-            .trim()
-            .replace(/^['"]|['"]$/g, '');
-          if (key === 'maxTokens' || key === 'temperature') {
-            (currentConfig as Record<string, unknown>)[key] = Number(val);
-          } else {
-            (currentConfig as Record<string, unknown>)[key] = val;
-          }
-        }
-      }
-    }
-
-    if (currentConfig && currentConfig.type) {
-      configs.push(currentConfig as ProviderConfig);
-    }
-
-    return configs;
   }
 
   private loadFromEnv(): void {
@@ -274,42 +211,25 @@ export class UnifiedRouter implements AIProvider {
   async *chatStream(messages: ChatMessage[], options?: ChatOptions): AsyncGenerator<AIStreamChunk> {
     // Check budgets first
     const currentSessionCost = this.fallbackManager.getSessionTotalCost();
-    const maxSessionCost = (this.fallbackManager as unknown as Record<string, unknown>)
-      .budgetConfig as {
-      maxCostPerSession: number;
-      maxCostPerDay: number;
-      alertThresholdPercent: number;
-    };
-    if (currentSessionCost >= maxSessionCost.maxCostPerSession) {
+    const budgetConfig = this.fallbackManager.getBudgetConfig();
+    if (currentSessionCost >= budgetConfig.maxCostPerSession) {
       throw new Error(
-        `[BudgetExceeded] Session cost limit ($${maxSessionCost.maxCostPerSession}) reached. Current: $${currentSessionCost.toFixed(4)}`,
+        `[BudgetExceeded] Session cost limit ($${budgetConfig.maxCostPerSession}) reached. Current: $${currentSessionCost.toFixed(4)}`,
       );
     }
 
     const currentDayCost = this.fallbackManager.getDayTotalCost();
-    const maxDayCost = (this.fallbackManager as unknown as Record<string, unknown>)
-      .budgetConfig as {
-      maxCostPerSession: number;
-      maxCostPerDay: number;
-      alertThresholdPercent: number;
-    };
-    if (currentDayCost >= maxDayCost.maxCostPerDay) {
+    if (currentDayCost >= budgetConfig.maxCostPerDay) {
       throw new Error(
-        `[BudgetExceeded] Daily cost limit ($${maxDayCost.maxCostPerDay}) reached. Current: $${currentDayCost.toFixed(4)}`,
+        `[BudgetExceeded] Daily cost limit ($${budgetConfig.maxCostPerDay}) reached. Current: $${currentDayCost.toFixed(4)}`,
       );
     }
 
     const requestedModel = options?.model;
-    const fallbackManagerInternal = this.fallbackManager as unknown as {
-      sessionId: string;
-      fallbackChain: string[];
-    };
+    const fallbackChain = this.fallbackManager.getFallbackChain();
     const chain = requestedModel
-      ? [
-          requestedModel,
-          ...fallbackManagerInternal.fallbackChain.filter((m: string) => m !== requestedModel),
-        ]
-      : fallbackManagerInternal.fallbackChain;
+      ? [requestedModel, ...fallbackChain.filter((m: string) => m !== requestedModel)]
+      : fallbackChain;
 
     let success = false;
     let accumulatedContent = '';
@@ -350,7 +270,7 @@ export class UnifiedRouter implements AIProvider {
         );
 
         this.fallbackManager.logCost({
-          sessionId: (this.fallbackManager as unknown as { sessionId: string }).sessionId,
+          sessionId: this.fallbackManager.getSessionId(),
           provider: options?.agentRole || 'unknown-provider-stream',
           model: finalModel,
           promptTokens: responsePromptTokens,
@@ -367,7 +287,7 @@ export class UnifiedRouter implements AIProvider {
 
         // Log failed stream attempt
         this.fallbackManager.logCost({
-          sessionId: (this.fallbackManager as unknown as { sessionId: string }).sessionId,
+          sessionId: this.fallbackManager.getSessionId(),
           provider: options?.agentRole || 'unknown-provider-stream',
           model,
           promptTokens: this.fallbackManager.countMessagesTokens(messages),
@@ -410,7 +330,7 @@ export class UnifiedRouter implements AIProvider {
 
         const responseCompletionTokens = this.fallbackManager.countTokens(accumulatedContent);
         this.fallbackManager.logCost({
-          sessionId: (this.fallbackManager as unknown as { sessionId: string }).sessionId,
+          sessionId: this.fallbackManager.getSessionId(),
           provider: options?.agentRole || 'ollama-fallback-stream',
           model: finalModel,
           promptTokens: this.fallbackManager.countMessagesTokens(messages),
@@ -580,5 +500,11 @@ export class UnifiedRouter implements AIProvider {
       ...options,
       agent, // Sẽ được adapter của provider bóc tách và chèn vào fetch options nếu được hỗ trợ
     } as Record<string, unknown> as ChatOptions;
+  }
+
+  public close(): void {
+    this.fallbackManager.close();
+    this.httpsAgent.destroy();
+    this.httpAgent.destroy();
   }
 }

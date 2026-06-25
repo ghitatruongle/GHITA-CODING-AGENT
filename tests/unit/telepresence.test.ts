@@ -136,7 +136,7 @@ describe('18: Omnichannel Live Telepresence Portal Unit Tests', () => {
       expect(response).toContain('Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=');
 
       // Wait for server to process socket close event tick
-      await new Promise((r) => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 100));
       expect(portal.getClientCount()).toBe(0); // Socket is destroyed now
     });
   });

@@ -240,7 +240,11 @@ export interface EmbeddingProvider {
 
 export interface MemoryStorageAdapter {
   /** List all entries (optionally filtered by tier) */
-  list(filter?: { tier?: MemoryTier; type?: string; limit?: number }): Promise<CompressableMemoryEntry[]>;
+  list(filter?: {
+    tier?: MemoryTier;
+    type?: string;
+    limit?: number;
+  }): Promise<CompressableMemoryEntry[]>;
   /** Get a single entry */
   get(id: string): Promise<CompressableMemoryEntry | null>;
   /** Insert or update entries */

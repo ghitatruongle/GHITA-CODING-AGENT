@@ -29,10 +29,9 @@ export class CdpAccessibilityAdapter implements CdpAccessibilityClient {
   constructor(private readonly transport: CdpTransport) {}
 
   async getFullAXTree(sessionId: string): Promise<AxTreeNode> {
-    const raw = await this.transport.send<{ nodes?: RawAxNode[] }>(
-      'Accessibility.getFullAXTree',
-      { sessionId },
-    );
+    const raw = await this.transport.send<{ nodes?: RawAxNode[] }>('Accessibility.getFullAXTree', {
+      sessionId,
+    });
     return toAxTree(raw.nodes ?? []);
   }
 
@@ -42,7 +41,12 @@ export class CdpAccessibilityAdapter implements CdpAccessibilityClient {
     payload: Record<string, unknown>,
   ): Promise<void> {
     if (kind === 'mouseClick') {
-      const { x, y, button = 'left', clickCount = 1 } = payload as {
+      const {
+        x,
+        y,
+        button = 'left',
+        clickCount = 1,
+      } = payload as {
         x: number;
         y: number;
         button?: 'left' | 'right' | 'middle';
@@ -176,7 +180,11 @@ export class WebDriverAccessibilityClient implements CdpAccessibilityClient {
     const { baseUrl, fetchImpl } = this.options.session;
     const url = `${baseUrl}/session/${sessionId}/actions`;
     if (kind === 'mouseClick') {
-      const { x, y, button = 'left' } = payload as {
+      const {
+        x,
+        y,
+        button = 'left',
+      } = payload as {
         x: number;
         y: number;
         button?: string;

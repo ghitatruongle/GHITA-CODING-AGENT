@@ -1,0 +1,26 @@
+app-id: com.ghita.CodingAgent
+runtime: org.freedesktop.Platform
+runtime-version: '23.08'
+sdk: org.freedesktop.Sdk
+command: ghita-coding-agent
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=x11
+  - --socket=wayland
+  - --filesystem=home
+  - --device=all
+modules:
+  - name: ghita-coding-agent
+    buildsystem: simple
+    build-options:
+      env:
+        npm_config_cache: /run/build/ghita-coding-agent/.npm
+    build-commands:
+      - npm install -g pnpm
+      - pnpm install
+      - pnpm build:desktop
+      - cp -r apps/desktop/src-tauri/target/release/bundle/flatpak/* /app/
+    sources:
+      - type: git
+        url: https://github.com/ghitatruongle/GHITA-CODING-AGENT.git
