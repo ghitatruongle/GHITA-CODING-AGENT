@@ -95,7 +95,7 @@ jobs:
 
       - name: Upload SBOM to release (if tag push)
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             sbom.npm.json
