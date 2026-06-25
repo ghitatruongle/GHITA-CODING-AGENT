@@ -14,7 +14,9 @@ export class EngagementTracker {
   /**
    * Record a new event.
    */
-  record(event: Omit<EngagementEvent, 'id' | 'timestamp'> & { timestamp?: number }): EngagementEvent {
+  record(
+    event: Omit<EngagementEvent, 'id' | 'timestamp'> & { timestamp?: number },
+  ): EngagementEvent {
     const e: EngagementEvent = {
       ...event,
       id: `evt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -58,7 +60,11 @@ export class EngagementTracker {
    */
   avgSessionDurationMs(productId: string, range?: TimeRange): number {
     const events = this.events
-      .filter((e) => e.productId === productId && (!range || (e.timestamp >= range.start && e.timestamp < range.end)))
+      .filter(
+        (e) =>
+          e.productId === productId &&
+          (!range || (e.timestamp >= range.start && e.timestamp < range.end)),
+      )
       .sort((a, b) => a.timestamp - b.timestamp);
     if (events.length === 0) return 0;
 

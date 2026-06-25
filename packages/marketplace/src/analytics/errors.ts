@@ -15,7 +15,13 @@ export class ErrorAnalytics {
   /**
    * Record an error.
    */
-  record(opts: { productId: string; message: string; stack?: string; userId: string; timestamp?: number }): PluginError {
+  record(opts: {
+    productId: string;
+    message: string;
+    stack?: string;
+    userId: string;
+    timestamp?: number;
+  }): PluginError {
     const fp = this.fingerprint(opts.message, opts.stack);
     const ts = opts.timestamp ?? Date.now();
     let err = this.errors.get(fp);

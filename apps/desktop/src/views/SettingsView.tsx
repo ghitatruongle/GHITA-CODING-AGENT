@@ -1,5 +1,5 @@
 // ==============================================================================
-// GHITA CODING AGENT — Settings View
+// GHITA CODING AGENT — Settings View (Tailwind Edition)
 // ==============================================================================
 
 import { useState } from 'react';
@@ -7,27 +7,19 @@ import { useAppStore, type ThemeMode } from '../stores/appStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useTranslation } from '../i18n';
 import { isWindows, isLinux } from '@ghita/shared';
+import { Button, Badge, Input } from '../components/ui';
 
 const LANGUAGE_OPTIONS = [
   { value: 'vi', label: 'Tiếng Việt' },
   { value: 'en', label: 'English' },
   { value: 'zh', label: '简体中文' },
-  { value: 'ru', label: 'Russian (beta)' },
+  { value: 'ru', label: 'Русский' },
 ];
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{ marginBottom: '32px' }}>
-      <h3
-        style={{
-          fontSize: '16px',
-          fontWeight: 600,
-          color: 'var(--text-primary)',
-          marginBottom: '16px',
-          paddingBottom: '8px',
-          borderBottom: '1px solid var(--border-subtle)',
-        }}
-      >
+    <div className="mb-8">
+      <h3 className="text-base font-semibold text-[var(--text-primary)] mb-4 pb-2 border-b border-[var(--border-subtle)]">
         {title}
       </h3>
       {children}
@@ -45,23 +37,11 @@ function SettingRow({
   children: React.ReactNode;
 }) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '12px 0',
-        borderBottom: '1px solid var(--border-subtle)',
-      }}
-    >
+    <div className="flex items-center justify-between py-3 border-b border-[var(--border-subtle)]">
       <div>
-        <div style={{ fontSize: '14px', color: 'var(--text-primary)', fontWeight: 500 }}>
-          {label}
-        </div>
+        <div className="text-sm text-[var(--text-primary)] font-medium">{label}</div>
         {description && (
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
-            {description}
-          </div>
+          <div className="text-xs text-[var(--text-muted)] mt-0.5">{description}</div>
         )}
       </div>
       {children}
@@ -82,16 +62,7 @@ function Select({
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      style={{
-        padding: '6px 12px',
-        background: 'var(--bg-tertiary)',
-        color: 'var(--text-primary)',
-        border: '1px solid var(--border-default)',
-        borderRadius: 'var(--radius-sm)',
-        fontSize: '13px',
-        minWidth: '140px',
-        cursor: 'pointer',
-      }}
+      className="px-3 py-1.5 bg-[var(--bg-tertiary)] text-[var(--text-primary)] border border-[var(--border-default)] rounded text-[13px] min-w-[140px] cursor-pointer"
     >
       {options.map((opt) => (
         <option key={opt.value} value={opt.value}>
@@ -141,27 +112,11 @@ export function SettingsView() {
   const [hookCommand, setHookCommand] = useState('');
 
   return (
-    <div
-      style={{
-        height: '100%',
-        overflow: 'auto',
-        padding: '32px',
-        maxWidth: '700px',
-      }}
-    >
-      <h2
-        style={{
-          fontSize: '24px',
-          fontWeight: 700,
-          color: 'var(--text-primary)',
-          marginBottom: '8px',
-        }}
-      >
+    <div className="h-full overflow-auto p-8 max-w-[700px]">
+      <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-2">
         ⚙️ {t('settings.title')}
       </h2>
-      <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '32px' }}>
-        {t('settings.subtitle')}
-      </p>
+      <p className="text-[var(--text-muted)] text-sm mb-8">{t('settings.subtitle')}</p>
 
       <Section title={`🎨 ${t('settings.appearance')}`}>
         <SettingRow label={t('settings.theme')} description={t('settings.themeDesc')}>
@@ -184,204 +139,133 @@ export function SettingsView() {
 
       <Section title={`🤖 ${t('settings.aiProviders')}`}>
         <SettingRow label={t('settings.apiKeys')} description={t('settings.apiKeysDesc')}>
-          <button
+          <Button
+            variant="primary"
+            size="md"
             onClick={() => useAppStore.getState().setActiveTab('api')}
-            style={{
-              padding: '6px 16px',
-              background: 'var(--accent-primary)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 'var(--radius-sm)',
-              fontSize: '13px',
-              cursor: 'pointer',
-            }}
           >
             {t('settings.openApiManager')}
-          </button>
+          </Button>
         </SettingRow>
       </Section>
 
       {/* Phase 5A: MCP Servers */}
       <Section title={`🔌 ${t('settings.mcpServers')}`}>
-        <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-          {t('settings.mcpServersDesc')}
-        </p>
+        <p className="text-[13px] text-[var(--text-muted)] mb-3">{t('settings.mcpServersDesc')}</p>
         {mcpServers.map((server) => {
-          // BUG FIX: the previous implementation used the array index as both
-          // the React key and the deletion target. If the list is reordered
-          // or filtered between renders, clicking "Remove" could remove the
-          // wrong server. Use a stable composite key (name + transport) for
-          // both React reconciliation and the filter predicate.
-          const serverKey = `${server.name}::${server.transport}`;
+          // BUG FIX: Use stable composite key (name + transport) instead of
+          // array index for both React reconciliation and the filter predicate.
+          const serverKey = server.id || `${server.name}::${server.transport}`;
           return (
             <SettingRow
               key={serverKey}
               label={`${server.name} (${server.transport})`}
               description={server.enabled ? t('common.enabled') : t('common.disabled')}
             >
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <span
-                  style={{
-                    padding: '2px 8px',
-                    borderRadius: '4px',
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    background: server.connected ? 'rgba(16,185,129,0.1)' : 'rgba(148,163,184,0.1)',
-                    color: server.connected ? '#34d399' : '#94a3b8',
-                    border: `1px solid ${server.connected ? 'rgba(16,185,129,0.3)' : 'rgba(148,163,184,0.2)'}`,
-                  }}
-                >
+              <div className="flex gap-2">
+                <Badge variant={server.connected ? 'success' : 'neutral'} dot>
                   {server.connected
-                    ? `● ${t('common.connected')}`
-                    : `○ ${t('common.disconnected')}`}
-                </span>
-                <button
+                    ? t('common.connected')
+                    : t('common.disconnected')}
+                </Badge>
+                <Button
+                  size="sm"
+                  variant="secondary"
                   onClick={() => {
                     setMcpServers(
                       mcpServers.map((s) =>
-                        s.name === server.name && s.transport === server.transport
+                        (server.id
+                          ? s.id === server.id
+                          : s.name === server.name && s.transport === server.transport)
                           ? { ...s, enabled: !s.enabled }
                           : s,
                       ),
                     );
                   }}
-                  style={{
-                    padding: '2px 10px',
-                    borderRadius: '4px',
-                    fontSize: '11px',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    background: 'transparent',
-                    color: '#cbd5e1',
-                    cursor: 'pointer',
-                  }}
                 >
                   {server.enabled ? t('common.disable') : t('common.enable')}
-                </button>
-                <button
+                </Button>
+                <Button
+                  size="sm"
+                  variant="danger"
                   onClick={() =>
                     setMcpServers(
-                      mcpServers.filter(
-                        (s) => !(s.name === server.name && s.transport === server.transport),
+                      mcpServers.filter((s) =>
+                        server.id
+                          ? s.id !== server.id
+                          : !(s.name === server.name && s.transport === server.transport),
                       ),
                     )
                   }
-                  style={{
-                    padding: '2px 10px',
-                    borderRadius: '4px',
-                    fontSize: '11px',
-                    border: '1px solid rgba(239,68,68,0.3)',
-                    background: 'transparent',
-                    color: '#f87171',
-                    cursor: 'pointer',
-                  }}
                 >
                   {t('common.remove')}
-                </button>
+                </Button>
               </div>
             </SettingRow>
           );
         })}
-        <div style={{ display: 'flex', gap: '8px', marginTop: '12px', alignItems: 'center' }}>
-          <input
-            type="text"
+        <div className="flex gap-2 mt-3 items-center">
+          <Input
             placeholder={t('settings.mcpNamePlaceholder')}
             value={mcpName}
             onChange={(e) => setMcpName(e.target.value)}
-            style={{
-              flex: '0 0 100px',
-              padding: '6px 10px',
-              background: 'rgba(15,23,42,0.6)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: '6px',
-              color: '#f8fafc',
-              fontSize: '12px',
-              outline: 'none',
-            }}
+            className="flex-none w-[100px]"
           />
-          <input
-            type="text"
+          <Input
             placeholder={t('settings.mcpCommandPlaceholder')}
             value={mcpCommand}
             onChange={(e) => setMcpCommand(e.target.value)}
-            style={{
-              flex: 1,
-              padding: '6px 10px',
-              background: 'rgba(15,23,42,0.6)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: '6px',
-              color: '#f8fafc',
-              fontSize: '12px',
-              outline: 'none',
-            }}
+            className="flex-1"
           />
           <select
             value={mcpTransport}
             onChange={(e) => setMcpTransport(e.target.value as 'stdio' | 'sse')}
-            style={{
-              padding: '6px 10px',
-              background: 'rgba(15,23,42,0.6)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: '6px',
-              color: '#f8fafc',
-              fontSize: '12px',
-            }}
+            className="px-2.5 py-1.5 text-xs rounded-md bg-slate-900/60 border border-white/10 text-slate-100"
           >
             <option value="stdio">stdio</option>
             <option value="sse">sse</option>
           </select>
-          <button
+          <Button
+            variant="primary"
+            size="md"
             onClick={() => {
               if (mcpName && mcpCommand) {
                 setMcpServers([
                   ...mcpServers,
-                  { name: mcpName, transport: mcpTransport, enabled: true, connected: false },
+                  {
+                    id: crypto.randomUUID(),
+                    name: mcpName,
+                    transport: mcpTransport,
+                    enabled: true,
+                    connected: false,
+                  },
                 ]);
                 setMcpName('');
                 setMcpCommand('');
               }
             }}
-            style={{
-              padding: '6px 14px',
-              borderRadius: '6px',
-              border: 'none',
-              background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
-              color: '#fff',
-              fontSize: '12px',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
           >
             + {t('common.add')}
-          </button>
+          </Button>
         </div>
       </Section>
 
       {/* Phase 5B: Hooks */}
       <Section title={`🪝 ${t('settings.hooks')}`}>
-        <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-          {t('settings.hooksDesc')}
-        </p>
+        <p className="text-[13px] text-[var(--text-muted)] mb-3">{t('settings.hooksDesc')}</p>
         {hooks.map((hook, i) => (
           <SettingRow
             key={i}
             label={`${hook.event}: ${hook.tool || '*'}`}
             description={hook.command}
           >
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <span
-                style={{
-                  padding: '2px 8px',
-                  borderRadius: '4px',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  background: hook.enabled ? 'rgba(16,185,129,0.1)' : 'rgba(148,163,184,0.1)',
-                  color: hook.enabled ? '#34d399' : '#94a3b8',
-                  border: `1px solid ${hook.enabled ? 'rgba(16,185,129,0.3)' : 'rgba(148,163,184,0.2)'}`,
-                }}
-              >
-                {hook.enabled ? `● ${t('common.active')}` : `○ ${t('common.disabled')}`}
-              </span>
-              <button
+            <div className="flex gap-2">
+              <Badge variant={hook.enabled ? 'success' : 'neutral'} dot>
+                {hook.enabled ? t('common.active') : t('common.disabled')}
+              </Badge>
+              <Button
+                size="sm"
+                variant="secondary"
                 onClick={() => {
                   const u = [...hooks];
                   const h = u[i];
@@ -390,86 +274,44 @@ export function SettingsView() {
                   }
                   setHooks(u);
                 }}
-                style={{
-                  padding: '2px 10px',
-                  borderRadius: '4px',
-                  fontSize: '11px',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  background: 'transparent',
-                  color: '#cbd5e1',
-                  cursor: 'pointer',
-                }}
               >
                 {hook.enabled ? t('common.disable') : t('common.enable')}
-              </button>
-              <button
+              </Button>
+              <Button
+                size="sm"
+                variant="danger"
                 onClick={() => setHooks(hooks.filter((_, idx) => idx !== i))}
-                style={{
-                  padding: '2px 10px',
-                  borderRadius: '4px',
-                  fontSize: '11px',
-                  border: '1px solid rgba(239,68,68,0.3)',
-                  background: 'transparent',
-                  color: '#f87171',
-                  cursor: 'pointer',
-                }}
               >
                 {t('common.remove')}
-              </button>
+              </Button>
             </div>
           </SettingRow>
         ))}
-        <div style={{ display: 'flex', gap: '8px', marginTop: '12px', alignItems: 'center' }}>
+        <div className="flex gap-2 mt-3 items-center">
           <select
             value={hookEvent}
             onChange={(e) => setHookEvent(e.target.value)}
-            style={{
-              flex: '0 0 100px',
-              padding: '6px 10px',
-              background: 'rgba(15,23,42,0.6)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: '6px',
-              color: '#f8fafc',
-              fontSize: '12px',
-            }}
+            className="flex-none w-[100px] px-2.5 py-1.5 text-xs rounded-md bg-slate-900/60 border border-white/10 text-slate-100"
           >
             <option value="pre_tool">pre_tool</option>
             <option value="post_tool">post_tool</option>
             <option value="pre_response">pre_response</option>
           </select>
-          <input
-            type="text"
+          <Input
             placeholder={t('settings.hookToolPlaceholder')}
             value={hookTool}
             onChange={(e) => setHookTool(e.target.value)}
-            style={{
-              flex: '0 0 120px',
-              padding: '6px 10px',
-              background: 'rgba(15,23,42,0.6)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: '6px',
-              color: '#f8fafc',
-              fontSize: '12px',
-              outline: 'none',
-            }}
+            className="flex-none w-[120px]"
           />
-          <input
-            type="text"
+          <Input
             placeholder={t('settings.hookCommandPlaceholder')}
             value={hookCommand}
             onChange={(e) => setHookCommand(e.target.value)}
-            style={{
-              flex: 1,
-              padding: '6px 10px',
-              background: 'rgba(15,23,42,0.6)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: '6px',
-              color: '#f8fafc',
-              fontSize: '12px',
-              outline: 'none',
-            }}
+            className="flex-1"
           />
-          <button
+          <Button
+            variant="primary"
+            size="md"
             onClick={() => {
               if (hookCommand) {
                 setHooks([
@@ -480,30 +322,20 @@ export function SettingsView() {
                 setHookCommand('');
               }
             }}
-            style={{
-              padding: '6px 14px',
-              borderRadius: '6px',
-              border: 'none',
-              background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
-              color: '#fff',
-              fontSize: '12px',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
           >
             + {t('common.add')}
-          </button>
+          </Button>
         </div>
       </Section>
 
       <Section title={`ℹ️ ${t('settings.info')}`}>
         <SettingRow label={t('settings.version')} description="GHITA CODING AGENT">
-          <span style={{ fontSize: '14px', color: 'var(--accent-primary)', fontWeight: 600 }}>
+          <span className="text-sm text-[var(--accent-primary)] font-semibold">
             {t('app.version')}
           </span>
         </SettingRow>
         <SettingRow label={t('settings.platform')} description={t('settings.platformDesc')}>
-          <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+          <span className="text-sm text-[var(--text-secondary)]">
             {isWindows()
               ? `🖥️ ${t('settings.windows')}`
               : isLinux()

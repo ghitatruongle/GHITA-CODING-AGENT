@@ -223,7 +223,7 @@ function getSampleInput(skill: SkillDefinition): Record<string, unknown> {
     case 'search.codebase':
       return { query: 'SkillRegistry', path: 'packages/skills/src' };
     case 'compress.zip':
-      return { source: 'README.md', output: 'test-archive.tar.gz' };
+      return { source: 'README.md', output: 'tmp/test-archive.zip' };
     case 'deploy.check':
       return {};
     default:
@@ -305,8 +305,11 @@ export function SkillManager() {
   }, [snapshot.skills]);
 
   const toggleSkill = (skill: SkillDefinition) => {
-    registry.setEnabled(skill.id, !skill.enabled);
+    const updated = registry.setEnabled(skill.id, !skill.enabled);
     setSnapshot(registry.snapshot());
+    if (connected && socket) {
+      socket.emit('set_skill_enabled', { id: updated.id, enabled: updated.enabled }, () => {});
+    }
   };
 
   const runSkill = async (skill: SkillDefinition) => {
@@ -316,6 +319,21 @@ export function SkillManager() {
     if (connected && socket) {
       // Proxy skill run to Node sidecar
       try {
+        const syncResult = await new Promise<{ success: boolean; error?: string }>(
+          (resolvePromise) => {
+            socket.emit(
+              'set_skill_enabled',
+              { id: skill.id, enabled: skill.enabled },
+              (res: { success: boolean; error?: string }) => {
+                resolvePromise(res);
+              },
+            );
+          },
+        );
+        if (!syncResult.success) {
+          throw new Error(syncResult.error ?? 'Failed to sync skill enablement on host sidecar.');
+        }
+
         const result = await new Promise<SkillResult>((resolvePromise) => {
           let settled = false;
           const timer = setTimeout(() => {

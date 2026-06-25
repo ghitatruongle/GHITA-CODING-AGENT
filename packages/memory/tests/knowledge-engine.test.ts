@@ -163,8 +163,12 @@ describe('KnowledgeEngine', () => {
   describe('semantic search', () => {
     it('15. semantic search uses embeddings', async () => {
       const embEngine = new KnowledgeEngine(mockEmbedding);
-      await embEngine.ingestDocument('TypeScript tutorial', 'ts.txt', 'text', { generateEmbeddings: true });
-      await embEngine.ingestDocument('React hooks guide', 'react.txt', 'text', { generateEmbeddings: true });
+      await embEngine.ingestDocument('TypeScript tutorial', 'ts.txt', 'text', {
+        generateEmbeddings: true,
+      });
+      await embEngine.ingestDocument('React hooks guide', 'react.txt', 'text', {
+        generateEmbeddings: true,
+      });
 
       const results = await embEngine.search('TypeScript', { semantic: true });
       expect(results.length).toBeGreaterThanOrEqual(0);
@@ -177,7 +181,9 @@ describe('KnowledgeEngine', () => {
 
     it('17. semantic results include score', async () => {
       const embEngine = new KnowledgeEngine(mockEmbedding);
-      await embEngine.ingestDocument('test content here', 't.txt', 'text', { generateEmbeddings: true });
+      await embEngine.ingestDocument('test content here', 't.txt', 'text', {
+        generateEmbeddings: true,
+      });
       const results = await embEngine.search('test content', { semantic: true, minScore: 0.01 });
       for (const r of results) {
         expect(r.score).toBeDefined();

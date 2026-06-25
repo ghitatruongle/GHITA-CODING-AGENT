@@ -20,7 +20,10 @@ export interface CommunityResult {
   iterations: number;
 }
 
-export function detectCommunities(graph: AssociationList, options: { maxIterations?: number } = {}): CommunityResult {
+export function detectCommunities(
+  graph: AssociationList,
+  options: { maxIterations?: number } = {},
+): CommunityResult {
   const maxIterations = options.maxIterations ?? 10;
   const nodeIds = new Set<string>();
   for (const id of graph.adjacency.keys()) nodeIds.add(id);
@@ -31,11 +34,17 @@ export function detectCommunities(graph: AssociationList, options: { maxIteratio
   for (const [from, assocs] of graph.adjacency.entries()) {
     for (const a of assocs) {
       let fromSet = undirected.get(from);
-      if (!fromSet) { fromSet = new Set(); undirected.set(from, fromSet); }
+      if (!fromSet) {
+        fromSet = new Set();
+        undirected.set(from, fromSet);
+      }
       fromSet.add(a.to);
 
       let toSet = undirected.get(a.to);
-      if (!toSet) { toSet = new Set(); undirected.set(a.to, toSet); }
+      if (!toSet) {
+        toSet = new Set();
+        undirected.set(a.to, toSet);
+      }
       toSet.add(from);
     }
   }
@@ -79,7 +88,10 @@ export function detectCommunities(graph: AssociationList, options: { maxIteratio
   const communityMembers = new Map<string, string[]>();
   for (const [node, label] of labels.entries()) {
     let arr = communityMembers.get(label);
-    if (!arr) { arr = []; communityMembers.set(label, arr); }
+    if (!arr) {
+      arr = [];
+      communityMembers.set(label, arr);
+    }
     arr.push(node);
   }
   const sortedLabels = Array.from(communityMembers.keys()).sort();

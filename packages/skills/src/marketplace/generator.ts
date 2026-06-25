@@ -47,9 +47,9 @@ export interface GenerationResult {
 export function detectTemplate(manifest: SkillManifest): TemplateId {
   const tag = (manifest.tags ?? []).join(' ').toLowerCase();
   const desc = (manifest.description ?? '').toLowerCase();
-  if (/browser|scrape|crawl|web\s*page|playwright/.test(tag + ' ' + desc)) return 'browser-task';
-  if (/http|api|rest|graphql|webhook/.test(tag + ' ' + desc)) return 'http-api';
-  if (/cli|shell|exec|command|terminal|process/.test(tag + ' ' + desc)) return 'cli-wrapper';
+  if (/browser|scrape|crawl|web\s*page|playwright/.test(`${tag  } ${  desc}`)) return 'browser-task';
+  if (/http|api|rest|graphql|webhook/.test(`${tag  } ${  desc}`)) return 'http-api';
+  if (/cli|shell|exec|command|terminal|process/.test(`${tag  } ${  desc}`)) return 'cli-wrapper';
   return 'data-transform';
 }
 

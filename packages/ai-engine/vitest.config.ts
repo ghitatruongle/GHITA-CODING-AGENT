@@ -7,7 +7,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   resolve: {
     alias: {
-      'react-native-bluetooth-classic': path.resolve(__dirname, '../../tests/unit/react-native-bluetooth-classic-mock.ts'),
+      'react-native-bluetooth-classic': path.resolve(
+        __dirname,
+        '../../tests/unit/react-native-bluetooth-classic-mock.ts',
+      ),
       'react-native': path.resolve(__dirname, '../../tests/unit/react-native-mock.ts'),
     },
   },
@@ -23,20 +26,39 @@ export default defineConfig({
       },
     },
     alias: {
-      'react-native-bluetooth-classic': path.resolve(__dirname, '../../tests/unit/react-native-bluetooth-classic-mock.ts'),
+      'react-native-bluetooth-classic': path.resolve(
+        __dirname,
+        '../../tests/unit/react-native-bluetooth-classic-mock.ts',
+      ),
       'react-native': path.resolve(__dirname, '../../tests/unit/react-native-mock.ts'),
     },
     globals: true,
     environment: 'node',
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'text-summary', 'html', 'lcov', 'json-summary'],
+      reportsDirectory: './coverage',
+      include: ['src/**/*.ts'],
+      exclude: [
+        'src/**/*.test.ts',
+        'src/**/*.d.ts',
+        'node_modules/**',
+        'dist/**',
+      ],
+      thresholds: {
+        // ai-engine is the largest package and has many runtime-only code
+        // paths (providers, transports) that need live credentials to exercise.
+        // Raise incrementally as new integration tests are added.
+        statements: 30,
+        branches: 40,
+        functions: 35,
+        lines: 30,
+      },
+    },
     server: {
       deps: {
         external: ['socket.io', 'socket.io-client'],
-        inline: [
-          /@ghita\//,
-          /apps\//,
-          'react-native',
-          'react-native-bluetooth-classic',
-        ],
+        inline: [/@ghita\//, /apps\//, 'react-native', 'react-native-bluetooth-classic'],
       },
     },
     include: [

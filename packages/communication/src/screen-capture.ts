@@ -68,6 +68,9 @@ export class ScreenCapture {
     this.streamTimer = setInterval(() => {
       void this.emitFrame();
     }, this.config.interval);
+    if (this.streamTimer && typeof this.streamTimer === 'object' && 'unref' in this.streamTimer) {
+      this.streamTimer.unref();
+    }
   }
 
   /**

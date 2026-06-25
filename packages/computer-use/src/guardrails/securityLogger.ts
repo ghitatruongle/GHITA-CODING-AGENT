@@ -140,17 +140,20 @@ export class SecurityLogger {
     if (!this.db) this.init();
     if (!this.db) throw new Error('Database not initialized');
 
-    const total = this.db.prepare('SELECT COUNT(*) as count FROM security_logs').get() as {
-      count: number;
-    };
+    const totalRow = this.db.prepare('SELECT COUNT(*) as count FROM security_logs').get() as
+      | {
+          count: number;
+        }
+      | undefined;
 
-    if (total.count === 0) return -1;
+    const total = totalRow?.count ?? 0;
+    if (total === 0) return -1;
 
-    const blocked = this.db
+    const blockedRow = this.db
       .prepare('SELECT COUNT(*) as count FROM security_logs WHERE safe = 0')
-      .get() as { count: number };
+      .get() as { count: number } | undefined;
 
-    return blocked.count / total.count;
+    return (blockedRow?.count ?? 0) / total;
   }
 
   /**

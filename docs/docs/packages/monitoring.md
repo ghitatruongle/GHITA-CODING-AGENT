@@ -119,5 +119,11 @@ for (const g of top) {
 Ngoài `MonitoringHub`, bạn có thể dùng trực tiếp các sub-modules:
 
 ```ts
-import { RateLimiter, ErrorGrouper, AlertEngine, SentryClient, PerformanceMonitor } from '@ghita/monitoring';
+import {
+  RateLimiter,
+  ErrorGrouper,
+  AlertEngine,
+  SentryClient,
+  PerformanceMonitor,
+} from '@ghita/monitoring';
 ```

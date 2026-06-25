@@ -16,20 +16,100 @@ import type {
 // ---------------------------------------------------------------------------
 
 const STOP_WORDS = new Set([
-  'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
-  'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'shall', 'should',
-  'may', 'might', 'can', 'could', 'this', 'that', 'these', 'those', 'it', 'its',
-  'i', 'you', 'he', 'she', 'they', 'we', 'me', 'us', 'them', 'my', 'your',
-  'and', 'or', 'but', 'not', 'no', 'if', 'then', 'else', 'so', 'for', 'with',
-  'from', 'to', 'of', 'in', 'on', 'at', 'by', 'as', 'into', 'about',
-  'what', 'which', 'who', 'whom', 'whose', 'where', 'when', 'why', 'how',
-  'all', 'each', 'every', 'any', 'some', 'few', 'many', 'most', 'other',
-  'such', 'only', 'same', 'than', 'too', 'very', 'just', 'also',
+  'the',
+  'a',
+  'an',
+  'is',
+  'are',
+  'was',
+  'were',
+  'be',
+  'been',
+  'being',
+  'have',
+  'has',
+  'had',
+  'do',
+  'does',
+  'did',
+  'will',
+  'would',
+  'shall',
+  'should',
+  'may',
+  'might',
+  'can',
+  'could',
+  'this',
+  'that',
+  'these',
+  'those',
+  'it',
+  'its',
+  'i',
+  'you',
+  'he',
+  'she',
+  'they',
+  'we',
+  'me',
+  'us',
+  'them',
+  'my',
+  'your',
+  'and',
+  'or',
+  'but',
+  'not',
+  'no',
+  'if',
+  'then',
+  'else',
+  'so',
+  'for',
+  'with',
+  'from',
+  'to',
+  'of',
+  'in',
+  'on',
+  'at',
+  'by',
+  'as',
+  'into',
+  'about',
+  'what',
+  'which',
+  'who',
+  'whom',
+  'whose',
+  'where',
+  'when',
+  'why',
+  'how',
+  'all',
+  'each',
+  'every',
+  'any',
+  'some',
+  'few',
+  'many',
+  'most',
+  'other',
+  'such',
+  'only',
+  'same',
+  'than',
+  'too',
+  'very',
+  'just',
+  'also',
 ]);
 
 function tokenize(text: string): string[] {
-  return (text.toLowerCase().match(/[\p{L}\p{N}_-]+/gu) ?? [])
-    .filter((t) => t.length > 2 && !STOP_WORDS.has(t));
+  return (text.toLowerCase().match(/[\p{L}\p{N}_-]+/gu) ?? []).filter(
+    (t) => t.length > 2 && !STOP_WORDS.has(t),
+  );
 }
 
 function extractKeyTopics(text: string, max = 5): string[] {
@@ -106,7 +186,9 @@ function buildSummary(group: CompressableMemoryEntry[], maxLength: number): Summ
   if (group.length === 1) {
     summaryParts.push(truncate(firstItem.content, maxLength));
   } else {
-    summaryParts.push(`${group.length} entries from ${new Date(startTime).toISOString().slice(0, 10)}`);
+    summaryParts.push(
+      `${group.length} entries from ${new Date(startTime).toISOString().slice(0, 10)}`,
+    );
     if (keyTopics.length > 0) {
       summaryParts.push(`Topics: ${keyTopics.slice(0, 5).join(', ')}`);
     }
@@ -116,12 +198,11 @@ function buildSummary(group: CompressableMemoryEntry[], maxLength: number): Summ
 
   let summary = summaryParts.join('. ');
   if (summary.length > maxLength) {
-    summary = summary.slice(0, maxLength - 3) + '...';
+    summary = `${summary.slice(0, maxLength - 3)  }...`;
   }
 
   const charsSaved = combinedText.length - summary.length;
-  const compressionRatio =
-    combinedText.length > 0 ? charsSaved / combinedText.length : 0;
+  const compressionRatio = combinedText.length > 0 ? charsSaved / combinedText.length : 0;
 
   return {
     sourceIds: group.map((e) => e.id),
@@ -137,7 +218,7 @@ function buildSummary(group: CompressableMemoryEntry[], maxLength: number): Summ
 
 function truncate(text: string, maxLen: number): string {
   if (text.length <= maxLen) return text;
-  return text.slice(0, maxLen - 3) + '...';
+  return `${text.slice(0, maxLen - 3)  }...`;
 }
 
 // ---------------------------------------------------------------------------
@@ -148,10 +229,7 @@ export class MemorySummarizer {
   private config: Required<SummarizerConfig>;
   private embedder: EmbeddingProvider | null;
 
-  constructor(
-    config?: Partial<SummarizerConfig>,
-    embedder?: EmbeddingProvider,
-  ) {
+  constructor(config?: Partial<SummarizerConfig>, embedder?: EmbeddingProvider) {
     this.config = {
       maxSummaryLength: config?.maxSummaryLength ?? 300,
       minGroupSize: config?.minGroupSize ?? 3,
@@ -188,17 +266,14 @@ export class MemorySummarizer {
     const charsBefore = entries.reduce((s, e) => s + e.content.length, 0);
 
     // 1. Pick out the top N most-important entries to keep verbatim
-    const sortedByImportance = [...entries].sort(
-      (a, b) => b.importance - a.importance,
-    );
+    const sortedByImportance = [...entries].sort((a, b) => b.importance - a.importance);
     const preserved = new Set(
       sortedByImportance.slice(0, this.config.preserveTopN).map((e) => e.id),
     );
 
     // 2. Filter out low-importance entries
     const candidates = entries.filter(
-      (e) =>
-        !preserved.has(e.id) && e.importance < this.config.importanceThreshold,
+      (e) => !preserved.has(e.id) && e.importance < this.config.importanceThreshold,
     );
 
     // 3. Group by temporal + tag/session proximity
@@ -246,9 +321,7 @@ export class MemorySummarizer {
         .slice(0, this.config.preserveTopN)
         .reduce((s, e) => s + e.content.length, 0);
     const compressionRatio =
-      charsBefore > 0
-        ? Math.max(0, (charsBefore - totalCharsAfter) / charsBefore)
-        : 0;
+      charsBefore > 0 ? Math.max(0, (charsBefore - totalCharsAfter) / charsBefore) : 0;
 
     return {
       groups: builtGroups,
@@ -276,7 +349,7 @@ export class MemorySummarizer {
   private computeGroupImportance(group: CompressableMemoryEntry[]): number {
     if (group.length === 0) return 0;
     const sum = group.reduce((s, e) => s + e.importance, 0);
-    return Math.min(1, sum / group.length * 1.2);
+    return Math.min(1, (sum / group.length) * 1.2);
   }
 
   private async embedSummary(text: string): Promise<number[] | undefined> {

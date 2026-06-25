@@ -99,9 +99,7 @@ export class TemplateGallery {
 
     // Tags filter
     if (filters?.tags?.length) {
-      results = results.filter((t) =>
-        filters.tags?.some((tag) => t.tags.includes(tag)) ?? false,
-      );
+      results = results.filter((t) => filters.tags?.some((tag) => t.tags.includes(tag)) ?? false);
     }
 
     // Min rating filter

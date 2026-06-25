@@ -138,10 +138,11 @@ export class SQLiteGraphStore implements GraphStore {
   removeFile(filePath: string): void {
     const tx = this.db.transaction(() => {
       // Get node IDs for this file
-      const nodeIds = (this.db
-        .prepare('SELECT id FROM nodes WHERE file_path = ?')
-        .all(filePath) as Array<{ id: string }>)
-        .map((r) => r.id);
+      const nodeIds = (
+        this.db.prepare('SELECT id FROM nodes WHERE file_path = ?').all(filePath) as Array<{
+          id: string;
+        }>
+      ).map((r) => r.id);
 
       // Remove edges referencing these nodes
       const idSet = nodeIds.map(() => '?').join(',');
@@ -194,7 +195,12 @@ export class SQLiteGraphStore implements GraphStore {
         WHERE nodes_fts MATCH ?
       `;
       // FTS5 query: add * for prefix matching
-      const ftsQuery = pattern.replace(/[^a-zA-Z0-9_]/g, ' ').trim().split(/\s+/).map(w => `${w}*`).join(' ');
+      const ftsQuery = pattern
+        .replace(/[^a-zA-Z0-9_]/g, ' ')
+        .trim()
+        .split(/\s+/)
+        .map((w) => `${w}*`)
+        .join(' ');
       params.push(ftsQuery);
     } else {
       sql = `
@@ -212,7 +218,15 @@ export class SQLiteGraphStore implements GraphStore {
            OR LOWER(tags) LIKE ?
       `;
       const likePattern = `%${pattern}%`;
-      params.push(pattern, likePattern, likePattern, likePattern, likePattern, likePattern, likePattern);
+      params.push(
+        pattern,
+        likePattern,
+        likePattern,
+        likePattern,
+        likePattern,
+        likePattern,
+        likePattern,
+      );
     }
 
     // Scope filter
@@ -272,10 +286,16 @@ export class SQLiteGraphStore implements GraphStore {
   }
 
   stats(): { nodes: number; edges: number; files: number } {
-    const nodeCount = (this.db.prepare('SELECT COUNT(*) as cnt FROM nodes').get() as { cnt: number }).cnt;
-    const edgeCount = (this.db.prepare('SELECT COUNT(*) as cnt FROM edges').get() as { cnt: number }).cnt;
-    const fileCount = (this.db.prepare('SELECT COUNT(DISTINCT file_path) as cnt FROM nodes').get() as { cnt: number }).cnt;
-    return { nodes: nodeCount, edges: edgeCount, files: fileCount };
+    const nodeRow = this.db.prepare('SELECT COUNT(*) as cnt FROM nodes').get() as
+      | { cnt: number }
+      | undefined;
+    const edgeRow = this.db.prepare('SELECT COUNT(*) as cnt FROM edges').get() as
+      | { cnt: number }
+      | undefined;
+    const fileRow = this.db.prepare('SELECT COUNT(DISTINCT file_path) as cnt FROM nodes').get() as
+      | { cnt: number }
+      | undefined;
+    return { nodes: nodeRow?.cnt ?? 0, edges: edgeRow?.cnt ?? 0, files: fileRow?.cnt ?? 0 };
   }
 
   close(): void {
@@ -347,7 +367,7 @@ function rowToNode(row: NodeRow): CodeNode {
     excerpt: row.excerpt,
     exported: row.exported === 1,
     docComment: row.doc_comment ?? undefined,
-    parameters: row.parameters ? JSON.parse(row.parameters) as string[] : undefined,
+    parameters: row.parameters ? (JSON.parse(row.parameters) as string[]) : undefined,
     returnType: row.return_type ?? undefined,
     parentId: row.parent_id ?? undefined,
     tags: JSON.parse(row.tags) as string[],

@@ -38,7 +38,12 @@ export class RevenueSplitter {
    * Compute payouts for a payment amount.
    * Largest-remainder method to ensure cents add up exactly.
    */
-  computePayouts(paymentIntentId: string, config: SplitConfig, totalCents: number, currency: { code: string; symbol: string; decimals: number }): Payout[] {
+  computePayouts(
+    paymentIntentId: string,
+    config: SplitConfig,
+    totalCents: number,
+    currency: { code: string; symbol: string; decimals: number },
+  ): Payout[] {
     const validation = this.validate(config);
     if (!validation.valid) {
       throw new Error(`Invalid split config: ${validation.errors.join('; ')}`);
@@ -79,7 +84,9 @@ export class RevenueSplitter {
    * Add or update a split rule.
    */
   updateSplit(config: SplitConfig, split: RevenueSplit): SplitConfig {
-    const others = config.splits.filter((s) => !(s.recipientId === split.recipientId && s.role === split.role));
+    const others = config.splits.filter(
+      (s) => !(s.recipientId === split.recipientId && s.role === split.role),
+    );
     const splits = [...others, split];
     const total = splits.reduce((acc, s) => acc + s.basisPoints, 0);
     return { ...config, splits, totalBasisPoints: total };
@@ -90,9 +97,27 @@ export class RevenueSplitter {
    */
   static default(productId: string, authorId: string): SplitConfig {
     const splits: RevenueSplit[] = [
-      { id: randomUUID(), recipientId: authorId, role: 'author', basisPoints: 7000, name: 'Author' },
-      { id: randomUUID(), recipientId: 'platform', role: 'platform', basisPoints: 2000, name: 'GHITA Platform' },
-      { id: randomUUID(), recipientId: 'reserve', role: 'reserve', basisPoints: 1000, name: 'Refund Reserve' },
+      {
+        id: randomUUID(),
+        recipientId: authorId,
+        role: 'author',
+        basisPoints: 7000,
+        name: 'Author',
+      },
+      {
+        id: randomUUID(),
+        recipientId: 'platform',
+        role: 'platform',
+        basisPoints: 2000,
+        name: 'GHITA Platform',
+      },
+      {
+        id: randomUUID(),
+        recipientId: 'reserve',
+        role: 'reserve',
+        basisPoints: 1000,
+        name: 'Refund Reserve',
+      },
     ];
     return { productId, splits, totalBasisPoints: TOTAL_BPS };
   }

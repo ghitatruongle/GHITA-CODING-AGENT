@@ -4,7 +4,7 @@
 
 import { spawn } from 'node:child_process';
 import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
-import { dirname, extname, resolve } from 'node:path';
+import { dirname, extname, isAbsolute, relative, resolve } from 'node:path';
 import { platform } from 'node:process';
 import { createDefaultSkillRegistry, type SkillRuntimeAdapters } from './index.js';
 
@@ -14,6 +14,16 @@ export interface NodeSkillAdapterOptions {
 }
 
 const DEFAULT_MAX_OUTPUT_BYTES = 1024 * 1024;
+
+function resolveWorkspacePath(defaultCwd: string, requestedPath: string): string {
+  const target = resolve(defaultCwd, requestedPath);
+  const rel = relative(defaultCwd, target);
+  if (rel === '' || (!rel.startsWith('..') && !isAbsolute(rel))) {
+    return target;
+  }
+
+  throw new Error(`Path is outside the workspace: ${requestedPath}`);
+}
 
 /**
  * Escape a string for safe use as a shell argument.
@@ -122,14 +132,14 @@ export function createNodeSkillAdapters(
 
   return {
     file: {
-      readFile: async (path) => readFile(resolve(defaultCwd, path), 'utf8'),
+      readFile: async (path) => readFile(resolveWorkspacePath(defaultCwd, path), 'utf8'),
       writeFile: async (path, content) => {
-        const target = resolve(defaultCwd, path);
+        const target = resolveWorkspacePath(defaultCwd, path);
         await mkdir(dirname(target), { recursive: true });
         await writeFile(target, content, 'utf8');
       },
       listDirectory: async (path) => {
-        const directory = resolve(defaultCwd, path);
+        const directory = resolveWorkspacePath(defaultCwd, path);
         const entries = await readdir(directory, { withFileTypes: true });
         return Promise.all(
           entries.map(async (entry) => {
@@ -150,7 +160,9 @@ export function createNodeSkillAdapters(
     terminal: {
       runCommand: (command, commandOptions) =>
         runProcess(command, {
-          cwd: commandOptions?.cwd ? resolve(defaultCwd, commandOptions.cwd) : defaultCwd,
+          cwd: commandOptions?.cwd
+            ? resolveWorkspacePath(defaultCwd, commandOptions.cwd)
+            : defaultCwd,
           timeoutMs: commandOptions?.timeoutMs,
           signal: commandOptions?.signal,
           maxOutputBytes,

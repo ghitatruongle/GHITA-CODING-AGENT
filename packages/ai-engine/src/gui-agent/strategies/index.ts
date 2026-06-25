@@ -7,10 +7,7 @@
  * they have.
  */
 
-export {
-  BrowserUseOnlyStrategy,
-  findByRoleAndName,
-} from './browser-use-only.js';
+export { BrowserUseOnlyStrategy, findByRoleAndName } from './browser-use-only.js';
 export type {
   AxTreeNode,
   BrowserTarget,
@@ -29,18 +26,9 @@ export type {
 } from './gui-agent-only.js';
 
 export { MixedStrategy, isBrowserDescription as isBrowserTask } from './mixed.js';
-export type {
-  TaskKind,
-  MixedTask,
-  MixedAction,
-  WindowProbe,
-  MixedConfig,
-} from './mixed.js';
+export type { TaskKind, MixedTask, MixedAction, WindowProbe, MixedConfig } from './mixed.js';
 
-export {
-  CdpAccessibilityAdapter,
-  WebDriverAccessibilityClient,
-} from './cdp-accessibility.js';
+export { CdpAccessibilityAdapter, WebDriverAccessibilityClient } from './cdp-accessibility.js';
 export type {
   CdpTransport,
   WebDriverSession,

@@ -29,6 +29,18 @@ export interface SecretRotatorOptions {
  */
 export class SecretRotator {
   private readonly keys = new Map<string, ApiKeyInfo>();
+  /**
+   * Separate in-memory store of the actual (unmasked) key material.
+   *
+   * SECURITY (audit fix 2.11): previously the rotator would call
+   * `maskKey(newKey)` and assign the masked form to `ApiKeyInfo.maskedKey`
+   * while discarding the original `newKey` — meaning no consumer could
+   * ever use the freshly rotated credential. We now keep the real key
+   * here (in-memory only, never persisted, never returned in lists) and
+   * expose it via `getActiveKey()`. External secret stores (e.g. OS
+   * keychain) are a recommended follow-up to take this off the heap.
+   */
+  private readonly unmasked = new Map<string, string>();
   private readonly defaultRotationIntervalMs: number;
   private readonly onLog?: (message: string, level: 'debug' | 'info' | 'warn' | 'error') => void;
   private readonly generateKey?: (provider: string) => Promise<string>;
@@ -45,22 +57,46 @@ export class SecretRotator {
 
   /**
    * Đăng ký 1 key.
+   *
+   * @param info Metadata. Pass `unmaskedKey` alongside `maskedKey` so the
+   *              rotator can hand the real credential to consumers via
+   *              `getActiveKey()`. If omitted, only the masked form is
+   *              available (suitable for read-only audit use).
    */
-  register(info: Omit<ApiKeyInfo, 'status' | 'rotationIntervalMs'> & { rotationIntervalMs?: number }): ApiKeyInfo {
+  register(
+    info: Omit<ApiKeyInfo, 'status' | 'rotationIntervalMs'> & {
+      rotationIntervalMs?: number;
+      unmaskedKey?: string;
+    },
+  ): ApiKeyInfo {
     const full: ApiKeyInfo = {
       ...info,
       status: 'active',
       rotationIntervalMs: info.rotationIntervalMs ?? this.defaultRotationIntervalMs,
     };
     this.keys.set(info.id, full);
+    if (info.unmaskedKey) {
+      this.unmasked.set(info.id, info.unmaskedKey);
+    }
     return full;
   }
 
   /**
-   * Lấy thông tin key.
+   * Lấy thông tin key (masked).
    */
   get(id: string): ApiKeyInfo | undefined {
     return this.keys.get(id);
+  }
+
+  /**
+   * Lấy key thật (chưa mask) — chỉ sử dụng khi cần gọi API provider.
+   * Trả về undefined nếu key chưa được cung cấp dưới dạng unmasked
+   * hoặc key không ở trạng thái active.
+   */
+  getActiveKey(id: string): string | undefined {
+    const k = this.keys.get(id);
+    if (!k || k.status !== 'active') return undefined;
+    return this.unmasked.get(id);
   }
 
   /**
@@ -83,7 +119,9 @@ export class SecretRotator {
    * Lấy tất cả key đã expired.
    */
   listExpired(now = Date.now()): ApiKeyInfo[] {
-    return Array.from(this.keys.values()).filter((k) => k.expiresAt !== undefined && k.expiresAt <= now);
+    return Array.from(this.keys.values()).filter(
+      (k) => k.expiresAt !== undefined && k.expiresAt <= now,
+    );
   }
 
   /**
@@ -97,45 +135,60 @@ export class SecretRotator {
   }
 
   /**
-   * Rotate 1 key (revoke cũ, tạo mới).
+   * Rotate 1 key (tạo mới trước, revoke sau — đảm bảo luôn có key hợp lệ).
    */
   async rotate(id: string, reason?: string): Promise<RotationEvent> {
     const k = this.keys.get(id);
     if (!k) throw new Error(`Key ${id} not found`);
 
     k.status = 'rotating';
-    this.onLog?.(`[Rotator] Rotating key ${id} (${k.provider})${reason ? ` — ${reason}` : ''}`, 'info');
+    this.onLog?.(
+      `[Rotator] Rotating key ${id} (${k.provider})${reason ? ` — ${reason}` : ''}`,
+      'info',
+    );
 
-    if (this.revokeKey) {
-      try {
-        await this.revokeKey(k.provider, k.id);
-      } catch (err) {
-        this.onLog?.(`[Rotator] revokeKey failed: ${(err as Error).message}`, 'warn');
-      }
-    }
-
+    // Step 1: Generate new key FIRST so the old key remains valid if generation fails
     if (this.generateKey) {
       try {
         const newKey = await this.generateKey(k.provider);
         k.maskedKey = maskKey(newKey);
+        // SECURITY (audit fix 2.11): also store the unmasked form so
+        // `getActiveKey()` can hand it to the HTTP client. Without this
+        // line the freshly rotated credential would be unreachable.
+        this.unmasked.set(id, newKey);
         k.createdAt = Date.now();
         k.status = 'active';
       } catch (err) {
-        k.status = 'revoked';
-        this.onLog?.(`[Rotator] generateKey failed, key ${id} marked revoked: ${(err as Error).message}`, 'error');
+        // Generation failed — old key is still active, do NOT revoke
+        k.status = 'active';
+        this.onLog?.(
+          `[Rotator] generateKey failed, key ${id} kept active: ${(err as Error).message}`,
+          'error',
+        );
         const event: RotationEvent = {
           keyId: id,
           provider: k.provider,
-          action: 'revoked',
+          action: 'rotated',
           timestamp: Date.now(),
-          reason: `rotate_failed: ${(err as Error).message}`,
+          reason: `generate_failed:${(err as Error).message}`,
         };
-        this.totalRevocations++;
         return event;
       }
     } else {
       k.status = 'active';
       k.createdAt = Date.now();
+    }
+
+    // Step 2: Revoke old key AFTER successful generation
+    if (this.revokeKey) {
+      try {
+        await this.revokeKey(k.provider, k.id);
+      } catch (err) {
+        this.onLog?.(
+          `[Rotator] revokeKey failed (new key is active): ${(err as Error).message}`,
+          'warn',
+        );
+      }
     }
 
     this.totalRotations++;
@@ -156,6 +209,8 @@ export class SecretRotator {
     const k = this.keys.get(id);
     if (!k) throw new Error(`Key ${id} not found`);
     k.status = 'revoked';
+    // Drop the unmasked form from memory once revoked.
+    this.unmasked.delete(id);
     if (this.revokeKey) {
       try {
         await this.revokeKey(k.provider, k.id);
@@ -171,7 +226,10 @@ export class SecretRotator {
       timestamp: Date.now(),
       ...(reason !== undefined ? { reason } : {}),
     };
-    this.onLog?.(`[Rotator] Revoked key ${id} (${k.provider})${reason ? ` — ${reason}` : ''}`, 'warn');
+    this.onLog?.(
+      `[Rotator] Revoked key ${id} (${k.provider})${reason ? ` — ${reason}` : ''}`,
+      'warn',
+    );
     return event;
   }
 
@@ -192,8 +250,17 @@ export class SecretRotator {
   /**
    * Stats.
    */
-  stats(): { totalKeys: number; active: number; rotating: number; revoked: number; totalRotations: number; totalRevocations: number } {
-    let active = 0, rotating = 0, revoked = 0;
+  stats(): {
+    totalKeys: number;
+    active: number;
+    rotating: number;
+    revoked: number;
+    totalRotations: number;
+    totalRevocations: number;
+  } {
+    let active = 0,
+      rotating = 0,
+      revoked = 0;
     for (const k of this.keys.values()) {
       if (k.status === 'active') active++;
       else if (k.status === 'rotating') rotating++;

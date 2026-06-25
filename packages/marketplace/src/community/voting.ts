@@ -15,7 +15,13 @@ export class FeatureVoting {
   /**
    * Create a new feature request.
    */
-  create(opts: { productId: string; authorId: string; title: string; description: string; useCase: string }): FeatureRequest {
+  create(opts: {
+    productId: string;
+    authorId: string;
+    title: string;
+    description: string;
+    useCase: string;
+  }): FeatureRequest {
     const r: FeatureRequest = {
       id: `fr_${randomUUID()}`,
       productId: opts.productId,
@@ -71,7 +77,10 @@ export class FeatureVoting {
   /**
    * List requests for a product, top-voted first.
    */
-  listForProduct(productId: string, filter?: { status?: FeatureRequest['status'] }): FeatureRequest[] {
+  listForProduct(
+    productId: string,
+    filter?: { status?: FeatureRequest['status'] },
+  ): FeatureRequest[] {
     const ids = this.byProduct.get(productId) ?? new Set();
     return Array.from(ids)
       .flatMap((id) => this.requests.get(id) ?? [])

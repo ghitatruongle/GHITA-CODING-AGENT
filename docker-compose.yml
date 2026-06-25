@@ -1,0 +1,106 @@
+# ==============================================================================
+# GHITA CODING AGENT — Docker Compose (Production)
+# ==============================================================================
+# Services:
+#   - sidecar:  Node.js sidecar server (Socket.IO + API proxy)
+#   - redis:    Optional Redis for distributed caching & pub/sub
+#   - searxng:  Optional self-hosted search engine for WebSearchTool
+#
+# Usage:
+#   docker compose up -d                  # Start all services
+#   docker compose up -d sidecar          # Start sidecar only
+#   docker compose logs -f sidecar        # Follow sidecar logs
+#   docker compose down                   # Stop all services
+# ==============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Sidecar Server (Node.js)
+  # ---------------------------------------------------------------------------
+  sidecar:
+    image: node:20-slim
+    container_name: ghita-sidecar
+    restart: unless-stopped
+    working_dir: /app
+    command: ["node", "apps/desktop/src-tauri/sidecar/server.bundle.mjs"]
+    ports:
+      - "${GHITA_PORT:-8080}:8080"
+    environment:
+      - NODE_ENV=production
+      - GHITA_SESSION_TOKEN=${GHITA_SESSION_TOKEN:?Set GHITA_SESSION_TOKEN in .env}
+      - PORT=8080
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - ./:/app:ro
+      - ghita-data:/app/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8080/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - ghita-net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+        reservations:
+          memory: 128M
+
+  # ---------------------------------------------------------------------------
+  # Redis (optional — for distributed caching & pub/sub)
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: ghita-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - ghita-net
+    deploy:
+      resources:
+        limits:
+          memory: 192M
+
+  # ---------------------------------------------------------------------------
+  # SearXNG (optional — self-hosted meta-search engine)
+  # ---------------------------------------------------------------------------
+  searxng:
+    image: searxng/searxng:latest
+    container_name: ghita-searxng
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8888:8080"
+    volumes:
+      - searxng-data:/etc/searxng
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:8888/
+    networks:
+      - ghita-net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+volumes:
+  ghita-data:
+  redis-data:
+  searxng-data:
+
+networks:
+  ghita-net:
+    driver: bridge

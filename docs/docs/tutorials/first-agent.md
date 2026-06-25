@@ -38,9 +38,7 @@ async function main() {
   const filePath = process.argv[2];
   const content = await readFile(filePath, 'utf-8');
 
-  const summary = await agent.run(
-    `Summarize the following file in 3 bullet points:\n\n${content}`,
-  );
+  const summary = await agent.run(`Summarize the following file in 3 bullet points:\n\n${content}`);
 
   console.log('Summary:', summary);
   memory.remember({
@@ -61,6 +59,7 @@ npx tsx index.ts README.md
 ```
 
 Output:
+
 ```
 Summary:
 - GHITA là desktop AI agent...

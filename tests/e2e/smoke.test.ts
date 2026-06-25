@@ -73,12 +73,14 @@ function createMockServer(port: number): http.Server {
       res.end(JSON.stringify({ status: 'ok', uptime: process.uptime() }));
     } else if (req.url === '/api/models') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({
-        models: [
-          { id: 'gpt-4', provider: 'openai', available: true },
-          { id: 'claude-3', provider: 'anthropic', available: true },
-        ],
-      }));
+      res.end(
+        JSON.stringify({
+          models: [
+            { id: 'gpt-4', provider: 'openai', available: true },
+            { id: 'claude-3', provider: 'anthropic', available: true },
+          ],
+        }),
+      );
     } else if (req.url === '/api/skills') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ skills: [{ id: 'code-review', enabled: true }] }));
@@ -114,7 +116,7 @@ describe('Phase 46 - Smoke Test Suite', () => {
     const result = await runner.checkService('health-endpoint', async () => {
       const res = await fetch(`http://localhost:${PORT}/health`);
       expect(res.status).toBe(200);
-      const data = await res.json() as { status: string };
+      const data = (await res.json()) as { status: string };
       expect(data.status).toBe('ok');
     });
     expect(result.status).toBe('ok');
@@ -125,7 +127,7 @@ describe('Phase 46 - Smoke Test Suite', () => {
     const result = await runner.checkService('models-api', async () => {
       const res = await fetch(`http://localhost:${PORT}/api/models`);
       expect(res.status).toBe(200);
-      const data = await res.json() as { models: Array<{ id: string; available: boolean }> };
+      const data = (await res.json()) as { models: Array<{ id: string; available: boolean }> };
       expect(data.models.length).toBeGreaterThan(0);
       expect(data.models.every((m) => m.available)).toBe(true);
     });
@@ -136,7 +138,7 @@ describe('Phase 46 - Smoke Test Suite', () => {
     const result = await runner.checkService('skills-api', async () => {
       const res = await fetch(`http://localhost:${PORT}/api/skills`);
       expect(res.status).toBe(200);
-      const data = await res.json() as { skills: Array<{ id: string; enabled: boolean }> };
+      const data = (await res.json()) as { skills: Array<{ id: string; enabled: boolean }> };
       expect(data.skills.length).toBeGreaterThan(0);
     });
     expect(result.status).toBe('ok');
@@ -181,7 +183,9 @@ describe('Phase 46 - API Integration Tests', () => {
       fetch(`http://localhost:${PORT}/health`).then((r) => r.json()),
     );
     const results = await Promise.all(promises);
-    expect(results.every((r: { status: string }) => (r as { status: string }).status === 'ok')).toBe(true);
+    expect(
+      results.every((r: { status: string }) => (r as { status: string }).status === 'ok'),
+    ).toBe(true);
   });
 
   it('JSON responses have correct Content-Type', async () => {

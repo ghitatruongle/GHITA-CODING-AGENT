@@ -2,10 +2,21 @@
  * Phase 23 — Graph sub-module public API.
  */
 
-export type { Association, AssociationType, AssociationList, AssociationListOptions } from './associations.js';
+export type {
+  Association,
+  AssociationType,
+  AssociationList,
+  AssociationListOptions,
+} from './associations.js';
 export {
-  createAssociationList, addAssociation, addAssociations,
-  nodeDegree, neighbors, totalNodes, totalAssociations, associationsByType,
+  createAssociationList,
+  addAssociation,
+  addAssociations,
+  nodeDegree,
+  neighbors,
+  totalNodes,
+  totalAssociations,
+  associationsByType,
 } from './associations.js';
 
 export type { PathNode, PathResult } from './path.js';

@@ -41,7 +41,8 @@ export type ComputerUseAction =
   | { type: 'click'; point?: Point; button?: MouseButton }
   | { type: 'typeText'; text: string }
   | { type: 'pressKey'; key: string }
-  | { type: 'screenshot' };
+  | { type: 'screenshot' }
+  | { type: 'wait' };
 
 export interface ComputerUseActionResult {
   action: ComputerUseAction;
@@ -158,6 +159,10 @@ export class ComputerUseController {
         return this.pressKey(action.key);
       case 'screenshot':
         return this.screenshot();
+      case 'wait': {
+        const waitAction: ComputerUseAction = { type: 'wait' };
+        return success(waitAction, 'Wait action is handled in executeActions.');
+      }
     }
   }
 
@@ -267,7 +272,7 @@ export class ComputerUseController {
           break;
         }
         case 'wait': {
-          const actionObj: ComputerUseAction = { type: 'screenshot' };
+          const actionObj: ComputerUseAction = { type: 'wait' };
           const waitTime = inputs.time ? parseInt(String(inputs.time), 10) * 1000 : 5000;
           await new Promise((resolve) => setTimeout(resolve, waitTime));
           result = success(actionObj, `Waited for ${waitTime}ms.`);

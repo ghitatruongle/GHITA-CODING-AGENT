@@ -57,12 +57,12 @@ GHITA đọc config từ nhiều nguồn (priority cao → thấp):
 
 ## Environment variables
 
-| Var | Mô tả |
-|-----|-------|
+| Var                 | Mô tả                                              |
+| ------------------- | -------------------------------------------------- |
 | `GHITA_CONFIG_PATH` | Đường dẫn config (default: `~/.ghita/config.json`) |
-| `GHITA_LOG_LEVEL` | `debug` \| `info` \| `warn` \| `error` |
-| `GHITA_TELEMETRY` | `on` \| `off` |
-| `OPENAI_API_KEY` | OpenAI key |
-| `ANTHROPIC_API_KEY` | Anthropic key |
-| `GOOGLE_API_KEY` | Google AI key |
-| `SENTRY_DSN` | Sentry DSN |
+| `GHITA_LOG_LEVEL`   | `debug` \| `info` \| `warn` \| `error`             |
+| `GHITA_TELEMETRY`   | `on` \| `off`                                      |
+| `OPENAI_API_KEY`    | OpenAI key                                         |
+| `ANTHROPIC_API_KEY` | Anthropic key                                      |
+| `GOOGLE_API_KEY`    | Google AI key                                      |
+| `SENTRY_DSN`        | Sentry DSN                                         |

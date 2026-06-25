@@ -13,7 +13,10 @@ export class DownloadTracker {
   /**
    * Record a download event.
    */
-  record(productId: string, opts: { version: string; country?: string; timestamp?: number } = { version: '0.0.0' }): void {
+  record(
+    productId: string,
+    opts: { version: string; country?: string; timestamp?: number } = { version: '0.0.0' },
+  ): void {
     const ts = opts.timestamp ?? Date.now();
     let s = this.stats.get(productId);
     if (!s) {
@@ -63,7 +66,9 @@ export class DownloadTracker {
    * Get top N products by total downloads.
    */
   top(n: number): DownloadStats[] {
-    return Array.from(this.stats.values()).sort((a, b) => b.total - a.total).slice(0, n);
+    return Array.from(this.stats.values())
+      .sort((a, b) => b.total - a.total)
+      .slice(0, n);
   }
 
   private dayKey(ts: number): string {

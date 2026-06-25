@@ -19,4 +19,3 @@ export const Image = 'Image';
 export const Text = 'Text';
 export const ActivityIndicator = 'ActivityIndicator';
 export const TouchableWithoutFeedback = 'TouchableWithoutFeedback';
-

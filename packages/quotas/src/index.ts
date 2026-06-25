@@ -3,6 +3,8 @@
 // ==============================================================================
 
 export { RateLimiter } from './rate-limiter.js';
+export { DEFAULT_ENDPOINT_LIMITS, getLimitsByGroup, findLimitByRoute } from './endpoint-limits.js';
+export type { EndpointRule } from './endpoint-limits.js';
 export { QuotaManager } from './quota-manager.js';
 export type { QuotaManagerOptions } from './quota-manager.js';
 export { UsageTracker } from './usage-tracker.js';

@@ -228,18 +228,49 @@ export class StateSyncManager {
    * Sync a child's state to its parent.
    * Takes a snapshot of the child, computes the diff from previous,
    * and notifies via the onSync callback.
+   *
+   * RESILIENCE (audit fix 2.5): the previous implementation returned
+   * `null` when `previousVersion === 0`, silently dropping the very
+   * first sync after registration. Parents therefore never received
+   * the initial state of their children. We now treat version 0 as
+   * "no previous snapshot exists" and emit a full add diff instead.
    */
   syncToParent(childId: string, data: Record<string, unknown>): StateDiff | null {
     const previousVersion = this.getVersion(childId);
     const snap = this.snapshot(childId, data);
     const parentId = this.parentOf.get(childId);
 
-    if (!parentId || previousVersion === 0) return null;
+    if (!parentId) return null;
 
-    const previousSnap = this.getSnapshotByVersion(childId, previousVersion);
-    if (!previousSnap) return null;
-
-    const diffResult = this.computeDiff(previousSnap, snap);
+    let diffResult: StateDiff;
+    if (previousVersion === 0) {
+      // First-time sync — emit all current keys as additions so the
+      // parent mirrors the initial state. Copy into a fresh
+      // `Record<string, unknown>` so external mutations of `snap.data`
+      // do not retroactively mutate the diff payload.
+      //
+      // RESILIENCE (audit fix 2.5): `StateDiff.removed` is a `string[]`
+      // (keys present in `from` but missing in `to`). There is no
+      // previous snapshot, so `removed` is an empty array. `added`
+      // and `changed` are `Record<string, unknown>` because they carry
+      // payload values, not just key names.
+      const initialState: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(snap.data)) {
+        initialState[k] = v;
+      }
+      diffResult = {
+        agentId: childId,
+        fromVersion: 0,
+        toVersion: snap.version,
+        added: initialState,
+        removed: [],
+        changed: {},
+      };
+    } else {
+      const previousSnap = this.getSnapshotByVersion(childId, previousVersion);
+      if (!previousSnap) return null;
+      diffResult = this.computeDiff(previousSnap, snap);
+    }
 
     this.config.onSync?.(childId, diffResult);
 
@@ -319,6 +350,9 @@ export class StateSyncManager {
       const data = syncFn();
       this.syncToParent(childId, data);
     }, interval);
+    if (timer && typeof timer === 'object' && 'unref' in timer) {
+      timer.unref();
+    }
 
     this.syncTimers.set(childId, timer);
   }

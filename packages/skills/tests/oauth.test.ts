@@ -10,7 +10,6 @@ import {
 } from '../src/index.js';
 
 describe('Phase 25 OAuth Handoff + toolkitSlug Discovery', () => {
-
   // ==============================================================================
   // 1. OAuth Handoff & PKCE Tests
   // ==============================================================================
@@ -31,7 +30,7 @@ describe('Phase 25 OAuth Handoff + toolkitSlug Discovery', () => {
       expect(session.state).toHaveLength(32); // 16 bytes hex = 32 chars
       expect(session.codeVerifier).toBeDefined();
       expect(session.codeChallenge).toBeDefined();
-      
+
       // Check auth URL structure
       const url = new URL(session.url);
       expect(url.origin).toBe('https://auth.ghita.ai');
@@ -50,7 +49,11 @@ describe('Phase 25 OAuth Handoff + toolkitSlug Discovery', () => {
       const redirectUri = 'http://localhost:3000/callback';
       const session = oauth.generateSession(appId, redirectUri);
 
-      const conn = await oauth.handleCallback(session.state, 'test_auth_code', session.codeVerifier);
+      const conn = await oauth.handleCallback(
+        session.state,
+        'test_auth_code',
+        session.codeVerifier,
+      );
 
       expect(conn.appId).toBe('slack');
       expect(conn.accessToken).toContain('mock_access_');
@@ -59,21 +62,21 @@ describe('Phase 25 OAuth Handoff + toolkitSlug Discovery', () => {
     });
 
     it('should fail callback if state is not found', async () => {
-      await expect(
-        oauth.handleCallback('invalid_state', 'code')
-      ).rejects.toThrow('OAuth session not found');
+      await expect(oauth.handleCallback('invalid_state', 'code')).rejects.toThrow(
+        'OAuth session not found',
+      );
     });
 
     it('should fail callback if PKCE verification fails', async () => {
       const session = oauth.generateSession('slack', 'http://localhost/cb');
-      await expect(
-        oauth.handleCallback(session.state, 'code', 'wrong_verifier')
-      ).rejects.toThrow('PKCE verification failed');
+      await expect(oauth.handleCallback(session.state, 'code', 'wrong_verifier')).rejects.toThrow(
+        'PKCE verification failed',
+      );
     });
 
     it('should fail callback if OAuth session has expired', async () => {
       const session = oauth.generateSession('slack', 'http://localhost/cb');
-      
+
       // Artificially change the creation time to 15 minutes ago
       oauth.sessionTimeoutMs = 10 * 60 * 1000;
       const oldSession = {
@@ -82,11 +85,11 @@ describe('Phase 25 OAuth Handoff + toolkitSlug Discovery', () => {
         redirectUri: 'http://localhost/cb',
         createdAt: Date.now() - 15 * 60 * 1000,
       };
-      
+
       oauth.setSession(session.state, oldSession);
 
       await expect(
-        oauth.handleCallback(session.state, 'code', session.codeVerifier)
+        oauth.handleCallback(session.state, 'code', session.codeVerifier),
       ).rejects.toThrow('OAuth session expired');
     });
 
@@ -96,7 +99,7 @@ describe('Phase 25 OAuth Handoff + toolkitSlug Discovery', () => {
 
       // Second attempt with the same state should fail
       await expect(
-        oauth.handleCallback(session.state, 'code', session.codeVerifier)
+        oauth.handleCallback(session.state, 'code', session.codeVerifier),
       ).rejects.toThrow('OAuth session not found');
     });
   });
@@ -106,8 +109,19 @@ describe('Phase 25 OAuth Handoff + toolkitSlug Discovery', () => {
   // ==============================================================================
   describe('KeychainStore', () => {
     const testFilePath = path.join(__dirname, `test-keychain-${Date.now()}.enc`);
+    let originalEnvPassword: string | undefined;
+
+    beforeEach(() => {
+      originalEnvPassword = process.env.GHITA_KEYCHAIN_PASSWORD;
+      process.env.GHITA_KEYCHAIN_PASSWORD = 'super-secret-dummy-keychain-password-16';
+    });
 
     afterEach(() => {
+      if (originalEnvPassword === undefined) {
+        delete process.env.GHITA_KEYCHAIN_PASSWORD;
+      } else {
+        process.env.GHITA_KEYCHAIN_PASSWORD = originalEnvPassword;
+      }
       if (fs.existsSync(testFilePath)) {
         fs.unlinkSync(testFilePath);
       }
@@ -283,7 +297,7 @@ describe('Phase 25 OAuth Handoff + toolkitSlug Discovery', () => {
       const app = discoverToolkitSlug('googlecalendar_toolkit');
       expect(app).toBeDefined();
       expect(app?.id).toBe('googlecalendar');
-      
+
       const appPartial = discoverToolkitSlug('calendar');
       expect(appPartial).toBeDefined();
       expect(appPartial?.id).toBe('googlecalendar');

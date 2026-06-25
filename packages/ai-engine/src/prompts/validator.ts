@@ -17,7 +17,7 @@ export class PromptValidationError extends Error {
  */
 export function validateInput(
   inputsSpec: PromptInputSpec[],
-  variables: Record<string, unknown>
+  variables: Record<string, unknown>,
 ): Record<string, unknown> {
   const validated: Record<string, unknown> = {};
   const errors: string[] = [];
@@ -58,7 +58,7 @@ export function validateInput(
 
     if (!typeMatched) {
       errors.push(
-        `Input variable "${spec.name}" must be of type "${spec.type}", received "${typeof value}"`
+        `Input variable "${spec.name}" must be of type "${spec.type}", received "${typeof value}"`,
       );
     } else {
       validated[spec.name] = value;
@@ -84,7 +84,7 @@ export function validateInput(
  */
 export function validateOutput(
   validatorSpec: PromptValidator | undefined,
-  renderedPrompt: string
+  renderedPrompt: string,
 ): ValidationResult {
   if (!validatorSpec) {
     return { valid: true };
@@ -114,7 +114,9 @@ export function validateOutput(
           errors.push(`Rendered prompt does not match required format pattern: ${pattern}`);
         }
       } catch (err: unknown) {
-        errors.push(`Invalid format regex pattern: ${err instanceof Error ? err.message : String(err)}`);
+        errors.push(
+          `Invalid format regex pattern: ${err instanceof Error ? err.message : String(err)}`,
+        );
       }
     }
     if (jsonSchema) {
@@ -130,13 +132,13 @@ export function validateOutput(
   // 3. Safety validation
   if (validatorSpec.safety) {
     const { blockWords, allowWords, enablePromptInjectionCheck } = validatorSpec.safety;
-    
+
     if (blockWords && blockWords.length > 0) {
       const lowerPrompt = renderedPrompt.toLowerCase();
       for (const word of blockWords) {
         const lowerWord = word.toLowerCase();
         // Skip check if it is explicitly in allowWords
-        if (allowWords && allowWords.some(aw => aw.toLowerCase() === lowerWord)) {
+        if (allowWords && allowWords.some((aw) => aw.toLowerCase() === lowerWord)) {
           continue;
         }
         if (lowerPrompt.includes(lowerWord)) {
@@ -154,12 +156,14 @@ export function validateOutput(
         'you are now',
         'new system instruction',
         'delete memory',
-        'override instructions'
+        'override instructions',
       ];
       const lowerPrompt = renderedPrompt.toLowerCase();
       for (const keyword of injectionKeywords) {
         if (lowerPrompt.includes(keyword)) {
-          errors.push(`Prompt injection attempt detected: contains instruction override keyword "${keyword}"`);
+          errors.push(
+            `Prompt injection attempt detected: contains instruction override keyword "${keyword}"`,
+          );
         }
       }
     }

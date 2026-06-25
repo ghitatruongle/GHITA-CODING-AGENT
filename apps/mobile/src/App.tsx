@@ -5,9 +5,11 @@
 
 import React, { Component, useEffect } from 'react';
 import type { ErrorInfo } from 'react';
+import { AppState } from 'react-native';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { Provider as PaperProvider, MD3DarkTheme, MD3LightTheme } from 'react-native-paper';
 import { PairingScreen } from './screens/PairingScreen';
 import { RemoteControlScreen } from './screens/RemoteControlScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
@@ -17,6 +19,8 @@ import type { RootStackParamList } from './navigation/types';
 import { I18nProvider } from './i18n/context';
 import { ThemeProvider, useTheme } from './theme/ThemeContext';
 import { notificationService } from './services/notificationService';
+import * as storageService from './services/storageService';
+import { socketService } from './services/socketService';
 
 // --- Navigation Stack ---
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -27,6 +31,29 @@ function AppNavigator() {
 
   useEffect(() => {
     notificationService.initialize().catch(console.error);
+  }, []);
+
+  // C13: Auto-reconnect on initial load and app resume (background→foreground)
+  useEffect(() => {
+    const reconnectIfNeeded = async () => {
+      if (!socketService.isConnected) {
+        const lastServer = await storageService.getLastServer();
+        if (lastServer) {
+          const url = lastServer.startsWith('http') ? lastServer : `http://${lastServer}`;
+          socketService.connect(url);
+        }
+      }
+    };
+
+    void reconnectIfNeeded();
+
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        void reconnectIfNeeded();
+      }
+    });
+
+    return () => sub.remove();
   }, []);
 
   const navigationTheme = {
@@ -43,21 +70,23 @@ function AppNavigator() {
   };
 
   return (
-    <NavigationContainer theme={navigationTheme}>
-      <Stack.Navigator
-        initialRouteName="Pairing"
-        screenOptions={{
-          headerShown: false,
-          animation: 'slide_from_right',
-          contentStyle: { backgroundColor: colors.background },
-        }}
-      >
-        <Stack.Screen name="Pairing" component={PairingScreen} />
-        <Stack.Screen name="RemoteControl" component={RemoteControlScreen} />
-        <Stack.Screen name="Settings" component={SettingsScreen} />
-        <Stack.Screen name="Dashboard" component={DashboardScreen} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <PaperProvider theme={isDark ? MD3DarkTheme : MD3LightTheme}>
+      <NavigationContainer theme={navigationTheme}>
+        <Stack.Navigator
+          initialRouteName="Pairing"
+          screenOptions={{
+            headerShown: false,
+            animation: 'slide_from_right',
+            contentStyle: { backgroundColor: colors.background },
+          }}
+        >
+          <Stack.Screen name="Pairing" component={PairingScreen} />
+          <Stack.Screen name="RemoteControl" component={RemoteControlScreen} />
+          <Stack.Screen name="Settings" component={SettingsScreen} />
+          <Stack.Screen name="Dashboard" component={DashboardScreen} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </PaperProvider>
   );
 }
 

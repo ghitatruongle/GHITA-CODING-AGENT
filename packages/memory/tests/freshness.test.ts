@@ -242,7 +242,13 @@ describe('Phase 22: memoryFreshness (decay)', () => {
 
       // getNamespaceOverview
       const entries: MemoryEntry[] = [
-        { id: '1', type: 'fact', content: 'c1', timestamp: now - halfLife, metadata: { namespace: 'custom' } },
+        {
+          id: '1',
+          type: 'fact',
+          content: 'c1',
+          timestamp: now - halfLife,
+          metadata: { namespace: 'custom' },
+        },
       ];
       const overview = tracker.getNamespaceOverview(entries, now);
       // For custom namespace, halfLife is double (2 days). Age is 1 day. Freshness should be 2 ^ (-1/2) = ~0.707

@@ -6,29 +6,28 @@
 import { useState, Suspense, lazy, useCallback, useRef, useEffect } from 'react';
 import { FileExplorer } from '../components/FileExplorer';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
+import { open } from '@tauri-apps/plugin-dialog';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useTranslation } from '../i18n';
+import { useAppStore, fileContentCache } from '../stores/appStore';
 
 const CodeEditor = lazy(() =>
   import('../components/CodeEditor').then((m) => ({ default: m.CodeEditor })),
 );
 
-interface OpenFile {
-  path: string;
-  name: string;
-  content: string;
-  originalContent: string; // For dirty detection
-  language: string;
-  modified: boolean;
-}
+// Interface OpenFile has been moved to appStore.ts as part of AppState
 
 export function CodeView() {
   const { t } = useTranslation();
   const tRef = useRef(t);
   tRef.current = t;
 
-  const [openFiles, setOpenFiles] = useState<OpenFile[]>([]);
-  const [activePath, setActivePath] = useState<string>('');
+  const openFiles = useAppStore((s) => s.codeOpenFiles);
+  const setOpenFiles = useAppStore((s) => s.setCodeOpenFiles);
+  const activePath = useAppStore((s) => s.codeActivePath);
+  const setActivePath = useAppStore((s) => s.setCodeActivePath);
+
   const [explorerWidth, setExplorerWidth] = useState(240);
   const isDragging = useRef(false);
   const startX = useRef(0);
@@ -36,6 +35,23 @@ export function CodeView() {
 
   // Active file
   const activeFile = openFiles.find((f) => f.path === activePath);
+
+  // Open folder directly
+  const handleOpenFolder = useCallback(async () => {
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: tRef.current('fileExplorer.openFolder'),
+      });
+      if (selected && typeof selected === 'string') {
+        useAppStore.getState().setTerminalCwd(selected);
+      }
+    } catch (e) {
+      console.error('[CodeView] Failed to select folder:', e);
+      toast.error(e instanceof Error ? e.message : String(e));
+    }
+  }, []);
 
   // Open a file from explorer
   const handleFileOpen = useCallback(
@@ -47,20 +63,19 @@ export function CodeView() {
         return;
       }
 
-      setOpenFiles((prev) => [
-        ...prev,
+      fileContentCache.set(path, { content, originalContent: content });
+      setOpenFiles([
+        ...openFiles,
         {
           path,
           name,
-          content,
-          originalContent: content,
           language,
           modified: false,
         },
       ]);
       setActivePath(path);
     },
-    [openFiles],
+    [openFiles, setOpenFiles, setActivePath],
   );
 
   // Close a tab
@@ -102,22 +117,28 @@ export function CodeView() {
       }
       setOpenFiles(nextFiles);
     },
-    [openFiles, activePath],
+    [openFiles, activePath, setActivePath, setOpenFiles],
   );
 
   // Handle editor content change
   const handleContentChange = useCallback(
     (value: string) => {
       if (!activePath) return;
-      setOpenFiles((prev) =>
-        prev.map((f) =>
-          f.path === activePath
-            ? { ...f, content: value, modified: value !== f.originalContent }
-            : f,
-        ),
-      );
+      const cache = fileContentCache.get(activePath);
+      if (!cache) return;
+      cache.content = value;
+      const isModified = value !== cache.originalContent;
+      
+      const file = openFiles.find(f => f.path === activePath);
+      if (file && file.modified !== isModified) {
+        setOpenFiles(
+          openFiles.map((f) =>
+            f.path === activePath ? { ...f, modified: isModified } : f,
+          ),
+        );
+      }
     },
-    [activePath],
+    [activePath, openFiles, setOpenFiles],
   );
 
   // Save current file
@@ -125,26 +146,18 @@ export function CodeView() {
     const file = openFiles.find((f) => f.path === activePath);
     if (!file) return;
 
-    const contentToSave = file.content;
+    const cache = fileContentCache.get(file.path);
+    if (!cache) return;
+    const contentToSave = cache.content;
     try {
       await writeTextFile(file.path, contentToSave);
-      // BUG FIX: the previous version compared `f.content` (the value inside
-      // the latest setState closure) against `contentToSave` to decide
-      // `modified`. If the user kept typing while the write was in flight,
-      // `f.content` would already reflect the *new* edits, so the file
-      // looked "unmodified" while it was actually dirty. We now use a
-      // functional setState and compare against the value present at the
-      // time of state application.
-      setOpenFiles((prev) =>
-        prev.map((f) => {
+      cache.originalContent = contentToSave;
+      setOpenFiles(
+        openFiles.map((f) => {
           if (f.path !== activePath) return f;
           return {
             ...f,
-            originalContent: contentToSave,
-            // `f.content` here is whatever the user has in the editor right
-            // now. If it equals what we wrote, the tab is clean; otherwise
-            // it is still dirty (we just persisted an older snapshot).
-            modified: f.content !== contentToSave,
+            modified: false,
           };
         }),
       );
@@ -154,7 +167,7 @@ export function CodeView() {
         tRef.current('codeView.saveFailed', { error: e instanceof Error ? e.message : String(e) }),
       );
     }
-  }, [openFiles, activePath]);
+  }, [openFiles, activePath, setOpenFiles]);
 
   // Save all files
   // BUG FIX: previously `savedContents` was populated *before* the actual
@@ -169,25 +182,23 @@ export function CodeView() {
     const savedContents = new Map<string, string>();
     let lastError: unknown = null;
     for (const f of modified) {
+      const cache = fileContentCache.get(f.path);
+      if (!cache) continue;
       try {
-        await writeTextFile(f.path, f.content);
-        savedContents.set(f.path, f.content);
+        await writeTextFile(f.path, cache.content);
+        cache.originalContent = cache.content;
+        savedContents.set(f.path, cache.content);
       } catch (e) {
         lastError = e;
-        // Continue with the remaining files so one bad write doesn't leave
-        // the rest unsaved.
       }
     }
     if (savedContents.size > 0) {
-      setOpenFiles((prev) =>
-        prev.map((f) => {
-          const savedVal = savedContents.get(f.path);
-          if (savedVal === undefined) return f;
-          return {
-            ...f,
-            originalContent: savedVal,
-            modified: f.content !== savedVal,
-          };
+      setOpenFiles(
+        openFiles.map((f) => {
+          if (savedContents.has(f.path)) {
+            return { ...f, modified: false };
+          }
+          return f;
         }),
       );
     }
@@ -200,7 +211,7 @@ export function CodeView() {
       return;
     }
     toast.success(tRef.current('codeView.filesSaved', { count: savedContents.size }));
-  }, [openFiles]);
+  }, [openFiles, setOpenFiles]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -218,10 +229,15 @@ export function CodeView() {
         e.preventDefault();
         if (activePath) handleCloseTab(activePath);
       }
+      // Ctrl+O to open folder
+      if ((e.ctrlKey || e.metaKey) && e.key?.toLowerCase() === 'o') {
+        e.preventDefault();
+        handleOpenFolder();
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [handleSave, handleSaveAll, activePath, handleCloseTab]);
+  }, [handleSave, handleSaveAll, activePath, handleCloseTab, handleOpenFolder]);
 
   // Explorer resize drag
   const onDragStart = useCallback(
@@ -472,7 +488,7 @@ export function CodeView() {
               }
             >
               <CodeEditor
-                value={activeFile.content}
+                value={fileContentCache.get(activeFile.path)?.content || ''}
                 language={activeFile.language}
                 onChange={handleContentChange}
                 onSave={handleSave}
@@ -480,36 +496,58 @@ export function CodeView() {
               />
             </Suspense>
           ) : (
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '100%',
-                color: 'var(--text-muted)',
-                gap: '12px',
-              }}
-            >
-              <span style={{ fontSize: '48px', opacity: 0.3 }}>🤖</span>
-              <span style={{ fontSize: '14px', fontWeight: 600 }}>GHITA CODING AGENT</span>
-              <span style={{ fontSize: '12px', opacity: 0.6 }}>{t('codeView.openFileHint')}</span>
-              <div
-                style={{
-                  marginTop: '16px',
-                  display: 'flex',
-                  gap: '12px',
-                  fontSize: '11px',
-                  color: 'var(--text-muted)',
-                  opacity: 0.5,
-                }}
+            <div className="flex flex-col items-center justify-center h-full p-8 bg-bg-primary text-text-primary">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.4 }}
+                className="glass-card max-w-md w-full p-8 flex flex-col items-center text-center gap-6 border border-border-default/40 shadow-glow"
               >
-                <span>{t('codeView.shortcutSave')}</span>
-                <span>·</span>
-                <span>{t('codeView.shortcutClose')}</span>
-                <span>·</span>
-                <span>{t('codeView.shortcutSaveAll')}</span>
-              </div>
+                {/* Visual Icon with Accent Glow */}
+                <div className="relative flex items-center justify-center w-16 h-16 rounded-2xl bg-bg-active border border-accent-primary/20 text-accent-primary animate-fadeIn">
+                  <div className="absolute inset-0 rounded-2xl bg-accent-primary/10 blur-md animate-pulse" />
+                  <span className="text-[36px] z-10">🤖</span>
+                </div>
+
+                {/* Typography: Welcome & Subtitle */}
+                <div className="flex flex-col gap-1.5">
+                  <h3 className="text-xl font-bold tracking-wide text-text-primary">
+                    {t('app.brand') || 'GHITA CODING AGENT'}
+                  </h3>
+                  <p className="text-xs text-text-secondary max-w-xs leading-relaxed">
+                    {t('codeView.openFileHint') || 'Open a file from the explorer sidebar to begin coding.'}
+                  </p>
+                </div>
+
+                {/* Quick Actions Grid */}
+                <div className="w-full flex flex-col gap-2 mt-2">
+                  <button
+                    onClick={handleOpenFolder}
+                    className="flex items-center justify-between w-full px-4 py-2.5 text-xs font-semibold rounded-lg bg-bg-surface hover:bg-bg-hover border border-border-subtle hover:border-border-default text-text-primary transition-all active:scale-[0.98]"
+                  >
+                    <span className="flex items-center gap-2">📁 {t('fileExplorer.openFolder')}</span>
+                    <span className="text-[10px] text-text-muted font-normal">Ctrl+O</span>
+                  </button>
+                  <button
+                    onClick={() => useAppStore.getState().toggleTerminal()}
+                    className="flex items-center justify-between w-full px-4 py-2.5 text-xs font-semibold rounded-lg bg-bg-surface hover:bg-bg-hover border border-border-subtle hover:border-border-default text-text-primary transition-all active:scale-[0.98]"
+                  >
+                    <span className="flex items-center gap-2">💻 {t('mainLayout.terminal')}</span>
+                    <span className="text-[10px] text-text-muted font-normal">Ctrl+`</span>
+                  </button>
+                </div>
+
+                {/* Keyboard Shortcuts List */}
+                <div className="w-full border-t border-border-subtle pt-4 mt-2">
+                  <div className="flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-[11px] text-text-muted font-medium">
+                    <span>{t('codeView.shortcutSave') || 'Ctrl+S (Save)'}</span>
+                    <span>·</span>
+                    <span>{t('codeView.shortcutClose') || 'Ctrl+W (Close)'}</span>
+                    <span>·</span>
+                    <span>{t('codeView.shortcutSaveAll') || 'Ctrl+Shift+S (Save All)'}</span>
+                  </div>
+                </div>
+              </motion.div>
             </div>
           )}
         </div>

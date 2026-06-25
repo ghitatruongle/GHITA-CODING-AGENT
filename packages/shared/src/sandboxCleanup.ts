@@ -66,7 +66,6 @@ export async function cleanOrphanedSandboxFiles(
         }
 
         try {
-          if (!fs.existsSync(fullPath)) continue;
           const itemStats = fs.statSync(fullPath);
           const age = now - itemStats.mtimeMs;
 

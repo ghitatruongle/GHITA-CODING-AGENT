@@ -140,10 +140,10 @@ Only output the Action. Do not write any HTML tags, explainers or other text.`;
     imageBase64: string,
     prompt: string,
   ): Promise<string> {
-    const url = config.baseUrl.endsWith('/') ? config.baseUrl : config.baseUrl + '/';
+    const url = config.baseUrl.endsWith('/') ? config.baseUrl : `${config.baseUrl  }/`;
 
     if (config.type === 'openai') {
-      const response = await fetch(url + 'chat/completions', {
+      const response = await fetch(`${url  }chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -180,7 +180,7 @@ Only output the Action. Do not write any HTML tags, explainers or other text.`;
       };
       return res.choices?.[0]?.message?.content || '';
     } else if (config.type === 'anthropic') {
-      const response = await fetch(url + 'messages', {
+      const response = await fetch(`${url  }messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

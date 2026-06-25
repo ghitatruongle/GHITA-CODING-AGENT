@@ -5,11 +5,7 @@
 // ==============================================================================
 
 import type { ChatMessage, ChatResponse } from '../types.js';
-import type {
-  BatchRequest,
-  ConcatenatedPrompt,
-  ConcatenationStrategy,
-} from './types.js';
+import type { BatchRequest, ConcatenatedPrompt, ConcatenationStrategy } from './types.js';
 import { estimateMessagesTokens } from '../utils/token-counter.js';
 
 // ---------------------------------------------------------------------------
@@ -53,9 +49,7 @@ export function concatenateRequests(
       );
     }
     if (r.model !== model) {
-      throw new Error(
-        `concatenateRequests: mixed models in batch (${model} vs ${r.model})`,
-      );
+      throw new Error(`concatenateRequests: mixed models in batch (${model} vs ${r.model})`);
     }
     if ((r.tag ?? 'default') !== tag) {
       throw new Error(`concatenateRequests: mixed tags in batch (${tag} vs ${r.tag})`);
@@ -70,8 +64,7 @@ export function concatenateRequests(
   const messages = buildMessages(requests, strategy);
   const estimatedTokens = estimateMessagesTokens(messages, model);
   const tokensSaved = Math.max(0, totalTokensIfSeparate - estimatedTokens);
-  const savingsRatio =
-    totalTokensIfSeparate > 0 ? tokensSaved / totalTokensIfSeparate : 0;
+  const savingsRatio = totalTokensIfSeparate > 0 ? tokensSaved / totalTokensIfSeparate : 0;
 
   // Truncate if too large: drop oldest, lowest-priority requests
   let finalRequests = requests;
@@ -98,10 +91,7 @@ export function concatenateRequests(
 // Internal: Build the concatenated message list
 // ---------------------------------------------------------------------------
 
-function buildMessages(
-  requests: BatchRequest[],
-  strategy: ConcatenationStrategy,
-): ChatMessage[] {
+function buildMessages(requests: BatchRequest[], strategy: ConcatenationStrategy): ChatMessage[] {
   const out: ChatMessage[] = [];
 
   out.push({ role: 'system', content: SYSTEM_PREAMBLE });
@@ -122,15 +112,11 @@ function formatUserContent(
 ): string {
   switch (strategy) {
     case 'sequential':
-      return request.messages
-        .map((m) => `[${m.role.toUpperCase()}] ${m.content}`)
-        .join('\n');
+      return request.messages.map((m) => `[${m.role.toUpperCase()}] ${m.content}`).join('\n');
 
     case 'numbered': {
       const header = `=== Request ${index} (id=${request.id}) ===`;
-      const body = request.messages
-        .map((m) => `[${m.role}] ${m.content}`)
-        .join('\n');
+      const body = request.messages.map((m) => `[${m.role}] ${m.content}`).join('\n');
       return `${header}\n${body}`;
     }
 
@@ -206,10 +192,7 @@ export interface SplitResult {
  * Split a single ChatResponse.content into N chunks, one per original request.
  * Returns content strings in the original request order.
  */
-export function splitResponse(
-  response: ChatResponse,
-  requests: BatchRequest[],
-): SplitResult[] {
+export function splitResponse(response: ChatResponse, requests: BatchRequest[]): SplitResult[] {
   const out: SplitResult[] = new Array(requests.length);
   const text = response.content ?? '';
 
@@ -229,13 +212,19 @@ export function splitResponse(
       out[i] = { id: (requests[i] as BatchRequest).id, content: text.slice(afterOpen).trim() };
       continue;
     }
-    out[i] = { id: (requests[i] as BatchRequest).id, content: text.slice(afterOpen, closeIdx).trim() };
+    out[i] = {
+      id: (requests[i] as BatchRequest).id,
+      content: text.slice(afterOpen, closeIdx).trim(),
+    };
   }
 
   // Fallback: if we got nothing back, split by double newline and zip
   const allEmpty = out.every((r) => !r.content);
   if (allEmpty && requests.length > 0) {
-    const fallback = text.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
+    const fallback = text
+      .split(/\n{2,}/)
+      .map((s) => s.trim())
+      .filter(Boolean);
     for (let i = 0; i < requests.length; i++) {
       out[i] = {
         id: (requests[i] as BatchRequest).id,

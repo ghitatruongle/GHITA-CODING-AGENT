@@ -49,9 +49,7 @@ export class TierManager {
 
     // === Demote hot → warm if over capacity ===
     if (hot.length > this.config.hotMaxSize) {
-      const sorted = [...hot].sort(
-        (a, b) => this.tierScore(a, now) - this.tierScore(b, now),
-      );
+      const sorted = [...hot].sort((a, b) => this.tierScore(a, now) - this.tierScore(b, now));
       const toDemoteCount = hot.length - this.config.hotMaxSize;
       for (let i = 0; i < toDemoteCount; i++) {
         const entry = sorted[i];
@@ -74,11 +72,18 @@ export class TierManager {
     }
 
     // === Demote warm → cold if over capacity ===
-    const currentWarmCount = warm.length - demoted.filter((e) => e.tier === 'warm').length;
+    // MEMORY (audit fix 2.19): the previous expression was
+    //   `warm.length - demoted.filter(...).length`
+    // which subtracted demoted entries from the *current* warm count.
+    // But demoted entries had just been re-tagged `tier = 'warm'` above,
+    // so they are now part of the warm set. The correct computation adds
+    // them: `warm.length + demoted(filter).length`. Otherwise the eviction
+    // trigger fires too late (or not at all) and the warm tier grows
+    // unboundedly until the next migration pass.
+    const currentWarmCount =
+      warm.length + demoted.filter((e) => e.tier === 'warm').length;
     if (currentWarmCount > this.config.warmMaxSize) {
-      const sorted = [...warm].sort(
-        (a, b) => this.tierScore(a, now) - this.tierScore(b, now),
-      );
+      const sorted = [...warm].sort((a, b) => this.tierScore(a, now) - this.tierScore(b, now));
       const toDemoteCount = currentWarmCount - this.config.warmMaxSize;
       for (let i = 0; i < toDemoteCount; i++) {
         const entry = sorted[i];
@@ -90,10 +95,7 @@ export class TierManager {
 
     // === Demote warm → cold if very old ===
     for (const entry of warm) {
-      if (
-        entry.tier === 'warm' &&
-        now - entry.lastAccessedAt > this.config.coldAgeMs
-      ) {
+      if (entry.tier === 'warm' && now - entry.lastAccessedAt > this.config.coldAgeMs) {
         entry.tier = 'cold';
         demoted.push(entry);
       }
@@ -108,11 +110,10 @@ export class TierManager {
     }
 
     // === Promote warm → hot if hot tier has room AND entry is recent/frequent ===
-    const updatedHotCount = hot.length - demoted.filter((e) => e.id && hot.find((h) => h.id === e.id)).length;
+    const updatedHotCount =
+      hot.length - demoted.filter((e) => e.id && hot.find((h) => h.id === e.id)).length;
     if (updatedHotCount < this.config.hotMaxSize) {
-      const warmSorted = [...warm].sort(
-        (a, b) => this.tierScore(b, now) - this.tierScore(a, now),
-      );
+      const warmSorted = [...warm].sort((a, b) => this.tierScore(b, now) - this.tierScore(a, now));
       for (const entry of warmSorted) {
         if (updatedHotCount + promoted.length >= this.config.hotMaxSize) break;
         if (entry.accessCount >= this.config.hotMinAccess) {
@@ -159,10 +160,7 @@ export class TierManager {
   }
 
   /** Classify which tier a new entry should start in. */
-  classifyInitialTier(
-    entry: CompressableMemoryEntry,
-    _now: number = Date.now(),
-  ): MemoryTier {
+  classifyInitialTier(entry: CompressableMemoryEntry, _now: number = Date.now()): MemoryTier {
     void _now;
     // Summaries and old entries go to warm; fresh, important entries go to hot
     if (entry.isSummary) return 'warm';

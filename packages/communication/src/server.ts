@@ -41,11 +41,34 @@ function isAllowedLocalOrigin(origin?: string): boolean {
   }
 }
 
+function isLanOrigin(origin?: string): boolean {
+  if (!origin) return false;
+  try {
+    const url = new URL(origin);
+    const hostname = url.hostname;
+    // Allow LAN: 192.168.x.x, 10.x.x.x, 172.16-31.x.x
+    return /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(hostname);
+  } catch {
+    return false;
+  }
+}
+
 const DEFAULT_CONFIG: ServerConfig = {
   port: 8080,
   host: '0.0.0.0',
   cors: {
-    origin: '*',
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
+      // Allow requests with no origin (mobile apps, curl, etc.)
+      if (!origin) return callback(null, true);
+      // Allow localhost and LAN addresses
+      if (isAllowedLocalOrigin(origin) || isLanOrigin(origin)) {
+        return callback(null, true);
+      }
+      callback(new Error('CORS not allowed'));
+    },
     methods: ['GET', 'POST'],
   },
 };
@@ -214,7 +237,9 @@ export class CommunicationServer {
       }
 
       // Route channel webhooks (Tauri HTTP server mount channels)
-      const channelWebhookMatch = req.url ? req.url.match(/^\/channels\/([^/]+)\/adapters\/([^/]+)\/webhook/) : null;
+      const channelWebhookMatch = req.url
+        ? req.url.match(/^\/channels\/([^/]+)\/adapters\/([^/]+)\/webhook/)
+        : null;
       if (channelWebhookMatch) {
         const channelId = channelWebhookMatch[1] || '';
         const adapterId = channelWebhookMatch[2] || '';
@@ -224,13 +249,28 @@ export class CommunicationServer {
           if (adapter && typeof adapter.handleWebhook === 'function') {
             const handleWebhook = adapter.handleWebhook;
             let body = '';
-            req.on('data', chunk => {
+            const MAX_WEBHOOK_BODY = 1024 * 1024; // 1 MB limit
+            let bodyOverflow = false;
+            req.on('data', (chunk: Buffer | string) => {
+              if (bodyOverflow) return;
               body += chunk;
+              if (body.length > MAX_WEBHOOK_BODY) {
+                bodyOverflow = true;
+                res.writeHead(413, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Webhook payload too large (max 1MB)' }));
+              }
             });
             req.on('end', () => {
+              if (bodyOverflow) return;
               try {
                 const parsedBody = body ? JSON.parse(body) : {};
-                const mockReq = { headers: req.headers, method: req.method, url: req.url, body: parsedBody, rawBody: body };
+                const mockReq = {
+                  headers: req.headers,
+                  method: req.method,
+                  url: req.url,
+                  body: parsedBody,
+                  rawBody: body,
+                };
                 const mockRes = {
                   writeHead: (status: number, headers?: Record<string, string | string[]>) => {
                     res.writeHead(status, headers);
@@ -245,7 +285,7 @@ export class CommunicationServer {
                   json: (jsonObj: unknown) => {
                     res.writeHead(res.statusCode || 200, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify(jsonObj));
-                  }
+                  },
                 };
                 void handleWebhook(mockReq, mockRes);
               } catch {
@@ -257,7 +297,11 @@ export class CommunicationServer {
           }
         }
         res.writeHead(404, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: `Webhook endpoint for channel "${channelId}" adapter "${adapterId}" not found.` }));
+        res.end(
+          JSON.stringify({
+            error: `Webhook endpoint for channel "${channelId}" adapter "${adapterId}" not found.`,
+          }),
+        );
         return;
       }
 
@@ -398,6 +442,23 @@ export class CommunicationServer {
         const id = `approve_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
         this.pendingApprovals.set(id, resolve);
 
+        // Auto-reject after 5 minutes to prevent memory leak
+        const timeout = setTimeout(
+          () => {
+            if (this.pendingApprovals.has(id)) {
+              this.pendingApprovals.delete(id);
+              resolve(false);
+            }
+          },
+          5 * 60 * 1000,
+        );
+
+        const wrappedResolve = (value: boolean) => {
+          clearTimeout(timeout);
+          resolve(value);
+        };
+        this.pendingApprovals.set(id, wrappedResolve);
+
         this.broadcastRequireApproval({
           id,
           command,
@@ -526,9 +587,9 @@ export class CommunicationServer {
    * Broadcast real-time AI cost telemetry
    */
   broadcastCostTelemetry(data: {
-    inputTokens: number;
-    outputTokens: number;
-    totalTokens: number;
+    promptTokens?: number;
+    completionTokens?: number;
+    totalTokens?: number;
     costUsd: number;
     limitUsd: number;
   }): void {
@@ -554,6 +615,18 @@ export class CommunicationServer {
     this.io.on('connection', (socket: Socket) => {
       console.info(`[CommServer] New connection: ${socket.id}`);
 
+      // C7: Validate auth token from handshake for reconnecting devices
+      const handshakeAuth = socket.handshake?.auth as { token?: string } | undefined;
+      if (handshakeAuth?.token) {
+        const existingDevice = this.findDeviceByToken(handshakeAuth.token);
+        if (existingDevice) {
+          existingDevice.socketId = socket.id;
+          existingDevice.lastSeen = Date.now();
+          socket.emit(SOCKET_EVENTS.PAIR_CONFIRM, { deviceName: 'GHITA Desktop' });
+          console.info(`[CommServer] Device ${existingDevice.name} reconnected via token`);
+        }
+      }
+
       // --- Pairing ---
       socket.on(
         SOCKET_EVENTS.PAIR,
@@ -576,6 +649,8 @@ export class CommunicationServer {
         const device = this.findDeviceBySocket(socket.id);
         if (device && data.text) {
           device.lastSeen = Date.now();
+          // C17: Emit chat_start before forwarding to AI
+          socket.emit('chat_start', { timestamp: Date.now() });
           this.events.onChat?.(device.id, data.text);
         }
       });
@@ -675,6 +750,72 @@ export class CommunicationServer {
       socket.on(SOCKET_EVENTS.SYNC_LANGUAGE, (data: { language: string }) => {
         console.info(`[CommServer] Sync language received: ${data.language}`);
         socket.broadcast.emit(SOCKET_EVENTS.SYNC_LANGUAGE, data);
+      });
+
+      // --- Phase 2: Set Workspace ---
+      socket.on('set_workspace', (data: { workspacePath: string }) => {
+        const device = this.findDeviceBySocket(socket.id);
+        if (!device) {
+          socket.emit(SOCKET_EVENTS.ERROR, { message: 'Unauthorized: Device is not paired' });
+          return;
+        }
+        if (data?.workspacePath) {
+          device.lastSeen = Date.now();
+          console.info(
+            `[CommServer] Workspace set for device ${device.name}: ${data.workspacePath}`,
+          );
+          this.events.onCommand?.(device.id, { action: 'set_workspace', path: data.workspacePath });
+        }
+      });
+
+      // --- Phase 2: Set Skill Enabled ---
+      socket.on('set_skill_enabled', (data: { skillId: string; enabled: boolean }) => {
+        const device = this.findDeviceBySocket(socket.id);
+        if (!device) {
+          socket.emit(SOCKET_EVENTS.ERROR, { message: 'Unauthorized: Device is not paired' });
+          return;
+        }
+        if (data?.skillId !== undefined) {
+          device.lastSeen = Date.now();
+          console.info(
+            `[CommServer] Skill ${data.skillId} ${data.enabled ? 'enabled' : 'disabled'} by ${device.name}`,
+          );
+          this.events.onCommand?.(device.id, {
+            action: 'set_skill_enabled',
+            skillId: data.skillId,
+            enabled: data.enabled,
+          });
+        }
+      });
+
+      // --- Phase 2: Run Skill ---
+      socket.on('run_skill', (data: { skillId: string; params?: Record<string, unknown> }) => {
+        const device = this.findDeviceBySocket(socket.id);
+        if (!device) {
+          socket.emit(SOCKET_EVENTS.ERROR, { message: 'Unauthorized: Device is not paired' });
+          return;
+        }
+        if (data?.skillId) {
+          device.lastSeen = Date.now();
+          console.info(`[CommServer] Run skill ${data.skillId} by ${device.name}`);
+          this.events.onCommand?.(device.id, {
+            action: 'run_skill',
+            skillId: data.skillId,
+            params: data.params,
+          });
+        }
+      });
+
+      // --- Phase 2: List Skills ---
+      socket.on('list_skills', () => {
+        const device = this.findDeviceBySocket(socket.id);
+        if (!device) {
+          socket.emit(SOCKET_EVENTS.ERROR, { message: 'Unauthorized: Device is not paired' });
+          return;
+        }
+        device.lastSeen = Date.now();
+        console.info(`[CommServer] List skills requested by ${device.name}`);
+        this.events.onCommand?.(device.id, { action: 'list_skills', timestamp: Date.now() });
       });
 
       // --- Disconnect ---
@@ -784,6 +925,16 @@ export class CommunicationServer {
   private findDeviceBySocket(socketId: string): PairedDevice | undefined {
     for (const device of this.connectedDevices.values()) {
       if (device.socketId === socketId) {
+        return device;
+      }
+    }
+    return undefined;
+  }
+
+  /** C7: Find paired device by auth token (secret) for reconnect validation */
+  private findDeviceByToken(token: string): PairedDevice | undefined {
+    for (const device of this.connectedDevices.values()) {
+      if (device.secret === token) {
         return device;
       }
     }

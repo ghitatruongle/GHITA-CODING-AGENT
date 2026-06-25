@@ -31,7 +31,13 @@ import type {
   OperatorHealth,
   OperatorKind,
 } from './types.js';
-import type { MouseButton, Point, ScreenCapture, ScreenSize } from '../index.js';
+import type {
+  ComputerUseAdapter,
+  MouseButton,
+  Point,
+  ScreenCapture,
+  ScreenSize,
+} from '../index.js';
 import { undoDpiScale } from './utils.js';
 
 // ---------------------------------------------------------------------------
@@ -50,11 +56,13 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
   // Access Tauri's IPC through the window global to avoid a hard dependency
   // on @tauri-apps/api. This works because Tauri injects __TAURI__ into the
   // WebView at startup.
-  const tauri = (globalThis as any).__TAURI__;
+  const tauri = (
+    globalThis as unknown as { __TAURI__?: { invoke: (...args: unknown[]) => Promise<unknown> } }
+  ).__TAURI__;
   if (!tauri?.invoke) {
     throw new Error(
       `Tauri invoke('${cmd}') failed: __TAURI__ global not found. ` +
-      `Ensure the app is running inside the Tauri WebView.`,
+        `Ensure the app is running inside the Tauri WebView.`,
     );
   }
   return tauri.invoke(cmd, args) as Promise<T>;
@@ -66,7 +74,10 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
  */
 export async function isTauriAvailable(): Promise<boolean> {
   try {
-    if (typeof window === 'undefined' || !(window as any).__TAURI__) {
+    if (
+      typeof window === 'undefined' ||
+      !(window as unknown as { __TAURI__?: unknown }).__TAURI__
+    ) {
       return false;
     }
     const health = await invoke<{ ready: boolean }>('computer_health_check');
@@ -97,11 +108,11 @@ export class TauriOperator implements Operator {
     const checkedAt = Date.now();
     try {
       const result = await invoke<OperatorHealth>('computer_health_check');
-      return { ...result, checkedAt, kind: 'nutjs' };
+      return { ...result, checkedAt, kind: 'tauri' };
     } catch (e) {
       return {
         ready: false,
-        kind: 'nutjs',
+        kind: 'tauri',
         checkedAt,
         reason: `Tauri backend unavailable: ${(e as Error).message}`,
       };
@@ -213,7 +224,7 @@ export async function tryCreateTauriOperator(): Promise<TauriOperator | null> {
  *   const adapter = await createTauriAdapter();
  *   const controller = new ComputerUseController(adapter);
  */
-export async function createTauriAdapter(): Promise<import('../index.js').ComputerUseAdapter> {
+export async function createTauriAdapter(): Promise<ComputerUseAdapter> {
   const op = new TauriOperator();
   return {
     getScreenSize: () => op.getScreenSize(),

@@ -142,7 +142,8 @@ describe('SecretDetector', () => {
 
   describe('JWT detection', () => {
     it('18. detects JWT token', () => {
-      const jwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIn0.Gfx0Rbsa0123';
+      const jwt =
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIn0.Gfx0Rbsa0123';
       const result = detector.detect(`Authorization: Bearer ${jwt}`);
       expect(result.detected).toBe(true);
       expect(result.findings[0]!.type).toBe('jwt');
@@ -173,13 +174,17 @@ describe('SecretDetector', () => {
 
   describe('private key detection', () => {
     it('22. detects RSA private key', () => {
-      const result = detector.detect('-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA\n-----END RSA PRIVATE KEY-----');
+      const result = detector.detect(
+        '-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA\n-----END RSA PRIVATE KEY-----',
+      );
       expect(result.detected).toBe(true);
       expect(result.findings[0]!.type).toBe('private_key');
     });
 
     it('23. detects EC private key', () => {
-      const result = detector.detect('-----BEGIN EC PRIVATE KEY-----\nMHQCAQEE\n-----END EC PRIVATE KEY-----');
+      const result = detector.detect(
+        '-----BEGIN EC PRIVATE KEY-----\nMHQCAQEE\n-----END EC PRIVATE KEY-----',
+      );
       expect(result.detected).toBe(true);
     });
   });
@@ -188,7 +193,8 @@ describe('SecretDetector', () => {
 
   describe('redaction', () => {
     it('24. redacts detected secrets', () => {
-      const content = 'API_KEY=sk-abc123def456ghi789jkl012 and also ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij1234';
+      const content =
+        'API_KEY=sk-abc123def456ghi789jkl012 and also ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij1234';
       const result = detector.detect(content);
       expect(result.redactedContent).toBeDefined();
       expect(result.redactedContent).toContain('[REDACTED:');

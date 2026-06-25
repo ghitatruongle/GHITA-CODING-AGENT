@@ -3,7 +3,13 @@
 // ==============================================================================
 
 import { randomUUID } from 'node:crypto';
-import type { ChannelDelivery, Notification, NotificationChannel, NotificationListener, NotificationPreferences } from './types.js';
+import type {
+  ChannelDelivery,
+  Notification,
+  NotificationChannel,
+  NotificationListener,
+  NotificationPreferences,
+} from './types.js';
 import { PriorityRouter } from './priority.js';
 
 /** A pluggable delivery backend (desktop/mobile/email/...) */
@@ -69,11 +75,21 @@ export class ChannelRouter {
         continue;
       }
       const r = await sink.send(n);
-      results.push({ channel: c, success: r.success, error: r.error, deliveredAt: r.success ? Date.now() : undefined });
+      results.push({
+        channel: c,
+        success: r.success,
+        error: r.error,
+        deliveredAt: r.success ? Date.now() : undefined,
+      });
     }
     const anySuccess = results.some((r) => r.success);
     n.status = anySuccess ? 'delivered' : 'failed';
-    if (!anySuccess) n.failureReason = results.map((r) => r.error).filter(Boolean).join('; ') || 'Unknown error';
+    if (!anySuccess)
+      n.failureReason =
+        results
+          .map((r) => r.error)
+          .filter(Boolean)
+          .join('; ') || 'Unknown error';
     if (anySuccess) n.deliveredAt = Date.now();
     this.emit(n);
     return results;
@@ -101,5 +117,79 @@ export class ChannelRouter {
 
   static newId(): string {
     return `n_${randomUUID()}`;
+  }
+}
+
+// ============================================================================
+// Tauri Desktop Toast Sink
+// ============================================================================
+
+/**
+ * Notification sink that delivers desktop toast notifications via the Tauri
+ * notification plugin. Falls back gracefully when Tauri is unavailable.
+ */
+export class TauriNotificationSink implements NotificationSink {
+  readonly channel: NotificationChannel = 'desktop';
+
+  // Use indirect import to avoid compile-time module resolution
+  // eslint-disable-next-line @typescript-eslint/no-implied-eval
+  private dynamicImport = new Function('specifier', 'return import(specifier)') as (
+    specifier: string,
+  ) => Promise<Record<string, unknown>>;
+
+  private tauriAvailable: boolean | null = null;
+
+  private async isAvailable(): Promise<boolean> {
+    if (this.tauriAvailable !== null) return this.tauriAvailable;
+    try {
+      const mod = await this.dynamicImport('@tauri-apps/plugin-notification');
+      this.tauriAvailable = typeof mod['sendNotification'] === 'function';
+    } catch {
+      this.tauriAvailable = false;
+    }
+    return this.tauriAvailable;
+  }
+
+  async send(n: Notification): Promise<{ success: boolean; error?: string }> {
+    const available = await this.isAvailable();
+    if (!available) {
+      return { success: false, error: 'Tauri notification plugin not available' };
+    }
+
+    try {
+      const mod = await this.dynamicImport('@tauri-apps/plugin-notification');
+
+      // Check permission
+      const isGranted = mod['isPermissionGranted'] as (() => Promise<boolean>) | undefined;
+      if (isGranted) {
+        const granted = await isGranted();
+        if (!granted) {
+          const request = mod['requestPermission'] as (() => Promise<string>) | undefined;
+          if (request) {
+            const perm = await request();
+            if (perm !== 'granted') {
+              return { success: false, error: `Notification permission: ${perm}` };
+            }
+          }
+        }
+      }
+
+      const sendNotification = mod['sendNotification'] as (
+        opts: Record<string, unknown>,
+      ) => void;
+
+      sendNotification({
+        title: n.title,
+        body: n.body,
+        icon: undefined,
+      });
+
+      return { success: true };
+    } catch (err) {
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
   }
 }

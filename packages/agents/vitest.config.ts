@@ -6,5 +6,23 @@ export default defineConfig({
     environment: 'node',
     include: ['tests/**/*.test.ts'],
     testTimeout: 15000,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'text-summary', 'html', 'lcov', 'json-summary'],
+      reportsDirectory: './coverage',
+      include: ['src/**/*.ts'],
+      exclude: [
+        'src/**/*.test.ts',
+        'src/**/*.d.ts',
+        'node_modules/**',
+        'dist/**',
+      ],
+      thresholds: {
+        statements: 0,
+        branches: 30,
+        functions: 30,
+        lines: 0,
+      },
+    },
   },
 });

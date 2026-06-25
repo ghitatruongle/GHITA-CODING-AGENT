@@ -36,7 +36,7 @@ export class WebFetchTool {
 
     // Truncate to prevent token overflow
     if (content.length > 8000) {
-      content = content.substring(0, 8000) + '\n\n[Content truncated...]';
+      content = `${content.substring(0, 8000)  }\n\n[Content truncated...]`;
     }
 
     return {

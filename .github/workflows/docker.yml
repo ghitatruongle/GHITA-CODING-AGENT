@@ -58,3 +58,18 @@ jobs:
           platforms: linux/amd64,linux/arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Smoke test (health check)
+        if: github.event_name == 'pull_request'
+        run: |
+          docker run -d --name ghita-test \
+            -e GHITA_SESSION_TOKEN=test-token-1234567890123456 \
+            -p 8080:8080 \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${GITHUB_SHA::7} || \
+          docker run -d --name ghita-test \
+            -e GHITA_SESSION_TOKEN=test-token-1234567890123456 \
+            -p 8080:8080 \
+            ${{ steps.meta.outputs.tags }}
+          sleep 10
+          curl -sf http://localhost:8080/health || (docker logs ghita-test && exit 1)
+          docker stop ghita-test

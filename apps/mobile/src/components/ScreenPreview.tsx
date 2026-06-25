@@ -13,7 +13,7 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import type { GestureResponderEvent, LayoutChangeEvent } from 'react-native';
-import { ThemeColors } from '../theme/colors';
+import type { ThemeColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { FontSize, Spacing, Radius } from '../theme/styles';
 import { useTranslation } from '../i18n/context';
@@ -36,6 +36,7 @@ export const ScreenPreview = React.memo(function ScreenPreview({
   const { t } = useTranslation();
   const [imageError, setImageError] = useState(false);
   const [dimensions, setDimensions] = useState({ width: 320, height: 240 });
+  const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
 
   const handleLayout = (event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
@@ -44,6 +45,19 @@ export const ScreenPreview = React.memo(function ScreenPreview({
 
   useEffect(() => {
     setImageError(false);
+    if (imageBase64) {
+      Image.getSize(
+        `data:image/jpeg;base64,${imageBase64}`,
+        (w, h) => {
+          if (w > 0 && h > 0) {
+            setImageSize({ width: w, height: h });
+          }
+        },
+        () => {
+          // Ignore error here, handled by onError
+        },
+      );
+    }
   }, [imageBase64]);
 
   // Loading state
@@ -57,12 +71,43 @@ export const ScreenPreview = React.memo(function ScreenPreview({
   }
 
   const handleTouch = (evt: GestureResponderEvent) => {
-    if (!onScreenTouch || dimensions.width === 0 || dimensions.height === 0) return;
+    if (
+      !onScreenTouch ||
+      dimensions.width === 0 ||
+      dimensions.height === 0 ||
+      imageSize.width === 0 ||
+      imageSize.height === 0
+    )
+      return;
     const { locationX, locationY } = evt.nativeEvent;
 
-    // Tính toán tọa độ tương đối từ 0.0 đến 1.0 dựa vào kích thước thực tế của container
-    const rx = locationX / dimensions.width;
-    const ry = locationY / dimensions.height;
+    const viewAspect = dimensions.width / dimensions.height;
+    const imgAspect = imageSize.width / imageSize.height;
+
+    let actualWidth = dimensions.width;
+    let actualHeight = dimensions.height;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    if (imgAspect > viewAspect) {
+      actualHeight = dimensions.width / imgAspect;
+      offsetY = (dimensions.height - actualHeight) / 2;
+    } else {
+      actualWidth = dimensions.height * imgAspect;
+      offsetX = (dimensions.width - actualWidth) / 2;
+    }
+
+    if (
+      locationX < offsetX ||
+      locationX > offsetX + actualWidth ||
+      locationY < offsetY ||
+      locationY > offsetY + actualHeight
+    ) {
+      return;
+    }
+
+    const rx = (locationX - offsetX) / actualWidth;
+    const ry = (locationY - offsetY) / actualHeight;
     onScreenTouch(rx, ry);
   };
 
@@ -106,38 +151,48 @@ export const ScreenPreview = React.memo(function ScreenPreview({
   );
 });
 
-const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  container: {
-    borderRadius: Radius.xl,
-    overflow: 'hidden',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    minHeight: 180,
-  },
-  placeholder: {
-    borderStyle: 'dashed',
-    borderColor: colors.borderPrimary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: Spacing.xxxl,
-    gap: Spacing.sm,
-  },
-  placeholderIcon: {
-    fontSize: 36,
-    marginBottom: Spacing.sm,
-  },
-  placeholderText: {
-    color: colors.textDark,
-    fontSize: FontSize.md,
-  },
-  placeholderSubtext: {
-    color: colors.textDark,
-    fontSize: FontSize.xs,
-    marginTop: Spacing.xs,
-  },
-  image: {
-    width: '100%',
-    height: 220,
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      borderRadius: Radius.xl,
+      overflow: 'hidden',
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      minHeight: 180,
+    },
+    placeholder: {
+      borderStyle: 'dashed',
+      borderColor: colors.borderPrimary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingVertical: Spacing.xxxl,
+      gap: Spacing.sm,
+    },
+    placeholderIcon: {
+      fontSize: 36,
+      marginBottom: Spacing.sm,
+    },
+    placeholderText: {
+      color: colors.textDark,
+      fontSize: FontSize.md,
+    },
+    placeholderSubtext: {
+      color: colors.textDark,
+      fontSize: FontSize.xs,
+      marginTop: Spacing.xs,
+    },
+    // ACCESSIBILITY/CORRECTNESS (audit fix 1.5): the previous style
+    // hard-coded `height: 220`, but the touch-coordinate math used
+    // the live container height from `onLayout`. When the container was
+    // taller than 220px the image occupied only the top 220px and any
+    // touch below 220 was either mapped to coordinates outside the
+    // image (silently dropped) or scaled against the wrong baseline.
+    // The image now stretches to fill the container vertically so
+    // its real display height always equals `dimensions.height`.
+    image: {
+      width: '100%',
+      height: '100%',
+      aspectRatio: 16 / 9,
+    },
+  });

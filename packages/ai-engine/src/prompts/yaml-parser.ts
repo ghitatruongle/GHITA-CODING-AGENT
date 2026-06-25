@@ -18,7 +18,7 @@ function parseNodeValue(valStr?: string): unknown {
   if (v === 'false') return false;
   if (v === 'null' || v === '~') return null;
   if (!isNaN(Number(v))) return Number(v);
-  
+
   // Remove enclosing quotes if any
   if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
     return v.substring(1, v.length - 1);
@@ -40,7 +40,7 @@ function buildTree(lines: string[]): YamlTreeNode[] {
       continue;
     }
     const indent = rawLine.search(/\S/);
-    
+
     // Determine if list item
     let isListItem = false;
     let text = trimmed;
@@ -52,7 +52,7 @@ function buildTree(lines: string[]): YamlTreeNode[] {
     // Determine key and value
     let key: string | undefined;
     let value: string | undefined = text;
-    
+
     // Match "key: value" or "key:"
     const colonSpaceMatch = text.match(/^("([^"]+)"|'([^']+)'|([^:]+)):\s*(.*)$/);
     if (colonSpaceMatch) {
@@ -65,7 +65,7 @@ function buildTree(lines: string[]): YamlTreeNode[] {
       isListItem,
       key,
       value,
-      children: []
+      children: [],
     };
 
     // Pop stack until parent indent is smaller than current indent

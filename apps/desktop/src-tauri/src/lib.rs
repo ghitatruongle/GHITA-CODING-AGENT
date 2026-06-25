@@ -12,11 +12,53 @@ use proxy::{ProxyState, start_proxy_server, stop_proxy_server, get_proxy_port};
 mod computer_use;
 use computer_use::ComputerUseState;
 
+mod terminal;
+use terminal::TerminalManager;
+
 // --- Server sidecar state ---
 struct ServerState {
     child: Option<std::process::Child>,
     port: u16,
     http_client: reqwest::Client,
+    /// Guard flag to prevent concurrent start_server calls (race-condition safe)
+    starting: bool,
+}
+
+// --- Security state for IPC ---
+struct SecurityState {
+    session_token: String,
+}
+
+#[tauri::command]
+fn get_session_token(state: tauri::State<'_, SecurityState>) -> String {
+    state.session_token.clone()
+}
+
+/// Pick the first free TCP port in the range [preferred, preferred + 32).
+///
+/// RESILIENCE (audit fix 3.9): previously `start_server` used the
+/// hard-coded `port: 8080` from `ServerState`. If another process on
+/// the host (e.g. a dev server, the proxy, or another Tauri app) had
+/// bound 8080, the sidecar crashed at startup with "Address already in
+/// use" and the UI was left with no server. We now scan up to 32
+/// ports starting at the configured base and pick the first one
+/// `bind()` succeeds on. If none are free we return an error rather
+/// than crashing.
+fn find_free_port(preferred: u16) -> std::io::Result<u16> {
+    for offset in 0u16..32 {
+        let candidate = preferred.saturating_add(offset);
+        if std::net::TcpListener::bind(("127.0.0.1", candidate)).is_ok() {
+            return Ok(candidate);
+        }
+    }
+    Err(std::io::Error::new(
+        std::io::ErrorKind::AddrInUse,
+        format!(
+            "no free port in range {}-{}",
+            preferred,
+            preferred.saturating_add(31)
+        ),
+    ))
 }
 
 #[tauri::command]
@@ -43,91 +85,144 @@ async fn check_update(app: tauri::AppHandle) -> Result<String, String> {
 
 /// Start the communication server sidecar
 #[tauri::command]
-fn start_server(
+async fn start_server(
     app_handle: tauri::AppHandle,
     state: tauri::State<'_, Mutex<ServerState>>,
+    security_state: tauri::State<'_, SecurityState>,
 ) -> Result<String, String> {
-    let mut s = state.lock().map_err(|e| e.to_string())?;
-
-    if s.child.is_some() {
-        return Ok("Server already running".to_string());
-    }
-
-    // Resolve sidecar script path relative to the executable
-    let exe_dir = std::env::current_exe()
-        .map_err(|e| e.to_string())?
-        .parent()
-        .ok_or("Cannot resolve exe directory")?
-        .to_path_buf();
-
-    // Try multiple possible locations for the server script
-    let mut candidates = Vec::new();
-
-    #[cfg(debug_assertions)]
+    // Atomic guard: check + lock under a single lock acquisition to prevent race conditions
+    // (StrictMode or multiple UI triggers could call start_server concurrently)
     {
-        // Prioritize workspace source directory during development to run the latest bundle
-        candidates.push(
-            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .join("sidecar")
-                .join("server.bundle.mjs"),
-        );
-        candidates.push(
-            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .join("sidecar")
-                .join("server.mjs"),
-        );
+        let mut s = state.lock().map_err(|e| e.to_string())?;
+        if s.child.is_some() {
+            return Ok("Server already running".to_string());
+        }
+        if s.starting {
+            return Ok("Server is already starting".to_string());
+        }
+        s.starting = true;
     }
 
-    candidates.push(exe_dir.join("sidecar").join("server.bundle.mjs"));
-    candidates.push(exe_dir.join("sidecar").join("server.mjs"));
-    candidates.push(exe_dir.join("../sidecar/server.bundle.mjs"));
-    candidates.push(exe_dir.join("../sidecar/server.mjs"));
-    candidates.push(exe_dir.join("../../src-tauri/sidecar/server.bundle.mjs"));
-    candidates.push(exe_dir.join("../../src-tauri/sidecar/server.mjs"));
-
-
-    let server_script = candidates
-        .iter()
-        .find(|p| p.exists())
-        .ok_or_else(|| {
-            format!(
-                "sidecar server script not found. Searched: {}",
-                candidates
-                     .iter()
-                     .map(|p| p.display().to_string())
-                     .collect::<Vec<_>>()
-                     .join(", ")
-            )
-        })?;
-
+    let preferred_port = state.lock().map_err(|e| e.to_string())?.port;
+    // RESILIENCE (audit fix 3.9): scan for a free port instead of
+    // assuming the configured one is available. The selected port is
+    // written back to ServerState so downstream commands (proxy,
+    // status) see the actual bound port.
+    let port = find_free_port(preferred_port).map_err(|e| e.to_string())?;
+    {
+        let mut s = state.lock().map_err(|e| e.to_string())?;
+        s.port = port;
+    }
     let data_dir = app_handle
         .path()
         .app_data_dir()
         .map_err(|e| e.to_string())?;
-    fs::create_dir_all(&data_dir).map_err(|e| e.to_string())?;
 
-    let bundled_node = server_script
-        .parent()
-        .map(|dir| dir.join("node.exe"))
-        .filter(|path| path.exists());
-    let node_command = bundled_node
-        .as_ref()
-        .map(|path| path.as_os_str())
-        .unwrap_or_else(|| std::ffi::OsStr::new("node"));
+    let session_token = security_state.session_token.clone();
+    let resource_dir = app_handle
+        .path()
+        .resource_dir()
+        .map_err(|e| e.to_string())?;
 
-    let lan_config_path = data_dir.join("lan-enabled.txt");
-    let lan_enabled = fs::read_to_string(&lan_config_path).unwrap_or_default().trim() == "true";
+    // Heavy I/O (filesystem reads, process spawn) on a blocking thread
+    let spawn_result = tokio::task::spawn_blocking(move || {
+        // Try multiple possible locations for the server script.
+        //
+        // SECURITY/PORTABILITY (audit fix 3.2): the previous version only
+        // searched relative to the executable directory. On installed
+        // builds (NSIS / MSI / .deb / .AppImage) the layout is different
+        // and the sidecar was unlocatable. We now also probe the Tauri
+        // resource directory which is the canonical install location.
+        let mut candidates = Vec::new();
 
-    let mut child = std::process::Command::new(node_command)
-        .arg(&server_script)
-        .env("GHITA_PORT", s.port.to_string())
-        .env("GHITA_DATA_DIR", &data_dir)
-        .env("GHITA_LAN_ENABLED", if lan_enabled { "1" } else { "0" })
-        .env("GHITA_LIBERATE_PORTS", "1")
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::inherit())
-        .spawn()
-        .map_err(|e| format!("Failed to start sidecar server: {}", e))?;
+        #[cfg(debug_assertions)]
+        {
+            // Prioritize workspace source directory during development to run the latest bundle
+            candidates.push(
+                std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                    .join("sidecar")
+                    .join("server.bundle.mjs"),
+            );
+            candidates.push(
+                std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                    .join("sidecar")
+                    .join("server.mjs"),
+            );
+        }
+
+        // Tauri resource dir is the canonical install location
+        candidates.push(resource_dir.join("sidecar").join("server.bundle.mjs"));
+        candidates.push(resource_dir.join("sidecar").join("server.mjs"));
+        candidates.push(resource_dir.join("server.bundle.mjs"));
+        candidates.push(resource_dir.join("server.mjs"));
+
+        let exe_dir = std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+            .unwrap_or_default();
+
+        candidates.push(exe_dir.join("sidecar").join("server.bundle.mjs"));
+        candidates.push(exe_dir.join("sidecar").join("server.mjs"));
+        candidates.push(exe_dir.join("../sidecar/server.bundle.mjs"));
+        candidates.push(exe_dir.join("../sidecar/server.mjs"));
+        candidates.push(exe_dir.join("../../src-tauri/sidecar/server.bundle.mjs"));
+        candidates.push(exe_dir.join("../../src-tauri/sidecar/server.mjs"));
+
+        let server_script = candidates
+            .iter()
+            .find(|p| p.exists())
+            .ok_or_else(|| {
+                format!(
+                    "sidecar server script not found. Searched: {}",
+                    candidates
+                        .iter()
+                        .map(|p| p.display().to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            })?;
+
+        fs::create_dir_all(&data_dir).map_err(|e| e.to_string())?;
+
+        let bundled_node = server_script
+            .parent()
+            .map(|dir| dir.join("node.exe"))
+            .filter(|path| path.exists());
+        let node_command = bundled_node
+            .as_ref()
+            .map(|path| path.as_os_str())
+            .unwrap_or_else(|| std::ffi::OsStr::new("node"));
+
+        let lan_config_path = data_dir.join("lan-enabled.txt");
+        let lan_enabled = fs::read_to_string(&lan_config_path).unwrap_or_default().trim() == "true";
+
+        let child = std::process::Command::new(node_command)
+            .arg(&server_script)
+            .env("GHITA_PORT", port.to_string())
+            .env("GHITA_DATA_DIR", &data_dir)
+            .env("GHITA_LAN_ENABLED", if lan_enabled { "1" } else { "0" })
+            .env("GHITA_LIBERATE_PORTS", "1")
+            .env("GHITA_SESSION_TOKEN", session_token)
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::inherit())
+            .spawn()
+            .map_err(|e| format!("Failed to start sidecar server: {}", e))?;
+
+        Ok::<std::process::Child, String>(child)
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?;
+
+    // If spawn failed, reset starting flag before returning error
+    let mut child = match spawn_result {
+        Ok(c) => c,
+        Err(e) => {
+            if let Ok(mut s) = state.lock() {
+                s.starting = false;
+            }
+            return Err(e);
+        }
+    };
 
     // Spawn a thread to read stdout line-by-line
     if let Some(stdout) = child.stdout.take() {
@@ -151,8 +246,13 @@ fn start_server(
         });
     }
 
-    s.child = Some(child);
-    Ok(format!("Server starting on port {}", s.port))
+    // Store child handle and clear starting flag under lock
+    {
+        let mut s = state.lock().map_err(|e| e.to_string())?;
+        s.child = Some(child);
+        s.starting = false;
+    }
+    Ok(format!("Server starting on port {}", port))
 }
 
 /// Stop the communication server sidecar
@@ -348,31 +448,90 @@ async fn get_proxy_status(
 
 #[tauri::command]
 fn get_proxy_url(port: u16, path: String) -> Result<String, String> {
-    // Sanitize path to prevent URL injection
-    let clean = path.trim_start_matches('/');
-    if clean.contains('@') || clean.contains("://") || clean.contains('\\') {
+    // Sanitize path to prevent URL injection.
+    // The previous implementation only checked for `@`, `://`, and `\\`,
+    // which let percent-encoded sequences (e.g. `..%2F..%2Fetc%2Fpasswd`)
+    // bypass the filter. Decode the path first, then verify that:
+    //   1. It does not contain URL-scheme separators (`://`)
+    //   2. It does not contain `..` (parent-directory escape)
+    //   3. It does not contain `@` (userinfo injection) or `\\` (Windows UNC)
+    let trimmed = path.trim_start_matches('/');
+    let decoded = percent_encoding::percent_decode_str(trimmed).decode_utf8_lossy().into_owned();
+    if decoded.contains("://")
+        || decoded.contains('@')
+        || decoded.contains('\\')
+        || decoded.split(['/', '\\']).any(|seg| seg == "..")
+    {
         return Err("Invalid path characters".to_string());
     }
-    Ok(format!("http://127.0.0.1:{}/{}", port, clean))
+    // Preserve the originally-provided form (still safe) so the URL works
+    // with whatever casing/encoding the caller used.
+    Ok(format!("http://127.0.0.1:{}/{}", port, trimmed))
 }
 
-// Sandbox commands — return empty/placeholder until Docker integration is implemented
+// Sandbox commands — not yet implemented (Docker integration planned for v2.0)
+// These return structured JSON so the frontend can display a meaningful status
+// instead of silently failing or showing empty data.
 #[tauri::command]
-fn get_sandbox_containers() -> Vec<String> {
-    Vec::new()
+fn get_sandbox_containers() -> Result<Vec<serde_json::Value>, String> {
+    // TODO(v2.0): Implement Docker sandbox integration
+    Ok(Vec::new())
 }
 
 #[tauri::command]
-fn get_sandbox_summary() -> String {
-    "{\"status\":\"not_ready\",\"message\":\"Docker sandbox not configured\"}".to_string()
+fn get_sandbox_summary() -> Result<serde_json::Value, String> {
+    Ok(serde_json::json!({
+        "status": "not_ready",
+        "message": "Docker sandbox not configured. Coming in v2.0.",
+        "containers": 0,
+        "ready": false,
+    }))
 }
 
 #[tauri::command]
-fn get_sandbox_logs() -> String {
-    "No sandbox logs available.".to_string()
+fn get_sandbox_logs() -> Result<String, String> {
+    Ok("Sandbox not available. Configure Docker to enable sandbox execution.".to_string())
+}
+
+/// Graceful cleanup of all child processes and resources before the app exits.
+/// Called from both `WindowEvent::CloseRequested` and `RunEvent::Exit` to
+/// ensure the sidecar server, proxy, and PTY sessions are all terminated.
+fn cleanup_before_exit(app_handle: &tauri::AppHandle) {
+    // Kill sidecar server
+    if let Some(state) = app_handle.try_state::<Mutex<ServerState>>() {
+        if let Ok(mut s) = state.lock() {
+            if let Some(mut child) = s.child.take() {
+                let _ = child.kill();
+                let _ = child.wait();
+            }
+        }
+    }
+    // Stop proxy — block until write lock acquired (don't silently fail during shutdown)
+    if let Some(proxy_state) = app_handle.try_state::<Arc<RwLock<ProxyState>>>() {
+        let proxy = proxy_state.clone();
+        tauri::async_runtime::block_on(async move {
+            let mut s = proxy.write().await;
+            s.is_running = false;
+            if let Some(tx) = s.shutdown_tx.take() {
+                let _ = tx.send(true);
+            }
+        });
+    }
+    // Kill all PTY terminal sessions
+    if let Some(term_state) = app_handle.try_state::<TerminalManager>() {
+        term_state.kill_all();
+    }
 }
 
 pub fn run() {
+    let session_token = {
+        use rand::Rng;
+        let mut rng = rand::thread_rng();
+        let r1: u64 = rng.gen();
+        let r2: u64 = rng.gen();
+        format!("{:016x}{:016x}", r1, r2)
+    };
+
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
@@ -385,11 +544,15 @@ pub fn run() {
                 .timeout(std::time::Duration::from_millis(1500))
                 .build()
                 .expect("Failed to create HTTP client"),
+            starting: false,
         }))
+        .manage(SecurityState { session_token })
         .manage(Arc::new(RwLock::new(ProxyState::default())))
         .manage(ComputerUseState::new())
+        .manage(TerminalManager::new())
         .invoke_handler(tauri::generate_handler![
             greet,
+            get_session_token,
             check_update,
             start_server,
             stop_server,
@@ -416,6 +579,12 @@ pub fn run() {
             computer_use::computer_type_text,
             computer_use::computer_press_key,
             computer_use::computer_health_check,
+            // Phase 2: Native PTY terminal (Rust)
+            terminal::terminal_create,
+            terminal::terminal_write,
+            terminal::terminal_resize,
+            terminal::terminal_kill,
+            terminal::terminal_list,
         ])
         .setup(|app| {
             // Get splash and main windows — gracefully handle if not found
@@ -491,21 +660,46 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
 
+    // Guard against running cleanup twice (CloseRequested triggers Exit)
+    let cleaned_up = std::sync::atomic::AtomicBool::new(false);
+
     app.run(move |app_handle, event| {
-        if let tauri::RunEvent::Exit = event {
-            if let Some(state) = app_handle.try_state::<Mutex<ServerState>>() {
-                if let Ok(mut s) = state.lock() {
-                    if let Some(mut child) = s.child.take() {
-                        let _ = child.kill();
-                        let _ = child.wait();
+        match event {
+            tauri::RunEvent::WindowEvent {
+                label,
+                event: tauri::WindowEvent::CloseRequested { api, .. },
+                ..
+            } => {
+                // Only trigger full shutdown when the *main* window is closed
+                if label == "main" {
+                    // Prevent the default close so we can clean up first
+                    api.prevent_close();
+
+                    // Close DevTools to prevent Chrome_WidgetWin_0 unregister error
+                    #[cfg(debug_assertions)]
+                    {
+                        if let Some(w) = app_handle.get_webview_window("main") {
+                            w.close_devtools();
+                        }
                     }
+
+                    if !cleaned_up.swap(true, std::sync::atomic::Ordering::SeqCst) {
+                        cleanup_before_exit(app_handle);
+                    }
+
+                    // Destroy all windows so WebView2 can clean up, then exit
+                    if let Some(w) = app_handle.get_webview_window("main") {
+                        let _ = w.destroy();
+                    }
+                    app_handle.exit(0);
                 }
             }
-            if let Some(proxy_state) = app_handle.try_state::<Arc<RwLock<ProxyState>>>() {
-                if let Ok(mut s) = proxy_state.try_write() {
-                    s.is_running = false;
+            tauri::RunEvent::Exit => {
+                if !cleaned_up.swap(true, std::sync::atomic::Ordering::SeqCst) {
+                    cleanup_before_exit(app_handle);
                 }
             }
+            _ => {}
         }
     });
 }

@@ -52,25 +52,24 @@ describe('8: Channel Plugins & FIFO Lanes (Phase 8)', () => {
       const queue = new FifoQueue();
       const executionOrder: number[] = [];
 
-      const task1 = () => new Promise<void>((resolve) => {
-        setTimeout(() => {
-          executionOrder.push(1);
-          resolve();
-        }, 50);
-      });
+      const task1 = () =>
+        new Promise<void>((resolve) => {
+          setTimeout(() => {
+            executionOrder.push(1);
+            resolve();
+          }, 50);
+        });
 
-      const task2 = () => new Promise<void>((resolve) => {
-        setTimeout(() => {
-          executionOrder.push(2);
-          resolve();
-        }, 10);
-      });
+      const task2 = () =>
+        new Promise<void>((resolve) => {
+          setTimeout(() => {
+            executionOrder.push(2);
+            resolve();
+          }, 10);
+        });
 
       // Enqueue both. Task 2 finishes faster in setTimeout, but must be processed AFTER task 1.
-      await Promise.all([
-        queue.enqueue(task1),
-        queue.enqueue(task2),
-      ]);
+      await Promise.all([queue.enqueue(task1), queue.enqueue(task2)]);
 
       expect(executionOrder).toEqual([1, 2]);
     });
@@ -94,7 +93,7 @@ describe('8: Channel Plugins & FIFO Lanes (Phase 8)', () => {
   describe('3. Tauri HTTP Server Mount Channels Webhook Router', () => {
     it('should mount channel webhook and route request body correctly', async () => {
       const server = new CommunicationServer({ port: 8299 });
-      
+
       const webhookPayload = { event: 'message', text: 'hello' };
       const receivedReq: any[] = [];
 
@@ -123,11 +122,14 @@ describe('8: Channel Plugins & FIFO Lanes (Phase 8)', () => {
 
       // Send a mock request to the webhook endpoint
       try {
-        const response = await fetch('http://127.0.0.1:8299/channels/test-channel/adapters/test/webhook', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(webhookPayload),
-        });
+        const response = await fetch(
+          'http://127.0.0.1:8299/channels/test-channel/adapters/test/webhook',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(webhookPayload),
+          },
+        );
 
         expect(response.status).toBe(200);
         const resBody = await response.json();
@@ -143,11 +145,14 @@ describe('8: Channel Plugins & FIFO Lanes (Phase 8)', () => {
       await server.start();
 
       try {
-        const response = await fetch('http://127.0.0.1:8298/channels/nonexistent/adapters/nonexistent/webhook', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({}),
-        });
+        const response = await fetch(
+          'http://127.0.0.1:8298/channels/nonexistent/adapters/nonexistent/webhook',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({}),
+          },
+        );
 
         expect(response.status).toBe(404);
       } finally {

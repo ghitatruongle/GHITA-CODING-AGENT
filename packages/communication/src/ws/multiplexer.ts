@@ -57,6 +57,9 @@ export class WsMultiplexer {
   private _bytesSent = 0;
   private _bytesReceived = 0;
 
+  // Pending message buffer for offline sends (max 100)
+  private _pendingMessages: ChannelMessage[] = [];
+
   constructor(config?: Partial<WsMultiplexerConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.reconnectStrategy = new ReconnectStrategy(this.config.reconnect);
@@ -91,10 +94,7 @@ export class WsMultiplexer {
    * Subscribe to a channel by name.
    * Creates the channel if it doesn't exist.
    */
-  channel<T = unknown>(
-    name: string,
-    options?: Partial<ChannelSubscriptionOptions>,
-  ): WsChannel<T> {
+  channel<T = unknown>(name: string, options?: Partial<ChannelSubscriptionOptions>): WsChannel<T> {
     let ch = this.channels.get(name) as WsChannel<T> | undefined;
     if (!ch) {
       ch = new WsChannel<T>(name, options);
@@ -163,9 +163,10 @@ export class WsMultiplexer {
       activeChannels: this.channels.size,
       state: this._state,
       reconnectAttempts: this.reconnectStrategy.attempts,
-      avgRtt: this.rttSamples.length > 0
-        ? this.rttSamples.reduce((a, b) => a + b, 0) / this.rttSamples.length
-        : 0,
+      avgRtt:
+        this.rttSamples.length > 0
+          ? this.rttSamples.reduce((a, b) => a + b, 0) / this.rttSamples.length
+          : 0,
       uptime: this._connectedAt > 0 ? Date.now() - this._connectedAt : 0,
     };
   }
@@ -186,60 +187,63 @@ export class WsMultiplexer {
     timeout: ReturnType<typeof setTimeout>,
   ): void {
     // Dynamic import of ws to avoid issues when not installed
-    import('ws' as string).then((wsModule) => {
-      const WebSocketClass = wsModule.default || wsModule.WebSocket;
-      const ws = new WebSocketClass(this.config.url, {
-        headers: this.config.headers,
-      }) as WsLike;
+    import('ws' as string)
+      .then((wsModule) => {
+        const WebSocketClass = wsModule.default || wsModule.WebSocket;
+        const ws = new WebSocketClass(this.config.url, {
+          headers: this.config.headers,
+        }) as WsLike;
 
-      ws.on('open', () => {
-        clearTimeout(timeout);
-        this.ws = ws;
-        this._state = 'connected';
-        this._connectedAt = Date.now();
-        this.reconnectStrategy.onConnected(() => this.reconnectStrategy.reset());
-        this.emit({ type: 'connected', url: this.config.url });
-        this.startHeartbeat();
-        this.flushAllChannels();
-        resolve();
-      });
+        ws.on('open', () => {
+          clearTimeout(timeout);
+          this.ws = ws;
+          this._state = 'connected';
+          this._connectedAt = Date.now();
+          this.reconnectStrategy.onConnected(() => this.reconnectStrategy.reset());
+          this.emit({ type: 'connected', url: this.config.url });
+          this.startHeartbeat();
+          this.flushAllChannels();
+          this.flushPendingMessages();
+          resolve();
+        });
 
-      ws.on('message', (data: unknown) => {
-        this.handleMessage(data);
-      });
+        ws.on('message', (data: unknown) => {
+          this.handleMessage(data);
+        });
 
-      ws.on('close', (code: unknown, reason: unknown) => {
-        clearTimeout(timeout);
-        const closeCode = typeof code === 'number' ? code : 1006;
-        const closeReason = typeof reason === 'string' ? reason : 'Unknown';
+        ws.on('close', (code: unknown, reason: unknown) => {
+          clearTimeout(timeout);
+          const closeCode = typeof code === 'number' ? code : 1006;
+          const closeReason = typeof reason === 'string' ? reason : 'Unknown';
 
-        this._state = 'disconnected';
-        this.stopHeartbeat();
-        this.emit({ type: 'disconnected', code: closeCode, reason: closeReason });
+          this._state = 'disconnected';
+          this.stopHeartbeat();
+          this.emit({ type: 'disconnected', code: closeCode, reason: closeReason });
 
-        if (this.reconnectStrategy.enabled && !this.reconnectStrategy.aborted) {
-          this.scheduleReconnect();
-        }
-      });
+          if (this.reconnectStrategy.enabled && !this.reconnectStrategy.aborted) {
+            this.scheduleReconnect();
+          }
+        });
 
-      ws.on('error', (err: unknown) => {
+        ws.on('error', (err: unknown) => {
+          clearTimeout(timeout);
+          const error = err instanceof Error ? err : new Error(String(err));
+          this.emit({ type: 'error', error });
+          if (this._state === 'connecting') {
+            reject(error);
+          }
+        });
+
+        ws.on('pong', () => {
+          this.handlePong();
+        });
+      })
+      .catch((err: unknown) => {
         clearTimeout(timeout);
         const error = err instanceof Error ? err : new Error(String(err));
-        this.emit({ type: 'error', error });
-        if (this._state === 'connecting') {
-          reject(error);
-        }
+        this._state = 'disconnected';
+        reject(error);
       });
-
-      ws.on('pong', () => {
-        this.handlePong();
-      });
-    }).catch((err: unknown) => {
-      clearTimeout(timeout);
-      const error = err instanceof Error ? err : new Error(String(err));
-      this._state = 'disconnected';
-      reject(error);
-    });
   }
 
   private handleMessage(data: unknown): void {
@@ -315,16 +319,35 @@ export class WsMultiplexer {
     }
   }
 
-  private sendRaw(msg: ChannelMessage): void {
-    if (!this.ws || this._state !== 'connected') return;
+  private sendRaw(msg: ChannelMessage): boolean {
+    if (!this.ws || this._state !== 'connected') {
+      // Buffer message for retry on reconnect instead of silent drop
+      this._pendingMessages ??= [];
+      if (this._pendingMessages.length < 100) {
+        this._pendingMessages.push(msg);
+      }
+      return false;
+    }
 
     try {
       const text = JSON.stringify(msg);
       this.ws.send(text);
       this._messagesSent++;
       this._bytesSent += text.length * 2;
+      return true;
     } catch {
-      // Send error - message will be lost
+      return false;
+    }
+  }
+
+  /**
+   * Flush buffered pending messages after reconnection.
+   */
+  private flushPendingMessages(): void {
+    if (this._pendingMessages.length === 0) return;
+    const pending = this._pendingMessages.splice(0);
+    for (const msg of pending) {
+      this.sendRaw(msg);
     }
   }
 
@@ -375,13 +398,15 @@ export class WsMultiplexer {
       if (this.ws && this._state === 'connected') {
         this.lastPingAt = Date.now();
         try {
-          this.ws.send(JSON.stringify({
-            channel: '__heartbeat',
-            type: 'ping',
-            payload: { timestamp: this.lastPingAt },
-            id: `hb:${this.lastPingAt}`,
-            timestamp: this.lastPingAt,
-          }));
+          this.ws.send(
+            JSON.stringify({
+              channel: '__heartbeat',
+              type: 'ping',
+              payload: { timestamp: this.lastPingAt },
+              id: `hb:${this.lastPingAt}`,
+              timestamp: this.lastPingAt,
+            }),
+          );
         } catch {
           // Heartbeat send failed
         }
@@ -400,7 +425,11 @@ export class WsMultiplexer {
       }
     }, this.config.heartbeatInterval);
 
-    if (this.heartbeatTimer && typeof this.heartbeatTimer === 'object' && 'unref' in this.heartbeatTimer) {
+    if (
+      this.heartbeatTimer &&
+      typeof this.heartbeatTimer === 'object' &&
+      'unref' in this.heartbeatTimer
+    ) {
       this.heartbeatTimer.unref();
     }
   }

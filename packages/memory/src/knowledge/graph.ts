@@ -128,11 +128,7 @@ export class KnowledgeGraph {
   /**
    * Calculates the centrality of all nodes using PageRank algorithm with weighted edges.
    */
-  calculatePageRank(
-    damping = 0.85,
-    maxIterations = 100,
-    tolerance = 1e-6,
-  ): Map<string, number> {
+  calculatePageRank(damping = 0.85, maxIterations = 100, tolerance = 1e-6): Map<string, number> {
     const nodeIds = Array.from(this.nodes.keys());
     const N = nodeIds.length;
     const pageRanks = new Map<string, number>();
@@ -151,14 +147,17 @@ export class KnowledgeGraph {
     for (const nodeId of nodeIds) {
       const edges = this.getEdgesForNode(nodeId);
       const uniqueNeighbors = new Map<string, number>();
-      
+
       for (const edge of edges) {
         const neighborId = edge.sourceId === nodeId ? edge.targetId : edge.sourceId;
         const weight = edge.weight !== undefined ? Number(edge.weight) : 1;
         uniqueNeighbors.set(neighborId, (uniqueNeighbors.get(neighborId) || 0) + weight);
       }
 
-      const neighborsList = Array.from(uniqueNeighbors.entries()).map(([id, weight]) => ({ id, weight }));
+      const neighborsList = Array.from(uniqueNeighbors.entries()).map(([id, weight]) => ({
+        id,
+        weight,
+      }));
       neighborsMap.set(nodeId, neighborsList);
 
       const totalWeight = neighborsList.reduce((sum, n) => sum + n.weight, 0);
@@ -173,13 +172,13 @@ export class KnowledgeGraph {
       // Compute rank from neighbors
       for (const nodeId of nodeIds) {
         let incomingRankSum = 0;
-        
+
         // Treat as bidirectional graph
         for (const otherId of nodeIds) {
           if (otherId === nodeId) continue;
-          
+
           const neighbors = neighborsMap.get(otherId) || [];
-          const link = neighbors.find(n => n.id === nodeId);
+          const link = neighbors.find((n) => n.id === nodeId);
           if (link) {
             const outWeight = outTotalWeights.get(otherId) || 1;
             incomingRankSum += ((pageRanks.get(otherId) || 0) * link.weight) / outWeight;

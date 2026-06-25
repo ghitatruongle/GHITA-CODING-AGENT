@@ -1,0 +1,19 @@
+{
+  "projectName": "GHITA-CODING-AGENT",
+  "projectOwner": "ghitatruongle",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "files": ["README.md"],
+  "imageSize": 100,
+  "commit": true,
+  "commitConvention": "conventional",
+  "contributors": [
+    {
+      "login": "ghitatruongle",
+      "name": "Ghita Truong Le",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1?v=4",
+      "profile": "https://github.com/ghitatruongle",
+      "contributions": ["code", "doc", "design", "maintenance"]
+    }
+  ]
+}

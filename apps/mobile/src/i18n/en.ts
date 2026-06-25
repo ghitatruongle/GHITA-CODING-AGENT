@@ -69,6 +69,8 @@ export const en: TranslationKeys = {
     pairErrBtFindFail: 'No computer found via Bluetooth.',
     pairErrApiKeyMissing:
       'Cloud Discovery API Key is not configured. Please use a manual IP address.',
+    pairErrCloudDisabled:
+      'Cloud Discovery is temporarily disabled. Please enter a manual IP address in the Wi-Fi tab or connect via Bluetooth directly to the computer.',
     noCodeFromServer: 'Could not retrieve pairing code from the server.',
   },
   remote: {
@@ -139,6 +141,20 @@ export const en: TranslationKeys = {
     error: 'Connection Error',
     lanConnection: '🟢 LAN (High Speed)',
     cloudConnection: '🌐 Cloud (Remote)',
+  },
+  dashboard: {
+    title: 'Analytics Dashboard',
+    totalTokens: 'Total Tokens (Week)',
+    estCost: 'Est. Cost (Week)',
+    tokensUsage: 'Tokens Usage',
+    insights: 'Insights',
+    loading: 'Loading data...',
+    clearBtn: 'Clear history',
+    confirmTitle: 'Confirm clear',
+    confirmDesc: 'Are you sure you want to clear telemetry history?',
+    mostUsage: 'You have used the most tokens on {{day}} ({{tokens}}k tokens).',
+    noUsage: 'No usage recorded for this week.',
+    averageDaily: 'Your average daily cost is ${{cost}}.',
   },
   errorFallback: {
     title: 'An unexpected application error occurred',

@@ -30,10 +30,12 @@ export const ru: TranslationKeys = {
     uninstall: 'Удалить',
     add: 'Добавить',
     delete: 'Удалить',
+    copied: 'Скопировано',
+    run: 'Запуск',
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v0.0.3',
+    version: 'v0.0.4',
     deviceReconnected: 'Повторное подключение к устройству: {{name}}',
     devicePaired: 'Устройство успешно сопряжено: {{name}}',
     commandReceived: 'Команда получена от устройства: {{action}}',
@@ -80,7 +82,8 @@ export const ru: TranslationKeys = {
     apiKeysDesc: 'Управление ключами API на вкладке настроек API',
     openApiManager: 'Открыть менеджер ключей API',
     mcpServers: 'Серверы MCP (Model Context Protocol)',
-    mcpServersDesc: 'Настройка серверов Model Context Protocol для расширения возможностей ИИ-инструментов.',
+    mcpServersDesc:
+      'Настройка серверов Model Context Protocol для расширения возможностей ИИ-инструментов.',
     hooks: 'Хуки (скрипты жизненного цикла)',
     hooksDesc: 'Скрипты, выполняемые до/после вызовов инструментов для автоматизации процессов.',
     info: 'Системная информация',
@@ -114,7 +117,8 @@ export const ru: TranslationKeys = {
     shortcutSaveAll: 'Ctrl+Shift+S: Сохранить все',
     unsavedChangesConfirm:
       'В файле "{{name}}" есть несохраненные изменения. Вы уверены, что хотите закрыть его и отменить изменения?',
-    binaryNotSupported: 'Бинарный файл "{{name}}" не поддерживается напрямую в текстовом редакторе.',
+    binaryNotSupported:
+      'Бинарный файл "{{name}}" не поддерживается напрямую в текстовом редакторе.',
     readFailed: 'Не удалось прочитать файл: {{error}}',
   },
   devices: {
@@ -293,7 +297,8 @@ export const ru: TranslationKeys = {
     notConnectedHint:
       'Нет подключения к службе -- введите что-нибудь, чтобы увидеть инструкции по настройке...',
     noProvider: 'Провайдер ИИ не настроен...',
-    noProviderHint: 'API не настроен -- введите что-нибудь, чтобы увидеть инструкции по настройке...',
+    noProviderHint:
+      'API не настроен -- введите что-нибудь, чтобы увидеть инструкции по настройке...',
     systemError: 'Системная ошибка:',
     connecting: 'Подключение...',
     reconnect: 'Переподключить службу',
@@ -311,7 +316,8 @@ export const ru: TranslationKeys = {
     reject: 'Отклонить действие',
     approve: 'Разрешить',
     placeholderConnected: 'Спросите ИИ или введите "/" для быстрых команд...',
-    placeholderNoApi: 'API не настроен -- введите что-нибудь, чтобы увидеть инструкции по настройке...',
+    placeholderNoApi:
+      'API не настроен -- введите что-нибудь, чтобы увидеть инструкции по настройке...',
     placeholderConnecting: 'Подключение к фоновому серверу...',
     placeholderDisconnected:
       'Нет подключения к серверу -- введите что-нибудь, чтобы увидеть инструкции по настройке...',
@@ -346,7 +352,8 @@ export const ru: TranslationKeys = {
     noWorkspace:
       'Нет открытой рабочей директории. Пожалуйста, откройте папку проекта в Проводнике перед запуском Agent, Review, Feature или Ralph.',
     permissionCustom: 'Вручную: Подтверждать каждую команду и изменение файлов',
-    permissionAuto: 'Авто: Свободный режим, подтверждать только опасные команды (install, download...)',
+    permissionAuto:
+      'Авто: Свободный режим, подтверждать только опасные команды (install, download...)',
     liveAgentEvents: 'ЖИВЫЕ СОБЫТИЯ АГЕНТА',
     clear: 'Очистить',
   },
@@ -356,8 +363,7 @@ export const ru: TranslationKeys = {
     running: 'Выполнение команды...',
     placeholder: 'Введите команду...',
     failedToExecute: 'Не удалось выполнить. Проверьте права доступа и правильность команды.',
-    permissionHint:
-      'Убедитесь, что команда существует на хост-компьютере и у вас достаточно прав.',
+    permissionHint: 'Убедитесь, что команда существует на хост-компьютере и у вас достаточно прав.',
     pathNotFound: "Директория или путь к файлу '{{path}}' не существует",
   },
   errorFallback: {
@@ -453,8 +459,7 @@ export const ru: TranslationKeys = {
     socraticQuestions: 'Размышляющие сократические вопросы ({{count}})',
     sources: 'Ссылки на источники:',
     designDecisions: 'Архитектурные проектные решения',
-    allConsistent:
-      'Все документы полностью согласованы. Архитектурных противоречий не обнаружено.',
+    allConsistent: 'Все документы полностью согласованы. Архитектурных противоречий не обнаружено.',
   },
   sandbox: {
     loadingStatus: 'Проверка состояния среды песочницы...',

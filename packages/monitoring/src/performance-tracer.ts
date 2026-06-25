@@ -44,7 +44,11 @@ export class Tracer {
   /**
    * Bắt đầu transaction mới.
    */
-  start(name: string, op = 'custom', tags?: Record<string, string>): PerformanceTransaction | undefined {
+  start(
+    name: string,
+    op = 'custom',
+    tags?: Record<string, string>,
+  ): PerformanceTransaction | undefined {
     if (!this.shouldSample()) return undefined;
     if (this.sentryClient) {
       return this.sentryClient.startTransaction({ name, op, tags });
@@ -151,7 +155,12 @@ export class Tracer {
   /**
    * Lấy stats.
    */
-  stats(): { totalTransactions: number; totalSpans: number; activeTransactions: number; sampleRate: number } {
+  stats(): {
+    totalTransactions: number;
+    totalSpans: number;
+    activeTransactions: number;
+    sampleRate: number;
+  } {
     return {
       totalTransactions: this.totalTransactions,
       totalSpans: this.totalSpans,

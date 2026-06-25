@@ -94,9 +94,7 @@ export class EventStream {
   subscribe(subscriber: EventSubscriber, options?: { replay?: boolean }): () => void {
     if (this.subscribers.size >= this.maxSubscribers) {
       this.totalDropped += 1;
-      throw new Error(
-        `EventStream: subscriber limit reached (max=${this.maxSubscribers})`,
-      );
+      throw new Error(`EventStream: subscriber limit reached (max=${this.maxSubscribers})`);
     }
     this.subscribers.add(subscriber);
 

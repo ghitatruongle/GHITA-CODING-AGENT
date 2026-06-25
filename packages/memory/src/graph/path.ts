@@ -26,7 +26,9 @@ export interface PathResult {
 class MinHeap<T> {
   private readonly data: T[] = [];
   constructor(private readonly cmp: (a: T, b: T) => number) {}
-  size() { return this.data.length; }
+  size() {
+    return this.data.length;
+  }
   push(v: T) {
     this.data.push(v);
     this._bubbleUp(this.data.length - 1);
@@ -60,11 +62,17 @@ class MinHeap<T> {
       let dBest = this.data[best] as T;
       if (l < n) {
         const dL = this.data[l] as T;
-        if (this.cmp(dL, dBest) < 0) { best = l; dBest = dL; }
+        if (this.cmp(dL, dBest) < 0) {
+          best = l;
+          dBest = dL;
+        }
       }
       if (r < n) {
         const dR = this.data[r] as T;
-        if (this.cmp(dR, dBest) < 0) { best = r; dBest = dR; }
+        if (this.cmp(dR, dBest) < 0) {
+          best = r;
+          dBest = dR;
+        }
       }
       if (best === i) break;
       const dI = this.data[i] as T;
@@ -75,7 +83,8 @@ class MinHeap<T> {
 }
 
 export function bfsPath(graph: AssociationList, source: string, target: string): PathResult | null {
-  if (source === target) return { nodes: [source], associations: [], totalCost: 0, weighted: false };
+  if (source === target)
+    return { nodes: [source], associations: [], totalCost: 0, weighted: false };
   const visited = new Map<string, PathNode>();
   visited.set(source, { id: source, depth: 0, cost: 0, parent: null, via: null });
   const queue: string[] = [source];
@@ -99,7 +108,11 @@ export function bfsPath(graph: AssociationList, source: string, target: string):
   return null;
 }
 
-export function dijkstraPath(graph: AssociationList, source: string, target: string): PathResult | null {
+export function dijkstraPath(
+  graph: AssociationList,
+  source: string,
+  target: string,
+): PathResult | null {
   if (source === target) return { nodes: [source], associations: [], totalCost: 0, weighted: true };
   const dist = new Map<string, number>();
   const prev = new Map<string, { from: string; via: Association } | null>();
@@ -128,13 +141,23 @@ export function dijkstraPath(graph: AssociationList, source: string, target: str
   const cost = dist.get(target) ?? 0;
   while (cursor) {
     const p = prev.get(cursor);
-    visited.set(cursor, { id: cursor, depth: 0, cost, parent: p ? p.from : null, via: p ? p.via : null });
+    visited.set(cursor, {
+      id: cursor,
+      depth: 0,
+      cost,
+      parent: p ? p.from : null,
+      via: p ? p.via : null,
+    });
     cursor = p ? p.from : null;
   }
   return reconstruct(visited, target, true);
 }
 
-function reconstruct(visited: Map<string, PathNode>, target: string, weighted: boolean): PathResult {
+function reconstruct(
+  visited: Map<string, PathNode>,
+  target: string,
+  weighted: boolean,
+): PathResult {
   const nodes: string[] = [];
   const associations: Association[] = [];
   let cursor: string | null = target;
@@ -149,17 +172,37 @@ function reconstruct(visited: Map<string, PathNode>, target: string, weighted: b
   return { nodes, associations, totalCost, weighted };
 }
 
-export function findConnectionPath(graph: AssociationList, source: string, target: string): PathResult | null {
+export function findConnectionPath(
+  graph: AssociationList,
+  source: string,
+  target: string,
+): PathResult | null {
   const fn = graph.hasWeights ? dijkstraPath : bfsPath;
   return fn(graph, source, target);
 }
 
-export function findAllPaths(graph: AssociationList, source: string, target: string, maxLength: number): PathResult[] {
+export function findAllPaths(
+  graph: AssociationList,
+  source: string,
+  target: string,
+  maxLength: number,
+): PathResult[] {
   const out: PathResult[] = [];
-  const dfs = (current: string, visited: Set<string>, path: string[], acc: Association[], cost: number) => {
+  const dfs = (
+    current: string,
+    visited: Set<string>,
+    path: string[],
+    acc: Association[],
+    cost: number,
+  ) => {
     if (path.length > maxLength) return;
     if (current === target && path.length > 1) {
-      out.push({ nodes: [...path], associations: [...acc], totalCost: cost, weighted: graph.hasWeights });
+      out.push({
+        nodes: [...path],
+        associations: [...acc],
+        totalCost: cost,
+        weighted: graph.hasWeights,
+      });
       return;
     }
     const outgoing = graph.adjacency.get(current) ?? [];

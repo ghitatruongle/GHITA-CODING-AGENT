@@ -27,7 +27,7 @@
 -keep class com.reactnativecommunity.asyncstorage.** { *; }
 
 # Bluetooth
--keep class com.example.reactnativebluetoothclassic.** { *; }
+-keep class kjd.reactnative.bluetooth.** { *; }
 
 # General
 -keepattributes Signature

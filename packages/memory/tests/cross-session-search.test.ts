@@ -52,9 +52,15 @@ describe('CrossSessionSearch', () => {
 
     it('4. evicts oldest when maxSessions reached', () => {
       const small = new CrossSessionSearch({ maxSessions: 2 });
-      small.indexSession(makeSession('s1', [{ role: 'user', content: 'first' }], { startTime: 1000 }));
-      small.indexSession(makeSession('s2', [{ role: 'user', content: 'second' }], { startTime: 2000 }));
-      small.indexSession(makeSession('s3', [{ role: 'user', content: 'third' }], { startTime: 3000 }));
+      small.indexSession(
+        makeSession('s1', [{ role: 'user', content: 'first' }], { startTime: 1000 }),
+      );
+      small.indexSession(
+        makeSession('s2', [{ role: 'user', content: 'second' }], { startTime: 2000 }),
+      );
+      small.indexSession(
+        makeSession('s3', [{ role: 'user', content: 'third' }], { startTime: 3000 }),
+      );
       expect(small.getSessionCount()).toBe(2);
       // s1 should be evicted (oldest)
       const results = small.searchAcrossSessions('first');
@@ -69,9 +75,7 @@ describe('CrossSessionSearch', () => {
           summary: 'TypeScript configuration setup',
         }),
       );
-      search.indexSession(
-        makeSession('s2', [{ role: 'user', content: 'TypeScript strict mode' }]),
-      );
+      search.indexSession(makeSession('s2', [{ role: 'user', content: 'TypeScript strict mode' }]));
       // Both sessions should be found - s2 via message match, s1 as candidate via summary
       // but s1 won't have message-level matches, so only s2 returns results
       const results = search.searchAcrossSessions('TypeScript');
@@ -95,23 +99,36 @@ describe('CrossSessionSearch', () => {
 
   describe('searchAcrossSessions', () => {
     beforeEach(() => {
+      const now = Date.now();
       search.indexSession(
-        makeSession('s1', [
-          { role: 'user', content: 'How to configure TypeScript?' },
-          { role: 'assistant', content: 'You need to create a tsconfig.json file.' },
-        ]),
+        makeSession(
+          's1',
+          [
+            { role: 'user', content: 'How to configure TypeScript?' },
+            { role: 'assistant', content: 'You need to create a tsconfig.json file.' },
+          ],
+          { endTime: now },
+        ),
       );
       search.indexSession(
-        makeSession('s2', [
-          { role: 'user', content: 'How to setup ESLint?' },
-          { role: 'assistant', content: 'Install eslint and create eslint.config.js' },
-        ]),
+        makeSession(
+          's2',
+          [
+            { role: 'user', content: 'How to setup ESLint?' },
+            { role: 'assistant', content: 'Install eslint and create eslint.config.js' },
+          ],
+          { endTime: now - 60000 },
+        ),
       );
       search.indexSession(
-        makeSession('s3', [
-          { role: 'user', content: 'React hooks tutorial' },
-          { role: 'assistant', content: 'useState and useEffect are common hooks' },
-        ]),
+        makeSession(
+          's3',
+          [
+            { role: 'user', content: 'React hooks tutorial' },
+            { role: 'assistant', content: 'useState and useEffect are common hooks' },
+          ],
+          { endTime: now - 120000 },
+        ),
       );
     });
 
@@ -224,9 +241,9 @@ describe('CrossSessionSearch', () => {
 
     it('18. hybrid search combines keyword + vector', () => {
       search.indexSession(
-        makeSession('s1', [
-          { role: 'user', content: 'TypeScript configuration' },
-        ], { vector: [1, 0, 0] }),
+        makeSession('s1', [{ role: 'user', content: 'TypeScript configuration' }], {
+          vector: [1, 0, 0],
+        }),
       );
       const results = search.searchEnhanced('TypeScript', {
         queryVector: [1, 0, 0],
@@ -302,9 +319,7 @@ describe('CrossSessionSearch', () => {
 
   describe('searchEnhanced', () => {
     it('22. returns detailed score breakdown', () => {
-      search.indexSession(
-        makeSession('s1', [{ role: 'user', content: 'TypeScript tutorial' }]),
-      );
+      search.indexSession(makeSession('s1', [{ role: 'user', content: 'TypeScript tutorial' }]));
       const results = search.searchEnhanced('TypeScript');
       if (results.length > 0) {
         const match = results[0]!.matches[0]!;
@@ -316,9 +331,7 @@ describe('CrossSessionSearch', () => {
     });
 
     it('23. source is keyword when no queryVector', () => {
-      search.indexSession(
-        makeSession('s1', [{ role: 'user', content: 'hello world' }]),
-      );
+      search.indexSession(makeSession('s1', [{ role: 'user', content: 'hello world' }]));
       const results = search.searchEnhanced('hello');
       if (results.length > 0) {
         expect(results[0]!.source).toBe('keyword');
@@ -331,9 +344,7 @@ describe('CrossSessionSearch', () => {
     });
 
     it('25. respects minScore threshold', () => {
-      search.indexSession(
-        makeSession('s1', [{ role: 'user', content: 'TypeScript is great' }]),
-      );
+      search.indexSession(makeSession('s1', [{ role: 'user', content: 'TypeScript is great' }]));
       const results = search.searchEnhanced('quantum physics', { minScore: 0.5 });
       expect(results).toHaveLength(0);
     });
@@ -348,10 +359,14 @@ describe('CrossSessionSearch', () => {
 
     it('27. includes session id and match info', () => {
       search.indexSession(
-        makeSession('s1', [
-          { role: 'user', content: 'How to configure TypeScript?' },
-          { role: 'assistant', content: 'Create tsconfig.json' },
-        ], { summary: 'TypeScript setup guide' }),
+        makeSession(
+          's1',
+          [
+            { role: 'user', content: 'How to configure TypeScript?' },
+            { role: 'assistant', content: 'Create tsconfig.json' },
+          ],
+          { summary: 'TypeScript setup guide' },
+        ),
       );
       const results = search.searchAcrossSessions('TypeScript');
       const summary = search.summarizeResults(results);
@@ -360,11 +375,7 @@ describe('CrossSessionSearch', () => {
     });
 
     it('28. truncates when exceeding maxChars', () => {
-      search.indexSession(
-        makeSession('s1', [
-          { role: 'user', content: 'x'.repeat(5000) },
-        ]),
-      );
+      search.indexSession(makeSession('s1', [{ role: 'user', content: 'x'.repeat(5000) }]));
       const results = search.searchAcrossSessions('x', { minScore: 0.01 });
       const summary = search.summarizeResults(results, 200);
       expect(summary.length).toBeLessThanOrEqual(300); // some overflow

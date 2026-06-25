@@ -80,7 +80,9 @@ export class StreamingPipeline {
 
   /** List registered hooks */
   listHooks(): string[] {
-    return this.hooks.map((h) => `${h.name} (${Array.isArray(h.phase) ? h.phase.join('|') : h.phase})`);
+    return this.hooks.map(
+      (h) => `${h.name} (${Array.isArray(h.phase) ? h.phase.join('|') : h.phase})`,
+    );
   }
 
   /** Run pre-generation hooks */
@@ -134,7 +136,7 @@ export class StreamingPipeline {
         await hook.run(ctx);
       } catch (err) {
         // Hook errors should not crash the pipeline — log and continue
-         
+
         console.error(`[hook ${hook.name}] error:`, err);
       }
       if (ctx.cancelled) return false;

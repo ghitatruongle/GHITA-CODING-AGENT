@@ -96,7 +96,7 @@ export class UniversalChatModel implements AIProvider {
       'github-models',
     ];
     for (const type of allTypes) {
-      if (key === type || key.startsWith(type + '/') || key.includes(type)) return type;
+      if (key === type || key.startsWith(`${type  }/`) || key.includes(type)) return type;
     }
 
     if (key.includes('gpt') || key.includes('o1') || key.includes('o3')) return 'openai';

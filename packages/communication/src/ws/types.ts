@@ -3,7 +3,12 @@
 // ==============================================================================
 
 /** WebSocket connection state */
-export type WsConnectionState = 'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'closed';
+export type WsConnectionState =
+  | 'connecting'
+  | 'connected'
+  | 'reconnecting'
+  | 'disconnected'
+  | 'closed';
 
 /** Frame types for binary/JSON protocol */
 export type WsFrameType = 'text' | 'binary' | 'ping' | 'pong' | 'close';

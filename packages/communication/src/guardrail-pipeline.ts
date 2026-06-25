@@ -141,7 +141,7 @@ export class GuardrailPipeline {
       if (this.config.onHighSeverity === 'block') {
         blockedBy = 'length';
       } else {
-        sanitized = text.slice(0, this.config.maxLength) + '...[truncated]';
+        sanitized = `${text.slice(0, this.config.maxLength)  }...[truncated]`;
       }
     }
 

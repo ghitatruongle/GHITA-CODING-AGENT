@@ -134,7 +134,10 @@ describe('7: Sandboxed Workspace Tools & Agentic Execution', () => {
 
   describe('Shell Command Execution Guard (runCommand)', () => {
     it('should successfully run a safe echo command', async () => {
-      const cmd = process.platform === 'win32' ? 'cmd.exe /c echo "TEST_COMMAND_OK"' : 'echo "TEST_COMMAND_OK"';
+      const cmd =
+        process.platform === 'win32'
+          ? 'cmd.exe /c echo "TEST_COMMAND_OK"'
+          : 'echo "TEST_COMMAND_OK"';
       const res = await runCommand({ command: cmd });
       expect(res).toContain('TEST_COMMAND_OK');
     });
@@ -150,16 +153,16 @@ describe('7: Sandboxed Workspace Tools & Agentic Execution', () => {
         return cmd.includes('allowed');
       };
 
-      const cmdAllowed = process.platform === 'win32' ? 'cmd.exe /c echo allowed cmd' : 'echo "allowed cmd"';
-      const cmdBlocked = process.platform === 'win32' ? 'cmd.exe /c echo blocked cmd' : 'echo "blocked cmd"';
+      const cmdAllowed =
+        process.platform === 'win32' ? 'cmd.exe /c echo allowed cmd' : 'echo "allowed cmd"';
+      const cmdBlocked =
+        process.platform === 'win32' ? 'cmd.exe /c echo blocked cmd' : 'echo "blocked cmd"';
 
       const allowedRes = await runCommand({ command: cmdAllowed });
       expect(allowedRes).toContain('allowed cmd');
       expect(approvedCount).toBe(1);
 
-      await expect(runCommand({ command: cmdBlocked })).rejects.toThrow(
-        /Permission Denied/i,
-      );
+      await expect(runCommand({ command: cmdBlocked })).rejects.toThrow(/Permission Denied/i);
       expect(approvedCount).toBe(2);
     });
   });

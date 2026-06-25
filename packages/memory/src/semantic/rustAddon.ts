@@ -111,13 +111,55 @@ type DatabaseLike = {
   transaction: <T>(fn: (items: T) => void) => (items: T) => void;
   close: () => void;
 };
+
+/** HNSW index interface matching the Rust NAPI HnswIndex class */
+interface HnswIndexLike {
+  add(id: string, vector: number[]): void;
+  addBatch(entries: Array<{ id: string; vector: number[] }>): void;
+  search(query: number[], topK: number, efSearch?: number): Array<{ id: string; score: number }>;
+  remove(id: string): boolean;
+  size(): number;
+  clear(): void;
+}
+
 type RustBindingsLike = {
-  cosine_similarity?: (a: number[], b: number[]) => number;
+  cosineSimilarity?: (a: number[], b: number[]) => number;
+  batchCosineSimilarity?: (query: number[], candidates: number[][]) => number[];
+  batchDecayScore?: (timestamps: number[], halfLifeMs: number, now: number) => number[];
+  HnswIndex?: new (dim: number, m?: number, efConstruction?: number) => HnswIndexLike;
 };
 
 declare const require: ((id: string) => unknown) | undefined;
 const runtimeRequire: ((id: string) => unknown) | null =
   typeof require !== 'undefined' ? require : null;
+
+// ---------------------------------------------------------------------------
+// Shared cosine similarity (standalone, usable by all modules)
+// ---------------------------------------------------------------------------
+
+/**
+ * Pure-JS cosine similarity between two vectors.
+ * Used as the canonical fallback across the memory package.
+ * Handles unequal lengths (uses min), zero-norm (returns 0), empty (returns 0).
+ */
+export function cosineSimilarityJS(a: number[], b: number[]): number {
+  const length = Math.min(a.length, b.length);
+  if (length === 0) return 0;
+
+  let dot = 0,
+    normA = 0,
+    normB = 0;
+  for (let i = 0; i < length; i++) {
+    const va = a[i] ?? 0;
+    const vb = b[i] ?? 0;
+    dot += va * vb;
+    normA += va * va;
+    normB += vb * vb;
+  }
+
+  if (normA === 0 || normB === 0) return 0;
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+}
 
 // ---------------------------------------------------------------------------
 // RustMemoryAddon
@@ -142,6 +184,12 @@ export class RustMemoryAddon {
   /** Rust N-API bindings (null if unavailable) */
   private rustBindings: RustBindingsLike | null = null;
 
+  /** HNSW approximate nearest-neighbor index (null if Rust bindings unavailable) */
+  private hnswIndex: HnswIndexLike | null = null;
+
+  /** Dimension of the first stored vector (used to lazily init HNSW) */
+  private hnswDim: number | null = null;
+
   /** Statistics counters */
   private readonly stats: AddonStats = {
     totalIndexed: 0,
@@ -157,7 +205,7 @@ export class RustMemoryAddon {
   constructor(config?: RustAddonConfig | string) {
     const isString = typeof config === 'string';
     const configObj = isString ? undefined : config;
-    
+
     this.config = {
       dbPath: isString ? config : (configObj?.dbPath ?? ':memory:'),
       maxCacheSizeBytes: configObj?.maxCacheSizeBytes ?? 100 * 1024 * 1024,
@@ -220,6 +268,23 @@ export class RustMemoryAddon {
       this.rustBindings = runtimeRequire('./rust/index.node') as RustBindingsLike;
     } catch {
       this.rustBindings = null;
+    }
+  }
+
+  /** Lazily create the HNSW index once we know the vector dimension */
+  private ensureHnswIndex(dim: number): void {
+    if (this.hnswIndex) return;
+    if (!this.rustBindings?.HnswIndex) return;
+    this.hnswDim = dim;
+    this.hnswIndex = new this.rustBindings.HnswIndex(dim, 16, 200);
+  }
+
+  /** Rebuild HNSW from scratch (e.g. after bulk eviction) */
+  rebuildHnswIndex(): void {
+    if (!this.rustBindings?.HnswIndex || this.hnswDim === null) return;
+    this.hnswIndex = new this.rustBindings.HnswIndex(this.hnswDim, 16, 200);
+    for (const entry of this.vectorIndex.values()) {
+      this.hnswIndex.add(entry.id, entry.vector);
     }
   }
 
@@ -311,6 +376,17 @@ export class RustMemoryAddon {
 
     if (!this.isFallbackDb && this.db) {
       try {
+        // Escape FTS5 special characters and wrap each token in double quotes
+        // Use Unicode-aware regex to preserve non-ASCII letters (e.g. Vietnamese, CJK, Cyrillic)
+        const safeFtsQuery = query
+          .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+          .split(/\s+/)
+          .filter((t) => t.length > 0)
+          .map((t) => `"${t.replace(/"/g, '""')}"`)
+          .join(' ');
+        if (!safeFtsQuery) {
+          return [];
+        }
         const stmt = this.db.prepare(`
           SELECT c.id, c.session_id, c.role, c.content, c.timestamp, c.symbol_attached
           FROM old_chats_fts f
@@ -319,14 +395,16 @@ export class RustMemoryAddon {
           ORDER BY rank
           LIMIT ?
         `);
-        return stmt.all(query, limit) as ChatLogEntry[];
+        return stmt.all(safeFtsQuery, limit) as ChatLogEntry[];
       } catch {
+        // Escape LIKE wildcards in user query
+        const safeLike = query.replace(/[%_\\]/g, (c) => `\\${c}`);
         const stmt = this.db.prepare(`
           SELECT id, session_id, role, content, timestamp, symbol_attached
-          FROM old_chats WHERE content LIKE ?
+          FROM old_chats WHERE content LIKE ? ESCAPE '\\'
           ORDER BY timestamp DESC LIMIT ?
         `);
-        return stmt.all(`%${query}%`, limit) as ChatLogEntry[];
+        return stmt.all(`%${safeLike}%`, limit) as ChatLogEntry[];
       }
     }
 
@@ -359,33 +437,92 @@ export class RustMemoryAddon {
     // Evict oldest if at capacity
     if (this.vectorIndex.size >= this.config.maxVectorEntries && !this.vectorIndex.has(entry.id)) {
       const oldestId = this.getOldestVectorId();
-      if (oldestId) this.vectorIndex.delete(oldestId);
+      if (oldestId) {
+        this.vectorIndex.delete(oldestId);
+        this.hnswIndex?.remove(oldestId);
+      }
     }
 
     this.vectorIndex.set(entry.id, entry);
     this.stats.vectorEntries = this.vectorIndex.size;
+
+    // Add to HNSW index
+    this.ensureHnswIndex(entry.vector.length);
+    this.hnswIndex?.add(entry.id, entry.vector);
   }
 
   /** Store multiple embeddings at once */
   storeEmbeddings(entries: VectorEntry[]): void {
-    for (const entry of entries) this.storeEmbedding(entry);
+    if (entries.length === 0) return;
+
+    // Use batch add for HNSW when available
+    const batchEntries: Array<{ id: string; vector: number[] }> = [];
+    for (const entry of entries) {
+      if (
+        this.vectorIndex.size >= this.config.maxVectorEntries &&
+        !this.vectorIndex.has(entry.id)
+      ) {
+        const oldestId = this.getOldestVectorId();
+        if (oldestId) {
+          this.vectorIndex.delete(oldestId);
+          this.hnswIndex?.remove(oldestId);
+        }
+      }
+      this.vectorIndex.set(entry.id, entry);
+      batchEntries.push({ id: entry.id, vector: entry.vector });
+    }
+    this.stats.vectorEntries = this.vectorIndex.size;
+
+    if (entries.length > 0) {
+      this.ensureHnswIndex(entries[0]?.vector?.length ?? 0);
+    }
+    if (this.hnswIndex && batchEntries.length > 0) {
+      this.hnswIndex.addBatch(batchEntries);
+    }
   }
 
   /** Remove an embedding from the index */
   removeEmbedding(id: string): boolean {
     const removed = this.vectorIndex.delete(id);
-    if (removed) this.stats.vectorEntries = this.vectorIndex.size;
+    if (removed) {
+      this.stats.vectorEntries = this.vectorIndex.size;
+      this.hnswIndex?.remove(id);
+    }
     return removed;
+  }
+
+  /**
+   * Direct O(1) lookup by id. The previous `get()` codepath in tieredStore
+   * abused `searchByVector` with a fake empty vector and a `limit: 1000`
+   * (audit issue 2.16) — records past index 1000 were silently dropped.
+   * Callers should now use this method for ID-keyed access.
+   */
+  getEmbedding(id: string): VectorEntry | undefined {
+    return this.vectorIndex.get(id);
   }
 
   /** Semantic nearest-neighbor search using cosine similarity */
   searchByVector(
     queryVector: number[],
-    options: { limit?: number; minScore?: number; sessionId?: string } = {},
+    options: { limit?: number; minScore?: number; sessionId?: string; efSearch?: number } = {},
   ): SemanticSearchResult[] {
     const limit = options.limit ?? 10;
     const minScore = options.minScore ?? 0.3;
 
+    // HNSW fast path (no sessionId filter — HNSW doesn't support metadata filtering)
+    if (this.hnswIndex && !options.sessionId) {
+      const efSearch = options.efSearch ?? Math.max(50, limit * 3);
+      const hnswResults = this.hnswIndex.search(queryVector, limit * 2, efSearch);
+      const scored: SemanticSearchResult[] = [];
+      for (const { id, score } of hnswResults) {
+        if (score < minScore) continue;
+        const entry = this.vectorIndex.get(id);
+        if (entry) scored.push({ entry, score });
+      }
+      return scored.sort((a, b) => b.score - a.score).slice(0, limit);
+    }
+
+    // Brute-force fallback (with optional sessionId filter)
     const scored: SemanticSearchResult[] = [];
 
     for (const entry of this.vectorIndex.values()) {
@@ -405,6 +542,31 @@ export class RustMemoryAddon {
     queryVectors: number[][],
     options: { limit?: number; minScore?: number; sessionId?: string } = {},
   ): SemanticSearchResult[][] {
+    // Use Rust batch_cosine_similarity for speed when no sessionId filter
+    if (
+      this.rustBindings?.batchCosineSimilarity &&
+      !options.sessionId &&
+      this.vectorIndex.size > 0
+    ) {
+      const limit = options.limit ?? 10;
+      const minScore = options.minScore ?? 0.3;
+      const allEntries = Array.from(this.vectorIndex.values());
+      const candidateVectors = allEntries.map((e) => e.vector);
+
+      const batchCosine = this.rustBindings.batchCosineSimilarity;
+      return queryVectors.map((qv) => {
+        const scores = batchCosine(qv, candidateVectors);
+        const results: SemanticSearchResult[] = [];
+        for (let i = 0; i < scores.length; i++) {
+          const s = scores[i] ?? 0;
+          if (s >= minScore) {
+            const entry = allEntries[i];
+            if (entry) results.push({ entry, score: s });
+          }
+        }
+        return results.sort((a, b) => b.score - a.score).slice(0, limit);
+      });
+    }
     return queryVectors.map((v) => this.searchByVector(v, options));
   }
 
@@ -484,30 +646,14 @@ export class RustMemoryAddon {
 
   /** Compute cosine similarity between two vectors */
   cosineSimilarity(a: number[], b: number[]): number {
-    if (this.rustBindings?.cosine_similarity) {
+    if (this.rustBindings?.cosineSimilarity) {
       try {
-        return this.rustBindings.cosine_similarity(a, b);
+        return this.rustBindings.cosineSimilarity(a, b);
       } catch {
         // fallback
       }
     }
-
-    const length = Math.min(a.length, b.length);
-    if (length === 0) return 0;
-
-    let dot = 0,
-      normA = 0,
-      normB = 0;
-    for (let i = 0; i < length; i++) {
-      const va = a[i] ?? 0;
-      const vb = b[i] ?? 0;
-      dot += va * vb;
-      normA += va * va;
-      normB += vb * vb;
-    }
-
-    if (normA === 0 || normB === 0) return 0;
-    return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+    return cosineSimilarityJS(a, b);
   }
 
   // -----------------------------------------------------------------------
@@ -523,7 +669,9 @@ export class RustMemoryAddon {
     this.ramCache.set(key, { key, vector, lruIndex: this.lruCounter++, sizeBytes });
     this.ramCacheSizeBytes += sizeBytes;
 
-    const limit = (this as unknown as { MAX_CACHE_SIZE_BYTES?: number }).MAX_CACHE_SIZE_BYTES ?? this.config.maxCacheSizeBytes;
+    const limit =
+      (this as unknown as { MAX_CACHE_SIZE_BYTES?: number }).MAX_CACHE_SIZE_BYTES ??
+      this.config.maxCacheSizeBytes;
     if (this.ramCacheSizeBytes > limit) {
       this.evictLeastRecentlyUsed(limit);
     }
@@ -608,6 +756,7 @@ export class RustMemoryAddon {
     for (const [id, entry] of this.vectorIndex) {
       if (entry.timestamp < cutoff) {
         this.vectorIndex.delete(id);
+        this.hnswIndex?.remove(id);
         purged++;
       }
     }
@@ -625,6 +774,7 @@ export class RustMemoryAddon {
       this.mockDbLogs = [];
     }
     this.vectorIndex.clear();
+    this.hnswIndex?.clear();
     this.stats.vectorEntries = 0;
   }
 
@@ -674,5 +824,20 @@ export class RustMemoryAddon {
   /** Get count of stored vector embeddings */
   getVectorCount(): number {
     return this.vectorIndex.size;
+  }
+
+  /** Get count of HNSW-indexed vectors (0 if Rust bindings unavailable) */
+  getHnswSize(): number {
+    return this.hnswIndex?.size() ?? 0;
+  }
+
+  /** Whether the HNSW index is active */
+  hasHnswIndex(): boolean {
+    return this.hnswIndex !== null;
+  }
+
+  /** Access the raw Rust bindings (for freshness.ts / search.ts delegation) */
+  getRustBindings(): RustBindingsLike | null {
+    return this.rustBindings;
   }
 }

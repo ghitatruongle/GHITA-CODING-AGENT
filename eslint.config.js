@@ -2,6 +2,21 @@ import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import globals from 'globals';
 
+const reactHooksPlugin = {
+  rules: {
+    'exhaustive-deps': {
+      meta: {
+        type: 'suggestion',
+        docs: { description: 'Stub for react-hooks/exhaustive-deps' },
+        schema: [],
+      },
+      create() {
+        return {};
+      },
+    },
+  },
+};
+
 export default tseslint.config(
   {
     ignores: [
@@ -21,6 +36,9 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    plugins: {
+      'react-hooks': reactHooksPlugin,
+    },
     languageOptions: {
       globals: {
         ...globals.node,
@@ -41,6 +59,22 @@ export default tseslint.config(
       'no-console': ['error', { allow: ['warn', 'error', 'info'] }],
       'no-empty': ['error', { allowEmptyCatch: true }],
       'no-useless-escape': 'error',
+      'complexity': ['warn', { max: 15 }],
+      'max-depth': ['warn', { max: 4 }],
+      'max-lines': ['warn', { max: 500, skipBlankLines: true, skipComments: true }],
+      'max-lines-per-function': ['warn', { max: 80, skipBlankLines: true, skipComments: true }],
+      'max-params': ['warn', { max: 5 }],
+      'max-nested-callbacks': ['warn', { max: 3 }],
+      'no-implicit-coercion': 'error',
+      'no-return-assign': 'error',
+      'no-sequences': 'error',
+      'no-throw-literal': 'error',
+      'no-unmodified-loop-condition': 'error',
+      'no-useless-call': 'error',
+      'no-useless-concat': 'error',
+      'no-useless-return': 'error',
+      'prefer-template': 'error',
+      'no-var': 'error',
     },
   },
 );

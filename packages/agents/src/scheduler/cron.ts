@@ -17,6 +17,9 @@ export class CronScheduler {
   start(): void {
     if (this.masterTimer) return;
     this.masterTimer = setInterval(() => this.tick(), 10000);
+    if (this.masterTimer && typeof this.masterTimer === 'object' && 'unref' in this.masterTimer) {
+      this.masterTimer.unref();
+    }
   }
 
   /**
@@ -48,6 +51,9 @@ export class CronScheduler {
     if (intervalMs) {
       // For simple interval-based NL expressions (e.g. "every 10 seconds", "every 5 minutes")
       intervalId = setInterval(() => this.executeTask(config.id), intervalMs);
+      if (intervalId && typeof intervalId === 'object' && 'unref' in intervalId) {
+        intervalId.unref();
+      }
     }
 
     const nextRun = Date.now() + (intervalMs ?? 60000); // Rough estimation

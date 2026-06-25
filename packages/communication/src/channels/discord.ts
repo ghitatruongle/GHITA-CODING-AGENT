@@ -1,4 +1,4 @@
-import type { ChannelAdapter } from '../channel-plugin-contract.js';
+import type { ChannelAdapter, ChannelHealthStatus } from '../channel-plugin-contract.js';
 import { safeFetch } from '../utils/security.js';
 
 interface WSClient {
@@ -134,14 +134,18 @@ export class DiscordAdapter implements ChannelAdapter {
     }
 
     try {
-      let WebSocketCtor: new (url: string) => WSClient = (globalThis as unknown as { WebSocket?: new (url: string) => WSClient }).WebSocket as new (url: string) => WSClient;
+      let WebSocketCtor: new (url: string) => WSClient = (
+        globalThis as unknown as { WebSocket?: new (url: string) => WSClient }
+      ).WebSocket as new (url: string) => WSClient;
       if (!WebSocketCtor) {
         try {
           const wsModule = await import('ws');
           WebSocketCtor = wsModule.default as new (url: string) => WSClient;
         } catch {
           // If neither is available, fail gracefully
-          console.warn('[DiscordAdapter] WebSocket not available in host environment. Gateway skipped.');
+          console.warn(
+            '[DiscordAdapter] WebSocket not available in host environment. Gateway skipped.',
+          );
           return;
         }
       }
@@ -168,6 +172,9 @@ export class DiscordAdapter implements ChannelAdapter {
             heartbeatTimer = setInterval(() => {
               socket.send(JSON.stringify({ op: 1, d: null }));
             }, heartbeatInterval);
+            if (heartbeatTimer && typeof heartbeatTimer === 'object' && 'unref' in heartbeatTimer) {
+              heartbeatTimer.unref();
+            }
 
             // Identify payload
             socket.send(
@@ -224,7 +231,12 @@ export class DiscordAdapter implements ChannelAdapter {
   /**
    * Test-only helper to simulate receiving a message
    */
-  simulateMessage(channelId: string, content: string, userId = 'user_abc', username = 'discorduser'): void {
+  simulateMessage(
+    channelId: string,
+    content: string,
+    userId = 'user_abc',
+    username = 'discorduser',
+  ): void {
     if (this.messageHandler) {
       void this.messageHandler({
         id: `msg_${Date.now()}`,
@@ -237,5 +249,25 @@ export class DiscordAdapter implements ChannelAdapter {
         },
       });
     }
+  }
+
+  /**
+   * Probe Discord connection health by checking client or WS state.
+   */
+  async healthCheck(): Promise<ChannelHealthStatus> {
+    const start = Date.now();
+    const wsOpen = this.ws?.readyState === 1;
+    const clientConnected = this.discordClient !== null;
+    const connected = wsOpen || clientConnected;
+
+    return {
+      channelId: this.id,
+      connected,
+      latencyMs: Date.now() - start,
+      message: connected
+        ? `Discord ${clientConnected ? 'client' : 'gateway WS'} connected`
+        : 'Discord not connected',
+      checkedAt: Date.now(),
+    };
   }
 }

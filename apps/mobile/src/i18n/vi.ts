@@ -69,6 +69,8 @@ export const vi: TranslationKeys = {
     pairErrBtFindFail: 'Không tìm thấy máy tính thông qua kết nối Bluetooth.',
     pairErrApiKeyMissing:
       'Chưa cấu hình API Key cho Cloud Discovery. Vui lòng nhập địa chỉ IP thủ công.',
+    pairErrCloudDisabled:
+      'Cloud Discovery đang tạm thời bị vô hiệu hóa. Vui lòng nhập địa chỉ IP thủ công ở tab Wi-Fi hoặc kết nối Bluetooth trực tiếp tới máy tính.',
     noCodeFromServer: 'Không thể lấy mã ghép đôi từ máy chủ.',
   },
   remote: {
@@ -139,6 +141,20 @@ export const vi: TranslationKeys = {
     error: 'Gặp sự cố kết nối',
     lanConnection: '🟢 LAN (Tốc độ cao)',
     cloudConnection: '🌐 Cloud (Mạng ngoài)',
+  },
+  dashboard: {
+    title: 'Biểu đồ Phân tích',
+    totalTokens: 'Tổng số Token (Tuần)',
+    estCost: 'Chi phí Ước tính (Tuần)',
+    tokensUsage: 'Lượng Token Sử dụng',
+    insights: 'Phân tích & Nhận định',
+    loading: 'Đang tải dữ liệu...',
+    clearBtn: 'Xóa lịch sử',
+    confirmTitle: 'Xác nhận xóa',
+    confirmDesc: 'Bạn có chắc chắn muốn xóa lịch sử thống kê sử dụng không?',
+    mostUsage: 'Bạn đã sử dụng nhiều token nhất vào {{day}} ({{tokens}}k tokens).',
+    noUsage: 'Chưa có lịch sử sử dụng trong tuần này.',
+    averageDaily: 'Chi phí trung bình hàng ngày là ${{cost}}.',
   },
   errorFallback: {
     title: 'Ứng dụng gặp sự cố ngoài ý muốn',

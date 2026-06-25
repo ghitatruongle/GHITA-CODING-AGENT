@@ -23,8 +23,8 @@ const DEFAULT_PRICING: Record<string, { input: number; output: number }> = {
   'gemini-1.5-flash': { input: 0.000075, output: 0.0003 },
   'deepseek-chat': { input: 0.00014, output: 0.00028 },
   'deepseek-coder': { input: 0.00014, output: 0.00028 },
-  'kimi': { input: 0.001, output: 0.001 },
-  'minimax': { input: 0.001, output: 0.001 },
+  kimi: { input: 0.001, output: 0.001 },
+  minimax: { input: 0.001, output: 0.001 },
   default: { input: 0.001, output: 0.002 },
 };
 
@@ -35,7 +35,8 @@ export function estimateCostUsd(
   completionTokens: number,
 ): number {
   if (!model) model = 'default';
-  const pricing = DEFAULT_PRICING[model] ?? (DEFAULT_PRICING['default'] as { input: number; output: number });
+  const pricing =
+    DEFAULT_PRICING[model] ?? (DEFAULT_PRICING['default'] as { input: number; output: number });
   const input = (promptTokens / 1000) * pricing.input;
   const output = (completionTokens / 1000) * pricing.output;
   return input + output;
@@ -109,7 +110,12 @@ export class BatchCostTracker {
       if (!summary.byProvider[key]) {
         summary.byProvider[key] = { batches: 0, requests: 0, costUsd: 0, tokens: 0 };
       }
-      const bp = summary.byProvider[key] as { batches: number; requests: number; costUsd: number; tokens: number };
+      const bp = summary.byProvider[key] as {
+        batches: number;
+        requests: number;
+        costUsd: number;
+        tokens: number;
+      };
       bp.batches += 1;
       bp.requests += 1;
       bp.costUsd += e.costUsd;
@@ -137,8 +143,7 @@ export class BatchCostTracker {
       totalRatio += v.ratio;
     }
     summary.totalTokensSaved = totalSaved;
-    summary.averageSavingsRatio =
-      savingsByBatch.size > 0 ? totalRatio / savingsByBatch.size : 0;
+    summary.averageSavingsRatio = savingsByBatch.size > 0 ? totalRatio / savingsByBatch.size : 0;
 
     return summary;
   }

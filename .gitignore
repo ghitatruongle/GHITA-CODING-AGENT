@@ -75,17 +75,49 @@ desktop.ini
 # Plan
 Plan/
 
+# Generated TypeDoc API docs (auto-generated from source)
+docs/docs/api/
+
+# Agent handoff documents (internal, not for git)
+agents/**/handoff.md
+
+# Internal planning docs (not for git)
+docs/superpowers/
+.agents/
+.kimchi/
+progress.md
+PROJECT.md
+TEST_INFRA.md
+
+# Internal scripts
+scripts/clone-refer.sh
+scripts/inspect_*.py
+scripts/verify_doc.py
+scripts/sync_m1_doc.py
+
+# Test data
+tests/quality-loop/trends.jsonl
+tests/benchmark/history.jsonl
+tests/benchmark/results.json
+test-ledger.sqlite
+
 # Python scratch/fix scripts
 *.py
 
-# Root launch image
-android-ghita-launch.png
+# Root debug images / temp files
+/*.png
+window_dump.xml
+test_write.tmp
 
 # Compiled output in source dirs (should only exist in dist/)
 packages/*/src/**/*.js
 packages/*/src/**/*.d.ts
 packages/*/src/**/*.js.map
 packages/*/src/**/*.d.ts.map
+
+# Temp analysis files from commands
+untracked_*.txt
+%TEMP%*.txt
 
 # Build logs
 build_output.txt
@@ -95,4 +127,7 @@ nul
 
 # Debug keystores
 apps/mobile/android/app/debug.keystore
+
+# Build artifacts
+apps/mobile/android/app/src/main/assets/index.android.bundle
 
