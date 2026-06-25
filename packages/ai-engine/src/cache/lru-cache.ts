@@ -42,7 +42,11 @@ export class LRUCache<T = unknown> {
         this.evictExpired();
       }, this.config.cleanupInterval);
       // Allow process to exit even if timer is active
-      if (this.cleanupTimer && typeof this.cleanupTimer === 'object' && 'unref' in this.cleanupTimer) {
+      if (
+        this.cleanupTimer &&
+        typeof this.cleanupTimer === 'object' &&
+        'unref' in this.cleanupTimer
+      ) {
         this.cleanupTimer.unref();
       }
     }
@@ -78,7 +82,11 @@ export class LRUCache<T = unknown> {
     return entry.value;
   }
 
-  set(key: string, value: T, options?: { ttl?: number; tags?: string[]; embedding?: number[] }): void {
+  set(
+    key: string,
+    value: T,
+    options?: { ttl?: number; tags?: string[]; embedding?: number[] },
+  ): void {
     const existing = this.map.get(key);
     const ttl = options?.ttl ?? this.config.defaultTTL;
     const size = this.estimateSize(value);

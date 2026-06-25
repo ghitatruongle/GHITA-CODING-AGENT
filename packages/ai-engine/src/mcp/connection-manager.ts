@@ -10,13 +10,12 @@
 //                                   the user can enable with one click
 // ==============================================================================
 
-import type {
-  MCPServerConfig,
-  MCPServerStatus,
-  MCPTool,
-  MCPToolResult,
-} from './types.js';
-import { createExtendedTransport, type ExtendedServerConfig, type InProcessHandler } from './transport-extended.js';
+import type { MCPServerConfig, MCPServerStatus, MCPTool, MCPToolResult } from './types.js';
+import {
+  createExtendedTransport,
+  type ExtendedServerConfig,
+  type InProcessHandler,
+} from './transport-extended.js';
 import type { MCPTransport } from './transport.js';
 
 // -----------------------------------------------------------------------
@@ -178,9 +177,7 @@ export class MCPConnectionManager {
 
     if (response.error) {
       return {
-        content: [
-          { type: 'text', text: JSON.stringify(response.error) },
-        ],
+        content: [{ type: 'text', text: JSON.stringify(response.error) }],
         isError: true,
       };
     }
@@ -239,6 +236,9 @@ export class MCPConnectionManager {
         void this.attemptReconnect(entry.config.name);
       }
     }, this.opts.healthCheckIntervalMs);
+    if (entry.healthTimer && typeof entry.healthTimer === 'object' && 'unref' in entry.healthTimer) {
+      entry.healthTimer.unref();
+    }
   }
 
   private stopHealthCheck(entry: ManagedServer): void {

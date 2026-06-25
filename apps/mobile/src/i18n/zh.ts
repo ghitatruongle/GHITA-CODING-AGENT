@@ -65,6 +65,8 @@ export const zh: TranslationKeys = {
     pairErrBtFail: '蓝牙配对失败。请重试。',
     pairErrBtFindFail: '未通过蓝牙找到电脑。',
     pairErrApiKeyMissing: '未配置 Cloud Discovery API Key。请使用手动 IP 地址进行连接。',
+    pairErrCloudDisabled:
+      'Cloud Discovery 已临时禁用。请在 Wi-Fi 选项卡中手动输入 IP 地址，或通过蓝牙直接连接计算机。',
     noCodeFromServer: '无法从服务器获取配对码。',
   },
   remote: {
@@ -134,6 +136,20 @@ export const zh: TranslationKeys = {
     error: '连接错误',
     lanConnection: '🟢 局域网 (高速)',
     cloudConnection: '🌐 云端 (远程)',
+  },
+  dashboard: {
+    title: '分析仪表盘',
+    totalTokens: '总 Token (本周)',
+    estCost: '预估费用 (本周)',
+    tokensUsage: 'Token 使用量',
+    insights: '使用洞察',
+    loading: '加载数据中...',
+    clearBtn: '清除历史',
+    confirmTitle: '确认清除',
+    confirmDesc: '您确定要清除使用历史数据吗？',
+    mostUsage: '您在 {{day}} 使用了最多的 Token ({{tokens}}k tokens)。',
+    noUsage: '本周暂无使用记录。',
+    averageDaily: '您的日均使用费用为 ${{cost}}。',
   },
   errorFallback: {
     title: '出错了',

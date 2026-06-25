@@ -8,5 +8,23 @@ export default defineConfig({
     testTimeout: 10000,
     fileParallelism: false,
     sequence: { concurrent: false },
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'text-summary', 'html', 'lcov', 'json-summary'],
+      reportsDirectory: './coverage',
+      include: ['src/**/*.ts', 'rust-napi/src/**/*.rs'],
+      exclude: [
+        'src/**/*.test.ts',
+        'src/**/*.d.ts',
+        'node_modules/**',
+        'dist/**',
+      ],
+      thresholds: {
+        statements: 10,
+        branches: 10,
+        functions: 30,
+        lines: 10,
+      },
+    },
   },
 });

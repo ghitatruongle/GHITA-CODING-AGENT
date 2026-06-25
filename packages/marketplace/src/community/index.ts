@@ -3,13 +3,7 @@
 // ==============================================================================
 
 // --- Types ---
-export type {
-  ForumThread,
-  ForumReply,
-  BugReport,
-  FeatureRequest,
-  Contributor,
-} from './types.js';
+export type { ForumThread, ForumReply, BugReport, FeatureRequest, Contributor } from './types.js';
 
 // --- Modules ---
 export { ForumManager } from './forum.js';

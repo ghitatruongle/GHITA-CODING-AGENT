@@ -74,7 +74,11 @@ export class ReconnectStrategy {
     }, delay);
 
     // Allow process to exit
-    if (this._reconnectTimer && typeof this._reconnectTimer === 'object' && 'unref' in this._reconnectTimer) {
+    if (
+      this._reconnectTimer &&
+      typeof this._reconnectTimer === 'object' &&
+      'unref' in this._reconnectTimer
+    ) {
       this._reconnectTimer.unref();
     }
 

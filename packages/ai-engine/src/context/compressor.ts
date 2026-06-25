@@ -377,10 +377,10 @@ export class TrajectoryCompressor {
     );
 
     if (lastSentenceEnd > maxLength * 0.5) {
-      return truncated.slice(0, lastSentenceEnd + 1) + '...';
+      return `${truncated.slice(0, lastSentenceEnd + 1)  }...`;
     }
 
-    return truncated + '...';
+    return `${truncated  }...`;
   }
 
   /**
@@ -392,7 +392,7 @@ export class TrajectoryCompressor {
 
     return {
       role: message.role,
-      content: message.content.slice(0, maxChars) + '\n[... truncated ...]',
+      content: `${message.content.slice(0, maxChars)  }\n[... truncated ...]`,
     };
   }
 

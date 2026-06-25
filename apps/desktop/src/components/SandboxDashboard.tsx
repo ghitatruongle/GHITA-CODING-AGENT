@@ -6,6 +6,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from '../i18n';
+import { ResourceBar } from './ResourceBar';
+import { StatusBadge } from './StatusBadge';
 
 // =============================================================================
 // Types
@@ -45,98 +47,6 @@ interface SandboxLog {
 }
 
 // =============================================================================
-// Sub-components
-// =============================================================================
-
-/** Thanh tiến trình tài nguyên (CPU/RAM) */
-function ResourceBar({
-  label,
-  value,
-  max,
-  unit,
-  color,
-}: {
-  label: string;
-  value: number;
-  max: number;
-  unit: string;
-  color: string;
-}) {
-  const percent = max > 0 ? Math.min(100, (value / max) * 100) : 0;
-  const barColor = percent > 80 ? 'var(--error)' : percent > 60 ? 'var(--warning)' : color;
-
-  return (
-    <div style={{ marginBottom: '12px' }}>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          fontSize: '12px',
-          marginBottom: '6px',
-        }}
-      >
-        <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{label}</span>
-        <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>
-          {value.toFixed(1)} {unit}
-          {max > 0 && (
-            <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>
-              {' '}
-              / {max.toFixed(0)} {unit}
-            </span>
-          )}
-        </span>
-      </div>
-      <div
-        style={{
-          height: '8px',
-          background: 'rgba(255,255,255,0.05)',
-          borderRadius: '4px',
-          overflow: 'hidden',
-        }}
-      >
-        <div
-          style={{
-            height: '100%',
-            width: `${percent}%`,
-            background: barColor,
-            borderRadius: '4px',
-            transition: 'width 0.5s ease',
-          }}
-        />
-      </div>
-    </div>
-  );
-}
-
-/** Badge trạng thái container */
-function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, { bg: string; text: string }> = {
-    running: { bg: 'rgba(34,197,94,0.15)', text: '#22c55e' },
-    created: { bg: 'rgba(59,130,246,0.15)', text: '#3b82f6' },
-    stopped: { bg: 'rgba(148,163,184,0.15)', text: '#94a3b8' },
-    error: { bg: 'rgba(239,68,68,0.15)', text: '#ef4444' },
-  };
-  const style = colors[status] || { bg: 'rgba(148,163,184,0.15)', text: '#94a3b8' };
-
-  return (
-    <span
-      style={{
-        background: style.bg,
-        color: style.text,
-        padding: '2px 10px',
-        borderRadius: '12px',
-        fontSize: '11px',
-        fontWeight: 700,
-        textTransform: 'uppercase',
-        letterSpacing: '0.5px',
-      }}
-    >
-      {status}
-    </span>
-  );
-}
-
-// =============================================================================
 // Main Component
 // =============================================================================
 
@@ -171,7 +81,11 @@ export function SandboxDashboard() {
             val = null;
           }
         }
-        if (val && typeof val === 'object' && 'runningContainers' in (val as Record<string, unknown>)) {
+        if (
+          val &&
+          typeof val === 'object' &&
+          'runningContainers' in (val as Record<string, unknown>)
+        ) {
           setSummary(val as SandboxSummary);
         } else {
           setSummary(null);

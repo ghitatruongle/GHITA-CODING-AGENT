@@ -593,7 +593,7 @@ describe('1 Core AI Engine Features Test Suite', () => {
 
       orchestrator = new Orchestrator(config);
       // Inject mock provider into registry
-      (orchestrator as any).registry.register(mockProvider);
+      (orchestrator as any)._registry.register(mockProvider);
     });
 
     it('should expose unified orchestrator.embed and call active provider', async () => {
@@ -617,7 +617,7 @@ describe('1 Core AI Engine Features Test Suite', () => {
           .fn()
           .mockResolvedValue({ embedding: [0.9, 0.9], model: 'google-emb', provider: 'google' }),
       };
-      (orchestrator as any).registry.register(backupProvider as any);
+      (orchestrator as any)._registry.register(backupProvider as any);
       orchestrator.setFallbackOrder(['google']);
 
       // Primary fails

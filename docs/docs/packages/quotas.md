@@ -24,8 +24,9 @@ const quotas = new QuotaManager({
 
 // Auto-register khi user dùng lần đầu với tier 'free'
 // Hoặc register thủ công:
-quotas.registerSubject('user_123', 'pro');        // tier preset
-quotas.registerSubject('team_acme', {             // custom config
+quotas.registerSubject('user_123', 'pro'); // tier preset
+quotas.registerSubject('team_acme', {
+  // custom config
   subjectId: 'team_acme',
   tier: 'custom',
   maxInputTokensPerPeriod: 50_000_000,
@@ -48,13 +49,13 @@ if (!result.allowed) {
 
 ### Tier presets
 
-| Tier | Input/day | Output/day | Requests/day | Overage |
-|---|---|---|---|---|
-| `free` | 100K | 50K | 200 | ❌ block |
-| `pro` | 2M | 1M | 5K | ✅ $0.50/1K |
-| `team` | 20M | 10M | 50K | ✅ $0.40/1K |
-| `enterprise` | 200M | 100M | 500K | ✅ $0.30/1K |
-| `custom` | tuỳ config | tuỳ config | tuỳ config | tuỳ config |
+| Tier         | Input/day  | Output/day | Requests/day | Overage     |
+| ------------ | ---------- | ---------- | ------------ | ----------- |
+| `free`       | 100K       | 50K        | 200          | ❌ block    |
+| `pro`        | 2M         | 1M         | 5K           | ✅ $0.50/1K |
+| `team`       | 20M        | 10M        | 50K          | ✅ $0.40/1K |
+| `enterprise` | 200M       | 100M       | 500K         | ✅ $0.30/1K |
+| `custom`     | tuỳ config | tuỳ config | tuỳ config   | tuỳ config  |
 
 ## Rate Limiter (độc lập)
 
@@ -65,7 +66,7 @@ const limiter = new RateLimiter({
   maxRequests: 60,
   windowMs: 60_000,
   strategy: 'token-bucket', // mặc định
-  burstCapacity: 10,         // cho phép burst
+  burstCapacity: 10, // cho phép burst
 });
 
 const r = limiter.check('user_123');

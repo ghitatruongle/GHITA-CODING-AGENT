@@ -34,22 +34,66 @@ export function computeFileHash(filePath: string): string {
 }
 
 /**
- * Compute hash from SkillMeta fields (deterministic).
- * Sorts keys to ensure consistent hashing.
+ * Compute hash from SkillMeta fields plus optional script content.
+ *
+ * SECURITY (audit fix 2.17): the previous implementation only hashed
+ * the metadata fields (`id`, `name`, `description`, …), which means an
+ * attacker who can edit the skill's script files could swap executable
+ * content while leaving the metadata intact — the hash would still match.
+ *
+ * Callers SHOULD pass `contentPaths` listing the on-disk files that
+ * make up the skill (e.g. `index.js`, `manifest.yaml`, `commands/*.ts`).
+ * The function reads each path, hashes its UTF-8 contents, and combines
+ * them with the metadata hash via a SHA-256 of all digests concatenated.
+ *
+ * Files that do not exist are skipped with a console.warn — this lets
+ * the call site decide whether to fail closed. Production installers
+ * should treat warnings as integrity failures.
  */
-export function computeSkillHash(meta: SkillMeta): string {
-  const payload = JSON.stringify({
-    id: meta.id,
-    name: meta.name,
-    description: meta.description,
-    category: meta.category,
-    version: meta.version,
-    source: meta.source,
-    tags: [...meta.tags].sort(),
-    permissions: meta.permissions ? [...meta.permissions].sort() : [],
-    dependencies: meta.dependencies ? [...meta.dependencies].sort() : [],
-  }, null, 0);
-  return computeContentHash(payload);
+export function computeSkillHash(meta: SkillMeta, contentPaths?: string[]): string {
+  const payload = JSON.stringify(
+    {
+      id: meta.id,
+      name: meta.name,
+      description: meta.description,
+      category: meta.category,
+      version: meta.version,
+      source: meta.source,
+      tags: [...meta.tags].sort(),
+      permissions: meta.permissions ? [...meta.permissions].sort() : [],
+      dependencies: meta.dependencies ? [...meta.dependencies].sort() : [],
+    },
+    null,
+    0,
+  );
+  const metaHash = computeContentHash(payload);
+
+  if (!contentPaths || contentPaths.length === 0) {
+    // Backwards-compatible behaviour: callers that haven't been updated
+    // to pass content paths still get a metadata-only hash. We emit a
+    // warning so the gap is visible at install time.
+     
+    console.warn(
+      `[SkillGuard] computeSkillHash(${meta.id}) called without contentPaths — ` +
+        'integrity check is metadata-only and can be bypassed by editing script files.',
+    );
+    return metaHash;
+  }
+
+  const fileHashes: string[] = [];
+  for (const p of contentPaths) {
+    try {
+      const content = fs.readFileSync(p, 'utf8');
+      fileHashes.push(`${p}:${computeContentHash(content)}`);
+    } catch (err) {
+       
+      console.warn(
+        `[SkillGuard] failed to hash file ${p} for skill ${meta.id}: ${ 
+          err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+  return computeContentHash(`${metaHash  }\n${  fileHashes.sort().join('\n')}`);
 }
 
 // --- Trust Level Resolution ---
@@ -74,7 +118,7 @@ export function resolveTrustLevel(
   // Git skills: check if repo is in trusted list
   if (source === 'git' && repoUrl) {
     const normalized = normalizeRepoUrl(repoUrl);
-    if (trustedRepos.some(tr => normalizeRepoUrl(tr) === normalized)) {
+    if (trustedRepos.some((tr) => normalizeRepoUrl(tr) === normalized)) {
       return 'trusted';
     }
     return 'verified'; // Known git source but not in trusted list
@@ -118,10 +162,7 @@ export function normalizeRepoUrl(url: string): string {
 /**
  * Verify a skill's content hash matches expected hash.
  */
-export function verifySkillHash(
-  meta: SkillMeta,
-  expectedHash: string,
-): VerifyResult {
+export function verifySkillHash(meta: SkillMeta, expectedHash: string): VerifyResult {
   const actualHash = computeSkillHash(meta);
   const ok = actualHash === expectedHash;
 
@@ -138,10 +179,7 @@ export function verifySkillHash(
 /**
  * Verify a file's hash matches expected hash.
  */
-export function verifyFileHash(
-  filePath: string,
-  expectedHash: string,
-): VerifyResult {
+export function verifyFileHash(filePath: string, expectedHash: string): VerifyResult {
   const actualHash = computeFileHash(filePath);
   const ok = actualHash === expectedHash;
 
@@ -240,7 +278,7 @@ export class SkillGuard {
   /** Check if a repo is trusted */
   isTrusted(repoUrl: string): boolean {
     const normalized = normalizeRepoUrl(repoUrl);
-    return this.trustedRepos.some(tr => normalizeRepoUrl(tr) === normalized);
+    return this.trustedRepos.some((tr) => normalizeRepoUrl(tr) === normalized);
   }
 
   /** Compute content hash for a skill */

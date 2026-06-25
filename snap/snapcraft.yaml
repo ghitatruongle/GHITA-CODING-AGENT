@@ -1,0 +1,29 @@
+name: ghita-coding-agent
+base: core22
+version: '0.0.4'
+summary: AI Desktop Agent with VS Code-style interface
+description: |
+  GHITA CODING AGENT is a versatile AI desktop application with
+  VS Code-style interface, supporting remote computer control via Android phone.
+
+grade: stable
+confinement: strict
+parts:
+  ghita:
+    plugin: nil
+    source: .
+    build-packages:
+      - nodejs
+      - npm
+    override-build: |
+      npm install -g pnpm
+      pnpm install
+      pnpm build:desktop
+      cp -r apps/desktop/src-tauri/target/release/bundle/snap/* $CRAFT_PART_INSTALL/
+apps:
+  ghita:
+    command: ghita-coding-agent
+    plugs:
+      - network
+      - home
+      - x11

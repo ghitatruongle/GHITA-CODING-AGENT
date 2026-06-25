@@ -67,7 +67,11 @@ export class AudioStream {
 
   private isSilent(chunk: AudioChunk): boolean {
     if (chunk.data.byteLength === 0) return true;
-    const view = new Int16Array(chunk.data.buffer, chunk.data.byteOffset, chunk.data.byteLength / 2);
+    const view = new Int16Array(
+      chunk.data.buffer,
+      chunk.data.byteOffset,
+      chunk.data.byteLength / 2,
+    );
     let acc = 0;
     for (let i = 0; i < view.length; i++) {
       const v = (view[i] ?? 0) / 32768;

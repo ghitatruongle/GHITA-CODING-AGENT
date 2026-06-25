@@ -6,6 +6,35 @@
 // ==============================================================================
 
 import type { MemoryEntry, MemorySearchResult } from '@ghita/shared';
+import { cosineSimilarityJS } from './semantic/rustAddon.js';
+
+// ---------------------------------------------------------------------------
+// Optional Rust NAPI bindings (lazy-loaded once)
+// ---------------------------------------------------------------------------
+
+type RustBatchDecay = (timestamps: number[], halfLifeMs: number, now: number) => number[];
+type RustBatchCosine = (query: number[], candidates: number[][]) => number[];
+
+interface FreshnessRustBindings {
+  batchDecayScore?: RustBatchDecay;
+  batchCosineSimilarity?: RustBatchCosine;
+}
+
+let _cachedRustBindings: FreshnessRustBindings | null | undefined;
+
+declare const require: ((id: string) => unknown) | undefined;
+
+function getRustBindings(): FreshnessRustBindings | null {
+  if (_cachedRustBindings !== undefined) return _cachedRustBindings;
+  try {
+    const r = typeof require !== 'undefined' ? require : null;
+    if (!r) throw new Error('require unavailable');
+    _cachedRustBindings = r('./rust/index.node') as FreshnessRustBindings;
+  } catch {
+    _cachedRustBindings = null;
+  }
+  return _cachedRustBindings;
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -148,10 +177,7 @@ export function getNamespaceOverview(
 /**
  * Returns filtered and chronologically ordered memory entries.
  */
-export function getTimeline(
-  entries: MemoryEntry[],
-  options?: TimelineOptions,
-): MemoryEntry[] {
+export function getTimeline(entries: MemoryEntry[], options?: TimelineOptions): MemoryEntry[] {
   const now = options?.now ?? Date.now();
   const defaultHalfLife = options?.halfLifeMs ?? 30 * 24 * 60 * 60 * 1000;
   const namespaceHalfLifes = options?.namespaceHalfLifes ?? {};
@@ -219,35 +245,74 @@ export function retrieveEnhanced(
   };
   const queryTokens = tokenize(query);
 
-  const cosineSimilarity = (a: number[], b: number[]): number => {
-    const len = Math.min(a.length, b.length);
-    if (len === 0) return 0;
-    let dot = 0, nA = 0, nB = 0;
-    for (let i = 0; i < len; i++) {
-      const va = a[i] ?? 0;
-      const vb = b[i] ?? 0;
-      dot += va * vb;
-      nA += va * va;
-      nB += vb * vb;
+  // --- Rust fast-path: batch decay + batch cosine in one pass ---
+  const rust = getRustBindings();
+
+  // Precompute all decay scores in batch via Rust (or JS fallback)
+  let decayScores: number[] | null = null;
+  if (rust?.batchDecayScore && entries.length > 0) {
+    // Compute per-entry half-life respecting namespace overrides
+    const timestamps: number[] = [];
+    const halfLives: number[] = [];
+    for (const entry of entries) {
+      const ns = (entry.metadata?.namespace as string) || entry.type || 'default';
+      timestamps.push(entry.timestamp);
+      halfLives.push(namespaceHalfLifes[ns] ?? defaultHalfLife);
     }
-    if (nA === 0 || nB === 0) return 0;
-    return dot / (Math.sqrt(nA) * Math.sqrt(nB));
-  };
+    // Rust batch_decay_score uses a single halfLife; we group by unique halfLife
+    // For the common case (all same namespace), one call suffices
+    const uniqueHalfLives = new Set(halfLives);
+    if (uniqueHalfLives.size === 1) {
+      decayScores = rust.batchDecayScore(timestamps, halfLives[0] ?? defaultHalfLife, now);
+    }
+    // If multiple namespaces, fall through to per-entry JS computation
+  }
+
+  // Precompute all cosine similarities in batch via Rust
+  let cosineScores: number[] | null = null;
+  if (rust?.batchCosineSimilarity && queryVector && entries.length > 0) {
+    const vectors: number[][] = [];
+    let allHaveVectors = true;
+    for (const entry of entries) {
+      const vec = (entry as unknown as { vector?: number[] }).vector || entry.metadata?.vector;
+      if (Array.isArray(vec)) {
+        vectors.push(vec as number[]);
+      } else {
+        allHaveVectors = false;
+        vectors.push([]); // placeholder
+      }
+    }
+    if (allHaveVectors && vectors.length > 0) {
+      cosineScores = rust.batchCosineSimilarity(queryVector, vectors);
+    }
+  }
 
   const results: MemorySearchResult[] = [];
 
-  for (const entry of entries) {
+  for (let ei = 0; ei < entries.length; ei++) {
+    const entry = entries[ei];
+    if (!entry) continue;
+
     // A. Recency/Freshness Signal
-    const ns = (entry.metadata?.namespace as string) || entry.type || 'default';
-    const halfLife = namespaceHalfLifes[ns] ?? defaultHalfLife;
-    const recencyScore = calculateDecayScore(entry.timestamp, halfLife, now);
+    let recencyScore: number;
+    if (decayScores && decayScores[ei] !== undefined) {
+      recencyScore = decayScores[ei] as number;
+    } else {
+      const ns = (entry.metadata?.namespace as string) || entry.type || 'default';
+      const halfLife = namespaceHalfLifes[ns] ?? defaultHalfLife;
+      recencyScore = calculateDecayScore(entry.timestamp, halfLife, now);
+    }
 
     // B. Semantic Signal
     let semanticScore = 0.0;
     if (queryVector) {
-      const vector = (entry as unknown as { vector?: number[] }).vector || entry.metadata?.vector;
-      if (Array.isArray(vector)) {
-        semanticScore = cosineSimilarity(queryVector, vector);
+      if (cosineScores && cosineScores[ei] !== undefined) {
+        semanticScore = cosineScores[ei] as number;
+      } else {
+        const vector = (entry as unknown as { vector?: number[] }).vector || entry.metadata?.vector;
+        if (Array.isArray(vector)) {
+          semanticScore = cosineSimilarityJS(queryVector, vector);
+        }
       }
     } else if (query) {
       const entryTokens = tokenize(entry.content);
@@ -267,18 +332,18 @@ export function retrieveEnhanced(
       typeof entry.relevance === 'number'
         ? entry.relevance
         : typeof entry.metadata?.importance === 'number'
-        ? entry.metadata.importance
-        : typeof entry.metadata?._importance === 'number'
-        ? entry.metadata._importance
-        : 0.5;
+          ? entry.metadata.importance
+          : typeof entry.metadata?._importance === 'number'
+            ? entry.metadata._importance
+            : 0.5;
 
     // D. Frequency Signal
     const accessCount =
       typeof entry.metadata?.accessCount === 'number'
         ? entry.metadata.accessCount
         : typeof entry.metadata?._accessCount === 'number'
-        ? entry.metadata._accessCount
-        : 0;
+          ? entry.metadata._accessCount
+          : 0;
     const frequencyScore = Math.min(1.0, accessCount / 10);
 
     // Aggregate score based on weights
@@ -323,7 +388,10 @@ export class MemoryFreshnessTracker {
     });
   }
 
-  getTimeline(entries: MemoryEntry[], options?: Omit<TimelineOptions, 'halfLifeMs' | 'namespaceHalfLifes'>): MemoryEntry[] {
+  getTimeline(
+    entries: MemoryEntry[],
+    options?: Omit<TimelineOptions, 'halfLifeMs' | 'namespaceHalfLifes'>,
+  ): MemoryEntry[] {
     return getTimeline(entries, {
       ...options,
       halfLifeMs: this.config?.halfLifeMs,
@@ -331,7 +399,10 @@ export class MemoryFreshnessTracker {
     });
   }
 
-  retrieveEnhanced(entries: MemoryEntry[], options: Omit<MultiSignalRetrievalOptions, 'halfLifeMs' | 'namespaceHalfLifes'>): MemorySearchResult[] {
+  retrieveEnhanced(
+    entries: MemoryEntry[],
+    options: Omit<MultiSignalRetrievalOptions, 'halfLifeMs' | 'namespaceHalfLifes'>,
+  ): MemorySearchResult[] {
     return retrieveEnhanced(entries, {
       ...options,
       halfLifeMs: this.config?.halfLifeMs,

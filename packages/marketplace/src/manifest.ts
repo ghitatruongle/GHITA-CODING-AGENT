@@ -7,16 +7,26 @@ import type { PluginManifest, PluginCategory, PluginPermission } from './types.j
 
 /** Zod schema for PluginCategory */
 const PluginCategorySchema = z.enum([
-  'tool', 'provider', 'theme', 'extension',
-  'integration', 'language', 'framework', 'utility',
+  'tool',
+  'provider',
+  'theme',
+  'extension',
+  'integration',
+  'language',
+  'framework',
+  'utility',
 ]);
 
 /** Zod schema for PluginPermission */
 const PluginPermissionSchema = z.enum([
-  'filesystem:read', 'filesystem:write',
-  'network:http', 'network:websocket',
-  'process:spawn', 'process:env',
-  'clipboard:read', 'clipboard:write',
+  'filesystem:read',
+  'filesystem:write',
+  'network:http',
+  'network:websocket',
+  'process:spawn',
+  'process:env',
+  'clipboard:read',
+  'clipboard:write',
   'notification:send',
 ]);
 
@@ -29,7 +39,11 @@ const PluginToolSchema = z.object({
 
 /** Full Zod schema for PluginManifest */
 export const PluginManifestSchema = z.object({
-  id: z.string().min(1).max(128).regex(/^@?[a-z0-9][\w.-]*(?:\/[a-z0-9][\w.-]*)?$/),
+  id: z
+    .string()
+    .min(1)
+    .max(128)
+    .regex(/^@?[a-z0-9][\w.-]*(?:\/[a-z0-9][\w.-]*)?$/),
   name: z.string().min(1).max(256),
   description: z.string().min(1).max(1024),
   version: z.string().regex(/^\d+\.\d+\.\d+(-[\w.]+)?$/),
@@ -47,7 +61,10 @@ export const PluginManifestSchema = z.object({
   devDependencies: z.record(z.string()).optional(),
   peerDependencies: z.record(z.string()).optional(),
   permissions: z.array(PluginPermissionSchema),
-  minAgentVersion: z.string().regex(/^\d+\.\d+\.\d+$/).optional(),
+  minAgentVersion: z
+    .string()
+    .regex(/^\d+\.\d+\.\d+$/)
+    .optional(),
   size: z.number().int().positive().optional(),
   downloads: z.number().int().nonnegative().default(0),
   rating: z.number().min(0).max(5).default(0),
@@ -79,7 +96,9 @@ export function safeValidateManifest(data: unknown): {
   }
   return {
     success: false,
-    errors: result.error.errors.map((e: { path: (string | number)[]; message: string }) => `${e.path.join('.')}: ${e.message}`),
+    errors: result.error.errors.map(
+      (e: { path: (string | number)[]; message: string }) => `${e.path.join('.')}: ${e.message}`,
+    ),
   };
 }
 
@@ -94,20 +113,24 @@ export function manifestFromPackageJson(pkg: Record<string, unknown>): PluginMan
     name: (pkg.name as string) || 'Unknown Plugin',
     description: (pkg.description as string) || '',
     version: (pkg.version as string) || '0.0.0',
-    author: typeof pkg.author === 'string' ? pkg.author : (pkg.author as { name?: string })?.name || 'Unknown',
+    author:
+      typeof pkg.author === 'string'
+        ? pkg.author
+        : (pkg.author as { name?: string })?.name || 'Unknown',
     license: pkg.license as string | undefined,
     homepage: pkg.homepage as string | undefined,
-    repository: typeof pkg.repository === 'string'
-      ? pkg.repository
-      : (pkg.repository as { url?: string })?.url,
+    repository:
+      typeof pkg.repository === 'string'
+        ? pkg.repository
+        : (pkg.repository as { url?: string })?.url,
     category: (pkg.category as PluginCategory) || 'utility',
-    tags: Array.isArray(pkg.keywords) ? pkg.keywords as string[] : [],
+    tags: Array.isArray(pkg.keywords) ? (pkg.keywords as string[]) : [],
     entrypoint: (pkg.main as string) || 'index.js',
     tools: pkg.tools as PluginManifest['tools'],
     dependencies: pkg.dependencies as Record<string, string> | undefined,
     devDependencies: pkg.devDependencies as Record<string, string> | undefined,
     peerDependencies: pkg.peerDependencies as Record<string, string> | undefined,
-    permissions: Array.isArray(pkg.permissions) ? pkg.permissions as PluginPermission[] : [],
+    permissions: Array.isArray(pkg.permissions) ? (pkg.permissions as PluginPermission[]) : [],
     minAgentVersion: pkg.ghitaMinVersion as string | undefined,
     downloads: 0,
     rating: 0,
@@ -143,7 +166,12 @@ export function satisfiesRange(version: string, range: string): boolean {
   if (range === '*' || range === '') return true;
 
   // Exact match
-  if (!range.startsWith('^') && !range.startsWith('~') && !range.startsWith('>') && !range.startsWith('<')) {
+  if (
+    !range.startsWith('^') &&
+    !range.startsWith('~') &&
+    !range.startsWith('>') &&
+    !range.startsWith('<')
+  ) {
     return compareSemver(v, range) === 0;
   }
 

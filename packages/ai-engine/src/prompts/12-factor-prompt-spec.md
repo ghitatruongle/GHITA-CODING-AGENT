@@ -21,6 +21,7 @@ packages/ai-engine/prompts/
 ## 2. YAML File Structure
 
 Each prompt is defined in a YAML file containing three primary sections:
+
 1. `config`: Metadata, input variable definitions, and model parameters.
 2. `template`: The raw multiline template string.
 3. `validator`: Formatting constraints and safety filters.
@@ -29,31 +30,31 @@ Each prompt is defined in a YAML file containing three primary sections:
 
 ```yaml
 config:
-  name: "task_analyzer"
-  version: "1.0.0"
-  description: "Analyzes user query and suggests required tools"
-  provider: "openai"       # Suggests primary provider
-  model: "gpt-4o"          # Suggests target model
+  name: 'task_analyzer'
+  version: '1.0.0'
+  description: 'Analyzes user query and suggests required tools'
+  provider: 'openai' # Suggests primary provider
+  model: 'gpt-4o' # Suggests target model
   temperature: 0.2
   maxTokens: 1000
   inputs:
-    - name: "query"
-      type: "string"
+    - name: 'query'
+      type: 'string'
       required: true
-      description: "The input query from the user"
-    - name: "history"
-      type: "array"
+      description: 'The input query from the user'
+    - name: 'history'
+      type: 'array'
       required: false
       default: []
-      description: "Previous messages for context"
+      description: 'Previous messages for context'
 
 template: |
   You are a professional task analyzer agent.
   Analyze the user query and recommend next tools.
-  
+
   Context History:
   {{history}}
-  
+
   User Query:
   {{query}}
 
@@ -62,11 +63,11 @@ validator:
     min: 20
     max: 5000
   format:
-    pattern: "^You are.*"  # Matches starting template instructions
+    pattern: '^You are.*' # Matches starting template instructions
   safety:
     blockWords:
-      - "override instruct"
-      - "ignore system"
+      - 'override instruct'
+      - 'ignore system'
     enablePromptInjectionCheck: true
 ```
 
@@ -75,13 +76,17 @@ validator:
 ## 3. Schema & Validation Details
 
 ### Input Validation
-Input variables are verified *before* the template is rendered:
+
+Input variables are verified _before_ the template is rendered:
+
 - **Missing Required Variables**: Throws a `PromptValidationError`.
 - **Type Compatibility**: Checked against specified types: `string`, `number`, `boolean`, `array`, `object`.
 - **Default Values**: If a variable is omitted but has a defined `default`, it is injected automatically.
 
 ### Output Validation
-Rendered strings are scanned *after* the variables are compiled:
+
+Rendered strings are scanned _after_ the variables are compiled:
+
 - **Min/Max Length**: Ensures prompts stay within target limits to prevent context bloat.
 - **Pattern Matching**: Guarantees output structure fits requirements.
 - **Block Words**: Rejects output strings containing forbidden instructions or tokens.
@@ -92,7 +97,9 @@ Rendered strings are scanned *after* the variables are compiled:
 ## 4. Integration Guidelines
 
 ### Registry Retrieval
+
 Prompts must be loaded via the `PromptRegistry` class:
+
 ```typescript
 import { PromptRegistry } from '@ghita/ai-engine';
 
@@ -101,13 +108,16 @@ registry.loadDirectory('./prompts');
 
 // Always returns the highest version if 'latest' is specified
 const rendered = registry.render('task_analyzer', 'latest', {
-  query: "Write a test file",
+  query: 'Write a test file',
 });
 ```
 
 ### Hot Reloading
+
 During local development, folder watching ensures changes in `.yaml` files reload in-process immediately:
+
 ```typescript
 registry.watchDirectory('./prompts');
 ```
+
 This reduces roundtrip feedback loop latency for developers adjusting instructions.

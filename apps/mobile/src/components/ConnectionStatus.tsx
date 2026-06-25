@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
-import { ThemeColors } from '../theme/colors';
+import type { ThemeColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { FontSize, Spacing } from '../theme/styles';
 import type { ConnectionState } from '../types';
@@ -11,7 +11,9 @@ interface ConnectionStatusProps {
   compact?: boolean;
 }
 
-const getStatusConfig = (colors: ThemeColors): Record<ConnectionState, { color: string; label: string }> => ({
+const getStatusConfig = (
+  colors: ThemeColors,
+): Record<ConnectionState, { color: string; label: string }> => ({
   connected: { color: colors.success, label: 'status.connected' },
   connecting: { color: colors.warning, label: 'status.connecting' },
   pairing: { color: colors.info, label: 'status.pairing' },
@@ -24,7 +26,7 @@ export function ConnectionStatus({
   compact = false,
 }: ConnectionStatusProps): React.JSX.Element {
   const { colors } = useTheme();
-  const styles = React.useMemo(() => createStyles(colors), [colors]);
+  const styles = React.useMemo(() => createStyles(), []);
   const { t } = useTranslation();
   const glowAnim = useRef(new Animated.Value(0)).current;
 
@@ -86,34 +88,35 @@ export function ConnectionStatus({
   );
 }
 
-const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  dotContainer: {
-    width: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    position: 'absolute',
-  },
-  glowRing: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    borderWidth: 2,
-    position: 'absolute',
-  },
-  label: {
-    fontSize: FontSize.sm,
-    fontWeight: '500',
-  },
-});
+const createStyles = () =>
+  StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+    },
+    dotContainer: {
+      width: 20,
+      height: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
+      position: 'relative',
+    },
+    dot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      position: 'absolute',
+    },
+    glowRing: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+      borderWidth: 2,
+      position: 'absolute',
+    },
+    label: {
+      fontSize: FontSize.sm,
+      fontWeight: '500',
+    },
+  });

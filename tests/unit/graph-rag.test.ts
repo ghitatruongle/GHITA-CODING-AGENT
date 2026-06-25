@@ -129,7 +129,7 @@ describe('15: Knowledge Graph RAG', () => {
 
       const ranks = graph.calculatePageRank(0.85, 50, 1e-6);
       expect(ranks.size).toBe(3);
-      
+
       const rankA = ranks.get('A') || 0;
       const rankB = ranks.get('B') || 0;
       const rankC = ranks.get('C') || 0;
@@ -138,7 +138,7 @@ describe('15: Knowledge Graph RAG', () => {
       // So Node B should have the highest PageRank centrality.
       expect(rankB).toBeGreaterThan(rankA);
       expect(rankB).toBeGreaterThan(rankC);
-      
+
       // Sum of ranks should be approximately 1.0
       const sum = rankA + rankB + rankC;
       expect(sum).toBeCloseTo(1.0, 4);

@@ -115,9 +115,10 @@ export function processEvent(state: ThreadState, event: ReducerEvent): ThreadSta
 
   switch (event.type) {
     case 'message': {
-      const nextMessages = event.role === 'user' || event.role === 'assistant'
-        ? [...state.messages, event.eventId]
-        : state.messages;
+      const nextMessages =
+        event.role === 'user' || event.role === 'assistant'
+          ? [...state.messages, event.eventId]
+          : state.messages;
       const nextTokens = {
         input: state.tokenUsage.input + (event.tokens?.input ?? 0),
         output: state.tokenUsage.output + (event.tokens?.output ?? 0),
@@ -220,10 +221,7 @@ export interface ResumeResponse {
   error?: string;
 }
 
-export function handleResumeRequest(
-  store: ThreadStore,
-  req: ResumeRequest,
-): ResumeResponse {
+export function handleResumeRequest(store: ThreadStore, req: ResumeRequest): ResumeResponse {
   try {
     if (!req.threadId || typeof req.threadId !== 'string') {
       return { ok: false, error: 'threadId is required' };

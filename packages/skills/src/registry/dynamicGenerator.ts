@@ -27,7 +27,7 @@ export class DynamicSkillGenerator {
       if (/^(port|path|profile|protocol|phrase|prompt)/i.test(p2) && p1 === '-p') {
         return match;
       }
-      return p1 + '[REDACTED]';
+      return `${p1  }[REDACTED]`;
     });
     sanitized = sanitized.replace(/(--password\s+)([a-zA-Z0-9_.-]+)/gi, '$1[REDACTED]');
 

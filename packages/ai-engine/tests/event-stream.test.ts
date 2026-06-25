@@ -35,14 +35,24 @@ describe('EventStream', () => {
       await stream.emit('message.delta', 'orchestrator', { delta: 'world' });
 
       const received: StreamEvent[] = [];
-      stream.subscribe((evt) => { received.push(evt); }, { replay: true });
+      stream.subscribe(
+        (evt) => {
+          received.push(evt);
+        },
+        { replay: true },
+      );
       expect(received).toHaveLength(2);
     });
 
     it('4. subscriber skips replay when replay=false', async () => {
       await stream.emit('message.start', 'orchestrator');
       const received: StreamEvent[] = [];
-      stream.subscribe((evt) => { received.push(evt); }, { replay: false });
+      stream.subscribe(
+        (evt) => {
+          received.push(evt);
+        },
+        { replay: false },
+      );
       expect(received).toHaveLength(0);
     });
 
@@ -56,8 +66,12 @@ describe('EventStream', () => {
     it('6. multiple subscribers all receive events', async () => {
       const r1: StreamEvent[] = [];
       const r2: StreamEvent[] = [];
-      stream.subscribe((e) => { r1.push(e); });
-      stream.subscribe((e) => { r2.push(e); });
+      stream.subscribe((e) => {
+        r1.push(e);
+      });
+      stream.subscribe((e) => {
+        r2.push(e);
+      });
       await stream.emit('tool.call', 'tool', { name: 'read' });
       expect(r1).toHaveLength(1);
       expect(r2).toHaveLength(1);
@@ -95,7 +109,9 @@ describe('EventStream', () => {
 
     it('11. emit delivers to all subscribers', async () => {
       const received: StreamEvent[] = [];
-      stream.subscribe((e) => { received.push(e); });
+      stream.subscribe((e) => {
+        received.push(e);
+      });
       await stream.emit('tool.result', 'tool', { output: 'ok' });
       expect(received).toHaveLength(1);
       expect(received[0]!.data).toEqual({ output: 'ok' });
@@ -183,7 +199,9 @@ describe('EventStream', () => {
     it('22. events are persisted to rewindWriter', async () => {
       const persisted: StreamEvent[] = [];
       const writer: RewindWriter = {
-        append: (evt) => { persisted.push(evt); },
+        append: (evt) => {
+          persisted.push(evt);
+        },
         rewind: async () => [],
         size: () => persisted.length,
       };
@@ -195,7 +213,9 @@ describe('EventStream', () => {
 
     it('23. writer errors are swallowed when swallowErrors=true', async () => {
       const writer: RewindWriter = {
-        append: () => { throw new Error('disk full'); },
+        append: () => {
+          throw new Error('disk full');
+        },
         rewind: async () => [],
         size: () => 0,
       };
@@ -210,7 +230,9 @@ describe('EventStream', () => {
   describe('WebSocket bridge', () => {
     it('24. bridge sends JSON to sender', async () => {
       const sent: string[] = [];
-      const unsub = stream.attachWebSocketBridge((json) => { sent.push(json); });
+      const unsub = stream.attachWebSocketBridge((json) => {
+        sent.push(json);
+      });
       await stream.emit('message.start', 'orchestrator', { hello: 'world' });
       expect(sent).toHaveLength(1);
       const parsed = JSON.parse(sent[0]!);
@@ -221,7 +243,9 @@ describe('EventStream', () => {
 
     it('25. bridge unsubscribe stops sending', async () => {
       const sent: string[] = [];
-      const unsub = stream.attachWebSocketBridge((json) => { sent.push(json); });
+      const unsub = stream.attachWebSocketBridge((json) => {
+        sent.push(json);
+      });
       await stream.emit('message.start', 'orchestrator');
       unsub();
       await stream.emit('message.delta', 'orchestrator');
@@ -234,14 +258,18 @@ describe('EventStream', () => {
   describe('plugin hook runner', () => {
     it('26. plugin hook receives events', async () => {
       const received: StreamEvent[] = [];
-      stream.setPluginHookRunner((evt) => { received.push(evt); });
+      stream.setPluginHookRunner((evt) => {
+        received.push(evt);
+      });
       await stream.emit('message.start', 'orchestrator');
       expect(received).toHaveLength(1);
     });
 
     it('27. unregister plugin hook with null', async () => {
       const received: StreamEvent[] = [];
-      stream.setPluginHookRunner((evt) => { received.push(evt); });
+      stream.setPluginHookRunner((evt) => {
+        received.push(evt);
+      });
       await stream.emit('message.start', 'orchestrator');
       stream.setPluginHookRunner(null);
       await stream.emit('message.delta', 'orchestrator');
@@ -277,13 +305,17 @@ describe('EventStream', () => {
 
   describe('error handling', () => {
     it('31. subscriber error is swallowed gracefully', async () => {
-      stream.subscribe(() => { throw new Error('boom'); });
+      stream.subscribe(() => {
+        throw new Error('boom');
+      });
       await stream.emit('message.start', 'orchestrator');
       expect(stream.getStats().totalErrors).toBe(1);
     });
 
     it('32. subscriber async rejection is tracked', async () => {
-      stream.subscribe(async () => { throw new Error('async boom'); });
+      stream.subscribe(async () => {
+        throw new Error('async boom');
+      });
       await stream.emit('message.start', 'orchestrator');
       // Give async error time to be caught
       await new Promise((r) => setTimeout(r, 10));
@@ -303,7 +335,13 @@ describe('EventStream', () => {
     });
 
     it('34. dict_to_event reconstructs event', () => {
-      const dict = { id: 42, type: 'message.start', source: 'orchestrator', timestamp: 1000, data: { x: 1 } };
+      const dict = {
+        id: 42,
+        type: 'message.start',
+        source: 'orchestrator',
+        timestamp: 1000,
+        data: { x: 1 },
+      };
       const evt = dict_to_event(dict);
       expect(evt.id).toBe(42);
       expect(evt.type).toBe('message.start');

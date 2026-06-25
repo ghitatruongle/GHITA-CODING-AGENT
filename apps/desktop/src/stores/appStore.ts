@@ -6,6 +6,10 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { DeviceInfo, PluginManifest } from '@ghita/shared';
 
+// Cache file contents outside of React state to prevent massive re-renders
+// and out-of-memory errors on large files.
+export const fileContentCache = new Map<string, { content: string; originalContent: string }>();
+
 export type TabId =
   | 'code'
   | 'api'
@@ -24,6 +28,17 @@ interface AppState {
   // Tab
   activeTab: TabId;
   setActiveTab: (tab: TabId) => void;
+
+  // CodeView State
+  codeOpenFiles: Array<{
+    path: string;
+    name: string;
+    language: string;
+    modified: boolean;
+  }>;
+  codeActivePath: string;
+  setCodeOpenFiles: (files: AppState['codeOpenFiles']) => void;
+  setCodeActivePath: (path: string) => void;
 
   // Sidebar
   isSidebarOpen: boolean;
@@ -58,9 +73,21 @@ interface AppState {
   setConnectedDevices: (devices: DeviceInfo[]) => void;
 
   // Phase 5: MCP Servers
-  mcpServers: Array<{ name: string; transport: string; enabled: boolean; connected: boolean }>;
+  mcpServers: Array<{
+    id: string;
+    name: string;
+    transport: string;
+    enabled: boolean;
+    connected: boolean;
+  }>;
   setMcpServers: (
-    servers: Array<{ name: string; transport: string; enabled: boolean; connected: boolean }>,
+    servers: Array<{
+      id: string;
+      name: string;
+      transport: string;
+      enabled: boolean;
+      connected: boolean;
+    }>,
   ) => void;
 
   // Phase 5: Hooks
@@ -106,6 +133,12 @@ export const useAppStore = create<AppState>()(
       activeTab: 'code' as TabId,
       setActiveTab: (tab) => set({ activeTab: tab }),
 
+      // CodeView State
+      codeOpenFiles: [],
+      codeActivePath: '',
+      setCodeOpenFiles: (files) => set({ codeOpenFiles: files }),
+      setCodeActivePath: (path) => set({ codeActivePath: path }),
+
       // Sidebar
       isSidebarOpen: true,
       toggleSidebar: () => set((s) => ({ isSidebarOpen: !s.isSidebarOpen })),
@@ -143,6 +176,7 @@ export const useAppStore = create<AppState>()(
 
       // Phase 5: MCP Servers
       mcpServers: [] as Array<{
+        id: string;
         name: string;
         transport: string;
         enabled: boolean;
@@ -191,10 +225,40 @@ export const useAppStore = create<AppState>()(
         language: state.language,
         logLevel: state.logLevel,
         activeTab: state.activeTab,
+        terminalCwd: state.terminalCwd,
+        // Persist only file paths, NOT the full content, to avoid exceeding
+        // the 5MB localStorage quota. Content is re-loaded from disk on startup.
+        codeOpenFiles: state.codeOpenFiles.map((f) => ({
+          path: f.path,
+          language: f.language,
+        })),
+        codeActivePath: state.codeActivePath,
         isTerminalOpen: state.isTerminalOpen,
         plugins: state.plugins,
         permissionMode: state.permissionMode,
       }),
+      merge: (persistedState: unknown, currentState: AppState) => {
+        const persisted = persistedState as Record<string, unknown>;
+        const merged = { ...currentState, ...persisted } as AppState;
+        // Rehydrated codeOpenFiles only has {path, language} — fill in defaults
+        // for the remaining required fields so CodeView doesn't get undefined.
+        if (Array.isArray(merged.codeOpenFiles)) {
+          merged.codeOpenFiles = merged.codeOpenFiles.map(
+            (f: Partial<AppState['codeOpenFiles'][number]> & { path: string }) => {
+              if (!fileContentCache.has(f.path)) {
+                fileContentCache.set(f.path, { content: '', originalContent: '' });
+              }
+              return {
+                path: f.path,
+                name: f.name ?? f.path.split(/[/\\]/).pop() ?? '',
+                language: f.language ?? '',
+                modified: f.modified ?? false,
+              };
+            },
+          );
+        }
+        return merged;
+      },
     },
   ),
 );

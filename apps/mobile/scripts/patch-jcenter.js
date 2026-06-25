@@ -95,3 +95,22 @@ if (file) {
 } else {
   console.log('[postinstall] react-native-bluetooth-classic not found, skipping patch');
 }
+
+try {
+  const vectorIconsPkg = require.resolve('react-native-vector-icons/package.json', { paths: [__dirname, path.join(rootDir, 'apps', 'mobile')] });
+  const vectorIconsManifest = path.join(path.dirname(vectorIconsPkg), 'android', 'src', 'main', 'AndroidManifest.xml');
+  if (fs.existsSync(vectorIconsManifest)) {
+    let manifestContent = fs.readFileSync(vectorIconsManifest, 'utf8');
+    if (manifestContent.includes('package="com.oblador.vectoricons"')) {
+      manifestContent = manifestContent.replace(/\s*package="com\.oblador\.vectoricons"/, '');
+      fs.writeFileSync(vectorIconsManifest, manifestContent);
+      console.log('[postinstall] Patched react-native-vector-icons: removed deprecated package attribute from AndroidManifest.xml');
+    } else {
+      console.log('[postinstall] react-native-vector-icons AndroidManifest.xml already patched or not found');
+    }
+  } else {
+    console.log('[postinstall] react-native-vector-icons AndroidManifest.xml not found at ' + vectorIconsManifest);
+  }
+} catch (e) {
+  console.log('[postinstall] react-native-vector-icons package not found', e.message);
+}

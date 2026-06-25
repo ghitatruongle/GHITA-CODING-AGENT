@@ -18,7 +18,9 @@ const sanitizer = new InputSanitizer();
 
 const { issues, cleaned } = sanitizer.scan(userInput, 'chat.userMessage');
 if (issues.length > 0) {
-  await monitor.captureMessage('Suspicious input', 'warning', { tags: { issues: String(issues.length) } });
+  await monitor.captureMessage('Suspicious input', 'warning', {
+    tags: { issues: String(issues.length) },
+  });
 }
 
 // Safe to render:

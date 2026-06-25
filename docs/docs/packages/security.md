@@ -35,6 +35,7 @@ if (result.modified) {
 ```
 
 Patterns mặc định:
+
 - `<script>`, `javascript:`, `on*=` → XSS
 - `SELECT/INSERT/UPDATE/DELETE ...` → SQL injection
 - `;rm`, `$(...)`, backticks → Command injection

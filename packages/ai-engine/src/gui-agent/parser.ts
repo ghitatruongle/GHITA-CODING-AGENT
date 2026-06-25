@@ -56,7 +56,9 @@ export function validateGuiAction(action: Partial<GuiAction>, index = 0): GuiAct
       const toY = Number(params.toY !== undefined ? params.toY : params.y2);
 
       if (isNaN(fromX) || isNaN(fromY) || isNaN(toX) || isNaN(toY)) {
-        throw new Error(`[Action ${index}] "drag" requires numeric coordinates (fromX, fromY, toX, toY)`);
+        throw new Error(
+          `[Action ${index}] "drag" requires numeric coordinates (fromX, fromY, toX, toY)`,
+        );
       }
       return {
         type: 'drag',
@@ -93,7 +95,9 @@ export function validateGuiAction(action: Partial<GuiAction>, index = 0): GuiAct
       } else if (params.key && typeof params.key === 'string') {
         keys = [params.key];
       } else {
-        throw new Error(`[Action ${index}] "hotkey" requires an array of keys or a "+"-separated key string`);
+        throw new Error(
+          `[Action ${index}] "hotkey" requires an array of keys or a "+"-separated key string`,
+        );
       }
       return {
         type: 'hotkey',
@@ -110,7 +114,9 @@ export function validateGuiAction(action: Partial<GuiAction>, index = 0): GuiAct
         throw new Error(`[Action ${index}] "scroll" requires a numeric amount`);
       }
       if (!validDirections.includes(direction)) {
-        throw new Error(`[Action ${index}] "scroll" direction must be one of: ${validDirections.join(', ')}`);
+        throw new Error(
+          `[Action ${index}] "scroll" direction must be one of: ${validDirections.join(', ')}`,
+        );
       }
       return {
         type: 'scroll',
@@ -199,7 +205,8 @@ export function parseModelOutput(output: string): GuiAction[] {
       const params: Record<string, unknown> = {};
 
       // Parse type from attributes
-      const typeAttrMatch = /\btype=["']([^"']+)["']/.exec(attrsStr) || /\bname=["']([^"']+)["']/.exec(attrsStr);
+      const typeAttrMatch =
+        /\btype=["']([^"']+)["']/.exec(attrsStr) || /\bname=["']([^"']+)["']/.exec(attrsStr);
       if (typeAttrMatch) {
         action.type = typeAttrMatch[1] as ActionType;
       }
@@ -234,7 +241,8 @@ export function parseModelOutput(output: string): GuiAction[] {
   // 3. Fallback: Parse function-like text directives line-by-line:
   // e.g. click(100, 200), type("hello"), wait(1000)
   const lines = output.split('\n');
-  const directiveRegex = /\b(click|double_click|right_click|drag|move_to|type|keypress|hotkey|scroll|wait)\s*\(([^)]*)\)/gi;
+  const directiveRegex =
+    /\b(click|double_click|right_click|drag|move_to|type|keypress|hotkey|scroll|wait)\s*\(([^)]*)\)/gi;
 
   for (const line of lines) {
     let lineMatch;
@@ -272,13 +280,21 @@ export function parseModelOutput(output: string): GuiAction[] {
 
         // Helper to strip quotes
         const stripQuotes = (str: string) => {
-          if ((str.startsWith('"') && str.endsWith('"')) || (str.startsWith("'") && str.endsWith("'"))) {
+          if (
+            (str.startsWith('"') && str.endsWith('"')) ||
+            (str.startsWith("'") && str.endsWith("'"))
+          ) {
             return str.slice(1, -1);
           }
           return str;
         };
 
-        if (type === 'click' || type === 'double_click' || type === 'right_click' || type === 'move_to') {
+        if (
+          type === 'click' ||
+          type === 'double_click' ||
+          type === 'right_click' ||
+          type === 'move_to'
+        ) {
           params.x = Number(args[0]);
           params.y = Number(args[1]);
           if (args[2]) {

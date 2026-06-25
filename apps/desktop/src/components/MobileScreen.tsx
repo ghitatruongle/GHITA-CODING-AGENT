@@ -10,6 +10,7 @@
 // ==============================================================================
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 
 // ----- Tauri bridge types (mirrors mobile-adb.ts) -----
 
@@ -26,22 +27,21 @@ export interface TauriResult<T> {
   error?: string;
 }
 
-declare global {
-  interface Window {
-    __TAURI__?: {
-      core: {
-        invoke: <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
-      };
-    };
-  }
+function isTauri(): boolean {
+  return (
+    typeof window !== 'undefined' && ('__TAURI_INTERNALS__' in window || '__TAURI__' in window)
+  );
 }
 
-async function tauriInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<TauriResult<T>> {
-  if (typeof window === 'undefined' || !window.__TAURI__) {
+async function tauriInvoke<T>(
+  cmd: string,
+  args?: Record<string, unknown>,
+): Promise<TauriResult<T>> {
+  if (!isTauri()) {
     return { ok: false, error: 'Tauri runtime not available' };
   }
   try {
-    const data = await window.__TAURI__.core.invoke<T>(cmd, args);
+    const data = await invoke<T>(cmd, args);
     return { ok: true, data };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
@@ -91,7 +91,9 @@ export function MobileScreen({
         setError(res.error ?? 'Failed to list devices');
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [currentDevice]);
 
   const capture = useCallback(async () => {
@@ -121,30 +123,33 @@ export function MobileScreen({
     };
   }, [autoRefresh, currentDevice, refreshIntervalMs, capture]);
 
-  const handleImageClick = useCallback(async (e: React.MouseEvent<HTMLImageElement>) => {
-    if (!enableTouch || !currentDevice || !imgRef.current) return;
-    const rect = imgRef.current.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
-    const scaleX = imgRef.current.naturalWidth / rect.width;
-    const scaleY = imgRef.current.naturalHeight / rect.height;
-    const deviceX = Math.round(clickX * scaleX);
-    const deviceY = Math.round(clickY * scaleY);
+  const handleImageClick = useCallback(
+    async (e: React.MouseEvent<HTMLImageElement>) => {
+      if (!enableTouch || !currentDevice || !imgRef.current) return;
+      const rect = imgRef.current.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+      const scaleX = imgRef.current.naturalWidth / rect.width;
+      const scaleY = imgRef.current.naturalHeight / rect.height;
+      const deviceX = Math.round(clickX * scaleX);
+      const deviceY = Math.round(clickY * scaleY);
 
-    const id = ++rippleIdRef.current;
-    setRipples((prev) => [...prev, { id, x: clickX, y: clickY }]);
-    setTimeout(() => {
-      setRipples((prev) => prev.filter((r) => r.id !== id));
-    }, 600);
+      const id = ++rippleIdRef.current;
+      setRipples((prev) => [...prev, { id, x: clickX, y: clickY }]);
+      setTimeout(() => {
+        setRipples((prev) => prev.filter((r) => r.id !== id));
+      }, 600);
 
-    const res = await tauriInvoke<void>('mobile_adb_tap', {
-      x: deviceX,
-      y: deviceY,
-      serial: currentDevice,
-    });
-    if (!res.ok) setError(res.error ?? 'Tap failed');
-    onTap?.(deviceX, deviceY);
-  }, [enableTouch, currentDevice, onTap]);
+      const res = await tauriInvoke<void>('mobile_adb_tap', {
+        x: deviceX,
+        y: deviceY,
+        serial: currentDevice,
+      });
+      if (!res.ok) setError(res.error ?? 'Tap failed');
+      onTap?.(deviceX, deviceY);
+    },
+    [enableTouch, currentDevice, onTap],
+  );
 
   return (
     <div className={`mobile-screen ${className ?? ''}`} style={styles.container}>
@@ -157,7 +162,8 @@ export function MobileScreen({
           <option value="">— Select device —</option>
           {devices.map((d) => (
             <option key={d.serial} value={d.serial} disabled={d.state !== 'device'}>
-              {d.serial} {d.product ? `(${d.product})` : ''} {d.state !== 'device' ? `[${d.state}]` : ''}
+              {d.serial} {d.product ? `(${d.product})` : ''}{' '}
+              {d.state !== 'device' ? `[${d.state}]` : ''}
             </option>
           ))}
         </select>
@@ -177,7 +183,9 @@ export function MobileScreen({
       {error && (
         <div style={styles.errorBanner}>
           <span>⚠ {error}</span>
-          <button onClick={() => setError(null)} style={styles.dismissBtn}>×</button>
+          <button onClick={() => setError(null)} style={styles.dismissBtn}>
+            ×
+          </button>
         </div>
       )}
 

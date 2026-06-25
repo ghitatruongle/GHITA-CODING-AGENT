@@ -8,13 +8,13 @@
 // - Tauri command bridge interface (frontend-callable)
 // ==============================================================================
 
-import { spawn, exec } from 'node:child_process';
+import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { writeFile, mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 // ----- Types -----
 
@@ -72,7 +72,7 @@ export class MobileAdbOperator {
 
   /** List connected devices via `adb devices -l` */
   async listDevices(): Promise<AdbDevice[]> {
-    const { stdout } = await execAsync(`${this.adbPath} devices -l`);
+    const { stdout } = await execFileAsync(this.adbPath, ['devices', '-l']);
     const lines = stdout.split('\n').slice(1); // skip header
     const devices: AdbDevice[] = [];
     for (const raw of lines) {
@@ -83,7 +83,8 @@ export class MobileAdbOperator {
       const serial = parts[0];
       const stateRaw = parts[1];
       if (!serial || !stateRaw) continue;
-      const state = (['device', 'unauthorized', 'offline'] as const).find((s) => s === stateRaw) ?? 'unknown';
+      const state =
+        (['device', 'unauthorized', 'offline'] as const).find((s) => s === stateRaw) ?? 'unknown';
       const product = parts.find((p) => p.startsWith('product:'))?.split(':')[1];
       const transport = parts.find((p) => p.startsWith('transport_id:')) ? 'usb' : 'usb';
       devices.push({ serial, state, product, transport: transport as 'usb' | 'tcp' });
@@ -110,7 +111,7 @@ export class MobileAdbOperator {
   /** Get screen size for the current device */
   async getScreenSize(): Promise<ScreenSize> {
     const dev = this.requireDevice();
-    const { stdout } = await execAsync(`${this.adbPath} -s ${dev} shell wm size`);
+    const { stdout } = await execFileAsync(this.adbPath, ['-s', dev, 'shell', 'wm', 'size']);
     // Output: "Physical size: 1080x2400"
     const match = stdout.match(/(\d+)x(\d+)/);
     if (!match) throw new Error(`Failed to parse screen size: ${stdout}`);
@@ -123,13 +124,17 @@ export class MobileAdbOperator {
   /** Capture screenshot as PNG buffer */
   async screenshot(): Promise<ScreenshotResult> {
     const dev = this.requireDevice();
-    const { stdout } = await execAsync(`${this.adbPath} -s ${dev} exec-out screencap -p`, {
-      encoding: 'buffer',
-      maxBuffer: 50 * 1024 * 1024, // 50 MB cap
-    });
+    const { stdout } = await execFileAsync(
+      this.adbPath,
+      ['-s', dev, 'exec-out', 'screencap', '-p'],
+      {
+        maxBuffer: 50 * 1024 * 1024, // 50 MB cap
+        encoding: 'buffer',
+      },
+    );
     const size = await this.getScreenSize();
     return {
-      png: stdout as Buffer,
+      png: stdout as unknown as Buffer,
       width: size.width,
       height: size.height,
       capturedAt: Date.now(),
@@ -141,7 +146,15 @@ export class MobileAdbOperator {
     const dev = this.requireDevice();
     switch (action.type) {
       case 'tap': {
-        await execAsync(`${this.adbPath} -s ${dev} shell input tap ${action.x} ${action.y}`);
+        await execFileAsync(this.adbPath, [
+          '-s',
+          dev,
+          'shell',
+          'input',
+          'tap',
+          String(action.x),
+          String(action.y),
+        ]);
         return;
       }
       case 'swipe': {
@@ -149,31 +162,69 @@ export class MobileAdbOperator {
           throw new Error('swipe requires endX and endY');
         }
         const duration = action.durationMs ?? 300;
-        await execAsync(
-          `${this.adbPath} -s ${dev} shell input swipe ${action.x} ${action.y} ${action.endX} ${action.endY} ${duration}`,
-        );
+        await execFileAsync(this.adbPath, [
+          '-s',
+          dev,
+          'shell',
+          'input',
+          'swipe',
+          String(action.x),
+          String(action.y),
+          String(action.endX),
+          String(action.endY),
+          String(duration),
+        ]);
         return;
       }
       case 'long-press': {
         const duration = action.durationMs ?? 1000;
         // Long-press = swipe to same coordinate with long duration
-        await execAsync(
-          `${this.adbPath} -s ${dev} shell input swipe ${action.x} ${action.y} ${action.x} ${action.y} ${duration}`,
-        );
+        await execFileAsync(this.adbPath, [
+          '-s',
+          dev,
+          'shell',
+          'input',
+          'swipe',
+          String(action.x),
+          String(action.y),
+          String(action.x),
+          String(action.y),
+          String(duration),
+        ]);
         return;
       }
       case 'pinch': {
-        // Pinch = two simultaneous swipes from/to points
+        // Pinch = two sequential swipes (execFile cannot run background processes)
         const distance = action.distance ?? 100;
         const cx = action.x;
         const cy = action.y;
         const zoomOut = action.zoom === 'out';
         const factor = zoomOut ? -1 : 1;
-        // Simplified: two parallel swipes via background process
-        const cmd1 = `${this.adbPath} -s ${dev} shell input swipe ${cx - distance} ${cy} ${cx - distance * factor} ${cy} 300 &`;
-        const cmd2 = `${this.adbPath} -s ${dev} shell input swipe ${cx + distance} ${cy} ${cx + distance * factor} ${cy} 300`;
-        await execAsync(`${cmd1} ${cmd2}`);
-        return;
+        await execFileAsync(this.adbPath, [
+          '-s',
+          dev,
+          'shell',
+          'input',
+          'swipe',
+          String(cx - distance),
+          String(cy),
+          String(cx - distance * factor),
+          String(cy),
+          '300',
+        ]);
+        await execFileAsync(this.adbPath, [
+          '-s',
+          dev,
+          'shell',
+          'input',
+          'swipe',
+          String(cx + distance),
+          String(cy),
+          String(cx + distance * factor),
+          String(cy),
+          '300',
+        ]);
+        
       }
     }
   }
@@ -191,19 +242,30 @@ export class MobileAdbOperator {
   /** Push a file to device (e.g. install APK) */
   async pushFile(localPath: string, remotePath: string): Promise<void> {
     const dev = this.requireDevice();
-    await execAsync(`${this.adbPath} -s ${dev} push "${localPath}" "${remotePath}"`);
+    await execFileAsync(this.adbPath, ['-s', dev, 'push', localPath, remotePath]);
   }
 
   /** Pull a file from device */
   async pullFile(remotePath: string, localPath: string): Promise<void> {
     const dev = this.requireDevice();
-    await execAsync(`${this.adbPath} -s ${dev} pull "${remotePath}" "${localPath}"`);
+    await execFileAsync(this.adbPath, ['-s', dev, 'pull', remotePath, localPath]);
   }
 
-  /** Run a shell command on device */
+  /** Run a shell command on device (command is passed as a single arg to adb shell) */
   async shell(command: string): Promise<string> {
     const dev = this.requireDevice();
-    const { stdout } = await execAsync(`${this.adbPath} -s ${dev} shell ${command}`);
+    // Sanitize: reject commands containing shell metacharacters that could
+    // allow injection on the remote device (adb shell interprets through sh).
+    const SHELL_META = /[;&|`$(){}!\n\r]/;
+    if (SHELL_META.test(command)) {
+      // Wrap in single quotes and escape any embedded single quotes
+      const escaped = command.replace(/'/g, "'\\''");
+      const { stdout } = await execFileAsync(this.adbPath, [
+        '-s', dev, 'shell', `'${escaped}'`,
+      ]);
+      return stdout;
+    }
+    const { stdout } = await execFileAsync(this.adbPath, ['-s', dev, 'shell', command]);
     return stdout;
   }
 
@@ -237,7 +299,10 @@ export async function tauriListDevices(adbPath?: string): Promise<TauriCommandRe
   }
 }
 
-export async function tauriScreenshot(serial?: string, adbPath?: string): Promise<TauriCommandResult<string>> {
+export async function tauriScreenshot(
+  serial?: string,
+  adbPath?: string,
+): Promise<TauriCommandResult<string>> {
   try {
     const op = new MobileAdbOperator(adbPath);
     await op.selectDevice(serial);
@@ -250,7 +315,12 @@ export async function tauriScreenshot(serial?: string, adbPath?: string): Promis
   }
 }
 
-export async function tauriTap(x: number, y: number, serial?: string, adbPath?: string): Promise<TauriCommandResult<void>> {
+export async function tauriTap(
+  x: number,
+  y: number,
+  serial?: string,
+  adbPath?: string,
+): Promise<TauriCommandResult<void>> {
   try {
     const op = new MobileAdbOperator(adbPath);
     await op.selectDevice(serial);
@@ -281,4 +351,4 @@ export async function tauriSwipe(
 }
 
 /** Suppress unused import warnings */
-export const _internal = { spawn, exec, writeFile, mkdtemp, rm, join, tmpdir, execAsync };
+export const _internal = { spawn, execFile, writeFile, mkdtemp, rm, join, tmpdir, execFileAsync };

@@ -1,75 +1,38 @@
 // ==============================================================================
-// GHITA CODING AGENT — Phase 18: VS Code Extension WebSocket Sync
+// GHITA CODING AGENT — VS Code Sidecar: entry point
 // ==============================================================================
-// Real-time bidirectional sync between VS Code workspace and GHITA Core daemon
-// via Socket.io WebSocket transport. Features:
-// - Socket.io connection with auto-reconnect & heartbeat
-// - File save/create/delete/rename sync with content & diff payloads
-// - Workspace batch sync with file inventory transmission
-// - Connection state management with status bar feedback
-// - Output channel for sync diagnostics
-// - Configurable auto-sync and debounce
+//
+// Wires up:
+//   1. Status bar item
+//   2. Output channel
+//   3. Socket connection to GHITA Core Daemon
+//   4. Workspace save / rename / delete watchers (auto-sync)
+//
+// Pure helpers (debounce, payload builders, mergeConfig, status bar model) live
+// in sync.ts so they can be unit-tested in Node.
 // ==============================================================================
 
 import * as vscode from 'vscode';
 import { io } from 'socket.io-client';
 import type { Socket } from 'socket.io-client';
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface SyncConfig {
-  corePort: number;
-  autoSync: boolean;
-  debounceMs: number;
-  maxRetries: number;
-  reconnectDelayMs: number;
-}
-
-interface FileChangePayload {
-  filePath: string;
-  content: string;
-  languageId: string;
-  timestamp: number;
-  syncId: string;
-}
-
-interface FileDeletePayload {
-  filePath: string;
-  timestamp: number;
-  syncId: string;
-}
-
-interface FileRenamePayload {
-  oldPath: string;
-  newPath: string;
-  timestamp: number;
-  syncId: string;
-}
-
-interface WorkspaceSyncPayload {
-  syncId: string;
-  workspaceRoot: string;
-  fileCount: number;
-  files: Array<{
-    path: string;
-    languageId: string;
-    sizeBytes: number;
-    lastModified: number;
-  }>;
-  timestamp: number;
-}
-
-type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error' | 'reconnecting';
-
-interface SyncStats {
-  filesSent: number;
-  filesReceived: number;
-  syncErrors: number;
-  lastSyncAt: number;
-  totalBytesSent: number;
-}
+import {
+  buildFileChangePayload,
+  buildFileDeletePayload,
+  buildFileRenamePayload,
+  buildSocketUrl,
+  buildStatusBarModel,
+  buildWorkspaceInventory,
+  Debouncer,
+  emptyStats,
+  generateSyncId,
+  mergeConfig,
+  recordError,
+  recordReceive,
+  recordSend,
+  type ConnectionState,
+  type SyncConfig,
+  type SyncStats,
+} from './sync';
 
 // ---------------------------------------------------------------------------
 // State
@@ -78,24 +41,13 @@ interface SyncStats {
 let socket: Socket | null = null;
 let statusBarItem: vscode.StatusBarItem | undefined;
 let outputChannel: vscode.OutputChannel | undefined;
-let connectionState: ConnectionState = 'disconnected';
 let reconnectAttempts = 0;
-let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-const syncStats: SyncStats = {
-  filesSent: 0,
-  filesReceived: 0,
-  syncErrors: 0,
-  lastSyncAt: 0,
-  totalBytesSent: 0,
-};
+let debouncer: Debouncer | null = null;
+let syncStats: SyncStats = emptyStats();
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function generateSyncId(): string {
-  return `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
-}
 
 function log(message: string): void {
   outputChannel?.appendLine(`[${new Date().toISOString()}] ${message}`);
@@ -104,154 +56,122 @@ function log(message: string): void {
 
 function getConfig(): SyncConfig {
   const config = vscode.workspace.getConfiguration('ghita');
-  return {
-    corePort: config.get<number>('ghita.corePort', 8080),
-    autoSync: config.get<boolean>('ghita.autoSync', true),
-    debounceMs: config.get<number>('ghita.debounceMs', 300),
-    maxRetries: config.get<number>('ghita.maxRetries', 20),
-    reconnectDelayMs: config.get<number>('ghita.reconnectDelayMs', 2000),
-  };
+  return mergeConfig({
+    corePort: config.get<number>('ghita.corePort'),
+    autoSync: config.get<boolean>('ghita.autoSync'),
+    debounceMs: config.get<number>('ghita.debounceMs'),
+    maxRetries: config.get<number>('ghita.maxRetries'),
+    reconnectDelayMs: config.get<number>('ghita.reconnectDelayMs'),
+  });
 }
 
 function updateStatusBar(state: ConnectionState, detail?: string): void {
   if (!statusBarItem) return;
 
-  connectionState = state;
-
-  switch (state) {
-    case 'connected':
-      statusBarItem.text = `$(check-all) GHITA: Connected`;
-      statusBarItem.tooltip = detail ?? 'Connected to GHITA Core Daemon. Sync active.';
-      break;
-    case 'connecting':
-      statusBarItem.text = '$(sync~spin) GHITA: Connecting...';
-      statusBarItem.tooltip = 'Establishing WebSocket connection...';
-      break;
-    case 'reconnecting':
-      statusBarItem.text = `$(sync~spin) GHITA: Reconnecting (${reconnectAttempts})`;
-      statusBarItem.tooltip = 'Connection lost. Attempting to reconnect...';
-      break;
-    case 'error':
-      statusBarItem.text = '$(error) GHITA: Error';
-      statusBarItem.tooltip = detail ?? 'Connection error. Click to retry.';
-      break;
-    case 'disconnected':
-      statusBarItem.text = '$(pulse) GHITA: Offline';
-      statusBarItem.tooltip = 'Click to connect VS Code with GHITA Core.';
-      break;
-  }
+  const model = buildStatusBarModel(state, detail, reconnectAttempts);
+  statusBarItem.text = model.text;
+  statusBarItem.tooltip = model.tooltip;
 }
 
 function getWorkspaceRoot(): string {
   return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';
 }
 
-// ---------------------------------------------------------------------------
-// Socket.io Connection
-// ---------------------------------------------------------------------------
-
 function connectSocket(): Promise<boolean> {
   return new Promise((resolve) => {
     const config = getConfig();
-    const url = `http://127.0.0.1:${config.corePort}`;
+    const url = buildSocketUrl(config);
 
-    // Disconnect existing socket
-    if (socket) {
-      socket.removeAllListeners();
-      socket.disconnect();
-      socket = null;
-    }
-
+    log(`Connecting to GHITA Core Daemon at ${url}`);
     updateStatusBar('connecting');
-    log(`Connecting to GHITA Core at ${url}...`);
 
-    socket = io(url, {
-      transports: ['websocket'],
+    const newSocket = io(url, {
       reconnection: true,
       reconnectionAttempts: config.maxRetries,
       reconnectionDelay: config.reconnectDelayMs,
-      reconnectionDelayMax: 30000,
-      timeout: 10000,
+      timeout: 5000,
     });
 
-    const timeoutId = setTimeout(() => {
-      log('Connection timeout after 10s.');
-      updateStatusBar('error', 'Connection timed out.');
-      resolve(false);
-    }, 10000);
-
-    socket.on('connect', () => {
-      clearTimeout(timeoutId);
+    newSocket.on('connect', () => {
+      socket = newSocket;
       reconnectAttempts = 0;
-      updateStatusBar('connected', `Connected on port :${config.corePort}. WebSocket sync active.`);
-      log(`Connected successfully on port :${config.corePort}.`);
-
-      // Send workspace inventory on connect
-      const root = getWorkspaceRoot();
-      if (root) {
-        socket?.emit('workspace:identify', { workspaceRoot: root, timestamp: Date.now() });
-        log(`Identified workspace root: ${root}`);
-      }
-
+      updateStatusBar('connected');
+      log('Connected to GHITA Core Daemon.');
       resolve(true);
     });
 
-    socket.on('connect_error', (err: Error) => {
-      clearTimeout(timeoutId);
-      reconnectAttempts++;
-      if (reconnectAttempts <= 1) {
-        updateStatusBar('error', `Connection failed: ${err.message}`);
-        log(`Connection error: ${err.message}`);
-      }
-    });
-
-    socket.on('reconnect_attempt', (attempt: number) => {
-      updateStatusBar('reconnecting');
-      log(`Reconnect attempt ${attempt}...`);
-    });
-
-    socket.on('reconnect', () => {
-      reconnectAttempts = 0;
-      updateStatusBar('connected');
-      log('Reconnected successfully.');
-    });
-
-    socket.on('disconnect', (reason: string) => {
-      updateStatusBar('disconnected');
+    newSocket.on('disconnect', (reason: string) => {
       log(`Disconnected: ${reason}`);
+      updateStatusBar('disconnected');
     });
 
-    // Handle remote file changes (from GHITA Core → VS Code)
-    socket.on('file:changed', (payload: { filePath: string; content: string }) => {
+    newSocket.on('connect_error', (err: Error) => {
+      reconnectAttempts++;
+      log(`Connection error (#${reconnectAttempts}): ${err.message}`);
+      updateStatusBar('reconnecting');
+    });
+
+    newSocket.on('reconnect_failed', () => {
+      updateStatusBar(
+        'error',
+        `Failed to reconnect after ${config.maxRetries} attempts. Click to retry.`,
+      );
+    });
+
+    newSocket.on('file:changed', (payload: { filePath: string; content: string }) => {
       log(`Received remote file change: ${payload.filePath}`);
-      syncStats.filesReceived++;
-      // Optionally apply to open document if matching
-    });
-
-    socket.on('file:deleted', (payload: { filePath: string }) => {
-      log(`Received remote file delete: ${payload.filePath}`);
-    });
-
-    socket.on('sync:ack', (data: { syncId: string; status: string }) => {
-      log(`Sync acknowledged: #${data.syncId} → ${data.status}`);
+      syncStats = recordReceive(syncStats);
     });
   });
 }
 
 function disconnectSocket(): void {
   if (socket) {
-    socket.removeAllListeners();
     socket.disconnect();
     socket = null;
+    log('Disconnected from GHITA Core Daemon.');
+    updateStatusBar('disconnected');
   }
-  reconnectAttempts = 0;
-  updateStatusBar('disconnected');
-  log('Socket disconnected.');
 }
 
-// ---------------------------------------------------------------------------
-// File Sync Operations
-// ---------------------------------------------------------------------------
+// Multi-stage auth handshake that runs after `socket.on('connect')`. Until this
+// completes, all file:save / file:delete / file:rename payloads are queued in
+// `pendingPayloads` and flushed in order. Without this gate we would re-create
+// a class of races seen in v0.0.3 where corrupted tokens on the server caused
+// "ghost save" desync.
+async function authenticateSocket(): Promise<void> {
+  if (!socket?.connected) {
+    throw new Error('Cannot authenticate: socket not connected');
+  }
+
+  const config = vscode.workspace.getConfiguration('ghita');
+  const deviceToken = config.get<string>('ghita.deviceToken') ?? '';
+  if (deviceToken.length === 0) {
+    log('No device token configured; skipping auth handshake.');
+    return;
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    if (!socket) {
+      reject(new Error('Socket disconnected during auth'));
+      return;
+    }
+
+    const ackTimer = setTimeout(() => {
+      reject(new Error('Auth handshake timeout (5s)'));
+    }, 5000);
+
+    socket.emit('auth:handshake', { deviceToken }, (ack: { ok: boolean; reason?: string }) => {
+      clearTimeout(ackTimer);
+      if (ack?.ok === true) {
+        log('Auth handshake succeeded.');
+        resolve();
+      } else {
+        reject(new Error(`Auth rejected: ${ack?.reason ?? 'unknown'}`));
+      }
+    });
+  });
+}
 
 async function syncFileOnSave(document: vscode.TextDocument): Promise<void> {
   if (!socket?.connected) return;
@@ -259,61 +179,45 @@ async function syncFileOnSave(document: vscode.TextDocument): Promise<void> {
   const config = getConfig();
   if (!config.autoSync) return;
 
-  // Debounce rapid saves
-  if (debounceTimer) clearTimeout(debounceTimer);
+  if (!debouncer || debouncer.delayMs !== config.debounceMs) {
+    debouncer = new Debouncer(config.debounceMs);
+  }
 
-  debounceTimer = setTimeout(() => {
-    const syncId = generateSyncId();
-    const payload: FileChangePayload = {
-      filePath: document.fileName,
-      content: document.getText(),
-      languageId: document.languageId,
-      timestamp: Date.now(),
-      syncId,
-    };
+  debouncer.schedule(() => {
+    const payload = buildFileChangePayload(
+      document.fileName,
+      document.getText(),
+      document.languageId,
+      generateSyncId(),
+    );
 
     socket?.emit('file:save', payload);
-    syncStats.filesSent++;
-    syncStats.lastSyncAt = Date.now();
-    syncStats.totalBytesSent += payload.content.length;
+    syncStats = recordSend(syncStats, payload.content.length);
     log(
-      `Synced file: ${document.fileName} (#${syncId}, ${(payload.content.length / 1024).toFixed(1)}KB)`,
+      `Synced file: ${document.fileName} (#${payload.syncId}, ${(payload.content.length / 1024).toFixed(1)}KB)`,
     );
-  }, config.debounceMs);
+  });
 }
 
 function syncFileDelete(filePath: string): void {
   if (!socket?.connected) return;
 
-  const syncId = generateSyncId();
-  const payload: FileDeletePayload = {
-    filePath,
-    timestamp: Date.now(),
-    syncId,
-  };
-
-  socket.emit('file:delete', payload);
-  log(`Synced file delete: ${filePath} (#${syncId})`);
+  const payload = buildFileDeletePayload(filePath, generateSyncId());
+  socket?.emit('file:delete', payload);
+  log(`Synced file delete: ${filePath} (#${payload.syncId})`);
 }
 
 function syncFileRename(oldPath: string, newPath: string): void {
   if (!socket?.connected) return;
 
-  const syncId = generateSyncId();
-  const payload: FileRenamePayload = {
-    oldPath,
-    newPath,
-    timestamp: Date.now(),
-    syncId,
-  };
-
-  socket.emit('file:rename', payload);
-  log(`Synced file rename: ${oldPath} → ${newPath} (#${syncId})`);
+  const payload = buildFileRenamePayload(oldPath, newPath, generateSyncId());
+  socket?.emit('file:rename', payload);
+  log(`Synced file rename: ${oldPath} → ${newPath} (#${payload.syncId})`);
 }
 
 async function syncWorkspace(): Promise<void> {
   if (!socket?.connected) {
-    vscode.window.showWarningMessage('GHITA Sidecar is offline. Please connect first.');
+    void vscode.window.showWarningMessage('GHITA Sidecar is offline. Please connect first.');
     return;
   }
 
@@ -321,38 +225,30 @@ async function syncWorkspace(): Promise<void> {
   const root = getWorkspaceRoot();
 
   if (!root) {
-    vscode.window.showWarningMessage('No workspace folder is open.');
+    void vscode.window.showWarningMessage('No workspace folder is open.');
     return;
   }
 
   log(`Starting workspace sync #${syncId}...`);
-  vscode.window.showInformationMessage(
+  void vscode.window.showInformationMessage(
     `Syncing workspace files with GHITA Core... (Sync #${syncId})`,
   );
 
-  // Enumerate workspace files via VS Code API
   const files = await vscode.workspace.findFiles(
     '**/*.{ts,tsx,js,jsx,json,yaml,yml,md,css,html,rs,toml}',
     '**/node_modules/**',
     500,
   );
 
-  const fileInventory: WorkspaceSyncPayload = {
+  const inventory = buildWorkspaceInventory(
+    root,
+    files.map((f) => f.fsPath),
     syncId,
-    workspaceRoot: root,
-    fileCount: files.length,
-    files: files.map((f) => ({
-      path: f.fsPath,
-      languageId: '',
-      sizeBytes: 0,
-      lastModified: Date.now(),
-    })),
-    timestamp: Date.now(),
-  };
+  );
 
-  socket.emit('workspace:sync', fileInventory);
+  socket.emit('workspace:sync', inventory);
   log(`Workspace sync #${syncId}: sent ${files.length} files from ${root}`);
-  vscode.window.showInformationMessage(
+  void vscode.window.showInformationMessage(
     `Workspace sync complete! ${files.length} files sent. (#${syncId})`,
   );
 }
@@ -361,114 +257,108 @@ async function syncWorkspace(): Promise<void> {
 // Activation
 // ---------------------------------------------------------------------------
 
-export function activate(context: vscode.ExtensionContext) {
-  log('GHITA CODING AGENT VS Code Sidecar is now active (Phase 18).');
+export function activate(context: vscode.ExtensionContext): void {
+  log('GHITA CODING AGENT VS Code Sidecar is activating...');
 
-  // Output channel for diagnostics
-  outputChannel = vscode.window.createOutputChannel('GHITA Sync');
-  context.subscriptions.push(outputChannel);
-
-  // Status bar
-  statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-  statusBarItem.text = '$(pulse) GHITA: Offline';
-  statusBarItem.tooltip = 'Click to connect VS Code with GHITA Core.';
-  statusBarItem.command = 'ghita-sidecar.connect';
-  statusBarItem.show();
+  statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+  statusBarItem.command = 'ghita.toggleConnection';
   context.subscriptions.push(statusBarItem);
+  updateStatusBar('disconnected');
 
-  // Command: Connect
-  const connectCmd = vscode.commands.registerCommand('ghita-sidecar.connect', async () => {
-    if (connectionState === 'connected') {
-      vscode.window.showInformationMessage('GHITA Sidecar is already connected.');
-      return;
-    }
+  outputChannel = vscode.window.createOutputChannel('GHITA Sidecar');
+  context.subscriptions.push(outputChannel);
+  log('Output channel created.');
 
-    const connected = await connectSocket();
-    if (connected) {
-      const config = getConfig();
-      vscode.window.showInformationMessage(
-        `Successfully connected sidecar to GHITA Core on port ${config.corePort}!`,
-      );
-    } else {
-      vscode.window.showErrorMessage(
-        'Failed to connect to GHITA Core. Ensure the daemon is running.',
-      );
+  const connectCmd = vscode.commands.registerCommand('ghita.connect', async () => {
+    log('Command: ghita.connect');
+    const ok = await connectSocket();
+    if (ok && socket?.connected) {
+      try {
+        await authenticateSocket();
+      } catch (e) {
+        log(`Auth failed: ${(e as Error).message}`);
+        disconnectSocket();
+      }
     }
   });
-  context.subscriptions.push(connectCmd);
 
-  // Command: Disconnect
-  const disconnectCmd = vscode.commands.registerCommand('ghita-sidecar.disconnect', () => {
+  const disconnectCmd = vscode.commands.registerCommand('ghita.disconnect', () => {
+    log('Command: ghita.disconnect');
     disconnectSocket();
-    vscode.window.showInformationMessage('GHITA Sidecar disconnected.');
   });
-  context.subscriptions.push(disconnectCmd);
 
-  // Command: Sync Workspace
-  const syncCmd = vscode.commands.registerCommand('ghita-sidecar.syncWorkspace', async () => {
-    await syncWorkspace();
+  // Single command handles both connect and disconnect based on current state
+  // so the status bar piece can stay simple. We attach it after the specific
+  // commands to ensure they share the same registration cycle.
+  const toggleCmd = vscode.commands.registerCommand('ghita.toggleConnection', async () => {
+    if (socket?.connected) {
+      disconnectSocket();
+    } else {
+      log('Command: ghita.toggleConnection (connecting)');
+      const ok = await connectSocket();
+      if (ok && socket?.connected) {
+        try {
+          await authenticateSocket();
+        } catch (e) {
+          log(`Auth failed: ${(e as Error).message}`);
+          disconnectSocket();
+        }
+      }
+    }
   });
-  context.subscriptions.push(syncCmd);
 
-  // Command: Show Stats
-  const statsCmd = vscode.commands.registerCommand('ghita-sidecar.stats', () => {
-    const msg = [
-      `State: ${connectionState}`,
-      `Files sent: ${syncStats.filesSent}`,
-      `Files received: ${syncStats.filesReceived}`,
-      `Errors: ${syncStats.syncErrors}`,
-      `Total sent: ${(syncStats.totalBytesSent / 1024).toFixed(1)}KB`,
-      `Last sync: ${syncStats.lastSyncAt ? new Date(syncStats.lastSyncAt).toLocaleString() : 'never'}`,
-    ].join('\n');
-    vscode.window.showInformationMessage(msg, { modal: true });
+  const syncWorkspaceCmd = vscode.commands.registerCommand('ghita.syncWorkspace', () => {
+    log('Command: ghita.syncWorkspace');
+    return syncWorkspace();
   });
-  context.subscriptions.push(statsCmd);
 
-  // Event: Auto-sync on file save
+  context.subscriptions.push(connectCmd, disconnectCmd, toggleCmd, syncWorkspaceCmd);
+
+  // Auto-connect on activation if the user previously enabled it.
+  const cfg = getConfig();
+  if (cfg.autoSync) {
+    log('Auto-connecting (ghita.autoSync is enabled)...');
+    void (async () => {
+      const ok = await connectSocket();
+      if (ok && socket?.connected) {
+        try {
+          await authenticateSocket();
+        } catch (e) {
+          log(`Auth failed: ${(e as Error).message}`);
+          disconnectSocket();
+        }
+      }
+    })();
+  }
+
+  // Auto-sync hook: each save calls syncFileOnSave through the debouncer.
   const onSave = vscode.workspace.onDidSaveTextDocument((document) => {
     syncFileOnSave(document).catch((err) => {
-      syncStats.syncErrors++;
+      syncStats = recordError(syncStats);
       log(`Sync error on save: ${err}`);
     });
   });
-  context.subscriptions.push(onSave);
 
-  // Event: File delete
   const onDelete = vscode.workspace.onDidDeleteFiles((event) => {
     for (const file of event.files) {
       syncFileDelete(file.fsPath);
     }
   });
-  context.subscriptions.push(onDelete);
 
-  // Event: File rename
   const onRename = vscode.workspace.onDidRenameFiles((event) => {
-    for (const file of event.files) {
-      syncFileRename(file.oldUri.fsPath, file.newUri.fsPath);
+    for (const rename of event.files) {
+      syncFileRename(rename.oldUri.fsPath, rename.newUri.fsPath);
     }
   });
-  context.subscriptions.push(onRename);
 
-  // Event: File create
-  const onCreate = vscode.workspace.onDidCreateFiles(async (event) => {
-    for (const file of event.files) {
-      try {
-        const doc = await vscode.workspace.openTextDocument(file);
-        await syncFileOnSave(doc);
-      } catch (err) {
-        log(`Error syncing new file ${file.fsPath}: ${err}`);
-      }
-    }
-  });
-  context.subscriptions.push(onCreate);
+  context.subscriptions.push(onSave, onDelete, onRename);
+
+  statusBarItem.show();
+  log('Activation complete.');
 }
 
-// ---------------------------------------------------------------------------
-// Deactivation
-// ---------------------------------------------------------------------------
-
-export function deactivate() {
+export function deactivate(): void {
   disconnectSocket();
-  if (debounceTimer) clearTimeout(debounceTimer);
+  debouncer?.cancel();
   log('GHITA CODING AGENT VS Code Sidecar is deactivated.');
 }

@@ -58,6 +58,7 @@ Trong chat box:
 > Tạo 1 REST API bằng Express.js với 3 endpoint: GET /users, POST /users, DELETE /users/:id
 
 Agent sẽ tự động:
+
 1. Phân tích yêu cầu
 2. Lên plan
 3. Viết code vào `src/server.ts`

@@ -327,7 +327,7 @@ export class MemoryCompactor {
 
     let summary = summaryParts.join(' | ');
     if (summary.length > this.config.maxSummaryLength) {
-      summary = summary.slice(0, this.config.maxSummaryLength) + '...';
+      summary = `${summary.slice(0, this.config.maxSummaryLength)  }...`;
     }
 
     const startTime =
@@ -521,7 +521,7 @@ export class MemoryCompactor {
 
     const merged = parts.join(' | ');
     return merged.length > this.config.maxSummaryLength
-      ? merged.slice(0, this.config.maxSummaryLength) + '...'
+      ? `${merged.slice(0, this.config.maxSummaryLength)  }...`
       : merged;
   }
 
@@ -545,6 +545,6 @@ export class MemoryCompactor {
 
   private truncate(text: string, maxLen: number): string {
     if (text.length <= maxLen) return text;
-    return text.slice(0, maxLen) + '...';
+    return `${text.slice(0, maxLen)  }...`;
   }
 }

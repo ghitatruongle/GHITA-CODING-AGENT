@@ -145,11 +145,7 @@ export class LoadBalancer {
 
   // --- Routing ------------------------------------------------------------
 
-  pick(
-    tag?: string,
-    preferProviderId?: string,
-    providerType?: AIProviderType,
-  ): RoutingDecision {
+  pick(tag?: string, preferProviderId?: string, providerType?: AIProviderType): RoutingDecision {
     // Refresh health map from checker
     this.syncHealth();
 
@@ -238,11 +234,7 @@ export class LoadBalancer {
       // Pick provider
       let routingDecision: RoutingDecision;
       try {
-        routingDecision = this.pick(
-          request.tag,
-          request.preferProviderId,
-          request.providerType,
-        );
+        routingDecision = this.pick(request.tag, request.preferProviderId, request.providerType);
         if (attempt === 0) decision = routingDecision;
         this.decisionLatencySamples.push(routingDecision.decisionLatencyMs);
         if (this.decisionLatencySamples.length > this.maxSamples) {
@@ -302,11 +294,7 @@ export class LoadBalancer {
       // Execute
       const startedAt = Date.now();
       try {
-        const response = await this.invokeAdapter(
-          adapter,
-          request,
-          provider,
-        );
+        const response = await this.invokeAdapter(adapter, request, provider);
         const durationMs = Date.now() - startedAt;
         attempts.push({
           providerId: provider.id,
@@ -349,9 +337,7 @@ export class LoadBalancer {
         });
         // Backoff before retry
         if (attempt < maxRetries) {
-          await this.delay(
-            this.config.failover.retryDelayMs * Math.pow(2, attempt),
-          );
+          await this.delay(this.config.failover.retryDelayMs * Math.pow(2, attempt));
         }
       }
     }
@@ -470,11 +456,7 @@ export class LoadBalancer {
     }
   }
 
-  private onHealthChanged(
-    providerId: string,
-    state: HealthState,
-    previous: HealthState,
-  ): void {
+  private onHealthChanged(providerId: string, state: HealthState, previous: HealthState): void {
     const s = this.healthChecker.getSnapshot(providerId);
     if (s) this.health.set(providerId, s);
     this.emit({ type: 'health-changed', providerId, state, previous });

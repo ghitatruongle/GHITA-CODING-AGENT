@@ -238,7 +238,7 @@ export class SandboxValidationReporter {
     testsRun++;
     try {
       const dsoNetwork = await this.dso.createNetwork('integration-test');
-      const networkCreated = !!dsoNetwork;
+      const networkCreated = Boolean(dsoNetwork);
       if (networkCreated) testsPassed++;
       else errors.push('Integration: Failed to create DSO network');
     } catch (err: unknown) {

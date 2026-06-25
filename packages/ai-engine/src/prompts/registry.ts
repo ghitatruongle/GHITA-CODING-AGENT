@@ -71,7 +71,13 @@ export class PromptRegistry {
         name?: string;
         version?: string;
         description?: string;
-        inputs?: { name: string; type: 'string' | 'number' | 'boolean' | 'array' | 'object'; required: boolean; default?: unknown; description?: string }[];
+        inputs?: {
+          name: string;
+          type: 'string' | 'number' | 'boolean' | 'array' | 'object';
+          required: boolean;
+          default?: unknown;
+          description?: string;
+        }[];
         provider?: string;
         model?: string;
         temperature?: number;
@@ -81,12 +87,24 @@ export class PromptRegistry {
       validator?: {
         length?: { min?: number; max?: number };
         format?: { pattern?: string; jsonSchema?: Record<string, unknown> };
-        safety?: { blockWords?: string[]; allowWords?: string[]; enablePromptInjectionCheck?: boolean };
+        safety?: {
+          blockWords?: string[];
+          allowWords?: string[];
+          enablePromptInjectionCheck?: boolean;
+        };
       };
     }
     const parsed = parseYaml(yamlContent) as RawPrompt;
-    if (!parsed || !parsed.config || !parsed.config.name || !parsed.config.version || !parsed.template) {
-      throw new Error('Invalid prompt YAML structure. Must contain config (name, version) and template.');
+    if (
+      !parsed ||
+      !parsed.config ||
+      !parsed.config.name ||
+      !parsed.config.version ||
+      !parsed.template
+    ) {
+      throw new Error(
+        'Invalid prompt YAML structure. Must contain config (name, version) and template.',
+      );
     }
 
     const definition: PromptDefinition = {
@@ -130,7 +148,10 @@ export class PromptRegistry {
         try {
           this.loadFromFile(path.join(dirPath, file));
         } catch (err: unknown) {
-          console.error(`[PromptRegistry] Failed to load prompt file ${file}:`, err instanceof Error ? err.message : String(err));
+          console.error(
+            `[PromptRegistry] Failed to load prompt file ${file}:`,
+            err instanceof Error ? err.message : String(err),
+          );
         }
       }
     }
@@ -157,7 +178,10 @@ export class PromptRegistry {
             this.loadFromFile(filePath);
             console.info(`[PromptRegistry] Hot-reloaded prompt: ${filename}`);
           } catch (err: unknown) {
-            console.error(`[PromptRegistry] Hot-reload error for ${filename}:`, err instanceof Error ? err.message : String(err));
+            console.error(
+              `[PromptRegistry] Hot-reload error for ${filename}:`,
+              err instanceof Error ? err.message : String(err),
+            );
           }
         }
       }
@@ -192,13 +216,13 @@ export class PromptRegistry {
     const validation = validateOutput(def.validator, rendered);
     if (!validation.valid && validation.errors) {
       const isSafetyViolation = validation.errors.some(
-        (e) => e.includes('blocked word') || e.includes('injection')
+        (e) => e.includes('blocked word') || e.includes('injection'),
       );
       if (isSafetyViolation) {
         throw new AISecurityGuardrailError(
           'prompt_safety_violation',
           validation.errors,
-          validation.errors.join('; ')
+          validation.errors.join('; '),
         );
       } else {
         throw new PromptValidationError(validation.errors);

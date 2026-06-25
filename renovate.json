@@ -1,0 +1,25 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:base"],
+  "packageRules": [
+    {
+      "matchDepTypes": ["devDependencies"],
+      "groupName": "dev-dependencies",
+      "schedule": ["every weekend"]
+    },
+    {
+      "matchDepTypes": ["dependencies"],
+      "groupName": "production-dependencies",
+      "schedule": ["every weekday"]
+    },
+    {
+      "matchPackagePatterns": ["*"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true
+    }
+  ],
+  "automergeType": "pr",
+  "platformAutomerge": true,
+  "prConcurrentLimit": 10,
+  "prHourlyLimit": 5
+}

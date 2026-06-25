@@ -15,6 +15,13 @@ export class TelepresencePortal {
   private socketBuffers = new Map<Socket, Buffer>();
   private otpCode = '';
   private otpVerifiedClients = new WeakMap<Socket, boolean>();
+  private otpGeneratedAt = 0;
+  private readonly otpExpiryMs = 10 * 60 * 1000; // 10 minutes
+  private otpAttempts = new Map<Socket, number>();
+  private readonly otpMaxAttempts = 5;
+  private otpGlobalAttempts = 0;
+  private otpGlobalLockoutUntil = 0;
+  private readonly otpGlobalLockoutMs = 5 * 60 * 1000; // 5 min lockout after 20 total failures
   private bandwidthStatus: 'good' | 'weak' = 'good';
   private fpsLimit = 30; // 30 FPS default
   private jpegQuality = 90; // 90% quality default
@@ -65,7 +72,7 @@ export class TelepresencePortal {
 
         const acceptValue = crypto
           .createHash('sha1')
-          .update(secKey + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11')
+          .update(`${secKey  }258EAFA5-E914-47DA-95CA-C5AB0DC85B11`)
           .digest('base64');
 
         socket.write(
@@ -138,7 +145,10 @@ export class TelepresencePortal {
    * Generate a secure 6-digit OTP code for telepresence authentication
    */
   public generateOTP(): string {
-    this.otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    this.otpCode = crypto.randomInt(100000, 1000000).toString();
+    this.otpGeneratedAt = Date.now();
+    this.otpAttempts.clear();
+    this.otpGlobalAttempts = 0;
     return this.otpCode;
   }
 
@@ -150,19 +160,54 @@ export class TelepresencePortal {
   }
 
   /**
-   * Manually set OTP code (e.g. for testing)
+   * Manually set OTP code (e.g. for testing). Validates format: exactly 6 digits.
    */
   public setOTP(code: string): void {
+    if (!/^\d{6}$/.test(code)) {
+      throw new Error('[TelepresencePortal] OTP must be exactly 6 digits');
+    }
     this.otpCode = code;
+    this.otpGeneratedAt = Date.now();
+    this.otpAttempts.clear();
+    this.otpGlobalAttempts = 0;
   }
 
   /**
-   * Verify OTP authentication code for a client socket connection
+   * Verify OTP authentication code for a client socket connection.
+   * Enforces: per-socket attempt limit, global lockout, and OTP expiry.
    */
   public verifyOTP(socket: Socket, code: string): boolean {
+    const now = Date.now();
+
+    // Global lockout check
+    if (now < this.otpGlobalLockoutUntil) {
+      return false;
+    }
+
+    // OTP expiry check
+    if (this.otpGeneratedAt > 0 && now - this.otpGeneratedAt > this.otpExpiryMs) {
+      this.otpCode = ''; // Invalidate expired OTP
+      return false;
+    }
+
+    // Per-socket attempt limit
+    const attempts = this.otpAttempts.get(socket) ?? 0;
+    if (attempts >= this.otpMaxAttempts) {
+      return false;
+    }
+    this.otpAttempts.set(socket, attempts + 1);
+
     if (this.otpCode && code === this.otpCode) {
       this.otpVerifiedClients.set(socket, true);
+      this.otpAttempts.delete(socket);
       return true;
+    }
+
+    // Track global failures for lockout
+    this.otpGlobalAttempts++;
+    if (this.otpGlobalAttempts >= 20) {
+      this.otpGlobalLockoutUntil = now + this.otpGlobalLockoutMs;
+      this.otpGlobalAttempts = 0;
     }
     return false;
   }
@@ -171,7 +216,7 @@ export class TelepresencePortal {
    * Check if a client socket has successfully completed OTP verification
    */
   public isClientAuthenticated(socket: Socket): boolean {
-    return !!this.otpVerifiedClients.get(socket);
+    return Boolean(this.otpVerifiedClients.get(socket));
   }
 
   /**

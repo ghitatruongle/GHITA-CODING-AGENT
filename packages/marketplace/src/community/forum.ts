@@ -16,7 +16,13 @@ export class ForumManager {
   /**
    * Create a new thread.
    */
-  createThread(opts: { productId: string; title: string; authorId: string; body: string; tags?: string[] }): ForumThread {
+  createThread(opts: {
+    productId: string;
+    title: string;
+    authorId: string;
+    body: string;
+    tags?: string[];
+  }): ForumThread {
     const t: ForumThread = {
       id: `th_${randomUUID()}`,
       productId: opts.productId,
@@ -33,7 +39,8 @@ export class ForumManager {
       updatedAt: Date.now(),
     };
     this.threads.set(t.id, t);
-    if (!this.threadByProduct.has(opts.productId)) this.threadByProduct.set(opts.productId, new Set());
+    if (!this.threadByProduct.has(opts.productId))
+      this.threadByProduct.set(opts.productId, new Set());
     this.threadByProduct.get(opts.productId)?.add(t.id);
     this.replies.set(t.id, []);
     return t;

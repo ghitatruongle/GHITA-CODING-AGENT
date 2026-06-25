@@ -83,13 +83,16 @@ export class SkillToNpmConverter {
       ...(Object.keys(peerDependencies).length > 0 ? { peerDependencies } : {}),
     };
 
-    files.unshift({ path: 'package.json', content: JSON.stringify(packageJson, null, 2) + '\n' });
+    files.unshift({ path: 'package.json', content: `${JSON.stringify(packageJson, null, 2)}\n` });
 
     return { packageJson, files, warnings: [...this.warnings] };
   }
 
   private derivePackageName(skillId: string): string {
-    const safe = skillId.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/^-+|-+$/g, '');
+    const safe = skillId
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-')
+      .replace(/^-+|-+$/g, '');
     return `@ghita/skills/${safe || 'unnamed-skill'}`;
   }
 
@@ -103,7 +106,8 @@ export class SkillToNpmConverter {
 
   private extractBareImports(src: string): string[] {
     const out = new Set<string>();
-    const re = /(?:^|[^.\w])import\s+(?:.+?\s+from\s+)?['"]([^'"]+)['"]|require\(\s*['"]([^'"]+)['"]\s*\)/gm;
+    const re =
+      /(?:^|[^.\w])import\s+(?:.+?\s+from\s+)?['"]([^'"]+)['"]|require\(\s*['"]([^'"]+)['"]\s*\)/gm;
     let m: RegExpExecArray | null;
     while ((m = re.exec(src)) !== null) {
       const spec = m[1] ?? m[2];
@@ -122,6 +126,17 @@ export class SkillToNpmConverter {
   }
 
   private isStdLib(pkg: string): boolean {
-    return ['node:fs', 'node:path', 'node:crypto', 'fs', 'path', 'crypto', 'url', 'util', 'events', 'stream'].includes(pkg);
+    return [
+      'node:fs',
+      'node:path',
+      'node:crypto',
+      'fs',
+      'path',
+      'crypto',
+      'url',
+      'util',
+      'events',
+      'stream',
+    ].includes(pkg);
   }
 }

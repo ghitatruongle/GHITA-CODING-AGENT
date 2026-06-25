@@ -23,7 +23,11 @@ export type {
   LoadBalancerEventListener,
   LoadBalancerStats,
 } from './types.js';
-export { DEFAULT_LOAD_BALANCER_CONFIG, DEFAULT_HEALTH_CONFIG, DEFAULT_RATE_LIMITER_CONFIG } from './types.js';
+export {
+  DEFAULT_LOAD_BALANCER_CONFIG,
+  DEFAULT_HEALTH_CONFIG,
+  DEFAULT_RATE_LIMITER_CONFIG,
+} from './types.js';
 
 // --- Building blocks ---
 export { RateLimiter } from './rate-limiter.js';

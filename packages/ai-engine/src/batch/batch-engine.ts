@@ -94,9 +94,7 @@ export class BatchEngine {
    * Enqueue a request and return a promise that resolves with the per-request
    * result when the batch is executed.
    */
-  enqueue(
-    request: Omit<BatchRequest, 'id' | 'enqueuedAt'>,
-  ): Promise<BatchRequestResult> {
+  enqueue(request: Omit<BatchRequest, 'id' | 'enqueuedAt'>): Promise<BatchRequestResult> {
     const id = `req_${this.nextRequestId++}`;
 
     return new Promise<BatchRequestResult>((resolve, reject) => {
@@ -161,8 +159,7 @@ export class BatchEngine {
     return {
       totalRequests: this.totalRequests,
       totalBatches: this.totalBatches,
-      averageBatchSize:
-        this.totalBatches > 0 ? this.totalRequests / this.totalBatches : 0,
+      averageBatchSize: this.totalBatches > 0 ? this.totalRequests / this.totalBatches : 0,
       queueDepth: this.queue.length,
       inFlight: this.inFlight,
       failedRequests: this.failedRequests,
@@ -222,11 +219,7 @@ export class BatchEngine {
           this.flushTimer = null;
           void this.flush();
         }, this.config.windowMs);
-        if (
-          this.flushTimer &&
-          typeof this.flushTimer === 'object' &&
-          'unref' in this.flushTimer
-        ) {
+        if (this.flushTimer && typeof this.flushTimer === 'object' && 'unref' in this.flushTimer) {
           this.flushTimer.unref();
         }
       }
@@ -335,10 +328,7 @@ export class BatchEngine {
           }
         }
         this.totalBatches += executions.length;
-        this.totalTokensSaved += executions.reduce(
-          (sum, e) => sum + e.tokensSaved,
-          0,
-        );
+        this.totalTokensSaved += executions.reduce((sum, e) => sum + e.tokensSaved, 0);
 
         for (const exec of executions) {
           this.emit({ type: 'completed', batch: exec });
@@ -366,22 +356,11 @@ export class BatchEngine {
     const totalCostUsd = results.reduce(
       (sum, r) =>
         sum +
-        (r.costUsd ??
-          estimateCostUsd(
-            prompt.model,
-            r.promptTokens ?? 0,
-            r.completionTokens ?? 0,
-          )),
+        (r.costUsd ?? estimateCostUsd(prompt.model, r.promptTokens ?? 0, r.completionTokens ?? 0)),
       0,
     );
-    const providerLatencyMs = Math.max(
-      0,
-      ...results.map((r) => r.providerLatencyMs),
-    );
-    const windowLatencyMs = Math.max(
-      0,
-      ...results.map((r) => r.queueLatencyMs),
-    );
+    const providerLatencyMs = Math.max(0, ...results.map((r) => r.providerLatencyMs));
+    const windowLatencyMs = Math.max(0, ...results.map((r) => r.queueLatencyMs));
 
     const exec: BatchExecution = {
       batchId,
@@ -401,14 +380,8 @@ export class BatchEngine {
     };
 
     if (this.config.trackCost) {
-      const promptTokensTotal = results.reduce(
-        (s, r) => s + (r.promptTokens ?? 0),
-        0,
-      );
-      const completionTokensTotal = results.reduce(
-        (s, r) => s + (r.completionTokens ?? 0),
-        0,
-      );
+      const promptTokensTotal = results.reduce((s, r) => s + (r.promptTokens ?? 0), 0);
+      const completionTokensTotal = results.reduce((s, r) => s + (r.completionTokens ?? 0), 0);
       this.costTracker.record({
         batchId,
         provider: prompt.provider,
@@ -426,10 +399,7 @@ export class BatchEngine {
     return exec;
   }
 
-  private resolvePending(
-    group: PendingRequest[],
-    result: BatchRequestResult,
-  ): void {
+  private resolvePending(group: PendingRequest[], result: BatchRequestResult): void {
     const pending = group.find((g) => g.id === result.id);
     if (!pending) return;
     if (result.ok) {

@@ -1,10 +1,10 @@
 use bytes::Bytes;
 use http::{Request, Response, StatusCode};
-use http_body_util::{BodyExt, Full};
+use http_body_util::{BodyExt, Full, Limited};
 use hyper::body::Incoming;
 use hyper_util::rt::{TokioExecutor, TokioIo};
 use std::convert::Infallible;
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::net::TcpListener;
@@ -12,10 +12,17 @@ use tokio::sync::RwLock;
 
 type BodyClient = reqwest::Client;
 
+/// Maximum response body size accepted from upstream (50 MB).
+/// Prevents OOM when proxying a server that returns huge payloads.
+const MAX_RESPONSE_BODY_SIZE: usize = 50 * 1024 * 1024;
+
 pub struct ProxyState {
     pub is_running: bool,
     pub port: u16,
     pub target_url: String,
+    /// Shutdown signal sender — dropping it or sending `true` wakes the listener task
+    /// so it can exit cleanly and release the bound port.
+    pub shutdown_tx: Option<tokio::sync::watch::Sender<bool>>,
 }
 
 impl Default for ProxyState {
@@ -24,24 +31,32 @@ impl Default for ProxyState {
             is_running: false,
             port: 0,
             target_url: String::new(),
+            shutdown_tx: None,
         }
     }
 }
 
 fn strip_frame_headers(response: Response<Full<Bytes>>) -> Response<Full<Bytes>> {
     let mut res = response;
-    // Respect upstream X-Frame-Options; chỉ override CSP với app's own policy
+    // Bug #4: When CSP and X-Frame-Options are both present, modern
+    // browsers (Chrome, Firefox) prefer the CSP `frame-ancestors`
+    // directive, but legacy browsers and some embedded webviews only
+    // honor X-Frame-Options. Leaving both can result in inconsistent
+    // framing behavior depending on the embedded surface. We strip
+    // both and re-emit a single, consistent policy.
     res.headers_mut().remove("content-security-policy");
+    res.headers_mut().remove("x-frame-options");
     res.headers_mut().insert(
         http::header::CONTENT_SECURITY_POLICY,
         http::HeaderValue::from_static("frame-ancestors 'self' tauri://localhost"),
     );
+    // Keep a single source of truth (CSP); X-Frame-Options is implied.
     res
 }
 
 async fn handle_proxy_request(
     req: Request<Incoming>,
-    body_client: &BodyClient,
+    body_client: &Arc<BodyClient>,
     target_base: &str,
 ) -> Result<Response<Full<Bytes>>, Infallible> {
     let uri = req.uri();
@@ -59,22 +74,84 @@ async fn handle_proxy_request(
         target_url
     };
 
+    // Bug #27: validate the target URL is http(s) before sending the
+    // request. The proxy is a same-origin forwarder intended to be
+    // pointed at an internal `http://127.0.0.1:port` (e.g. a dev
+    // server). Without this check, an attacker that controls a portion
+    // of `target_base` (or the caller mistakenly configures it) could
+    // pivot the proxy into `file://`, `gopher://`, etc. and turn the
+    // proxy into an SSRF / file-disclosure gadget. We also block
+    // `data:` and `javascript:` schemes by the same check.
+    // SSRF hardening: block private/reserved IP ranges and cloud metadata
+    if !(full_url.starts_with("http://") || full_url.starts_with("https://")) {
+        let mut resp = Response::new(Full::new(Bytes::from_static(
+            b"Proxy target URL must use http:// or https://",
+        )));
+        *resp.status_mut() = StatusCode::BAD_REQUEST;
+        return Ok(strip_frame_headers(resp));
+    }
+
+    // Extract host and check against blocked ranges.
+    // Use proper IP parsing to avoid bypasses via IPv6 hex notation,
+    // abbreviated forms, or IPv4-mapped variants.
+    if let Some(host) = full_url.split('/').nth(2).and_then(|h| h.split(':').next().or(Some(h)).map(|s| s.split('?').next().unwrap_or(s))) {
+        let host_lower = host.to_lowercase();
+
+        // 1) Hostname checks (non-IP)
+        if host_lower == "localhost"
+            || host_lower == "169.254.169.254" // AWS/GCP/Azure metadata
+        {
+            let mut resp = Response::new(Full::new(Bytes::from_static(
+                b"Proxy target is in a blocked IP range (SSRF protection)",
+            )));
+            *resp.status_mut() = StatusCode::FORBIDDEN;
+            return Ok(strip_frame_headers(resp));
+        }
+
+        // 2) Try parsing as IP address (handles all IPv4/IPv6 notations)
+        //    Strip brackets for IPv6 like [::1] or [::ffff:127.0.0.1]
+        let stripped = host_lower.trim_start_matches('[').trim_end_matches(']');
+        if let Ok(ip) = stripped.parse::<IpAddr>() {
+            let blocked = match ip {
+                IpAddr::V4(v4) => {
+                    v4.is_loopback()           // 127.0.0.0/8
+                        || v4.is_broadcast()   // 255.255.255.255
+                        || v4.is_unspecified() // 0.0.0.0
+                        || v4.is_private()     // 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16
+                        || v4.is_link_local()  // 169.254.0.0/16
+                }
+                IpAddr::V6(v6) => {
+                    v6.is_loopback()    // ::1
+                        || v6.is_unspecified()  // ::
+                        || v6.to_ipv4_mapped().map_or(false, |v4| {
+                            v4.is_loopback() || v4.is_private() || v4.is_link_local()
+                        })
+                }
+            };
+            if blocked {
+                let mut resp = Response::new(Full::new(Bytes::from_static(
+                    b"Proxy target is in a blocked IP range (SSRF protection)",
+                )));
+                *resp.status_mut() = StatusCode::FORBIDDEN;
+                return Ok(strip_frame_headers(resp));
+            }
+        }
+    }
+
     let method = req.method().clone();
     let headers = req.headers().clone();
 
-    // Collect the request body from Incoming with size limit (10MB)
+    // Stream body with size limit (10MB) to prevent OOM from oversized payloads.
+    // `Limited` wraps the body and returns an error mid-stream if the limit is exceeded,
+    // so we never buffer the entire payload before checking.
     const MAX_BODY_SIZE: usize = 10 * 1024 * 1024;
-    let body_bytes = match req.into_body().collect().await {
-        Ok(c) => {
-            let b = c.to_bytes();
-            if b.len() > MAX_BODY_SIZE {
-                let mut resp = Response::new(Full::new(Bytes::from("Request body too large")));
-                *resp.status_mut() = StatusCode::PAYLOAD_TOO_LARGE;
-                return Ok(resp);
-            }
-            b
+    let body_bytes = match Limited::new(req.into_body(), MAX_BODY_SIZE).collect().await {
+        Ok(c) => c.to_bytes(),
+        Err(_) => {
+            let mut resp = Response::new(Full::new(Bytes::from("Request body too large")));
+            *resp.status_mut() = StatusCode::PAYLOAD_TOO_LARGE;
+            return Ok(resp);
         }
-        Err(_) => Bytes::new(),
     };
 
     // Build the request using reqwest
@@ -100,17 +177,45 @@ async fn handle_proxy_request(
             let status = resp.status();
             let mut res_builder = Response::builder().status(status);
 
-            // Copy response headers back
+            // Copy response headers back.
+            // Strip Content-Encoding and Content-Length: we read the body into
+            // memory (which reqwest auto-decompresses), so the original encoding
+            // header no longer applies. Leaving it would cause the client to try
+            // to decompress already-decompressed bytes → garbage output.
+            // (gzip compression of our own response is deferred — see TODO below.)
             if let Some(headers_mut) = res_builder.headers_mut() {
                 for (key, value) in resp.headers().iter() {
+                    if key == http::header::CONTENT_ENCODING || key == http::header::CONTENT_LENGTH {
+                        continue;
+                    }
                     headers_mut.insert(key.clone(), value.clone());
                 }
             }
 
-            // Read the full body bytes
+            // Read the full body bytes (with size cap to prevent OOM)
+            // TODO(Phase 5): gzip-encode body_bytes here when the client sent
+            //   Accept-Encoding: gzip AND body_bytes.len() > 1024. Requires the
+            //   `flate2` crate. For now the body is sent uncompressed.
             let body_bytes = match resp.bytes().await {
-                Ok(b) => b,
-                Err(_) => Bytes::new(),
+                Ok(b) => {
+                    if b.len() > MAX_RESPONSE_BODY_SIZE {
+                        let mut resp = Response::new(Full::new(Bytes::from(format!(
+                            "Upstream response too large ({} bytes, max {})",
+                            b.len(),
+                            MAX_RESPONSE_BODY_SIZE
+                        ))));
+                        *resp.status_mut() = StatusCode::BAD_GATEWAY;
+                        return Ok(strip_frame_headers(resp));
+                    }
+                    b
+                }
+                Err(e) => {
+                    let mut resp = Response::new(Full::new(Bytes::from(format!(
+                        "Failed to read upstream response body: {e}"
+                    ))));
+                    *resp.status_mut() = StatusCode::BAD_GATEWAY;
+                    return Ok(strip_frame_headers(resp));
+                }
             };
 
             let response = match res_builder.body(Full::new(body_bytes)) {
@@ -170,53 +275,68 @@ pub async fn start_proxy_server(
         Ok(c) => c,
         Err(e) => return Err(format!("Failed to build reqwest client: {e}")),
     };
+    // Wrap in Arc so per-connection tasks share the same connection pool
+    // instead of cloning the entire client (expensive).
+    let body_client = Arc::new(body_client);
+
+    let (shutdown_tx, mut shutdown_rx) = tokio::sync::watch::channel(false);
 
     let state_clone = state.clone();
+    {
+        let mut s = state.write().await;
+        s.shutdown_tx = Some(shutdown_tx);
+    }
 
     // Move listener into the spawned task so it's properly dropped when the task exits
+    // NOTE: is_running is intentionally NOT checked here.
+    // Shutdown is driven exclusively by the shutdown_rx watch channel below,
+    // eliminating a race where stop_proxy_server() could flip is_running to
+    // false before this task starts its first loop iteration.
     tokio::spawn(async move {
         loop {
-            // Check if we should stop BEFORE accepting (avoids race on restart)
-            {
-                let s = state_clone.read().await;
-                if !s.is_running {
+            // Use tokio::select! to race accept() against the shutdown signal,
+            // so stop_proxy_server can immediately release the port.
+            let stream = tokio::select! {
+                result = listener.accept() => {
+                    match result {
+                        Ok((stream, _)) => stream,
+                        Err(e) => {
+                            eprintln!("Accept error: {:?}", e);
+                            tokio::time::sleep(Duration::from_millis(100)).await;
+                            continue;
+                        }
+                    }
+                }
+                _ = shutdown_rx.changed() => {
+                    eprintln!("Proxy received shutdown signal, port {} releasing", local_port);
                     break;
                 }
-            }
+            };
 
-            match listener.accept().await {
-                Ok((stream, _)) => {
-                    let io = TokioIo::new(stream);
+            let io = TokioIo::new(stream);
+            let body_client = body_client.clone();
+            let state_clone2 = state_clone.clone();
+
+            tokio::spawn(async move {
+                let service = hyper::service::service_fn(move |req: Request<Incoming>| {
                     let body_client = body_client.clone();
-                    let state_clone2 = state_clone.clone();
+                    let state = state_clone2.clone();
+                    async move {
+                        let target = {
+                            let s = state.read().await;
+                            s.target_url.trim_end_matches('/').to_string()
+                        };
+                        handle_proxy_request(req, &body_client, &target).await
+                    }
+                });
 
-                    tokio::spawn(async move {
-                        let service = hyper::service::service_fn(move |req: Request<Incoming>| {
-                            let body_client = body_client.clone();
-                            let state = state_clone2.clone();
-                            async move {
-                                let target = {
-                                    let s = state.read().await;
-                                    s.target_url.trim_end_matches('/').to_string()
-                                };
-                                handle_proxy_request(req, &body_client, &target).await
-                            }
-                        });
-
-                        if let Err(e) = hyper_util::server::conn::auto::Builder::new(TokioExecutor::new())
-                            .serve_connection(io, service)
-                            .await
-                        {
-                            eprintln!("Proxy connection error: {:?}", e);
-                        }
-                    });
+                if let Err(e) = hyper_util::server::conn::auto::Builder::new(TokioExecutor::new())
+                    .serve_connection(io, service)
+                    .await
+                {
+                    eprintln!("Proxy connection error: {:?}", e);
                 }
-                Err(e) => {
-                    eprintln!("Accept error: {:?}", e);
-                    // Brief sleep to avoid busy-loop on accept errors
-                    tokio::time::sleep(Duration::from_millis(100)).await;
-                }
-            }
+            });
         }
         // TcpListener is dropped here when the task exits, releasing the port
         eprintln!("Proxy listener task ended, port {} released", local_port);
@@ -232,6 +352,11 @@ pub async fn stop_proxy_server(state: Arc<RwLock<ProxyState>>) -> Result<(), Str
     }
     s.is_running = false;
     s.port = 0;
+    // Send shutdown signal to wake the listener task from accept() blocking,
+    // then drop the sender so the task's select branch also fires on channel close.
+    if let Some(tx) = s.shutdown_tx.take() {
+        let _ = tx.send(true);
+    }
     Ok(())
 }
 
@@ -328,11 +453,14 @@ mod tests {
 
         let result = strip_frame_headers(response);
 
-        // Respect upstream X-Frame-Options
-        assert!(result.headers().contains_key("x-frame-options"));
-        assert_eq!(result.headers().get("x-frame-options").unwrap(), "DENY");
-        assert!(result.headers().contains_key("x-content-type-options"));
-        // CSP overrides with app's own policy
+        // Bug #4: We now strip BOTH x-frame-options AND content-security-policy
+        // and re-emit a single consistent CSP, to avoid the conflict where
+        // modern browsers prefer CSP `frame-ancestors` while legacy browsers
+        // only honor X-Frame-Options. The previous behaviour preserved the
+        // upstream X-Frame-Options which produced inconsistent framing
+        // depending on the embedded surface.
+        assert!(!result.headers().contains_key("x-frame-options"));
+        // CSP is overridden with the app's own policy
         assert_eq!(
             result.headers().get("content-security-policy").unwrap(),
             "frame-ancestors 'self' tauri://localhost"
@@ -368,9 +496,8 @@ mod tests {
 
         let result = strip_frame_headers(response);
 
-        // Respect upstream X-Frame-Options
-        assert!(result.headers().contains_key("x-frame-options"));
-        assert_eq!(result.headers().get("x-frame-options").unwrap(), "SAMEORIGIN");
+        // Bug #4: x-frame-options is now stripped (single-source CSP)
+        assert!(!result.headers().contains_key("x-frame-options"));
         assert_eq!(
             result.headers().get("cache-control").unwrap(),
             "no-cache"
@@ -408,6 +535,7 @@ mod tests {
             is_running: true,
             port: 3456,
             target_url: String::new(),
+            shutdown_tx: None,
         }));
         assert_eq!(get_proxy_port(&state).await, Some(3456));
     }

@@ -6,12 +6,12 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { tmpdir } from 'node:os';
-import { 
-  loadSkillMd, 
-  validateSkill, 
-  SkillDirectoryWatcher, 
+import {
+  loadSkillMd,
+  validateSkill,
+  SkillDirectoryWatcher,
   SkillRegistry,
-  SessionSkillRegistry
+  SessionSkillRegistry,
 } from '../src/index.js';
 
 describe('Markdown Skill Loader & Session Isolation', () => {
@@ -109,7 +109,7 @@ Instructions content
       fs.writeFileSync(filePath, mdContent, 'utf-8');
 
       // Wait for watcher to trigger
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
       let skill = registry.get('dynamic-skill');
       expect(skill).toBeDefined();
@@ -126,14 +126,14 @@ Updated instructions
 `;
 
       fs.writeFileSync(filePath, updatedMdContent, 'utf-8');
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
       skill = registry.get('dynamic-skill');
       expect(skill?.description).toBe('Dynamic test description - updated');
 
       // Delete the file
       fs.unlinkSync(filePath);
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
       skill = registry.get('dynamic-skill');
       expect(skill).toBeUndefined();
@@ -145,7 +145,7 @@ Updated instructions
   describe('SessionSkillRegistry Isolation', () => {
     it('should isolate enable/disable status per session', async () => {
       const parentRegistry = new SkillRegistry();
-      
+
       // Register a parent skill
       const baseSkill: any = {
         id: 'isolated-skill',
@@ -156,7 +156,7 @@ Updated instructions
         version: '0.1.0',
         scopes: ['workspace'],
         status: 'ready',
-        run: async () => ({ success: true, output: 'Success' })
+        run: async () => ({ success: true, output: 'Success' }),
       };
       parentRegistry.register(baseSkill);
 

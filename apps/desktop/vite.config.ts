@@ -125,9 +125,14 @@ export default defineConfig({
           ],
           'state-vendor': ['zustand', 'react-error-boundary', 'react-hot-toast'],
           'socket-vendor': ['socket.io-client'],
+          // Markdown rendering is heavy (react-markdown + rehype-sanitize + remark-gfm);
+          // split it out so chat UI loads fast.
+          'markdown-vendor': ['react-markdown', 'rehype-sanitize', 'remark-gfm'],
         },
       },
     },
-    chunkSizeWarningLimit: 300,
+    // 500 KB is realistic for the markdown/vendor chunks; 300 KB caused
+    // constant warnings without actionable signal.
+    chunkSizeWarningLimit: 500,
   },
 });

@@ -3,7 +3,14 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
 
-import { SkillGuard, computeContentHash, computeSkillHash, normalizeRepoUrl, resolveTrustLevel, DEFAULT_TRUSTED_REPOS } from '../src/hub/skill-guard.js';
+import {
+  SkillGuard,
+  computeContentHash,
+  computeSkillHash,
+  normalizeRepoUrl,
+  resolveTrustLevel,
+  DEFAULT_TRUSTED_REPOS,
+} from '../src/hub/skill-guard.js';
 import { LockManager } from '../src/hub/lock-manager.js';
 import { AuditLog } from '../src/hub/audit-log.js';
 import { HubRegistry } from '../src/hub/hub-registry.js';
@@ -93,11 +100,15 @@ describe('SkillGuard', () => {
     });
 
     it('should normalize HTTPS URL', () => {
-      expect(normalizeRepoUrl('https://github.com/ghita-corp/ghita-skills')).toBe('ghita-corp/ghita-skills');
+      expect(normalizeRepoUrl('https://github.com/ghita-corp/ghita-skills')).toBe(
+        'ghita-corp/ghita-skills',
+      );
     });
 
     it('should normalize SSH URL', () => {
-      expect(normalizeRepoUrl('git@github.com:ghita-corp/ghita-skills.git')).toBe('ghita-corp/ghita-skills');
+      expect(normalizeRepoUrl('git@github.com:ghita-corp/ghita-skills.git')).toBe(
+        'ghita-corp/ghita-skills',
+      );
     });
 
     it('should lowercase results', () => {
@@ -119,7 +130,9 @@ describe('SkillGuard', () => {
     });
 
     it('git from trusted repo → trusted', () => {
-      expect(resolveTrustLevel('git', 'https://github.com/ghita-corp/ghita-skills')).toBe('trusted');
+      expect(resolveTrustLevel('git', 'https://github.com/ghita-corp/ghita-skills')).toBe(
+        'trusted',
+      );
     });
 
     it('git from untrusted repo → verified', () => {
@@ -235,7 +248,16 @@ describe('LockManager', () => {
     const lockPath = path.join(tmpDir, 'lock.json');
 
     const lm1 = new LockManager(lockPath);
-    lm1.lock({ id: 'x', version: '1.0.0', contentHash: 'h', resolvedPath: '/x', integrity: 'h', lockedAt: 0, lockedBy: 'test', trustLevel: 'verified' });
+    lm1.lock({
+      id: 'x',
+      version: '1.0.0',
+      contentHash: 'h',
+      resolvedPath: '/x',
+      integrity: 'h',
+      lockedAt: 0,
+      lockedBy: 'test',
+      trustLevel: 'verified',
+    });
 
     const lm2 = new LockManager(lockPath);
     expect(lm2.isLocked('x')).toBe(true);
@@ -245,8 +267,26 @@ describe('LockManager', () => {
   it('should batch lock entries', () => {
     const lm = new LockManager(path.join(tmpDir, 'lock.json'));
     const entries: LockEntry[] = [
-      { id: 'a', version: '1.0.0', contentHash: 'ha', resolvedPath: '/a', integrity: 'ha', lockedAt: 0, lockedBy: 'test', trustLevel: 'trusted' },
-      { id: 'b', version: '2.0.0', contentHash: 'hb', resolvedPath: '/b', integrity: 'hb', lockedAt: 0, lockedBy: 'test', trustLevel: 'verified' },
+      {
+        id: 'a',
+        version: '1.0.0',
+        contentHash: 'ha',
+        resolvedPath: '/a',
+        integrity: 'ha',
+        lockedAt: 0,
+        lockedBy: 'test',
+        trustLevel: 'trusted',
+      },
+      {
+        id: 'b',
+        version: '2.0.0',
+        contentHash: 'hb',
+        resolvedPath: '/b',
+        integrity: 'hb',
+        lockedAt: 0,
+        lockedBy: 'test',
+        trustLevel: 'verified',
+      },
     ];
 
     lm.lockBatch(entries);
@@ -256,16 +296,52 @@ describe('LockManager', () => {
 
   it('should compute diff correctly', () => {
     const lm = new LockManager(path.join(tmpDir, 'lock.json'));
-    lm.lock({ id: 'a', version: '1.0.0', contentHash: 'h1', resolvedPath: '/a', integrity: 'h1', lockedAt: 0, lockedBy: 'test', trustLevel: 'trusted' });
-    lm.lock({ id: 'b', version: '1.0.0', contentHash: 'h2', resolvedPath: '/b', integrity: 'h2', lockedAt: 0, lockedBy: 'test', trustLevel: 'trusted' });
+    lm.lock({
+      id: 'a',
+      version: '1.0.0',
+      contentHash: 'h1',
+      resolvedPath: '/a',
+      integrity: 'h1',
+      lockedAt: 0,
+      lockedBy: 'test',
+      trustLevel: 'trusted',
+    });
+    lm.lock({
+      id: 'b',
+      version: '1.0.0',
+      contentHash: 'h2',
+      resolvedPath: '/b',
+      integrity: 'h2',
+      lockedAt: 0,
+      lockedBy: 'test',
+      trustLevel: 'trusted',
+    });
 
     const newEntries: LockEntry[] = [
-      { id: 'a', version: '1.0.0', contentHash: 'h1', resolvedPath: '/a', integrity: 'h1', lockedAt: 0, lockedBy: 'test', trustLevel: 'trusted' },
-      { id: 'c', version: '1.0.0', contentHash: 'h3', resolvedPath: '/c', integrity: 'h3', lockedAt: 0, lockedBy: 'test', trustLevel: 'verified' },
+      {
+        id: 'a',
+        version: '1.0.0',
+        contentHash: 'h1',
+        resolvedPath: '/a',
+        integrity: 'h1',
+        lockedAt: 0,
+        lockedBy: 'test',
+        trustLevel: 'trusted',
+      },
+      {
+        id: 'c',
+        version: '1.0.0',
+        contentHash: 'h3',
+        resolvedPath: '/c',
+        integrity: 'h3',
+        lockedAt: 0,
+        lockedBy: 'test',
+        trustLevel: 'verified',
+      },
     ];
 
     const diff = lm.diff(newEntries);
-    expect(diff.added.map(e => e.id)).toEqual(['c']);
+    expect(diff.added.map((e) => e.id)).toEqual(['c']);
     expect(diff.removed).toEqual(['b']);
     expect(diff.unchanged).toEqual(['a']);
     expect(diff.updated).toHaveLength(0);
@@ -273,10 +349,28 @@ describe('LockManager', () => {
 
   it('should detect version update in diff', () => {
     const lm = new LockManager(path.join(tmpDir, 'lock.json'));
-    lm.lock({ id: 'a', version: '1.0.0', contentHash: 'h1', resolvedPath: '/a', integrity: 'h1', lockedAt: 0, lockedBy: 'test', trustLevel: 'trusted' });
+    lm.lock({
+      id: 'a',
+      version: '1.0.0',
+      contentHash: 'h1',
+      resolvedPath: '/a',
+      integrity: 'h1',
+      lockedAt: 0,
+      lockedBy: 'test',
+      trustLevel: 'trusted',
+    });
 
     const newEntries: LockEntry[] = [
-      { id: 'a', version: '2.0.0', contentHash: 'h2', resolvedPath: '/a', integrity: 'h2', lockedAt: 0, lockedBy: 'test', trustLevel: 'trusted' },
+      {
+        id: 'a',
+        version: '2.0.0',
+        contentHash: 'h2',
+        resolvedPath: '/a',
+        integrity: 'h2',
+        lockedAt: 0,
+        lockedBy: 'test',
+        trustLevel: 'trusted',
+      },
     ];
 
     const diff = lm.diff(newEntries);
@@ -287,8 +381,26 @@ describe('LockManager', () => {
   it('should clear all entries', () => {
     const lm = new LockManager(path.join(tmpDir, 'lock.json'));
     lm.lockBatch([
-      { id: 'a', version: '1.0.0', contentHash: 'h', resolvedPath: '/a', integrity: 'h', lockedAt: 0, lockedBy: 'test', trustLevel: 'trusted' },
-      { id: 'b', version: '1.0.0', contentHash: 'h', resolvedPath: '/b', integrity: 'h', lockedAt: 0, lockedBy: 'test', trustLevel: 'trusted' },
+      {
+        id: 'a',
+        version: '1.0.0',
+        contentHash: 'h',
+        resolvedPath: '/a',
+        integrity: 'h',
+        lockedAt: 0,
+        lockedBy: 'test',
+        trustLevel: 'trusted',
+      },
+      {
+        id: 'b',
+        version: '1.0.0',
+        contentHash: 'h',
+        resolvedPath: '/b',
+        integrity: 'h',
+        lockedAt: 0,
+        lockedBy: 'test',
+        trustLevel: 'trusted',
+      },
     ]);
     expect(lm.size).toBe(2);
 
@@ -307,8 +419,20 @@ describe('AuditLog', () => {
   it('should create and query entries', () => {
     const log = new AuditLog(path.join(tmpDir, 'audit.json'));
 
-    log.log({ action: 'create', skillId: 's1', skillVersion: '1.0.0', actor: 'alice', success: true });
-    log.log({ action: 'delete', skillId: 's2', skillVersion: '0.5.0', actor: 'bob', success: true });
+    log.log({
+      action: 'create',
+      skillId: 's1',
+      skillVersion: '1.0.0',
+      actor: 'alice',
+      success: true,
+    });
+    log.log({
+      action: 'delete',
+      skillId: 's2',
+      skillVersion: '0.5.0',
+      actor: 'bob',
+      success: true,
+    });
 
     expect(log.getAll()).toHaveLength(2);
     expect(log.getBySkill('s1')).toHaveLength(1);
@@ -319,7 +443,13 @@ describe('AuditLog', () => {
   it('should persist across instances', () => {
     const logPath = path.join(tmpDir, 'audit.json');
     const log1 = new AuditLog(logPath);
-    log1.log({ action: 'create', skillId: 's1', skillVersion: '1.0.0', actor: 'test', success: true });
+    log1.log({
+      action: 'create',
+      skillId: 's1',
+      skillVersion: '1.0.0',
+      actor: 'test',
+      success: true,
+    });
 
     const log2 = new AuditLog(logPath);
     expect(log2.getAll()).toHaveLength(1);
@@ -327,8 +457,21 @@ describe('AuditLog', () => {
 
   it('should track failures', () => {
     const log = new AuditLog(path.join(tmpDir, 'audit.json'));
-    log.log({ action: 'verify', skillId: 's1', skillVersion: '1.0.0', actor: 'test', success: true });
-    log.log({ action: 'verify', skillId: 's2', skillVersion: '1.0.0', actor: 'test', success: false, details: 'Hash mismatch' });
+    log.log({
+      action: 'verify',
+      skillId: 's1',
+      skillVersion: '1.0.0',
+      actor: 'test',
+      success: true,
+    });
+    log.log({
+      action: 'verify',
+      skillId: 's2',
+      skillVersion: '1.0.0',
+      actor: 'test',
+      success: false,
+      details: 'Hash mismatch',
+    });
 
     const failures = log.getFailures();
     expect(failures).toHaveLength(1);
@@ -337,8 +480,20 @@ describe('AuditLog', () => {
 
   it('should compute stats', () => {
     const log = new AuditLog(path.join(tmpDir, 'audit.json'));
-    log.log({ action: 'create', skillId: 's1', skillVersion: '1.0.0', actor: 'test', success: true });
-    log.log({ action: 'delete', skillId: 's1', skillVersion: '1.0.0', actor: 'test', success: true });
+    log.log({
+      action: 'create',
+      skillId: 's1',
+      skillVersion: '1.0.0',
+      actor: 'test',
+      success: true,
+    });
+    log.log({
+      action: 'delete',
+      skillId: 's1',
+      skillVersion: '1.0.0',
+      actor: 'test',
+      success: true,
+    });
 
     const stats = log.stats();
     expect(stats.total).toBe(2);
@@ -349,10 +504,24 @@ describe('AuditLog', () => {
 
   it('should trim old entries', () => {
     const log = new AuditLog(path.join(tmpDir, 'audit.json'), 100);
-    log.log({ action: 'create', skillId: 's1', skillVersion: '1.0.0', actor: 'test', success: true, timestamp: Date.now() } as any);
+    log.log({
+      action: 'create',
+      skillId: 's1',
+      skillVersion: '1.0.0',
+      actor: 'test',
+      success: true,
+      timestamp: Date.now(),
+    } as any);
 
     const oldTime = Date.now() - 86400000;
-    log.log({ action: 'delete', skillId: 's2', skillVersion: '1.0.0', actor: 'test', success: true, timestamp: oldTime } as any);
+    log.log({
+      action: 'delete',
+      skillId: 's2',
+      skillVersion: '1.0.0',
+      actor: 'test',
+      success: true,
+      timestamp: oldTime,
+    } as any);
 
     const removed = log.trim(Date.now() - 43200000); // 12 hours ago
     expect(removed).toBe(1);
@@ -362,7 +531,13 @@ describe('AuditLog', () => {
   it('should return recent entries', () => {
     const log = new AuditLog(path.join(tmpDir, 'audit.json'));
     for (let i = 0; i < 20; i++) {
-      log.log({ action: 'create', skillId: `s${i}`, skillVersion: '1.0.0', actor: 'test', success: true });
+      log.log({
+        action: 'create',
+        skillId: `s${i}`,
+        skillVersion: '1.0.0',
+        actor: 'test',
+        success: true,
+      });
     }
     const recent = log.getRecent(5);
     expect(recent).toHaveLength(5);
@@ -391,7 +566,12 @@ describe('HubRegistry', () => {
   describe('Skill CRUD', () => {
     it('should create and retrieve a skill', () => {
       const hub = createHub();
-      const meta = hub.create({ id: 'my-skill', name: 'My Skill', description: 'Test', category: 'terminal' });
+      const meta = hub.create({
+        id: 'my-skill',
+        name: 'My Skill',
+        description: 'Test',
+        category: 'terminal',
+      });
 
       expect(meta.id).toBe('my-skill');
       expect(meta.name).toBe('My Skill');
@@ -406,7 +586,9 @@ describe('HubRegistry', () => {
     it('should prevent duplicate creation', () => {
       const hub = createHub();
       hub.create({ id: 'dup', name: 'Dup', description: 'Test', category: 'terminal' });
-      expect(() => hub.create({ id: 'dup', name: 'Dup 2', description: 'Test', category: 'terminal' })).toThrow('already exists');
+      expect(() =>
+        hub.create({ id: 'dup', name: 'Dup 2', description: 'Test', category: 'terminal' }),
+      ).toThrow('already exists');
     });
 
     it('should update a skill', () => {
@@ -449,8 +631,20 @@ describe('HubRegistry', () => {
 
     it('should search skills', () => {
       const hub = createHub();
-      hub.create({ id: 'git-skill', name: 'Git Helper', description: 'Helps with git', category: 'terminal', tags: ['git'] });
-      hub.create({ id: 'docker-skill', name: 'Docker Helper', description: 'Helps with docker', category: 'terminal', tags: ['docker'] });
+      hub.create({
+        id: 'git-skill',
+        name: 'Git Helper',
+        description: 'Helps with git',
+        category: 'terminal',
+        tags: ['git'],
+      });
+      hub.create({
+        id: 'docker-skill',
+        name: 'Docker Helper',
+        description: 'Helps with docker',
+        category: 'terminal',
+        tags: ['docker'],
+      });
 
       const results = hub.search('git');
       expect(results).toHaveLength(1);
@@ -492,10 +686,16 @@ describe('HubRegistry', () => {
 
     it('should update lock entries on skill update', () => {
       const hub = createHub();
-      hub.create({ id: 'v1', name: 'V1', description: 'Test', category: 'terminal', version: '1.0.0' });
+      hub.create({
+        id: 'v1',
+        name: 'V1',
+        description: 'Test',
+        category: 'terminal',
+        version: '1.0.0',
+      });
       hub.update('v1', { version: '2.0.0' });
 
-      const entry = hub.getLockEntries().find(e => e.id === 'v1');
+      const entry = hub.getLockEntries().find((e) => e.id === 'v1');
       expect(entry).toBeDefined();
       expect(entry!.version).toBe('2.0.0');
     });
@@ -567,7 +767,12 @@ describe('HubRegistry', () => {
 
     it('should detect tampered hash', () => {
       const hub = createHub();
-      hub.create({ id: 'verify-fail', name: 'Verify Fail', description: 'Test', category: 'terminal' });
+      hub.create({
+        id: 'verify-fail',
+        name: 'Verify Fail',
+        description: 'Test',
+        category: 'terminal',
+      });
 
       // Tamper with stored hash
       const meta = hub.get('verify-fail')!;
@@ -584,7 +789,7 @@ describe('HubRegistry', () => {
 
       const results = hub.verifyAll();
       expect(results).toHaveLength(2);
-      expect(results.every(r => r.ok)).toBe(true);
+      expect(results.every((r) => r.ok)).toBe(true);
     });
   });
 
@@ -655,7 +860,7 @@ describe('Skills Commands', () => {
     const hub = createHub();
     const commands = createSkillsCommands(hub);
 
-    const triggers = commands.map(c => c.trigger);
+    const triggers = commands.map((c) => c.trigger);
     expect(triggers).toContain('/skills list');
     expect(triggers).toContain('/skills create');
     expect(triggers).toContain('/skills info');
@@ -673,7 +878,7 @@ describe('Skills Commands', () => {
     it('should create a skill', async () => {
       const hub = createHub();
       const commands = createSkillsCommands(hub);
-      const cmd = commands.find(c => c.trigger === '/skills create')!;
+      const cmd = commands.find((c) => c.trigger === '/skills create')!;
 
       const result = await cmd.execute('cmd-my-skill Cmd Skill --desc "A command skill"', {
         positional: ['cmd-my-skill', 'Cmd Skill'],
@@ -691,7 +896,7 @@ describe('Skills Commands', () => {
       hub.create({ id: 'ls-1', name: 'List Me', description: 'Test', category: 'terminal' });
 
       const commands = createSkillsCommands(hub);
-      const cmd = commands.find(c => c.trigger === '/skills list')!;
+      const cmd = commands.find((c) => c.trigger === '/skills list')!;
 
       const result = await cmd.execute('', { positional: [], flags: {} });
       expect(result).toContain('List Me');
@@ -702,10 +907,16 @@ describe('Skills Commands', () => {
   describe('/skills search', () => {
     it('should find skills', async () => {
       const hub = createHub();
-      hub.create({ id: 'search-git', name: 'Git Search', description: 'Search git', category: 'terminal', tags: ['git'] });
+      hub.create({
+        id: 'search-git',
+        name: 'Git Search',
+        description: 'Search git',
+        category: 'terminal',
+        tags: ['git'],
+      });
 
       const commands = createSkillsCommands(hub);
-      const cmd = commands.find(c => c.trigger === '/skills search')!;
+      const cmd = commands.find((c) => c.trigger === '/skills search')!;
 
       const result = await cmd.execute('git', { positional: [], flags: {} });
       expect(result).toContain('Git Search');
@@ -718,7 +929,7 @@ describe('Skills Commands', () => {
       hub.create({ id: 'del-cmd', name: 'Delete Me', description: 'Test', category: 'terminal' });
 
       const commands = createSkillsCommands(hub);
-      const cmd = commands.find(c => c.trigger === '/skills delete')!;
+      const cmd = commands.find((c) => c.trigger === '/skills delete')!;
 
       const result = await cmd.execute('del-cmd', { positional: [], flags: {} });
       expect(result).toContain('✅');
@@ -732,7 +943,7 @@ describe('Skills Commands', () => {
       hub.create({ id: 'vf-1', name: 'Verify 1', description: 'Test', category: 'terminal' });
 
       const commands = createSkillsCommands(hub);
-      const cmd = commands.find(c => c.trigger === '/skills verify')!;
+      const cmd = commands.find((c) => c.trigger === '/skills verify')!;
 
       const result = await cmd.execute('', { positional: [], flags: {} });
       expect(result).toContain('passed');

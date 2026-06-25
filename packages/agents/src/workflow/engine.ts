@@ -66,12 +66,19 @@ export class WorkflowAgent {
         inProgress.add(step.id);
 
         // Resolve dependencies first
+        // ROBUSTNESS (audit fix 2.2): validate that every declared
+        // dependency actually exists in the step list. Previously,
+        // missing dependencies were silently skipped, which could
+        // lead to steps running without their prerequisites.
         if (step.dependsOn) {
           for (const depId of step.dependsOn) {
             const depStep = this.steps.find((s) => s.id === depId);
-            if (depStep) {
-              await executeStepWithDeps(depStep);
+            if (!depStep) {
+              throw new Error(
+                `Step "${step.id}" depends on "${depId}" which does not exist in workflow "${this.name}"`,
+              );
             }
+            await executeStepWithDeps(depStep);
           }
         }
 
@@ -94,9 +101,15 @@ export class WorkflowAgent {
             await Promise.resolve(callbacks.onError(step.id, err));
           }
           throw err;
+        } finally {
+          // RESILIENCE (audit fix 2.4): always remove from inProgress
+          // regardless of success or failure. Previously this was
+          // placed after the try/catch, so a thrown error would skip
+          // the cleanup. On retry, the step would appear to be in a
+          // circular dependency because `inProgress` still contained
+          // its id from the failed attempt.
+          inProgress.delete(step.id);
         }
-
-        inProgress.delete(step.id);
         executed.add(step.id);
       };
 

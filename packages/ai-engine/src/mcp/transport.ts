@@ -3,7 +3,7 @@
 // ==============================================================================
 
 import type { MCPServerConfig } from './types.js';
-import { spawn, type ChildProcess } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import * as readline from 'node:readline';
 
 export interface MCPTransport {
@@ -19,7 +19,7 @@ export interface MCPTransport {
 export class StdioTransport implements MCPTransport {
   private connected = false;
   private requestId = 0;
-  private process?: ChildProcess;
+  private process: ReturnType<typeof spawn> | undefined;
   private rl?: readline.Interface;
   private pendingRequests = new Map<
     number,
@@ -36,15 +36,15 @@ export class StdioTransport implements MCPTransport {
     this.process = spawn(this.config.command, this.config.args ?? [], {
       env: { ...process.env, ...this.config.env },
       stdio: ['pipe', 'pipe', 'inherit'],
-    });
+    }) as ReturnType<typeof spawn>;
 
-    this.process.on('error', (err) => {
+    (this.process as unknown as NodeJS.EventEmitter).on('error', (err: Error) => {
       this.disconnect();
       for (const req of this.pendingRequests.values()) req.reject(err);
       this.pendingRequests.clear();
     });
 
-    this.process.on('exit', () => {
+    (this.process as unknown as NodeJS.EventEmitter).on('exit', () => {
       this.disconnect();
       const err = new Error(`MCP server "${this.config.name}" process exited unexpectedly`);
       for (const req of this.pendingRequests.values()) req.reject(err);
@@ -53,7 +53,7 @@ export class StdioTransport implements MCPTransport {
 
     if (this.process.stdout) {
       this.rl = readline.createInterface({ input: this.process.stdout });
-      this.rl.on('line', (line) => {
+      (this.rl as unknown as NodeJS.EventEmitter).on('line', (line: string) => {
         try {
           const message = JSON.parse(line) as Record<string, unknown>;
           if (message.id !== undefined && typeof message.id === 'number') {
@@ -98,7 +98,7 @@ export class StdioTransport implements MCPTransport {
 
     return new Promise((resolve, reject) => {
       this.pendingRequests.set(id, { resolve, reject });
-      stdin.write(JSON.stringify(jsonRpc) + '\n', (err) => {
+      stdin.write(`${JSON.stringify(jsonRpc)  }\n`, (err) => {
         if (err) {
           this.pendingRequests.delete(id);
           reject(err);

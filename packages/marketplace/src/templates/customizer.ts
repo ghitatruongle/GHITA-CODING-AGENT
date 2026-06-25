@@ -52,10 +52,7 @@ export class TemplateCustomizer {
     }
 
     // Apply system prompt variables
-    customized.systemPrompt = this.interpolatePrompt(
-      customized.systemPrompt,
-      values,
-    );
+    customized.systemPrompt = this.interpolatePrompt(customized.systemPrompt, values);
 
     // Apply config overrides
     customized.config = this.applyConfigOverrides(customized.config, values);
@@ -73,10 +70,7 @@ export class TemplateCustomizer {
   /**
    * Validate customization values against option definitions.
    */
-  validate(
-    options: CustomizationOption[],
-    values: CustomizationValues,
-  ): ValidationError[] {
+  validate(options: CustomizationOption[], values: CustomizationValues): ValidationError[] {
     const errors: ValidationError[] = [];
 
     for (const option of options) {
@@ -98,10 +92,16 @@ export class TemplateCustomizer {
             continue;
           }
           if (option.validation?.min !== undefined && value < option.validation.min) {
-            errors.push({ key: option.key, message: `${option.label} must be >= ${option.validation.min}` });
+            errors.push({
+              key: option.key,
+              message: `${option.label} must be >= ${option.validation.min}`,
+            });
           }
           if (option.validation?.max !== undefined && value > option.validation.max) {
-            errors.push({ key: option.key, message: `${option.label} must be <= ${option.validation.max}` });
+            errors.push({
+              key: option.key,
+              message: `${option.label} must be <= ${option.validation.max}`,
+            });
           }
           break;
         }
@@ -127,7 +127,10 @@ export class TemplateCustomizer {
         }
         case 'select': {
           if (option.choices && !option.choices.some((c) => c.value === value)) {
-            errors.push({ key: option.key, message: `${option.label} must be one of: ${option.choices.map((c) => c.value).join(', ')}` });
+            errors.push({
+              key: option.key,
+              message: `${option.label} must be one of: ${option.choices.map((c) => c.value).join(', ')}`,
+            });
           }
           break;
         }
@@ -172,10 +175,7 @@ export class TemplateCustomizer {
     return result;
   }
 
-  private applyConfigOverrides(
-    config: AgentConfig,
-    values: CustomizationValues,
-  ): AgentConfig {
+  private applyConfigOverrides(config: AgentConfig, values: CustomizationValues): AgentConfig {
     const result: AgentConfig = { ...config };
 
     // Map common customization keys to config

@@ -1,11 +1,17 @@
 // ==============================================================================
 // GHITA CODING AGENT — Shell Execution Utility
 // Shared utility for executing commands via @tauri-apps/plugin-shell
+//
+// TODO(Phase 5): capabilities/default.json currently allows shell:allow-execute
+// with args:true for cmd + powershell. Tighten by replacing the generic shell
+// capability with a pinned sidecar binary, or whitelist command validators at
+// the Tauri capability level. Until then, MALICIOUS_PATTERNS below is the
+// primary runtime defense layer.
 // ==============================================================================
 
 import { Command } from '@tauri-apps/plugin-shell';
 
-export type ShellType = 'cmd' | 'powershell';
+export type ShellType = 'cmd' | 'powershell' | 'bash' | 'sh';
 
 export interface SecurityScanResult {
   safe: boolean;
@@ -23,6 +29,8 @@ export interface ShellResult {
 const SHELL_CONFIGS: Record<ShellType, { cmdName: string; args: string[] }> = {
   cmd: { cmdName: 'cmd', args: ['/c'] },
   powershell: { cmdName: 'powershell', args: ['-NoProfile', '-Command'] },
+  bash: { cmdName: 'bash', args: ['-c'] },
+  sh: { cmdName: 'sh', args: ['-c'] },
 };
 
 const MALICIOUS_PATTERNS: Array<{
@@ -85,6 +93,31 @@ const MALICIOUS_PATTERNS: Array<{
     reason: 'Phát hiện cấp quyền 777.',
     threatLevel: 'MEDIUM',
   },
+  {
+    regex: /\b(format|diskpart)\s+/i,
+    reason: 'Phát hiện lệnh format/diskpart ổ đĩa.',
+    threatLevel: 'HIGH',
+  },
+  {
+    regex: /\breg\s+(add|delete|import)\s+.*HKLM/i,
+    reason: 'Phát hiện chỉnh sửa registry hệ thống (HKLM).',
+    threatLevel: 'HIGH',
+  },
+  {
+    regex: /\b(taskkill|kill)\s+.*-9\b/i,
+    reason: 'Phát hiện kill process cưỡng chế (-9 / SIGKILL).',
+    threatLevel: 'MEDIUM',
+  },
+  {
+    regex: /\b(iex|Invoke-Expression|eval)\s*[("]/i,
+    reason: 'Phát hiện thực thi chuỗi động (eval/Invoke-Expression) — nguy cơ injection.',
+    threatLevel: 'HIGH',
+  },
+  {
+    regex: /\bnet\s+(user|localgroup)\s+.*\/add/i,
+    reason: 'Phát hiện tạo user/group hệ thống.',
+    threatLevel: 'HIGH',
+  },
 ];
 
 export function assessShellCommand(command: string): SecurityScanResult {
@@ -115,7 +148,10 @@ export async function executeShellCommand(
   cwd?: string,
 ): Promise<ShellResult> {
   const assessment = assessShellCommand(command);
-  if (!assessment.safe && assessment.threatLevel === 'CRITICAL') {
+  if (
+    !assessment.safe &&
+    (assessment.threatLevel === 'CRITICAL' || assessment.threatLevel === 'HIGH')
+  ) {
     return {
       stdout: '',
       stderr: assessment.reason || 'Blocked by security policy.',
@@ -150,9 +186,23 @@ export async function executeShellCommand(
 /**
  * Execute a command using the best shell for the platform.
  * On Windows, prefers cmd for simple commands and powershell for complex ones.
+ * Detects bash/sh commands by common Unix patterns.
  */
 export async function runCommand(command: string, cwd?: string): Promise<ShellResult> {
+  const trimmed = command.trim();
   // Auto-detect: use powershell for Start-Process or PS-specific commands
-  const usePowerShell = /^(Start-Process|Get-|Set-|New-|Remove-|Invoke-)/i.test(command.trim());
-  return executeShellCommand(command, usePowerShell ? 'powershell' : 'cmd', cwd);
+  if (/^(Start-Process|Get-|Set-|New-|Remove-|Invoke-)/i.test(trimmed)) {
+    return executeShellCommand(command, 'powershell', cwd);
+  }
+  // Auto-detect: use bash/sh for Unix-style commands (ls, grep, chmod, ./script, etc.)
+  if (
+    /^(ls|grep|find|chmod|chown|cp|mv|rm|cat|head|tail|wc|sort|uniq|diff|tar|gzip|gunzip|wget|curl|ssh|scp|rsync|sed|awk|echo|export|source|cd|pwd|which|man|mkdir|rmdir|touch|ln|du|df|ps|kill|bg|fg|jobs|nohup|screen|tmux)\b/.test(
+      trimmed,
+    ) ||
+    trimmed.startsWith('./') ||
+    trimmed.startsWith('/')
+  ) {
+    return executeShellCommand(command, 'bash', cwd);
+  }
+  return executeShellCommand(command, 'cmd', cwd);
 }

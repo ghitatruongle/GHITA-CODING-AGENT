@@ -136,7 +136,9 @@ export class LoadTestRunner {
         failures.push(`${r.endpoint}: p99 ${r.p99LatencyMs}ms > ${thresholds.maxP99Ms}ms`);
       }
       if (thresholds.maxErrorRate && r.errorRate > thresholds.maxErrorRate) {
-        failures.push(`${r.endpoint}: error rate ${(r.errorRate * 100).toFixed(2)}% > ${(thresholds.maxErrorRate * 100).toFixed(2)}%`);
+        failures.push(
+          `${r.endpoint}: error rate ${(r.errorRate * 100).toFixed(2)}% > ${(thresholds.maxErrorRate * 100).toFixed(2)}%`,
+        );
       }
     }
 

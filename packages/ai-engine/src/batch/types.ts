@@ -236,10 +236,7 @@ export interface BatchProviderAdapter {
   /** Send a (possibly concatenated) prompt to the provider */
   chat(messages: ChatMessage[], options?: ChatOptions): Promise<ChatResponse>;
   /** Stream a (possibly concatenated) prompt */
-  chatStream?(
-    messages: ChatMessage[],
-    options?: ChatOptions,
-  ): AsyncGenerator<AIStreamChunk>;
+  chatStream?(messages: ChatMessage[], options?: ChatOptions): AsyncGenerator<AIStreamChunk>;
   /** Optional cost estimator (USD per 1K tokens, input/output) */
   estimateCost?(promptTokens: number, completionTokens: number, model?: string): number;
 }

@@ -133,12 +133,19 @@ export class MarketplaceRegistry {
   /**
    * Publish a plugin to the registry.
    */
-  async publish(manifest: PluginManifest, tarball: Uint8Array): Promise<{ success: boolean; message: string }> {
+  async publish(
+    manifest: PluginManifest,
+    tarball: Uint8Array,
+  ): Promise<{ success: boolean; message: string }> {
     try {
       const url = `${this.config.registryUrl}/plugins/publish`;
       const formData = new FormData();
       formData.append('manifest', JSON.stringify(manifest));
-      formData.append('tarball', new Blob([new Uint8Array(tarball) as unknown as BlobPart]), `${manifest.id}-${manifest.version}.tgz`);
+      formData.append(
+        'tarball',
+        new Blob([new Uint8Array(tarball) as unknown as BlobPart]),
+        `${manifest.id}-${manifest.version}.tgz`,
+      );
 
       const res = await this.fetch(url, {
         method: 'POST',

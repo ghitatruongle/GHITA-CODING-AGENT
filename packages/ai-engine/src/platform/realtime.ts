@@ -80,8 +80,9 @@ export class RealtimeProxy extends EventEmitter {
             });
           })
           .catch((err) => {
+            this.activeConnections.delete(socket);
             socket.send(
-              JSON.stringify({ error: 'Failed to initialize relay client: ' + err.message }),
+              JSON.stringify({ error: `Failed to initialize relay client: ${  err.message}` }),
             );
             socket.close();
           });
@@ -91,7 +92,7 @@ export class RealtimeProxy extends EventEmitter {
         close: (cb: () => void) => cb && cb(),
         on: (_event: string, _handler: (...args: unknown[]) => void) => {},
       };
-      this.emit('listening', port);
+      this.emit('error', e instanceof Error ? e : new Error(String(e)));
     }
   }
 

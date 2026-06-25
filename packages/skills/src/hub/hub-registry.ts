@@ -152,7 +152,15 @@ export class HubRegistry {
   /**
    * Update a skill's metadata.
    */
-  update(skillId: string, patches: Partial<Pick<SkillMeta, 'name' | 'description' | 'version' | 'tags' | 'enabled' | 'permissions' | 'dependencies'>>): SkillMeta {
+  update(
+    skillId: string,
+    patches: Partial<
+      Pick<
+        SkillMeta,
+        'name' | 'description' | 'version' | 'tags' | 'enabled' | 'permissions' | 'dependencies'
+      >
+    >,
+  ): SkillMeta {
     const existing = this.skills.get(skillId);
     if (!existing) {
       throw new Error(`Skill not found: ${skillId}`);
@@ -233,26 +241,29 @@ export class HubRegistry {
    * List skills by category.
    */
   listByCategory(category: SkillMeta['category']): SkillMeta[] {
-    return this.list().filter(s => s.category === category);
+    return this.list().filter((s) => s.category === category);
   }
 
   /**
    * List skills by trust level.
    */
   listByTrust(trustLevel: TrustLevel): SkillMeta[] {
-    return this.list().filter(s => s.trustLevel === trustLevel);
+    return this.list().filter((s) => s.trustLevel === trustLevel);
   }
 
   /**
    * Search skills by keyword.
    */
   search(query: string): SkillMeta[] {
-    const tokens = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+    const tokens = query
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((t) => t.length > 0);
     if (tokens.length === 0) return this.list();
 
-    return this.list().filter(skill => {
+    return this.list().filter((skill) => {
       const searchable = `${skill.name} ${skill.description} ${skill.tags.join(' ')}`.toLowerCase();
-      return tokens.every(token => searchable.includes(token));
+      return tokens.every((token) => searchable.includes(token));
     });
   }
 
@@ -274,7 +285,9 @@ export class HubRegistry {
    * Trust a skill (upgrade trust level).
    */
   trust(skillId: string): SkillMeta {
-    return this.update(skillId, { /* trustLevel handled separately */ } as Partial<SkillMeta>);
+    return this.update(skillId, {
+      /* trustLevel handled separately */
+    } as Partial<SkillMeta>);
   }
 
   // --- Trust Management ---
@@ -324,7 +337,9 @@ export class HubRegistry {
       skillVersion: meta.version,
       actor: 'system',
       success: ok,
-      details: ok ? 'Hash verified' : `Hash mismatch: expected ${meta.contentHash}, got ${computed}`,
+      details: ok
+        ? 'Hash verified'
+        : `Hash mismatch: expected ${meta.contentHash}, got ${computed}`,
     });
 
     return { ok, error: ok ? undefined : `Hash mismatch for "${skillId}"` };
@@ -334,7 +349,7 @@ export class HubRegistry {
    * Verify all skills.
    */
   verifyAll(): Array<{ skillId: string; ok: boolean; error?: string }> {
-    return this.list().map(s => ({ skillId: s.id, ...this.verify(s.id) }));
+    return this.list().map((s) => ({ skillId: s.id, ...this.verify(s.id) }));
   }
 
   // --- Lock Management ---
@@ -350,7 +365,7 @@ export class HubRegistry {
    * Get diff between current state and lock file.
    */
   getLockDiff(): ReturnType<LockManager['diff']> {
-    const currentEntries = this.list().map(s => this.toLockEntry(s));
+    const currentEntries = this.list().map((s) => this.toLockEntry(s));
     return this.lockManager.diff(currentEntries);
   }
 
@@ -370,10 +385,20 @@ export class HubRegistry {
    */
   stats(): HubStats {
     const skills = this.list();
-    const byTrustLevel: Record<TrustLevel, number> = { trusted: 0, verified: 0, unverified: 0, restricted: 0 };
+    const byTrustLevel: Record<TrustLevel, number> = {
+      trusted: 0,
+      verified: 0,
+      unverified: 0,
+      restricted: 0,
+    };
     const bySource: Record<SkillSource, number> = { local: 0, hub: 0, npm: 0, git: 0, imported: 0 };
     const byCategory: Record<SkillMeta['category'], number> = {
-      file: 0, terminal: 0, browser: 0, computer: 0, screenshot: 0, app: 0,
+      file: 0,
+      terminal: 0,
+      browser: 0,
+      computer: 0,
+      screenshot: 0,
+      app: 0,
     };
 
     let enabled = 0;

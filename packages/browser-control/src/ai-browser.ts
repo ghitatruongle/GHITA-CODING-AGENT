@@ -55,7 +55,7 @@ export async function collectCandidates(page: unknown, max = 30): Promise<PageEl
           el.tagName.toLowerCase() +
           (el.id ? `#${el.id}` : '') +
           (el.className && typeof el.className === 'string'
-            ? '.' + el.className.trim().split(/\s+/).slice(0, 2).join('.')
+            ? `.${  el.className.trim().split(/\s+/).slice(0, 2).join('.')}`
             : ''),
         text: (el.textContent ?? '').trim().slice(0, 80),
         tag: el.tagName.toLowerCase(),

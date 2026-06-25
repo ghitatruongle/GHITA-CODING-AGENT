@@ -1,4 +1,4 @@
-import type { ChannelAdapter } from '../channel-plugin-contract.js';
+import type { ChannelAdapter, ChannelHealthStatus } from '../channel-plugin-contract.js';
 import { safeFetch } from '../utils/security.js';
 
 interface WSClient {
@@ -48,8 +48,8 @@ export class SlackAdapter implements ChannelAdapter {
       });
 
       if (!response.ok) return false;
-      const data = await response.json() as { ok?: boolean };
-      return !!(data && data.ok);
+      const data = (await response.json()) as { ok?: boolean };
+      return Boolean(data && data.ok);
     } catch (error) {
       console.error('[SlackAdapter] Send message failed:', error);
       return false;
@@ -103,7 +103,7 @@ export class SlackAdapter implements ChannelAdapter {
         return;
       }
 
-      const data = await response.json() as { ok?: boolean; url?: string };
+      const data = (await response.json()) as { ok?: boolean; url?: string };
       if (data && data.ok && data.url) {
         await this.connectWS(data.url);
       } else {
@@ -123,13 +123,17 @@ export class SlackAdapter implements ChannelAdapter {
     if (!this.isRunning) return;
 
     try {
-      let WebSocketCtor: new (url: string) => WSClient = (globalThis as unknown as { WebSocket?: new (url: string) => WSClient }).WebSocket as new (url: string) => WSClient;
+      let WebSocketCtor: new (url: string) => WSClient = (
+        globalThis as unknown as { WebSocket?: new (url: string) => WSClient }
+      ).WebSocket as new (url: string) => WSClient;
       if (!WebSocketCtor) {
         try {
           const wsModule = await import('ws');
           WebSocketCtor = wsModule.default as new (url: string) => WSClient;
         } catch {
-          console.warn('[SlackAdapter] WebSocket not available in host environment. Socket Mode skipped.');
+          console.warn(
+            '[SlackAdapter] WebSocket not available in host environment. Socket Mode skipped.',
+          );
           return;
         }
       }
@@ -198,5 +202,21 @@ export class SlackAdapter implements ChannelAdapter {
         timestamp: (Date.now() / 1000).toString(),
       });
     }
+  }
+
+  /**
+   * Probe Slack connection health by checking Socket Mode WS state.
+   */
+  async healthCheck(): Promise<ChannelHealthStatus> {
+    const start = Date.now();
+    const wsOpen = this.ws?.readyState === 1;
+
+    return {
+      channelId: this.id,
+      connected: wsOpen,
+      latencyMs: Date.now() - start,
+      message: wsOpen ? 'Slack Socket Mode connected' : 'Slack not connected',
+      checkedAt: Date.now(),
+    };
   }
 }

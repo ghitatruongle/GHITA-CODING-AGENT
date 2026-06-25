@@ -4,6 +4,8 @@
 
 import { useCallback, useRef, useEffect, Component, lazy, Suspense } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Terminal as TerminalIcon, MessageSquare, Bot, Monitor } from 'lucide-react';
 import { useAppStore, type TabId } from '../stores/appStore';
 import { useTranslation } from '../i18n';
 import { isWindows, isLinux } from '@ghita/shared';
@@ -174,6 +176,7 @@ function ActiveView() {
 }
 
 export function MainLayout() {
+  const activeTab = useAppStore((s) => s.activeTab);
   const isChatOpen = useAppStore((s) => s.isChatOpen);
   const toggleChat = useAppStore((s) => s.toggleChat);
   const isTerminalOpen = useAppStore((s) => s.isTerminalOpen);
@@ -182,6 +185,7 @@ export function MainLayout() {
   const setTerminalHeight = useAppStore((s) => s.setTerminalHeight);
   const connectedDevices = useAppStore((s) => s.connectedDevices);
   const serverStatus = useAppStore((s) => s.serverStatus);
+  const terminalCwd = useAppStore((s) => s.terminalCwd);
   const { t } = useTranslation();
 
   // Terminal resize drag
@@ -220,165 +224,151 @@ export function MainLayout() {
   }, [setTerminalHeight]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+    <div className="flex flex-col h-screen overflow-hidden bg-background text-text-primary">
       {/* Top bar — App title + actions */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '0 16px',
-          height: '40px',
-          background: 'var(--bg-tertiary)',
-          borderBottom: '1px solid var(--border-subtle)',
-          flexShrink: 0,
-        }}
+      <motion.div
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.3, ease: 'easeOut' }}
+        className="flex items-center justify-between px-4 h-10 bg-bg-tertiary border-b border-border-subtle shrink-0 shadow-sm z-10"
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-          <span style={{ fontSize: '18px' }}>🤖</span>
+        <div className="flex items-center gap-2 min-w-0">
+          <Bot size={18} className="text-accent-primary shrink-0" />
           <span
             style={{
-              fontSize: '14px',
-              fontWeight: 700,
               background: 'var(--accent-gradient)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
-              letterSpacing: '0.5px',
-              minWidth: 0,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
             }}
+            className="text-sm font-bold tracking-wide shrink-0"
           >
-            GHITA CODING AGENT
+            GHITA
           </span>
-          <span
-            style={{
-              fontSize: '10px',
-              padding: '2px 8px',
-              background: 'var(--accent-primary)',
-              color: '#fff',
-              borderRadius: 'var(--radius-full)',
-              fontWeight: 600,
-              flexShrink: 0,
-            }}
-          >
+          {terminalCwd && (
+            <>
+              <span className="text-text-muted text-[10px] select-none shrink-0">/</span>
+              <span className="text-xs text-text-muted font-medium truncate max-w-[180px]" title={terminalCwd}>
+                {terminalCwd.split(/[/\\]/).pop()}
+              </span>
+            </>
+          )}
+          <span className="text-[9px] px-1.5 py-0.5 bg-bg-active text-accent-primary border border-accent-primary/20 rounded-full font-semibold shrink-0">
             {t('app.version')}
           </span>
         </div>
-        <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-          <button
+        <div className="flex gap-2 shrink-0">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={toggleTerminal}
             title={t('mainLayout.terminal')}
-            style={{
-              padding: '4px 12px',
-              fontSize: '12px',
-              borderRadius: 'var(--radius-sm)',
-              background: isTerminalOpen ? 'var(--bg-active)' : 'transparent',
-              color: isTerminalOpen ? 'var(--accent-primary)' : 'var(--text-muted)',
-              transition: 'all var(--transition-fast)',
-            }}
+            className={`flex items-center gap-1.5 px-3 py-1 text-xs rounded-md transition-colors ${
+              isTerminalOpen ? 'bg-bg-active text-accent-primary' : 'hover:bg-bg-hover text-text-muted'
+            }`}
           >
-            💻 {t('mainLayout.terminal')}
-          </button>
-          <button
+            <TerminalIcon size={14} /> {t('mainLayout.terminal')}
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={toggleChat}
             title={t('mainLayout.chat')}
-            style={{
-              padding: '4px 12px',
-              fontSize: '12px',
-              borderRadius: 'var(--radius-sm)',
-              background: isChatOpen ? 'var(--bg-active)' : 'transparent',
-              color: isChatOpen ? 'var(--accent-primary)' : 'var(--text-muted)',
-              transition: 'all var(--transition-fast)',
-            }}
+            className={`flex items-center gap-1.5 px-3 py-1 text-xs rounded-md transition-colors ${
+              isChatOpen ? 'bg-bg-active text-accent-primary' : 'hover:bg-bg-hover text-text-muted'
+            }`}
           >
-            💬 {t('mainLayout.chat')}
-          </button>
+            <MessageSquare size={14} /> {t('mainLayout.chat')}
+          </motion.button>
         </div>
-      </div>
+      </motion.div>
 
       {/* Tab Bar */}
       <TabBar />
 
       {/* Main area */}
-      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+      <div className="flex flex-1 min-h-0 relative">
         {/* Content Area */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <div className="flex-1 flex flex-col min-w-0">
           {/* Active view */}
-          <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }} className="view-enter">
-            <ActiveView />
+          <div className="flex-1 min-h-0 overflow-hidden relative">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="absolute inset-0"
+              >
+                <ActiveView />
+              </motion.div>
+            </AnimatePresence>
           </div>
 
           {/* Terminal (bottom panel) */}
-          {isTerminalOpen && (
-            <>
-              {/* Drag handle */}
-              <div onMouseDown={onDragStart} className="drag-handle" />
-              <div style={{ height: terminalHeight, flexShrink: 0 }}>
-                <Suspense fallback={<LoadingPanel />}>
-                  <Terminal />
-                </Suspense>
-              </div>
-            </>
-          )}
+          <AnimatePresence>
+            {isTerminalOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: terminalHeight, opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ type: 'spring', bounce: 0, duration: 0.3 }}
+                className="flex flex-col shrink-0 border-t border-border-subtle bg-bg-secondary"
+              >
+                {/* Drag handle */}
+                <div onMouseDown={onDragStart} className="h-1 bg-border-subtle hover:bg-accent-primary cursor-row-resize transition-colors shrink-0" />
+                <div className="flex-1 overflow-hidden relative">
+                  <Suspense fallback={<LoadingPanel />}>
+                    <Terminal />
+                  </Suspense>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Chat Panel (right sidebar) */}
-        {isChatOpen && (
-          <div
-            style={{
-              width: 'min(340px, 40vw)',
-              borderLeft: '1px solid var(--border-subtle)',
-              flexShrink: 0,
-              animation: 'fadeIn 200ms ease forwards',
-            }}
-          >
-            <Suspense fallback={<LoadingPanel />}>
-              <ChatPanel />
-            </Suspense>
-          </div>
-        )}
+        <AnimatePresence>
+          {isChatOpen && (
+            <motion.div
+              initial={{ width: 0, opacity: 0, x: 20 }}
+              animate={{ width: 'min(340px, 40vw)', opacity: 1, x: 0 }}
+              exit={{ width: 0, opacity: 0, x: 20 }}
+              transition={{ type: 'spring', bounce: 0, duration: 0.3 }}
+              className="border-l border-border-subtle shrink-0 bg-bg-secondary overflow-hidden shadow-lg z-20"
+            >
+              <Suspense fallback={<LoadingPanel />}>
+                <ChatPanel />
+              </Suspense>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Status Bar */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '0 16px',
-          height: '24px',
-          background: 'var(--bg-tertiary)',
-          borderTop: '1px solid var(--border-subtle)',
-          fontSize: '11px',
-          color: 'var(--text-muted)',
-          flexShrink: 0,
-          overflow: 'hidden',
-          whiteSpace: 'nowrap',
-        }}
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.3, delay: 0.1, ease: 'easeOut' }}
+        className="flex items-center justify-between px-4 h-6 bg-bg-tertiary border-t border-border-subtle text-[11px] text-text-muted shrink-0 z-10"
       >
-        <div style={{ display: 'flex', gap: '12px', minWidth: 0, overflow: 'hidden' }}>
-          <span>🤖 GHITA {t('app.version')}</span>
-          <span>
-            {isWindows()
-              ? `🖥️ ${t('settings.windows')}`
-              : isLinux()
-                ? `🖥️ ${t('settings.linux')}`
-                : `🖥️ ${t('mainLayout.unknown')}`}
-          </span>
+        <div className="flex gap-3 min-w-0 overflow-hidden items-center">
+          <Bot size={12} />
+          <span>GHITA {t('app.version')}</span>
+          <div className="flex items-center gap-1">
+            <Monitor size={12} />
+            <span>
+              {isWindows()
+                ? t('settings.windows')
+                : isLinux()
+                  ? t('settings.linux')
+                  : t('mainLayout.unknown')}
+            </span>
+          </div>
         </div>
-        <div
-          style={{
-            display: 'flex',
-            gap: '12px',
-            minWidth: 0,
-            overflow: 'hidden',
-            justifyContent: 'flex-end',
-          }}
-        >
-          <span style={{ color: serverStatus === 'listening' ? 'var(--success)' : undefined }}>
-            📡{' '}
+        <div className="flex gap-3 min-w-0 overflow-hidden justify-end items-center">
+          <span className={serverStatus === 'listening' ? 'text-success flex items-center gap-1' : 'flex items-center gap-1'}>
+            <div className={`w-2 h-2 rounded-full ${serverStatus === 'listening' ? 'bg-success animate-pulse' : 'bg-text-muted'}`} />
             {connectedDevices.length > 0
               ? t('mainLayout.devices', {
                   count: connectedDevices.length,
@@ -391,7 +381,7 @@ export function MainLayout() {
           <span>TypeScript</span>
           <span>UTF-8</span>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

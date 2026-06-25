@@ -75,11 +75,7 @@ export type {
 } from './templates/index.js';
 
 // --- Phase 32: Auto-updater for Plugins ---
-export {
-  PluginUpdater,
-  PluginDiffer,
-  RollbackManager,
-} from './updater/index.js';
+export { PluginUpdater, PluginDiffer, RollbackManager } from './updater/index.js';
 export type {
   UpdateCheckResult,
   UpdateStatus,
@@ -94,12 +90,7 @@ export type {
 } from './updater/index.js';
 
 // --- Phase 37: Skill Publishing Pipeline ---
-export {
-  SkillToNpmConverter,
-  ReadmeGenerator,
-  Semver,
-  CicdGenerator,
-} from './pipeline/index.js';
+export { SkillToNpmConverter, ReadmeGenerator, Semver, CicdGenerator } from './pipeline/index.js';
 export type {
   SemverVersion,
   BumpKind,
@@ -117,12 +108,7 @@ export type {
 } from './pipeline/index.js';
 
 // --- Phase 38: Revenue Sharing ---
-export {
-  PaymentGateway,
-  RevenueSplitter,
-  PayoutScheduler,
-  TaxReporter,
-} from './revenue/index.js';
+export { PaymentGateway, RevenueSplitter, PayoutScheduler, TaxReporter } from './revenue/index.js';
 export type {
   PaymentProvider,
   PaymentStatus,
@@ -152,12 +138,7 @@ export type {
 } from './analytics/index.js';
 
 // --- Phase 40: Community Features ---
-export {
-  ForumManager,
-  BugReportTracker,
-  FeatureVoting,
-  Leaderboard,
-} from './community/index.js';
+export { ForumManager, BugReportTracker, FeatureVoting, Leaderboard } from './community/index.js';
 export type {
   ForumThread,
   ForumReply,

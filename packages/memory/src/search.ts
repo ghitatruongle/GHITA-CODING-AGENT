@@ -89,6 +89,12 @@ export interface SessionSearchOptions {
 
 const TOKEN_PATTERN = /[\p{L}\p{N}_-]+/gu;
 
+// ---------------------------------------------------------------------------
+// Optional Rust NAPI cosine similarity (lazy-loaded once)
+// ---------------------------------------------------------------------------
+
+import { cosineSimilarityJS } from './semantic/rustAddon.js';
+
 export class CrossSessionSearch {
   private readonly sessions = new Map<string, SessionRecord>();
   private readonly index = new Map<string, Set<string>>();
@@ -363,7 +369,7 @@ export class CrossSessionSearch {
 
     const output = lines.join('\n');
     return output.length > maxChars
-      ? output.slice(0, maxChars) + '...\n[Cắt bớt do quá dài]'
+      ? `${output.slice(0, maxChars)  }...\n[Cắt bớt do quá dài]`
       : output;
   }
 
@@ -381,20 +387,7 @@ export class CrossSessionSearch {
   // =========================================================================
 
   private cosine(a: number[], b: number[]): number {
-    const len = Math.min(a.length, b.length);
-    if (len === 0) return 0;
-    let dot = 0,
-      nA = 0,
-      nB = 0;
-    for (let i = 0; i < len; i++) {
-      const va = a[i] ?? 0,
-        vb = b[i] ?? 0;
-      dot += va * vb;
-      nA += va * va;
-      nB += vb * vb;
-    }
-    if (nA === 0 || nB === 0) return 0;
-    return dot / (Math.sqrt(nA) * Math.sqrt(nB));
+    return cosineSimilarityJS(a, b);
   }
 
   private tokenize(text: string): Set<string> {
@@ -424,8 +417,8 @@ export class CrossSessionSearch {
     const end = Math.min(content.length, bestIndex + windowChars + 20);
 
     let snippet = content.slice(start, end);
-    if (start > 0) snippet = '...' + snippet;
-    if (end < content.length) snippet = snippet + '...';
+    if (start > 0) snippet = `...${  snippet}`;
+    if (end < content.length) snippet = `${snippet  }...`;
 
     return snippet.trim().replace(/\s+/g, ' ');
   }

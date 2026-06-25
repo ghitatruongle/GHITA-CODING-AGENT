@@ -76,7 +76,11 @@ export class ErrorMonitor extends EventEmitter {
   /**
    * Capture exception.
    */
-  async captureException(error: Error | string, context?: MonitoringContext, severity: Severity = 'error'): Promise<CapturedError> {
+  async captureException(
+    error: Error | string,
+    context?: MonitoringContext,
+    severity: Severity = 'error',
+  ): Promise<CapturedError> {
     if (!this.config.enabled) {
       return {
         id: 'noop',
@@ -125,14 +129,22 @@ export class ErrorMonitor extends EventEmitter {
   /**
    * Capture message (non-fatal).
    */
-  async captureMessage(message: string, severity: 'info' | 'warning' = 'info', context?: MonitoringContext): Promise<void> {
+  async captureMessage(
+    message: string,
+    severity: 'info' | 'warning' = 'info',
+    context?: MonitoringContext,
+  ): Promise<void> {
     await this.captureException(new Error(message), context, severity);
   }
 
   /**
    * Bắt đầu transaction.
    */
-  startTransaction(name: string, op?: string, tags?: Record<string, string>): PerformanceTransaction | undefined {
+  startTransaction(
+    name: string,
+    op?: string,
+    tags?: Record<string, string>,
+  ): PerformanceTransaction | undefined {
     if (!this.config.enabled) return undefined;
     const tx = this.tracer.start(name, op, tags);
     if (tx) {
@@ -145,7 +157,10 @@ export class ErrorMonitor extends EventEmitter {
   /**
    * Kết thúc transaction.
    */
-  async finishTransaction(tx: PerformanceTransaction, status: 'ok' | 'internal_error' = 'ok'): Promise<void> {
+  async finishTransaction(
+    tx: PerformanceTransaction,
+    status: 'ok' | 'internal_error' = 'ok',
+  ): Promise<void> {
     await this.tracer.finish(tx, status);
   }
 

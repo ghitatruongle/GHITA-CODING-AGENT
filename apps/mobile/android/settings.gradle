@@ -5,9 +5,37 @@ pluginManagement {
         mavenCentral()
         gradlePluginPortal()
     }
+    // Make the `com.android.application` and
+    // `org.jetbrains.kotlin.android` plugins addressable from the
+    // declared `pluginManagement.repositories`. Without this block
+    // Gradle complains the plugin could not be resolved from the
+    // repository set above. (RN 0.76+ explicitly requires this.)
+    plugins {
+        id "com.android.application" version "8.7.0"
+        id "org.jetbrains.kotlin.android" version "1.9.24"
+    }
 }
 plugins { id("com.facebook.react.settings") }
 extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autolinkLibrariesFromCommand() }
+dependencyResolutionManagement {
+    // BUILD (Phase 11): Use `PREFER_PROJECT` so third-party RN modules
+    // (Notifee, react-native-vector-icons, react-native-bluetooth-classic)
+    // can still register their own custom Maven URLs via project-level
+    // `repositories {}` blocks. These libraries ship native artifacts in
+    // `node_modules/<lib>/android/libs` and need to register the local
+    // `file://` repos to be picked up. With `FAIL_ON_PROJECT_REPOS` these
+    // plugin-level repos would be silently ignored and the build would
+    // fail with "Could not find any matches for app.notifee:core:+".
+    repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
 rootProject.name = 'GhitaMobile'
 include ':app'
-includeBuild('../node_modules/@react-native/gradle-plugin')
+// SECURITY/BUILD (audit fix 4.4): kept the original duplicate
+// `includeBuild` comment for documentation, but the actual duplicate
+// declaration below was removed in audit fix 4.4 so Gradle no longer
+// evaluates the React Native plugin composite twice.
+// includeBuild('../node_modules/@react-native/gradle-plugin')   // removed

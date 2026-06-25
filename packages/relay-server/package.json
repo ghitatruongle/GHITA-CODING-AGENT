@@ -2,7 +2,7 @@
   "name": "@ghita/relay-server",
   "version": "0.1.0",
   "private": true,
-  "description": "Socket.IO Relay Server for GHITA CODING AGENT WAN connection",
+  "description": "WebSocket relay server for GHITA CODING AGENT mobile pairing",
   "main": "./dist/index.js",
   "type": "module",
   "types": "./dist/index.d.ts",
@@ -14,25 +14,18 @@
   },
   "scripts": {
     "build": "tsc -b",
-    "start": "node dist/index.js",
-    "dev": "tsx src/index.ts",
+    "dev": "tsc -b --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src/",
     "clean": "node -e \"const fs=require('fs'); fs.rmSync('dist',{recursive:true,force:true}); fs.readdirSync('.').filter(f=>f.endsWith('.tsbuildinfo')).forEach(f=>fs.rmSync(f,{force:true}))\""
   },
   "dependencies": {
-    "@ghita/shared": "workspace:*",
-    "cors": "^2.8.5",
-    "express": "^4.21.1",
-    "socket.io": "^4.8.3"
+    "@ghita/shared": "workspace:*"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.0",
-    "@types/node": "^20.0.0",
-    "debug": "^4.4.3",
-    "socket.io-client": "^4.8.3",
-    "tsx": "^4.19.2",
+    "@types/node": "^20.11.0",
     "typescript": "^5.6.0",
     "vitest": "^3.2.4"
   }

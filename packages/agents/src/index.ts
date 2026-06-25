@@ -1,17 +1,45 @@
 // ==============================================================================
 // GHITA CODING AGENT - Agents Package
 // ==============================================================================
-
+//
+// The Agents package provides the orchestration layer for AI agent lifecycle
+// management, multi-agent collaboration, and task execution pipelines.
+//
+// Key capabilities:
+//
+// - **ReAct Agent**: Reasoning + Acting agent with tool-use loops, structured
+//   output schemas, and configurable max iterations.
+// - **Flow Orchestration**: DAG-based workflow execution with typed step results,
+//   conditional branching, and parallel/sequential processing modes.
+// - **Task Delegation**: Pipeline for breaking complex tasks into subtasks
+//   and delegating them to specialized agents.
+// - **Multi-Agent Groups**: Create agent teams with shared memory, role-based
+//   task assignment, and collaborative problem solving.
+// - **Middleware Pipeline**: Pre/post model-call hooks for guardrails, logging,
+//   cost tracking, and human-in-the-loop approval.
+// - **Debate Engine**: Multi-perspective reasoning with Innovator, Devil's
+//   Advocate, and Editor-in-Chief roles for robust decision making.
+// - **Runnable Pipeline**: Composable data transformation pipeline with
+//   streaming support, inspired by LangChain's LCEL.
+// - **Storage Backends**: Pluggable persistence (in-memory, filesystem,
+//   encoder-backed) for agent state and conversation history.
+// - **Hub Integration**: Pull/push prompt templates from a shared hub
+//   for team-wide reuse and versioning.
+//
+// @packageDocumentation
+// @module @ghita/agents
+// ==============================================================================
 import type { Agent, AgentGroup, AgentRole, AgentTask } from '@ghita/shared';
 import type { AgentMemory } from '@ghita/memory';
 
+/** Registry of registered skill tools. Key represents skill name/ID. */
 export interface SkillRegistry {
   [key: string]: Record<string, unknown>;
 }
 
-// --- Phase 4: Multi-Agent & Pipeline exports ---
-
-// Message System
+/**
+ * Message models and parser helpers for agent-to-LLM communications.
+ */
 export {
   HumanMessage,
   AIMessage,
@@ -20,6 +48,7 @@ export {
   FunctionMessage,
   messageFromData,
 } from './messages/message.js';
+/** Types representing chat messages, roles, and media content blocks. */
 export type {
   MessageRole,
   ContentType,
@@ -34,10 +63,12 @@ export type {
   FunctionMessageData,
   MessageData,
 } from './messages/types.js';
+/** Abstract base class defining structural properties of a conversation message. */
 export { BaseMessage } from './messages/message.js';
 
-// ReAct Agent
+/** ReAct (Reasoning + Acting) Agent runtime orchestrating tool iteration execution. */
 export { ReActAgent, createReActAgent } from './react/agent.js';
+/** Options configuring ReAct runs, tool schemas, and callback hooks. */
 export type {
   ReActAgentConfig,
   ReActTool,
@@ -50,8 +81,9 @@ export type {
   StructuredOutputSchema,
 } from './react/types.js';
 
-// Agent Middleware (Phase 12 Enhanced)
+/** Pipeline executing interceptors sequentially before and after agent model actions. */
 export { MiddlewarePipeline } from './middleware/pipeline.js';
+/** Types representing agent execution middleware, metrics, and approval states. */
 export type {
   AgentMiddleware,
   MiddlewareContext,
@@ -66,8 +98,9 @@ export type {
   MiddlewareStats,
 } from './middleware/types.js';
 
-// Flow Orchestration
+/** Flow engine organizing complex workflows into structured DAG step chains. */
 export { Flow, createStep } from './flow/flow.js';
+/** Configurations controlling flow runs, contexts, and steps. */
 export type {
   FlowStep,
   FlowStepResult,
@@ -77,13 +110,16 @@ export type {
   FlowProcessMode,
 } from './flow/types.js';
 
-// Task Delegation Pipeline
+/** Pipeline decomposing single tasks into smaller subtasks for team agents. */
 export { TaskDelegationPipeline } from './orchestrator/pipeline.js';
+/** Configs defining task decomposition plans and results. */
 export type { DelegatedTask, PipelineConfig, PipelineResult } from './orchestrator/pipeline.js';
 
-// Agent Adapters
+/** Adapters translating external agent definitions (LangGraph, OpenAI) to local agents. */
 export { LangGraphAdapter } from './adapters/langgraph.js';
+/** OpenAI-specific agent runner conversion middleware. */
 export { OpenAIAgentsAdapter } from './adapters/openai-agents.js';
+/** Types representing adapter interfaces and source engine configurations. */
 export type {
   AgentAdapter,
   AdapterConvertedConfig,
@@ -97,8 +133,9 @@ export type {
   OpenAIAgentResult,
 } from './adapters/types.js';
 
-// Runnable Pipeline
+/** Runnable transformer pipeline simplifying async data streams, inspired by LCEL. */
 export { Runnable, LambdaRunnable, runnable, sequence, parallel } from './pipeline/runnable.js';
+/** Configurations controlling pipeline transforms and streaming blocks. */
 export type {
   RunnableConfig,
   StreamChunk,
@@ -107,10 +144,13 @@ export type {
   StreamTransformFn,
 } from './pipeline/types.js';
 
-// Storage Backends
+/** Pluggable storage mechanisms for maintaining agent state histories. */
 export { InMemoryStorage } from './storage/memory.js';
+/** Filesystem directory persistence engine for agent histories. */
 export { FileSystemStorage } from './storage/filesystem.js';
+/** Encoder-backed database translating state structures into binary streams. */
 export { EncoderBackedStorage, JSONEncoder } from './storage/encoder.js';
+/** Types defining storage backends and custom data serialization encoders. */
 export type {
   StorageBackend,
   SerializedEntry,
@@ -120,8 +160,9 @@ export type {
 } from './storage/types.js';
 export type { FileSystemStorageOptions } from './storage/filesystem.js';
 
-// Hub Integration
+/** Client communicating with a remote agent hub workspace. */
 export { HubClient } from './hub/hub.js';
+/** Configurations controlling prompt template indexing and search queries. */
 export type {
   HubPrompt,
   HubConfig,

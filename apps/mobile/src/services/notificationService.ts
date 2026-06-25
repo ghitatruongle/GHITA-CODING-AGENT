@@ -18,7 +18,7 @@ class NotificationService {
     notifee.onBackgroundEvent(async ({ type, detail }) => {
       const { notification } = detail;
       if (type === EventType.PRESS) {
-        console.log('User pressed notification in background', notification);
+        console.info('User pressed notification in background', notification);
       }
     });
   }
@@ -28,11 +28,16 @@ class NotificationService {
       await this.initialize();
     }
 
+    const channelId = this.channelId;
+    if (!channelId) {
+      throw new Error('Notification channel not initialized');
+    }
+
     await notifee.displayNotification({
       title,
       body,
       android: {
-        channelId: this.channelId!,
+        channelId,
         smallIcon: 'ic_launcher', // Optional, defaults to 'ic_launcher'
         importance: AndroidImportance.HIGH,
         pressAction: {

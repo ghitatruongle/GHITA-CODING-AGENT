@@ -1,15 +1,12 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { SaaSConnection, SaaSAppDefinition } from './composioAdapter.js';
-import { SAAS_APPS } from './composioAdapter.js';
+import type { SaaSConnection, SaaSAppDefinition } from './saas-apps-registry.js';
+import { SAAS_APPS } from './saas-apps-registry.js';
 
 // Helper to generate base64url representation from a Buffer
 function base64url(buf: Buffer): string {
-  return buf.toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '');
+  return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
 
 export interface OAuthSession {
@@ -31,7 +28,11 @@ export class OAuthHandoffManager {
   /**
    * Generates authorization URL, state random string, and PKCE verifier/challenge.
    */
-  public generateSession(appId: string, redirectUri: string, scope?: string): {
+  public generateSession(
+    appId: string,
+    redirectUri: string,
+    scope?: string,
+  ): {
     url: string;
     state: string;
     codeVerifier: string;
@@ -39,7 +40,7 @@ export class OAuthHandoffManager {
   } {
     const state = crypto.randomBytes(16).toString('hex');
     const verifier = base64url(crypto.randomBytes(32));
-    
+
     // S256 Challenge method
     const hash = crypto.createHash('sha256').update(verifier).digest();
     const challenge = base64url(hash);
@@ -56,9 +57,9 @@ export class OAuthHandoffManager {
     this.sessions.set(state, session);
 
     const url = `https://auth.ghita.ai/oauth/authorize?response_type=code&client_id=ghita_client&redirect_uri=${encodeURIComponent(
-      redirectUri
+      redirectUri,
     )}&state=${state}&code_challenge=${challenge}&code_challenge_method=S256&scope=${encodeURIComponent(
-      scope || ''
+      scope || '',
     )}`;
 
     return {
@@ -72,7 +73,11 @@ export class OAuthHandoffManager {
   /**
    * Validates state, verifier, and generates simulated SaaS Connection tokens.
    */
-  public async handleCallback(state: string, _code: string, incomingVerifier?: string): Promise<SaaSConnection> {
+  public async handleCallback(
+    state: string,
+    _code: string,
+    incomingVerifier?: string,
+  ): Promise<SaaSConnection> {
     const session = this.sessions.get(state);
     if (!session) {
       throw new Error('OAuth session not found');
@@ -117,22 +122,44 @@ export class OAuthHandoffManager {
  */
 export class KeychainStore {
   private cache = new Map<string, SaaSConnection>();
+  /** Optional on-disk path for the encrypted credentials file. */
+  public readonly storagePath?: string;
+  /** Master password used for AES-256-GCM encryption. Private — never
+   *  exposed via toString()/JSON.stringify because it's a class field
+   *  rather than a parameter property. */
+  private readonly masterPassword: string;
 
-  constructor(
-    public readonly storagePath?: string,
-    private readonly masterPassword = 'ghita-default-secure-password'
-  ) {}
+  /**
+   * @param storagePath Path to the encrypted credentials file.
+   * @param masterPassword Optional override for the master password. When omitted,
+   *                      reads `GHITA_KEYCHAIN_PASSWORD` from the environment.
+   *                      Throws on construction if neither is available — refuses
+   *                      to silently fall back to a hard-coded default.
+   */
+  constructor(storagePath?: string, masterPassword?: string) {
+    const envPwd =
+      typeof process !== 'undefined' ? process.env?.GHITA_KEYCHAIN_PASSWORD : undefined;
+    const resolved = masterPassword ?? envPwd;
+    if (!resolved || resolved.length < 16) {
+      throw new Error(
+        'KeychainStore requires a master password of at least 16 chars. ' +
+          'Pass it explicitly or set the GHITA_KEYCHAIN_PASSWORD environment variable.',
+      );
+    }
+    this.masterPassword = resolved;
+    this.storagePath = storagePath;
+  }
 
   private encrypt(data: string): string {
     const iv = crypto.randomBytes(12);
     const salt = crypto.randomBytes(16);
     const key = crypto.scryptSync(this.masterPassword, salt, 32);
     const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
-    
+
     let encrypted = cipher.update(data, 'utf8', 'hex');
     encrypted += cipher.final('hex');
     const authTag = cipher.getAuthTag().toString('hex');
-    
+
     return `${salt.toString('hex')}:${iv.toString('hex')}:${authTag}:${encrypted}`;
   }
 
@@ -145,11 +172,11 @@ export class KeychainStore {
     const salt = Buffer.from(saltHex, 'hex');
     const iv = Buffer.from(ivHex, 'hex');
     const authTag = Buffer.from(authTagHex, 'hex');
-    
+
     const key = crypto.scryptSync(this.masterPassword, salt, 32);
     const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
     decipher.setAuthTag(authTag);
-    
+
     let decrypted: string = decipher.update(encryptedHex, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
     return decrypted;
@@ -169,13 +196,45 @@ export class KeychainStore {
       this.cache.clear();
       return;
     }
+    // If we already have cache populated (e.g. by a previous successful load
+    // in the same process), reuse it — avoids re-decrypting on every call.
+    if (this.cache.size > 0) return;
+
+    let raw: string;
     try {
-      const encrypted = await fs.promises.readFile(this.storagePath, 'utf8');
-      const decrypted = this.decrypt(encrypted);
+      raw = await fs.promises.readFile(this.storagePath, 'utf8');
+    } catch (err) {
+      // Read failure — leave cache empty but do NOT destroy existing memory
+      throw new Error(
+        `KeychainStore: failed to read credentials file at ${this.storagePath}: ${ 
+          err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+
+    let decrypted: string;
+    try {
+      decrypted = this.decrypt(raw);
+    } catch (err) {
+      // SECURITY: do NOT clear cache or overwrite the file on decrypt failure.
+      // The most likely cause is a wrong master password or file corruption;
+      // silently nuking the file would lock the user out of all stored SaaS
+      // connections. Surface the error instead and keep the on-disk file
+      // intact for offline recovery.
+      throw new Error(
+        'KeychainStore: failed to decrypt credentials. The file at ' +
+          `${this.storagePath} was preserved untouched. Verify GHITA_KEYCHAIN_PASSWORD. ` +
+          `Underlying error: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+
+    try {
       const entries = JSON.parse(decrypted) as [string, SaaSConnection][];
       this.cache = new Map(entries);
-    } catch {
-      this.cache.clear();
+    } catch (err) {
+      throw new Error(
+        'KeychainStore: decrypted payload is not valid JSON — refusing to load. ' +
+          `Underlying error: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
   }
 
@@ -186,7 +245,10 @@ export class KeychainStore {
     await this.save();
   }
 
-  public async getCredential(appId: string, accountId?: string): Promise<SaaSConnection | undefined> {
+  public async getCredential(
+    appId: string,
+    accountId?: string,
+  ): Promise<SaaSConnection | undefined> {
     await this.load();
     const key = `${appId.toLowerCase()}:${accountId || 'default'}`;
     return this.cache.get(key);
@@ -299,8 +361,11 @@ export class PermissionGateManager {
  */
 export function discoverToolkitSlug(toolkitSlug: string): SaaSAppDefinition | undefined {
   const slug = toolkitSlug.toLowerCase().trim();
-  const clean = slug.replace(/(composio\/|toolkit-|-toolkit|_toolkit|tool-|-integration|_integration)/g, '');
-  
+  const clean = slug.replace(
+    /(composio\/|toolkit-|-toolkit|_toolkit|tool-|-integration|_integration)/g,
+    '',
+  );
+
   let match = SAAS_APPS.find((app) => app.id === clean);
   if (!match) {
     match = SAAS_APPS.find((app) => app.id.includes(clean) || clean.includes(app.id));

@@ -21,9 +21,14 @@ import type { SkillMeta, TrustLevel, AuditEntry } from './types.js';
 
 // --- Helper: Format SkillMeta for display ---
 function formatSkill(meta: SkillMeta): string {
-  const trust = meta.trustLevel === 'trusted' ? '🟢' :
-                meta.trustLevel === 'verified' ? '🔵' :
-                meta.trustLevel === 'restricted' ? '🔴' : '⚪';
+  const trust =
+    meta.trustLevel === 'trusted'
+      ? '🟢'
+      : meta.trustLevel === 'verified'
+        ? '🔵'
+        : meta.trustLevel === 'restricted'
+          ? '🔴'
+          : '⚪';
   return [
     `**${meta.name}** (${meta.id})`,
     `  Category: ${meta.category} | Version: ${meta.version}`,
@@ -33,7 +38,9 @@ function formatSkill(meta: SkillMeta): string {
     meta.author ? `  Author: ${meta.author}` : '',
     meta.tags.length > 0 ? `  Tags: ${meta.tags.join(', ')}` : '',
     `  ${meta.description}`,
-  ].filter(Boolean).join('\n');
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 // --- Create /skills commands ---
@@ -56,10 +63,10 @@ export function createSkillsCommands(hub: HubRegistry): SlashCommand[] {
         let skills = hub.list();
 
         if (category) {
-          skills = skills.filter(s => s.category === category);
+          skills = skills.filter((s) => s.category === category);
         }
         if (trust) {
-          skills = skills.filter(s => s.trustLevel === trust);
+          skills = skills.filter((s) => s.trustLevel === trust);
         }
 
         if (skills.length === 0) {
@@ -68,10 +75,17 @@ export function createSkillsCommands(hub: HubRegistry): SlashCommand[] {
 
         const lines = [`📋 **${skills.length} skill(s):**\n`];
         for (const s of skills) {
-          const trust = s.trustLevel === 'trusted' ? '🟢' :
-                        s.trustLevel === 'verified' ? '🔵' :
-                        s.trustLevel === 'restricted' ? '🔴' : '⚪';
-          lines.push(`${s.enabled ? '✅' : '❌'} ${trust} **${s.name}** (${s.id}) v${s.version} — ${s.category}`);
+          const trust =
+            s.trustLevel === 'trusted'
+              ? '🟢'
+              : s.trustLevel === 'verified'
+                ? '🔵'
+                : s.trustLevel === 'restricted'
+                  ? '🔴'
+                  : '⚪';
+          lines.push(
+            `${s.enabled ? '✅' : '❌'} ${trust} **${s.name}** (${s.id}) v${s.version} — ${s.category}`,
+          );
         }
         return lines.join('\n');
       },
@@ -82,12 +96,25 @@ export function createSkillsCommands(hub: HubRegistry): SlashCommand[] {
       name: 'Create Skill',
       description: 'Create a new skill in the hub',
       trigger: '/skills create',
-      usage: '/skills create <id> <name> [--category <cat>] [--desc <description>] [--tags <t1,t2>]',
+      usage:
+        '/skills create <id> <name> [--category <cat>] [--desc <description>] [--tags <t1,t2>]',
       flags: [
-        { name: '--category', short: '-c', description: 'Skill category', type: 'string', default: 'terminal' },
+        {
+          name: '--category',
+          short: '-c',
+          description: 'Skill category',
+          type: 'string',
+          default: 'terminal',
+        },
         { name: '--desc', short: '-d', description: 'Skill description', type: 'string' },
         { name: '--tags', short: '-t', description: 'Comma-separated tags', type: 'string' },
-        { name: '--version', short: '-v', description: 'Version string', type: 'string', default: '0.1.0' },
+        {
+          name: '--version',
+          short: '-v',
+          description: 'Version string',
+          type: 'string',
+          default: '0.1.0',
+        },
         { name: '--author', short: '-a', description: 'Author name', type: 'string' },
       ],
       execute: async (_args: string, parsed?: ParsedArgs) => {
@@ -101,7 +128,9 @@ export function createSkillsCommands(hub: HubRegistry): SlashCommand[] {
 
         const category = (parsed?.flags?.category as SkillMeta['category']) || 'terminal';
         const description = (parsed?.flags?.desc as string) || `Auto-created skill: ${skillName}`;
-        const tags = parsed?.flags?.tags ? (parsed.flags.tags as string).split(',').map(t => t.trim()) : [];
+        const tags = parsed?.flags?.tags
+          ? (parsed.flags.tags as string).split(',').map((t) => t.trim())
+          : [];
         const version = (parsed?.flags?.version as string) || '0.1.0';
         const author = parsed?.flags?.author as string | undefined;
 
@@ -225,13 +254,11 @@ export function createSkillsCommands(hub: HubRegistry): SlashCommand[] {
 
         if (skillId) {
           const result = hub.verify(skillId);
-          return result.ok
-            ? `✅ Verified: ${skillId}`
-            : `❌ Verification failed: ${result.error}`;
+          return result.ok ? `✅ Verified: ${skillId}` : `❌ Verification failed: ${result.error}`;
         }
 
         const results = hub.verifyAll();
-        const passed = results.filter(r => r.ok).length;
+        const passed = results.filter((r) => r.ok).length;
         const failed = results.length - passed;
 
         const lines = [`🔐 **Verification: ${passed}/${results.length} passed**\n`];
@@ -252,7 +279,13 @@ export function createSkillsCommands(hub: HubRegistry): SlashCommand[] {
       trigger: '/skills audit',
       usage: '/skills audit [--recent <n>] [--action <action>] [--skill <id>]',
       flags: [
-        { name: '--recent', short: '-r', description: 'Show last N entries', type: 'string', default: '10' },
+        {
+          name: '--recent',
+          short: '-r',
+          description: 'Show last N entries',
+          type: 'string',
+          default: '10',
+        },
         { name: '--action', short: '-a', description: 'Filter by action', type: 'string' },
         { name: '--skill', short: '-s', description: 'Filter by skill ID', type: 'string' },
       ],
@@ -277,7 +310,9 @@ export function createSkillsCommands(hub: HubRegistry): SlashCommand[] {
         for (const e of entries.slice(-20)) {
           const time = new Date(e.timestamp).toISOString().substring(0, 19);
           const status = e.success ? '✅' : '❌';
-          lines.push(`${status} [${time}] ${e.action} ${e.skillId} v${e.skillVersion} by ${e.actor}${e.details ? ` — ${e.details}` : ''}`);
+          lines.push(
+            `${status} [${time}] ${e.action} ${e.skillId} v${e.skillVersion} by ${e.actor}${e.details ? ` — ${e.details}` : ''}`,
+          );
         }
         return lines.join('\n');
       },
@@ -331,7 +366,12 @@ export function createSkillsCommands(hub: HubRegistry): SlashCommand[] {
         const positional = parsed?.positional || [];
 
         // Repo management mode
-        if (parsed?.flags?.repos || parsed?.flags?.add || parsed?.flags?.remove || parsed?.flags?.list) {
+        if (
+          parsed?.flags?.repos ||
+          parsed?.flags?.add ||
+          parsed?.flags?.remove ||
+          parsed?.flags?.list
+        ) {
           if (parsed.flags.add) {
             hub.addTrustedRepo(parsed.flags.add as string);
             return `✅ Added trusted repo: ${parsed.flags.add}`;

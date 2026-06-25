@@ -6,7 +6,13 @@
 export type PaymentProvider = 'stripe' | 'paypal' | 'lemonsqueezy' | 'paddle';
 
 /** Payment intent status */
-export type PaymentStatus = 'pending' | 'authorized' | 'captured' | 'refunded' | 'failed' | 'cancelled';
+export type PaymentStatus =
+  | 'pending'
+  | 'authorized'
+  | 'captured'
+  | 'refunded'
+  | 'failed'
+  | 'cancelled';
 
 /** Currency */
 export interface Currency {

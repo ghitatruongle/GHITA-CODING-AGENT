@@ -2,15 +2,30 @@
 // GHITA CODING AGENT — App Root
 // ==============================================================================
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, lazy, Suspense } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { ErrorFallback } from './components/ErrorFallback';
-import { MainLayout } from './layouts/MainLayout';
+
+const MainLayout = lazy(() =>
+  import('./layouts/MainLayout').then((m) => ({ default: m.MainLayout })),
+);
 import { Toast } from './components/Toast';
 import { useAppStore } from './stores/appStore';
 import { I18nProvider, useTranslation } from './i18n';
 import toast from 'react-hot-toast';
 import { invoke } from '@tauri-apps/api/core';
+
+// Module-level guard to prevent duplicate sidecar server startup in React StrictMode.
+// StrictMode double-invokes useEffect in development, which would cause two
+// concurrent start_server calls → two Node processes → port conflicts → crash.
+let serverStartupInFlight = false;
+
+/** Returns true when running inside the Tauri WebView (not a plain browser). */
+function isTauri(): boolean {
+  return (
+    typeof window !== 'undefined' && ('__TAURI_INTERNALS__' in window || '__TAURI__' in window)
+  );
+}
 
 /**
  * Emits a 'ready' event to Tauri after the first React render completes.
@@ -19,13 +34,15 @@ import { invoke } from '@tauri-apps/api/core';
  */
 function ReadyNotifier() {
   useEffect(() => {
+    // Silently skip outside Tauri (e.g. browser-only dev) to avoid console warnings
+    if (!isTauri()) return;
     // Use requestAnimationFrame to ensure the first paint has completed
     requestAnimationFrame(async () => {
       try {
         const { getCurrentWindow } = await import('@tauri-apps/api/window');
         await getCurrentWindow().emit('ready');
-      } catch (err) {
-        console.warn('[ReadyNotifier] Could not emit ready event (non-Tauri env):', err);
+      } catch {
+        // Silently ignore — emit failure is non-critical (safety timeout will show window)
       }
     });
   }, []);
@@ -46,23 +63,28 @@ function AppContent() {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
+
   // Sync language changes from desktop React state to the Node sidecar server
   useEffect(() => {
     const syncLanguageToServer = async () => {
       if (language === lastSyncedLangRef.current) return;
+      if (!isTauri()) return;
       lastSyncedLangRef.current = language;
 
       try {
         const status = await invoke<{ port: number }>('get_server_status');
-        const port = status.port || 8080;
+        const port = status.port || 39001;
         await fetch(`http://127.0.0.1:${port}/sync-language`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ language }),
         });
         if (import.meta.env.DEV) console.info('[AppContent] Language synced to server:', language);
-      } catch (err) {
-        console.warn('[AppContent] Failed to sync language to server:', err);
+      } catch {
+        // Silently ignore — language sync is best-effort
       }
     };
     void syncLanguageToServer();
@@ -71,6 +93,12 @@ function AppContent() {
   // Auto-start the sidecar server if it is offline on startup
   useEffect(() => {
     const autoStartServer = async () => {
+      // Skip outside Tauri to avoid console errors in browser-only dev
+      if (!isTauri()) return;
+      // Guard against React StrictMode double-invocation
+      if (serverStartupInFlight) return;
+      serverStartupInFlight = true;
+
       try {
         const result = await invoke<{ status?: string }>('get_server_status');
         if (result?.status !== 'ok') {
@@ -80,12 +108,12 @@ function AppContent() {
         } else {
           if (import.meta.env.DEV) console.info('[AppContent] Server is already running.');
         }
-      } catch (err) {
-        console.warn('[AppContent] Failed to check or start server on startup:', err);
+      } catch {
+        // Silently retry once on first failure
         try {
           await invoke('start_server');
-        } catch (startErr) {
-          console.error('[AppContent] Failed fallback start_server command:', startErr);
+        } catch {
+          // Sidecar not available — non-critical in dev
         }
       }
     };
@@ -97,6 +125,8 @@ function AppContent() {
     let unlistenFn: (() => void) | undefined;
 
     const setupListener = async () => {
+      // Skip outside Tauri to avoid console errors in browser-only dev
+      if (!isTauri()) return;
       try {
         const { listen } = await import('@tauri-apps/api/event');
         if (!active) return;
@@ -168,8 +198,8 @@ function AppContent() {
         } else {
           unlistenFn = cleanup;
         }
-      } catch (err) {
-        console.error('[AppContent] Failed to listen to sidecar events:', err);
+      } catch {
+        // Tauri event API unavailable — sidecar events are non-critical
       }
     };
 
@@ -183,10 +213,58 @@ function AppContent() {
     };
   }, []);
 
+  const terminalCwd = useAppStore((s) => s.terminalCwd);
+
+  // Sync workspace path to sidecar when it changes
+  useEffect(() => {
+    let active = true;
+    const syncWorkspace = async () => {
+      if (!isTauri()) return;
+      try {
+        const { getSharedSocket } = await import('./utils/sharedSocket');
+        const socket = await getSharedSocket();
+        if (socket && active) {
+          socket.emit('set_workspace', { path: terminalCwd || null });
+        }
+      } catch (err) {
+        console.warn('[AppContent] Failed to sync workspace path to sidecar:', err);
+      }
+    };
+    void syncWorkspace();
+    return () => {
+      active = false;
+    };
+  }, [terminalCwd]);
+
   return (
     <>
       <ReadyNotifier />
-      <MainLayout />
+      <Suspense
+        fallback={
+          <div
+            style={{
+              height: '100vh',
+              display: 'grid',
+              placeItems: 'center',
+              background: '#0f0f1a',
+              color: 'var(--text-muted)',
+            }}
+          >
+            <div
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: '50%',
+                border: '2px solid var(--border-subtle)',
+                borderTopColor: 'var(--accent-primary)',
+                animation: 'spin 700ms linear infinite',
+              }}
+            />
+          </div>
+        }
+      >
+        <MainLayout />
+      </Suspense>
       <Toast />
     </>
   );

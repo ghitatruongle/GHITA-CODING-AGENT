@@ -51,24 +51,27 @@ export function defineVendor(
 
     async isReady(): Promise<boolean> {
       if (spec.authScheme === 'none') return true;
-      return (this as unknown as { keyManager: { hasHealthyKey: () => Promise<boolean> } })
-        .keyManager.hasHealthyKey();
+      return (
+        this as unknown as { keyManager: { hasHealthyKey: () => Promise<boolean> } }
+      ).keyManager.hasHealthyKey();
     }
 
     async chat(messages: ChatMessage[], options?: ChatOptions): Promise<ChatResponse> {
       const apiKey = (this as unknown as { getApiKey: () => string }).getApiKey();
-      const model = (this as unknown as { getModel: (o?: ChatOptions) => string }).getModel(options);
+      const model = (this as unknown as { getModel: (o?: ChatOptions) => string }).getModel(
+        options,
+      );
       const body = spec.transformRequest
         ? spec.transformRequest(messages, options)
         : {
             model,
             messages: messages.map((m) => ({ role: m.role, content: m.content })),
-            max_tokens: (this as unknown as { getMaxTokens: (o?: ChatOptions) => number }).getMaxTokens(
-              options,
-            ),
-            temperature: (this as unknown as { getTemperature: (o?: ChatOptions) => number }).getTemperature(
-              options,
-            ),
+            max_tokens: (
+              this as unknown as { getMaxTokens: (o?: ChatOptions) => number }
+            ).getMaxTokens(options),
+            temperature: (
+              this as unknown as { getTemperature: (o?: ChatOptions) => number }
+            ).getTemperature(options),
             top_p: options?.topP,
             stop: options?.stop,
             stream: false,
@@ -81,12 +84,25 @@ export function defineVendor(
         signal: options?.signal,
       });
       if (!response.ok) {
-        if (apiKey)
-          (this as unknown as { reportKeyFailure: (k: string, s: number) => void }).reportKeyFailure(
-            apiKey,
-            response.status,
-          );
         const error = await response.text();
+        let statusToReport = response.status;
+        if (statusToReport === 401 || statusToReport === 403) {
+          const lower = error.toLowerCase();
+          if (
+            lower.includes('modelerror') ||
+            lower.includes('model error') ||
+            lower.includes('not supported') ||
+            lower.includes('unsupported') ||
+            lower.includes('not found') ||
+            lower.includes('invalid_model')
+          ) {
+            statusToReport = 500;
+          }
+        }
+        if (apiKey)
+          (
+            this as unknown as { reportKeyFailure: (k: string, s: number) => void }
+          ).reportKeyFailure(apiKey, statusToReport);
         throw new Error(`${spec.name} API error (${response.status}): ${error}`);
       }
       if (apiKey)
@@ -106,7 +122,9 @@ export function defineVendor(
         return;
       }
       const apiKey = (this as unknown as { getApiKey: () => string }).getApiKey();
-      const model = (this as unknown as { getModel: (o?: ChatOptions) => string }).getModel(options);
+      const model = (this as unknown as { getModel: (o?: ChatOptions) => string }).getModel(
+        options,
+      );
       const baseBody = spec.transformRequest
         ? (spec.transformRequest(messages, options) as Record<string, unknown>)
         : {};
@@ -117,9 +135,9 @@ export function defineVendor(
         max_tokens: (this as unknown as { getMaxTokens: (o?: ChatOptions) => number }).getMaxTokens(
           options,
         ),
-        temperature: (this as unknown as { getTemperature: (o?: ChatOptions) => number }).getTemperature(
-          options,
-        ),
+        temperature: (
+          this as unknown as { getTemperature: (o?: ChatOptions) => number }
+        ).getTemperature(options),
         stream: true,
       };
       const response = await fetch(spec.chatUrl, {
@@ -129,12 +147,25 @@ export function defineVendor(
         signal: options?.signal,
       });
       if (!response.ok) {
-        if (apiKey)
-          (this as unknown as { reportKeyFailure: (k: string, s: number) => void }).reportKeyFailure(
-            apiKey,
-            response.status,
-          );
         const error = await response.text();
+        let statusToReport = response.status;
+        if (statusToReport === 401 || statusToReport === 403) {
+          const lower = error.toLowerCase();
+          if (
+            lower.includes('modelerror') ||
+            lower.includes('model error') ||
+            lower.includes('not supported') ||
+            lower.includes('unsupported') ||
+            lower.includes('not found') ||
+            lower.includes('invalid_model')
+          ) {
+            statusToReport = 500;
+          }
+        }
+        if (apiKey)
+          (
+            this as unknown as { reportKeyFailure: (k: string, s: number) => void }
+          ).reportKeyFailure(apiKey, statusToReport);
         throw new Error(`${spec.name} API error (${response.status}): ${error}`);
       }
       if (apiKey)

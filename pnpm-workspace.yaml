@@ -2,7 +2,6 @@ packages:
   - packages/*
   - apps/*
   - docs
-  - docs
 
 allowBuilds:
   better-sqlite3: true

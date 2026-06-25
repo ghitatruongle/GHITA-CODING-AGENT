@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useColorScheme } from 'react-native';
-import { darkColors, lightColors, ThemeColors } from './colors';
+import type { ThemeColors } from './colors';
+import { darkColors, lightColors } from './colors';
 import * as storageService from '../services/storageService';
 
 type ThemeType = 'light' | 'dark' | 'system';

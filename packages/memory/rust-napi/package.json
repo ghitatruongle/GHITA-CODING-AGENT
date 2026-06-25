@@ -1,0 +1,10 @@
+{
+  "name": "ghita-memory-napi",
+  "version": "0.1.0",
+  "napi": {
+    "name": "index",
+    "triples": {
+      "defaults": true
+    }
+  }
+}
