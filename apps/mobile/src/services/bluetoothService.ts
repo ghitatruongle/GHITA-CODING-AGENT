@@ -29,10 +29,9 @@ interface RNBluetoothClassicModule {
 }
 
 let RNBluetoothClassic: RNBluetoothClassicModule | null = null;
-// @ts-expect-error - mockBluetoothClassic is defined globally in tests
-if (typeof globalThis.mockBluetoothClassic !== 'undefined') {
-  // @ts-expect-error - mockBluetoothClassic is defined globally in tests
-  RNBluetoothClassic = globalThis.mockBluetoothClassic;
+const globalMock = (globalThis as unknown as Record<string, unknown>).mockBluetoothClassic;
+if (globalMock) {
+  RNBluetoothClassic = globalMock as RNBluetoothClassicModule;
 } else {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -55,6 +54,7 @@ class BluetoothService {
   private isDiscovering = false;
   private discoveredDevices: Map<string, BluetoothDevice> = new Map();
   private onDeviceFound?: DiscoveryCallback;
+  private discoveryTimeout: ReturnType<typeof setTimeout> | null = null;
 
   /**
    * Check if Bluetooth is available and enabled
@@ -72,30 +72,36 @@ class BluetoothService {
   }
 
   /**
-   * Request Bluetooth permissions (Android 12+)
+   * Request Bluetooth permissions.
+   *
+   * SECURITY (audit fix 4.5): Android 12+ (API 31+) does NOT require
+   * ACCESS_FINE_LOCATION for Bluetooth scanning as long as the
+   * `neverForLocation` flag is set on the BLUETOOTH_SCAN permission in
+   * AndroidManifest.xml. Asking for it anyway is unnecessary AND would
+   * require a privacy disclosure on the Play Store listing.
    */
   async requestPermissions(): Promise<boolean> {
     if (Platform.OS !== 'android') return true;
 
     try {
       if (Platform.Version >= 31) {
-        // Android 12+ requires BLUETOOTH_SCAN and BLUETOOTH_CONNECT
+        // Android 12+ (API 31+): only Bluetooth permissions are required.
         const results = await PermissionsAndroid.requestMultiple([
           PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
           PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
         ]);
         return (
           results['android.permission.BLUETOOTH_SCAN'] === 'granted' &&
           results['android.permission.BLUETOOTH_CONNECT'] === 'granted'
         );
-      } else {
-        // Older Android needs location permission for BT discovery
-        const result = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-        );
-        return result === 'granted';
       }
+      // Android 11 and below (API <= 30): legacy Bluetooth + Location.
+      // BLUETOOTH + BLUETOOTH_ADMIN are install-time only; we still need
+      // ACCESS_FINE_LOCATION at runtime for BLE scanning on these versions.
+      const result = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+      );
+      return result === 'granted';
     } catch {
       return false;
     }
@@ -157,6 +163,12 @@ class BluetoothService {
       if (RNBluetoothClassic.startDiscovery) {
         await RNBluetoothClassic.startDiscovery();
       }
+
+      // H5: Auto-stop discovery after 30 seconds to prevent indefinite scanning
+      this.discoveryTimeout = setTimeout(() => {
+        void this.stopDiscovery();
+      }, 30000);
+
       return true;
     } catch (e) {
       console.error('[Bluetooth] Discovery failed:', e);
@@ -170,6 +182,10 @@ class BluetoothService {
    */
   async stopDiscovery(): Promise<void> {
     this.isDiscovering = false;
+    if (this.discoveryTimeout) {
+      clearTimeout(this.discoveryTimeout);
+      this.discoveryTimeout = null;
+    }
     if (!RNBluetoothClassic) return;
 
     // Remove listeners first to prevent duplicates/leaks
@@ -193,7 +209,7 @@ class BluetoothService {
    * Connect to a Bluetooth device and read server info
    * Returns the server address (IP:Port) if the device is a GHITA desktop
    */
-  async connectToDevice(device: BluetoothDevice): Promise<string | null> {
+  async connectToDevice(device: BluetoothDevice, retries = 3): Promise<string | null> {
     if (!RNBluetoothClassic) return null;
 
     try {
@@ -272,7 +288,13 @@ class BluetoothService {
         }
       });
     } catch (e) {
-      console.error('[Bluetooth] Connection failed:', e);
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error(`[Bluetooth] Connection failed (retries left ${retries}): ${msg}`);
+      if (retries > 0) {
+        const delay = (3 - retries + 1) * 1000;
+        await new Promise((r) => setTimeout(r, delay));
+        return this.connectToDevice(device, retries - 1);
+      }
       return null;
     }
   }

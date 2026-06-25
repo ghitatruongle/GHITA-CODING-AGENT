@@ -78,9 +78,30 @@ describe('Streaming Hooks Tests', () => {
   it('should execute hooks in priority order', async () => {
     const pipeline = new StreamingPipeline();
     const order: string[] = [];
-    pipeline.registerHook({ name: 'b', phase: 'pre-generation', priority: 200, run: () => { order.push('b'); } });
-    pipeline.registerHook({ name: 'a', phase: 'pre-generation', priority: 100, run: () => { order.push('a'); } });
-    pipeline.registerHook({ name: 'c', phase: 'pre-generation', priority: 300, run: () => { order.push('c'); } });
+    pipeline.registerHook({
+      name: 'b',
+      phase: 'pre-generation',
+      priority: 200,
+      run: () => {
+        order.push('b');
+      },
+    });
+    pipeline.registerHook({
+      name: 'a',
+      phase: 'pre-generation',
+      priority: 100,
+      run: () => {
+        order.push('a');
+      },
+    });
+    pipeline.registerHook({
+      name: 'c',
+      phase: 'pre-generation',
+      priority: 300,
+      run: () => {
+        order.push('c');
+      },
+    });
     await pipeline.runPreGen({ sessionId: 's1', prompt: 'x', metadata: {} });
     expect(order.join(',')).toBe('a,b,c');
   });
@@ -92,7 +113,9 @@ describe('Streaming Hooks Tests', () => {
     pipeline.registerHook({
       name: 'catcher',
       phase: 'on-error',
-      run: (ctx) => { errorCaught = ctx.error ?? null; },
+      run: (ctx) => {
+        errorCaught = ctx.error ?? null;
+      },
     });
     const err = new Error('boom');
     await pipeline.runOnError({ sessionId: 's1', error: err, metadata: {} });
@@ -132,13 +155,17 @@ describe('Streaming Hooks Tests', () => {
     pipeline.registerHook({
       name: 'broken',
       phase: 'pre-generation',
-      run: () => { throw new Error('intentional'); },
+      run: () => {
+        throw new Error('intentional');
+      },
     });
     pipeline.registerHook({
       name: 'after',
       phase: 'pre-generation',
       priority: 200,
-      run: () => { secondFired = true; },
+      run: () => {
+        secondFired = true;
+      },
     });
     await pipeline.runPreGen({ sessionId: 's1', prompt: 'x', metadata: {} });
     expect(secondFired).toBe(true);
@@ -155,6 +182,10 @@ describe('Streaming Hooks Tests', () => {
 });
 
 // Maintain runAllHookTests compatibility
-export async function runAllHookTests(): Promise<{ passed: number; failed: number; results: string[] }> {
+export async function runAllHookTests(): Promise<{
+  passed: number;
+  failed: number;
+  results: string[];
+}> {
   return { passed: 10, failed: 0, results: [] };
 }

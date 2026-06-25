@@ -69,6 +69,8 @@ export const ru: TranslationKeys = {
     pairErrBtFindFail: 'Компьютер не найден по Bluetooth.',
     pairErrApiKeyMissing:
       'Ключ Cloud Discovery API не настроен. Пожалуйста, укажите IP-адрес вручную.',
+    pairErrCloudDisabled:
+      'Cloud Discovery временно отключён. Укажите IP-адрес вручную на вкладке Wi-Fi или подключитесь по Bluetooth напрямую к компьютеру.',
     noCodeFromServer: 'Не удалось получить код сопряжения от сервера.',
   },
   remote: {
@@ -139,6 +141,20 @@ export const ru: TranslationKeys = {
     error: 'Ошибка подключения',
     lanConnection: '🟢 LAN (Быстрое)',
     cloudConnection: '🌐 Облако (Удаленное)',
+  },
+  dashboard: {
+    title: 'Панель аналитики',
+    totalTokens: 'Всего токенов (неделя)',
+    estCost: 'Оцен. стоимость (неделя)',
+    tokensUsage: 'Использование токенов',
+    insights: 'Аналитика',
+    loading: 'Загрузка данных...',
+    clearBtn: 'Очистить историю',
+    confirmTitle: 'Подтверждение',
+    confirmDesc: 'Вы уверены, что хотите очистить историю использования?',
+    mostUsage: 'Наибольшее количество токенов использовано в {{day}} ({{tokens}}k токенов).',
+    noUsage: 'Нет записей использования за эту неделю.',
+    averageDaily: 'Средняя стоимость в день: ${{cost}}.',
   },
   errorFallback: {
     title: 'Произошла непредвиденная ошибка приложения',

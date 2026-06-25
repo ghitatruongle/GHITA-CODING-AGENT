@@ -37,7 +37,15 @@ export class PriorityRouter {
   /**
    * Filter a channel list against the user's per-channel min-priority preferences.
    */
-  filterByPreferences(channels: NotificationChannel[], priority: NotificationPriority, prefs: Array<{ channel: NotificationChannel; minPriority: NotificationPriority; enabled: boolean }>): NotificationChannel[] {
+  filterByPreferences(
+    channels: NotificationChannel[],
+    priority: NotificationPriority,
+    prefs: Array<{
+      channel: NotificationChannel;
+      minPriority: NotificationPriority;
+      enabled: boolean;
+    }>,
+  ): NotificationChannel[] {
     return channels.filter((c) => {
       const p = prefs.find((x) => x.channel === c);
       if (!p) return true;
@@ -66,7 +74,9 @@ export class PriorityRouter {
    * Sort notifications high → low priority.
    */
   sort(notifications: Notification[]): Notification[] {
-    return [...notifications].sort((a, b) => PRIORITY_WEIGHT[b.priority] - PRIORITY_WEIGHT[a.priority]);
+    return [...notifications].sort(
+      (a, b) => PRIORITY_WEIGHT[b.priority] - PRIORITY_WEIGHT[a.priority],
+    );
   }
 
   /** Default channel map (for documentation / UI) */

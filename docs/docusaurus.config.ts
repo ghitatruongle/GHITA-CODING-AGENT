@@ -90,7 +90,10 @@ const config: Config = {
         {
           title: 'Community',
           items: [
-            { label: 'GitHub Discussions', href: 'https://github.com/ghitatruongle/ghita-coding-agent/discussions' },
+            {
+              label: 'GitHub Discussions',
+              href: 'https://github.com/ghitatruongle/ghita-coding-agent/discussions',
+            },
             { label: 'Issues', href: 'https://github.com/ghitatruongle/ghita-coding-agent/issues' },
           ],
         },

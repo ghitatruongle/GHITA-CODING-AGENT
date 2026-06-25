@@ -1,5 +1,5 @@
 // ==============================================================================
-// GHITA CODING AGENT — Dashboard View (Phase 7B)
+// GHITA CODING AGENT — Dashboard View (Phase 7B — Tailwind Edition)
 // ==============================================================================
 
 import { useAppStore } from '../stores/appStore';
@@ -7,6 +7,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useTranslation } from '../i18n';
 import { SandboxDashboard } from '../components/SandboxDashboard';
 import { DocsGrillerDashboard } from '../components/DocsGrillerDashboard';
+import { Badge } from '../components/ui';
 
 function StatCard({
   icon,
@@ -22,80 +23,86 @@ function StatCard({
   color: string;
 }) {
   return (
-    <div
-      className="glass-card"
-      style={{
-        padding: '24px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <span style={{ fontSize: '28px' }}>{icon}</span>
-        <span
-          style={{
-            fontSize: '13px',
-            color: 'var(--text-muted)',
-            fontWeight: 600,
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
-          }}
-        >
+    <div className="glass-card p-6 flex flex-col gap-3">
+      <div className="flex items-center gap-2.5">
+        <span className="text-[28px]">{icon}</span>
+        <span className="text-[13px] text-[var(--text-muted)] font-semibold uppercase tracking-wide">
           {title}
         </span>
       </div>
-      <div style={{ fontSize: '32px', fontWeight: 800, color }}>{value}</div>
-      {subtitle && <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{subtitle}</div>}
+      <div className="text-[32px] font-extrabold" style={{ color }}>
+        {value}
+      </div>
+      {subtitle && <div className="text-xs text-[var(--text-muted)]">{subtitle}</div>}
+    </div>
+  );
+}
+
+function CardSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="glass-card p-6">
+      <h3 className="text-base font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
+        {title}
+      </h3>
+      {children}
+    </div>
+  );
+}
+
+function InfoRow({
+  label,
+  children,
+  indent = false,
+}: {
+  label: React.ReactNode;
+  children: React.ReactNode;
+  indent?: boolean;
+}) {
+  return (
+    <div className={`flex justify-between text-[13px] ${indent ? 'pl-3 text-xs' : ''}`}>
+      <span className="text-[var(--text-muted)]">{label}</span>
+      {children}
     </div>
   );
 }
 
 export function DashboardView() {
   const { t } = useTranslation();
-  const {
-    serverStatus,
-    connectedDevices,
-    mcpServers,
-    contextUsage,
-    dashboardStats,
-    hooks,
-  } = useAppStore(
-    useShallow((s) => ({
-      serverStatus: s.serverStatus,
-      connectedDevices: s.connectedDevices,
-      mcpServers: s.mcpServers,
-      contextUsage: s.contextUsage,
-      dashboardStats: s.dashboardStats,
-      hooks: s.hooks,
-    }))
-  );
+  const { serverStatus, connectedDevices, mcpServers, contextUsage, dashboardStats, hooks } =
+    useAppStore(
+      useShallow((s) => ({
+        serverStatus: s.serverStatus,
+        connectedDevices: s.connectedDevices,
+        mcpServers: s.mcpServers,
+        contextUsage: s.contextUsage,
+        dashboardStats: s.dashboardStats,
+        hooks: s.hooks,
+      })),
+    );
+
+  const contextPercent = Math.min(100, contextUsage.percentage);
+  const progressBarColor =
+    contextPercent > 80
+      ? 'bg-[var(--error)]'
+      : contextPercent > 60
+        ? 'bg-[var(--warning)]'
+        : 'bg-[var(--success)]';
 
   return (
-    <div style={{ height: '100%', overflow: 'auto', padding: '32px' }}>
-      <h2
-        style={{
-          fontSize: '24px',
-          fontWeight: 700,
-          color: 'var(--text-primary)',
-          marginBottom: '8px',
-        }}
-      >
+    <div className="h-full overflow-auto p-8">
+      <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-2">
         {t('dashboard.title')}
       </h2>
-      <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '32px' }}>
-        {t('dashboard.subtitle')}
-      </p>
+      <p className="text-[var(--text-muted)] text-sm mb-8">{t('dashboard.subtitle')}</p>
 
       {/* Stats Grid */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: '20px',
-          marginBottom: '32px',
-        }}
-      >
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-5 mb-8">
         <StatCard
           icon="📊"
           title={t('dashboard.totalTokens')}
@@ -127,223 +134,108 @@ export function DashboardView() {
       </div>
 
       {/* Status Sections */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
-          gap: '20px',
-        }}
-      >
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(350px,1fr))] gap-5">
         {/* Server Status */}
-        <div className="glass-card" style={{ padding: '24px' }}>
-          <h3
-            style={{
-              fontSize: '16px',
-              fontWeight: 600,
-              color: 'var(--text-primary)',
-              marginBottom: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
-            {t('dashboard.serverAndDevices')}
-          </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-              <span style={{ color: 'var(--text-muted)' }}>{t('dashboard.socketServer')}</span>
-              <span
-                style={{
-                  color: serverStatus === 'listening' ? 'var(--success)' : 'var(--error)',
-                  fontWeight: 600,
-                }}
+        <CardSection title={t('dashboard.serverAndDevices')}>
+          <div className="flex flex-col gap-2.5">
+            <InfoRow label={t('dashboard.socketServer')}>
+              <Badge
+                variant={serverStatus === 'listening' ? 'success' : 'danger'}
+                dot
               >
                 {serverStatus === 'listening'
-                  ? `● ${t('dashboard.listening')}`
+                  ? t('dashboard.listening')
                   : serverStatus === 'error'
-                    ? `● ${t('dashboard.error')}`
-                    : `● ${t('dashboard.offline')}`}
-              </span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-              <span style={{ color: 'var(--text-muted)' }}>{t('dashboard.connectedDevices')}</span>
-              <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                    ? t('dashboard.error')
+                    : t('dashboard.offline')}
+              </Badge>
+            </InfoRow>
+            <InfoRow label={t('dashboard.connectedDevices')}>
+              <span className="text-[var(--text-primary)] font-semibold">
                 {connectedDevices.length}
               </span>
-            </div>
+            </InfoRow>
             {connectedDevices.map((d) => (
-              <div
-                key={d.id}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  fontSize: '12px',
-                  paddingLeft: '12px',
-                }}
-              >
-                <span style={{ color: 'var(--text-muted)' }}>{d.name}</span>
-                <span style={{ color: d.connected ? 'var(--success)' : 'var(--text-muted)' }}>
+              <InfoRow key={d.id} label={d.name} indent>
+                <span
+                  className={d.connected ? 'text-[var(--success)]' : 'text-[var(--text-muted)]'}
+                >
                   {d.connected ? '● Online' : '○ Offline'}
                 </span>
-              </div>
+              </InfoRow>
             ))}
           </div>
-        </div>
+        </CardSection>
 
         {/* MCP Servers */}
-        <div className="glass-card" style={{ padding: '24px' }}>
-          <h3
-            style={{
-              fontSize: '16px',
-              fontWeight: 600,
-              color: 'var(--text-primary)',
-              marginBottom: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
-            {t('dashboard.mcpServers')}
-          </h3>
+        <CardSection title={t('dashboard.mcpServers')}>
           {mcpServers.length === 0 ? (
-            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-              {t('dashboard.mcpEmpty')}
-            </p>
+            <p className="text-[13px] text-[var(--text-muted)]">{t('dashboard.mcpEmpty')}</p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div className="flex flex-col gap-2.5">
               {mcpServers.map((s) => (
-                <div
-                  key={s.name}
-                  style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}
-                >
-                  <span style={{ color: 'var(--text-muted)' }}>
-                    {s.name} ({s.transport})
-                  </span>
+                <InfoRow key={s.name} label={`${s.name} (${s.transport})`}>
                   <span
-                    style={{
-                      color: s.connected ? 'var(--success)' : 'var(--text-muted)',
-                      fontWeight: 600,
-                    }}
+                    className={`font-semibold ${s.connected ? 'text-[var(--success)]' : 'text-[var(--text-muted)]'}`}
                   >
                     {s.connected ? '● Connected' : s.enabled ? '○ Enabled' : '○ Disabled'}
                   </span>
-                </div>
+                </InfoRow>
               ))}
             </div>
           )}
-        </div>
+        </CardSection>
 
         {/* Hooks */}
-        <div className="glass-card" style={{ padding: '24px' }}>
-          <h3
-            style={{
-              fontSize: '16px',
-              fontWeight: 600,
-              color: 'var(--text-primary)',
-              marginBottom: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
-            {t('dashboard.hooks')}
-          </h3>
+        <CardSection title={t('dashboard.hooks')}>
           {hooks.length === 0 ? (
-            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-              {t('dashboard.hooksEmpty')}
-            </p>
+            <p className="text-[13px] text-[var(--text-muted)]">{t('dashboard.hooksEmpty')}</p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div className="flex flex-col gap-2.5">
               {hooks.map((h, i) => (
-                <div
-                  key={i}
-                  style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}
-                >
-                  <span style={{ color: 'var(--text-muted)' }}>
-                    {h.event} → {h.tool}
-                  </span>
+                <InfoRow key={i} label={`${h.event} → ${h.tool}`}>
                   <span
-                    style={{
-                      color: h.enabled ? 'var(--success)' : 'var(--text-muted)',
-                      fontWeight: 600,
-                    }}
+                    className={`font-semibold ${h.enabled ? 'text-[var(--success)]' : 'text-[var(--text-muted)]'}`}
                   >
                     {h.enabled ? '● Active' : '○ Disabled'}
                   </span>
-                </div>
+                </InfoRow>
               ))}
             </div>
           )}
-        </div>
+        </CardSection>
 
         {/* Context Usage */}
-        <div className="glass-card" style={{ padding: '24px' }}>
-          <h3
-            style={{
-              fontSize: '16px',
-              fontWeight: 600,
-              color: 'var(--text-primary)',
-              marginBottom: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
-            {t('dashboard.contextWindow')}
-          </h3>
-          <div style={{ marginBottom: '12px' }}>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                fontSize: '13px',
-                marginBottom: '8px',
-              }}
-            >
-              <span style={{ color: 'var(--text-muted)' }}>{t('dashboard.tokenUsage')}</span>
-              <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+        <CardSection title={t('dashboard.contextWindow')}>
+          <div className="mb-3">
+            <div className="flex justify-between text-[13px] mb-2">
+              <span className="text-[var(--text-muted)]">{t('dashboard.tokenUsage')}</span>
+              <span className="text-[var(--text-primary)] font-semibold">
                 {contextUsage.used.toLocaleString()} / {contextUsage.max.toLocaleString()}
               </span>
             </div>
-            <div
-              style={{
-                height: '8px',
-                background: 'rgba(255,255,255,0.05)',
-                borderRadius: '4px',
-                overflow: 'hidden',
-              }}
-            >
+            <div className="h-2 bg-white/5 rounded overflow-hidden">
               <div
-                style={{
-                  height: '100%',
-                  width: `${Math.min(100, contextUsage.percentage)}%`,
-                  background:
-                    contextUsage.percentage > 80
-                      ? 'var(--error)'
-                      : contextUsage.percentage > 60
-                        ? 'var(--warning)'
-                        : 'var(--success)',
-                  borderRadius: '4px',
-                  transition: 'width 0.3s',
-                }}
+                className={`h-full rounded transition-[width] duration-300 ${progressBarColor}`}
+                style={{ width: `${contextPercent}%` }}
               />
             </div>
           </div>
-          <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
+          <p className="text-xs text-[var(--text-muted)] m-0">
             {contextUsage.percentage > 80
               ? t('dashboard.contextWarning')
               : t('dashboard.contextRemaining', { percent: 100 - contextUsage.percentage })}
           </p>
-        </div>
+        </CardSection>
       </div>
 
       {/* Phase 12: Docker Sandbox Dashboard */}
-      <div style={{ marginTop: '24px' }}>
+      <div className="mt-6">
         <SandboxDashboard />
       </div>
 
       {/* Phase 5: DocsGriller Dashboard */}
-      <div style={{ marginTop: '24px' }}>
+      <div className="mt-6">
         <DocsGrillerDashboard />
       </div>
     </div>

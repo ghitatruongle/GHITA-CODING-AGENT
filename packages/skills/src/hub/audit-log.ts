@@ -38,7 +38,7 @@ export class AuditLog {
         this.entries = Array.isArray(parsed) ? parsed : [];
         // Find next ID
         if (this.entries.length > 0) {
-          const maxId = Math.max(...this.entries.map(e => this.parseId(e.id)));
+          const maxId = Math.max(...this.entries.map((e) => this.parseId(e.id)));
           this.nextId = maxId + 1;
         }
       } catch {
@@ -127,28 +127,28 @@ export class AuditLog {
    * Get entries for a specific skill.
    */
   getBySkill(skillId: string): AuditEntry[] {
-    return this.entries.filter(e => e.skillId === skillId);
+    return this.entries.filter((e) => e.skillId === skillId);
   }
 
   /**
    * Get entries by action type.
    */
   getByAction(action: AuditAction): AuditEntry[] {
-    return this.entries.filter(e => e.action === action);
+    return this.entries.filter((e) => e.action === action);
   }
 
   /**
    * Get entries by actor.
    */
   getByActor(actor: string): AuditEntry[] {
-    return this.entries.filter(e => e.actor === actor);
+    return this.entries.filter((e) => e.actor === actor);
   }
 
   /**
    * Get entries within a time range.
    */
   getByTimeRange(from: number, to: number): AuditEntry[] {
-    return this.entries.filter(e => e.timestamp >= from && e.timestamp <= to);
+    return this.entries.filter((e) => e.timestamp >= from && e.timestamp <= to);
   }
 
   /**
@@ -162,7 +162,7 @@ export class AuditLog {
    * Get failed entries only.
    */
   getFailures(): AuditEntry[] {
-    return this.entries.filter(e => !e.success);
+    return this.entries.filter((e) => !e.success);
   }
 
   /**
@@ -221,7 +221,7 @@ export class AuditLog {
    */
   trim(olderThan: number): number {
     const before = this.entries.length;
-    this.entries = this.entries.filter(e => e.timestamp >= olderThan);
+    this.entries = this.entries.filter((e) => e.timestamp >= olderThan);
     if (this.entries.length !== before) {
       this.save();
     }

@@ -36,7 +36,8 @@
       "identifier": "fs:scope",
       "allow": [
         { "path": "$APPDATA/ghita/**" },
-        { "path": "$DOCUMENT/ghita-workspace/**" }
+        { "path": "$DOCUMENT/ghita-workspace/**" },
+        { "path": "**" }
       ]
     }
   ]

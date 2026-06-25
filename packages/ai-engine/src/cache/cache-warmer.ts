@@ -85,7 +85,10 @@ export class CacheWarmer<T = unknown> {
   /**
    * Create a warm source from an in-memory snapshot.
    */
-  static fromSnapshot<T>(name: string, data: Array<{ key: string; value: T; tags?: string[] }>): WarmSource {
+  static fromSnapshot<T>(
+    name: string,
+    data: Array<{ key: string; value: T; tags?: string[] }>,
+  ): WarmSource {
     return {
       name,
       load: async () => data.map((d) => ({ key: d.key, value: d.value as unknown, tags: d.tags })),

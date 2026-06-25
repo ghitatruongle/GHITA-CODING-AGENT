@@ -28,6 +28,8 @@ export interface TranslationKeys {
     uninstall: string;
     add: string;
     delete: string;
+    copied: string;
+    run: string;
   };
   app: {
     brand: string;

@@ -48,11 +48,7 @@ export { SlackAdapter } from './channels/slack.js';
 export { isSafeUrl, safeFetch, getSessionKey } from './utils/security.js';
 
 // --- Phase 29: WebSocket Multiplexer ---
-export {
-  WsChannel,
-  ReconnectStrategy,
-  WsMultiplexer,
-} from './ws/index.js';
+export { WsChannel, ReconnectStrategy, WsMultiplexer } from './ws/index.js';
 export type {
   WsConnectionState,
   WsFrameType,

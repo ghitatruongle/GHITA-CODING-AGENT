@@ -69,6 +69,7 @@ pnpm build
 ```
 
 Deploy `build/` to:
+
 - Vercel: `vercel deploy --prebuilt`
 - Netlify: drag `build/` into dashboard
 - GitHub Pages: copy `build/` to `gh-pages` branch

@@ -26,6 +26,21 @@ function generateSubId(): string {
 export class SubagentSpawner {
   private readonly activeSubagents = new Map<string, SubagentState>();
   private readonly runningIds = new Set<string>(); // agent ids currently executing
+  /**
+   * FIFO queue of pending spawn requests when `maxConcurrency` is full.
+   * Each entry is a `{ input, resolve, reject }` triple so we can wake
+   * the original caller once a slot frees up.
+   *
+   * SECURITY/PERFORMANCE (audit fix 2.6): the previous implementation
+   * rejected spawn requests immediately when concurrency was saturated,
+   * producing head-of-line blocking and dropped agent work. Requests are
+   * now queued and processed in FIFO order as in-flight agents finish.
+   */
+  private readonly queue: Array<{
+    input: SubagentSpawnInput;
+    resolve: (r: SubagentSpawnResult) => void;
+    reject: (e: Error) => void;
+  }> = [];
   private readonly config: Required<
     Pick<SpawnerConfig, 'maxConcurrency' | 'defaultTimeoutMs' | 'maxStateHistory'>
   > &
@@ -49,20 +64,29 @@ export class SubagentSpawner {
 
   /**
    * Spawn an isolated sub-agent and execute its designated task.
-   * Respects concurrency limits and timeout settings.
+   *
+   * If `maxConcurrency` is reached the request is queued (FIFO) rather
+   * than rejected. Inspect `queuedCount` to read backlog.
    */
   async spawn(input: SubagentSpawnInput): Promise<SubagentSpawnResult> {
-    // Enforce concurrency limit
     if (this.runningIds.size >= this.config.maxConcurrency) {
-      return {
-        subagentId: 'rejected',
-        taskId: 'rejected',
-        status: 'failed',
-        error: `Concurrency limit reached (${this.config.maxConcurrency}). Retry later.`,
-        duration: 0,
-      };
+      // Queue the request and return a Promise that resolves when a slot
+      // frees up. Callers awaiting the Promise are not stuck in a hot loop
+      // and the original input is preserved verbatim.
+      return await new Promise<SubagentSpawnResult>((resolve, reject) => {
+        this.queue.push({ input, resolve, reject });
+      });
     }
 
+    return await this.executeSpawn(input);
+  }
+
+  /**
+   * Actual spawn execution — assumes a concurrency slot is available.
+   * Called by `spawn()` once a slot is granted (immediately or via
+   * `drainQueue()` after a running agent finishes).
+   */
+  private async executeSpawn(input: SubagentSpawnInput): Promise<SubagentSpawnResult> {
     const startTime = Date.now();
     const timeoutMs = input.timeoutMs ?? this.config.defaultTimeoutMs;
 
@@ -149,7 +173,34 @@ export class SubagentSpawner {
       this.runningIds.delete(agent.id);
       this.agentManager.remove(agent.id);
       this.trimStateHistory();
+      // Drain the next queued request if any. We deliberately don't await
+      // it here — the queue's resolve/reject are wired up to the original
+      // Promise returned by `spawn()`, so draining is fire-and-forget from
+      // the perspective of this finally block.
+      void this.drainQueue();
     }
+  }
+
+  /**
+   * Pop and execute the next queued request if a concurrency slot is open.
+   * Called after every agent finishes. Safe to call repeatedly — it returns
+   * immediately when the queue is empty or the pool is saturated.
+   */
+  private drainQueue(): void {
+    while (this.queue.length > 0 && this.runningIds.size < this.config.maxConcurrency) {
+      const next = this.queue.shift();
+      if (!next) break;
+      this.executeSpawn(next.input)
+        .then((result) => next.resolve(result))
+        .catch((err: unknown) =>
+          next.reject(err instanceof Error ? err : new Error(String(err))),
+        );
+    }
+  }
+
+  /** Number of pending requests waiting for a concurrency slot. */
+  get queuedCount(): number {
+    return this.queue.length;
   }
 
   // -----------------------------------------------------------------------

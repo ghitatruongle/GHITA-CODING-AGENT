@@ -1,0 +1,87 @@
+name: Build iOS
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'debug'
+        type: choice
+        options:
+          - debug
+          - release
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install CocoaPods
+        run: |
+          gem install cocoapods
+          pod --version
+
+      - name: Install Rust (for native deps if needed)
+        uses: dtolnay/rust-toolchain@stable
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build shared package
+        run: pnpm --filter @ghita/shared build
+
+      - name: Install Pods
+        working-directory: apps/mobile/ios
+        run: pod install
+
+      - name: Typecheck mobile
+        run: pnpm --filter @ghita/mobile typecheck
+        continue-on-error: true
+
+      - name: Lint mobile
+        run: pnpm --filter @ghita/mobile lint
+        continue-on-error: true
+
+      - name: Run mobile tests
+        run: pnpm --filter @ghita/mobile test
+        continue-on-error: true
+
+      - name: Build iOS (${{ github.event.inputs.build_type || 'debug' }})
+        working-directory: apps/mobile/ios
+        run: |
+          if [ "${{ github.event.inputs.build_type || 'debug' }}" = "release" ]; then
+            xcodebuild -workspace GhitaMobile.xcworkspace \
+              -scheme GhitaMobile \
+              -configuration Release \
+              -sdk iphoneos \
+              -derivedDataPath build \
+              CODE_SIGNING_ALLOWED=NO
+          else
+            xcodebuild -workspace GhitaMobile.xcworkspace \
+              -scheme GhitaMobile \
+              -configuration Debug \
+              -sdk iphonesimulator \
+              -derivedDataPath build
+          fi
+
+      - name: Upload iOS build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build
+          path: |
+            apps/mobile/ios/build/Build/Products/*/*.app
+            apps/mobile/ios/build/Build/Products/*/*.app.dSYM
+          retention-days: 14

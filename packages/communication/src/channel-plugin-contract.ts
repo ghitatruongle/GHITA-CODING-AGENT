@@ -3,6 +3,20 @@
 // Kế thừa đặc tả OpenClaw plugin contract
 // ==============================================================================
 
+/** Health check result for a channel adapter */
+export interface ChannelHealthStatus {
+  /** Channel ID */
+  channelId: string;
+  /** Whether the channel is connected and operational */
+  connected: boolean;
+  /** Latency of the health probe in ms */
+  latencyMs: number;
+  /** Human-readable status message */
+  message: string;
+  /** Timestamp of the check */
+  checkedAt: number;
+}
+
 /**
  * Adapter cho một channel cụ thể (Telegram, Discord, Slack, etc.)
  */
@@ -11,6 +25,8 @@ export interface ChannelAdapter {
   sendMessage(channelId: string, text: string): Promise<boolean>;
   onMessage(handler: (message: unknown) => void | Promise<void>): void;
   handleWebhook?(req: unknown, res: unknown): Promise<void> | void;
+  /** Probe the channel's connection health. Returns a status report. */
+  healthCheck?(): Promise<ChannelHealthStatus>;
 }
 
 /**
@@ -53,6 +69,66 @@ export class ChannelPluginRegistry {
 
   listChannels(): ChannelPluginEntry[] {
     return Array.from(this.channels.values());
+  }
+
+  /**
+   * Auto-discover available channels by probing health on all registered adapters.
+   * Returns a map of channelId → health status for each probe.
+   */
+  async discoverAvailable(timeoutMs = 5000): Promise<Map<string, ChannelHealthStatus>> {
+    const results = new Map<string, ChannelHealthStatus>();
+    const probes: Promise<void>[] = [];
+
+    for (const [id, entry] of this.channels) {
+      for (const [adapterName, adapter] of Object.entries(entry.adapters)) {
+        const key = `${id}:${adapterName}`;
+        const healthCheck = adapter.healthCheck;
+        if (healthCheck) {
+          const probe = new Promise<void>((resolve) => {
+            const probeStart = Date.now();
+            const timer = setTimeout(() => {
+              results.set(key, {
+                channelId: key,
+                connected: false,
+                latencyMs: timeoutMs,
+                message: 'Health check timed out',
+                checkedAt: Date.now(),
+              });
+              resolve();
+            }, timeoutMs);
+            healthCheck()
+              .then((status) => {
+                clearTimeout(timer);
+                results.set(key, status);
+              })
+              .catch(() => {
+                clearTimeout(timer);
+                results.set(key, {
+                  channelId: key,
+                  connected: false,
+                  latencyMs: Date.now() - probeStart,
+                  message: 'Health check threw an error',
+                  checkedAt: Date.now(),
+                });
+              })
+              .finally(() => resolve());
+          });
+          probes.push(probe);
+        } else {
+          // No healthCheck method - assume available
+          results.set(key, {
+            channelId: key,
+            connected: true,
+            latencyMs: 0,
+            message: 'No health check available (assumed available)',
+            checkedAt: Date.now(),
+          });
+        }
+      }
+    }
+
+    await Promise.all(probes);
+    return results;
   }
 }
 
@@ -120,7 +196,11 @@ export class FifoLaneManager {
  * Unified Plugin API cho bên thứ ba đăng ký Tool, Command và Channel
  */
 export interface PluginApi {
-  registerTool(name: string, definition: unknown, execute: (args: unknown) => Promise<unknown>): void;
+  registerTool(
+    name: string,
+    definition: unknown,
+    execute: (args: unknown) => Promise<unknown>,
+  ): void;
   registerCommand(name: string, execute: (args: unknown) => Promise<unknown>): void;
   registerChannel(channel: ChannelPluginEntry): void;
 }

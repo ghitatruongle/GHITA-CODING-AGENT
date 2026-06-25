@@ -40,7 +40,7 @@ export function getDeterministicMockEmbedding(text: string, dimensions = 1536): 
   for (let i = 0; i < text.length; i++) {
     seed = (seed * 31 + text.charCodeAt(i)) | 0;
   }
-  
+
   let r = seed;
   for (let i = 0; i < dimensions; i++) {
     r = (r * 1664525 + 1013904223) | 0;
@@ -118,9 +118,14 @@ export class TieredMemoryStore {
    */
   private calculateUtilityScore(entry: MemoryEntry, now: number): number {
     const metadata = entry.metadata ?? {};
-    const importance = typeof metadata['_importance'] === 'number' ? (metadata['_importance'] as number) : 0.5;
-    const accessCount = typeof metadata['_accessCount'] === 'number' ? (metadata['_accessCount'] as number) : 0;
-    const lastAccessed = typeof metadata['_lastAccessed'] === 'number' ? (metadata['_lastAccessed'] as number) : entry.timestamp;
+    const importance =
+      typeof metadata['_importance'] === 'number' ? (metadata['_importance'] as number) : 0.5;
+    const accessCount =
+      typeof metadata['_accessCount'] === 'number' ? (metadata['_accessCount'] as number) : 0;
+    const lastAccessed =
+      typeof metadata['_lastAccessed'] === 'number'
+        ? (metadata['_lastAccessed'] as number)
+        : entry.timestamp;
 
     // Recency decay: half-life of 1 hour for quick eviction of inactive working memories
     const ageMs = Math.max(0, now - lastAccessed);
@@ -138,9 +143,10 @@ export class TieredMemoryStore {
   private promoteToTier1(entry: MemoryEntry): void {
     const now = Date.now();
     const metadata = { ...(entry.metadata ?? {}) };
-    
+
     // Update access metrics
-    const currentAccessCount = typeof metadata['_accessCount'] === 'number' ? (metadata['_accessCount'] as number) : 0;
+    const currentAccessCount =
+      typeof metadata['_accessCount'] === 'number' ? (metadata['_accessCount'] as number) : 0;
     metadata['_accessCount'] = currentAccessCount + 1;
     metadata['_lastAccessed'] = now;
 
@@ -213,7 +219,7 @@ export class TieredMemoryStore {
           entry.type,
           entry.content,
           entry.timestamp,
-          JSON.stringify(entry.metadata ?? {})
+          JSON.stringify(entry.metadata ?? {}),
         );
       } catch (err) {
         console.warn('[TieredStore] SQLite demote failed, falling back to mock:', err);
@@ -260,7 +266,7 @@ export class TieredMemoryStore {
     if (!entryCopy.metadata) {
       entryCopy.metadata = {};
     }
-    
+
     this.promoteToTier1(entryCopy);
     return entryCopy;
   }
@@ -281,7 +287,9 @@ export class TieredMemoryStore {
     if (!this.isFallbackDb && this.db) {
       try {
         const stmt = this.db.prepare('SELECT * FROM tiered_memories WHERE id = ?');
-        const row = stmt.get(id) as { id: string; type: string; content: string; timestamp: number; metadata: string } | undefined;
+        const row = stmt.get(id) as
+          | { id: string; type: string; content: string; timestamp: number; metadata: string }
+          | undefined;
         if (row) {
           entry = {
             id: row.id,
@@ -304,18 +312,21 @@ export class TieredMemoryStore {
     }
 
     // Check Tier 3 (Long-term Store)
-    const vecEntry = this.vectorStore.searchByVector(
-      getDeterministicMockEmbedding(''), // placeholder, we just look up by exact match using vectorStore internal map access
-      { limit: 1000 }
-    ).find((res) => res.entry.id === id);
+    //
+    // MEMORY (audit fix 2.16): the previous implementation called
+    //   `vectorStore.searchByVector(emptyVec, { limit: 1000 })`
+    // and filtered results by id. This silently dropped any entry past
+    // index 1000 in the HNSW / brute-force index. Use the new O(1)
+    // `getEmbedding()` instead.
+    const vecEntry = this.vectorStore.getEmbedding(id);
 
     if (vecEntry) {
       entry = {
-        id: vecEntry.entry.id,
-        type: (vecEntry.entry.metadata?.type as MemoryEntry['type']) ?? 'fact',
-        content: vecEntry.entry.content,
-        timestamp: vecEntry.entry.timestamp,
-        metadata: vecEntry.entry.metadata,
+        id: vecEntry.id,
+        type: (vecEntry.metadata?.type as MemoryEntry['type']) ?? 'fact',
+        content: vecEntry.content,
+        timestamp: vecEntry.timestamp,
+        metadata: vecEntry.metadata,
       };
       this.promoteToTier1(entry);
       return entry;
@@ -362,7 +373,7 @@ export class TieredMemoryStore {
    */
   clear(): void {
     this.workingMemory.clear();
-    
+
     if (!this.isFallbackDb && this.db) {
       try {
         this.db.exec('DELETE FROM tiered_memories');
@@ -384,7 +395,10 @@ export class TieredMemoryStore {
 
     // Load from Tier 3
     // Since we don't have direct list in vectorStore, search all (high similarity filter disabled)
-    const vecResults = this.vectorStore.searchByVector(new Array(1536).fill(0), { limit: 10000, minScore: -1 });
+    const vecResults = this.vectorStore.searchByVector(new Array(1536).fill(0), {
+      limit: 10000,
+      minScore: -1,
+    });
     for (const res of vecResults) {
       const entry: MemoryEntry = {
         id: res.entry.id,
@@ -401,10 +415,18 @@ export class TieredMemoryStore {
     // Load from Tier 2 (Session Store - SQLite)
     if (!this.isFallbackDb && this.db) {
       try {
-        const query = type ? 'SELECT * FROM tiered_memories WHERE type = ?' : 'SELECT * FROM tiered_memories';
+        const query = type
+          ? 'SELECT * FROM tiered_memories WHERE type = ?'
+          : 'SELECT * FROM tiered_memories';
         const stmt = this.db.prepare(query);
         const rows = type ? stmt.all(type) : stmt.all();
-        for (const row of rows as Array<{ id: string; type: string; content: string; timestamp: number; metadata: string }>) {
+        for (const row of rows as Array<{
+          id: string;
+          type: string;
+          content: string;
+          timestamp: number;
+          metadata: string;
+        }>) {
           allMap.set(row.id, {
             id: row.id,
             type: row.type as MemoryEntry['type'],
@@ -417,14 +439,18 @@ export class TieredMemoryStore {
         console.warn('[TieredStore] SQLite list failed, falling back to mock:', err);
       }
     } else {
-      const filteredMocks = type ? this.mockDbEntries.filter((e) => e.type === type) : this.mockDbEntries;
+      const filteredMocks = type
+        ? this.mockDbEntries.filter((e) => e.type === type)
+        : this.mockDbEntries;
       for (const e of filteredMocks) {
         allMap.set(e.id, e);
       }
     }
 
     // Load from Tier 1 (Working Memory)
-    const filteredT1 = type ? [...this.workingMemory.values()].filter((e) => e.type === type) : [...this.workingMemory.values()];
+    const filteredT1 = type
+      ? [...this.workingMemory.values()].filter((e) => e.type === type)
+      : [...this.workingMemory.values()];
     for (const e of filteredT1) {
       allMap.set(e.id, e);
     }
@@ -440,7 +466,15 @@ export class TieredMemoryStore {
    * 3. Query Tier 3 (Semantic search).
    * 4. Merge results and sort by composite score + similarity.
    */
-  search(query: string, options: { limit?: number; type?: MemoryEntry['type']; minScore?: number; metadata?: Record<string, unknown> } = {}): MemorySearchResult[] {
+  search(
+    query: string,
+    options: {
+      limit?: number;
+      type?: MemoryEntry['type'];
+      minScore?: number;
+      metadata?: Record<string, unknown>;
+    } = {},
+  ): MemorySearchResult[] {
     const limit = options.limit ?? 5;
     const minScore = options.minScore ?? 0.05;
     const now = Date.now();
@@ -459,7 +493,13 @@ export class TieredMemoryStore {
       try {
         const baseQuery = 'SELECT * FROM tiered_memories WHERE content LIKE ?';
         const stmt = this.db.prepare(baseQuery);
-        const rows = stmt.all(`%${query}%`) as Array<{ id: string; type: string; content: string; timestamp: number; metadata: string }>;
+        const rows = stmt.all(`%${query}%`) as Array<{
+          id: string;
+          type: string;
+          content: string;
+          timestamp: number;
+          metadata: string;
+        }>;
         for (const row of rows) {
           const entry: MemoryEntry = {
             id: row.id,
@@ -476,7 +516,9 @@ export class TieredMemoryStore {
       }
     } else {
       const lowercaseQuery = query.toLowerCase();
-      const mockMatches = this.mockDbEntries.filter((e) => e.content.toLowerCase().includes(lowercaseQuery));
+      const mockMatches = this.mockDbEntries.filter((e) =>
+        e.content.toLowerCase().includes(lowercaseQuery),
+      );
       for (const entry of mockMatches) {
         if (options.type && entry.type !== options.type) continue;
         candidates.set(entry.id, entry);
@@ -507,7 +549,7 @@ export class TieredMemoryStore {
       const matches = val.toLowerCase().match(TOKEN_PATTERN) ?? [];
       return new Set(matches.filter((t) => t.length > 1));
     };
-    
+
     const queryTokens = tokenize(query);
 
     const scoreEntry = (entry: MemoryEntry): number => {
@@ -569,8 +611,8 @@ export class TieredMemoryStore {
     if (!this.isFallbackDb && this.db) {
       try {
         const stmt = this.db.prepare('SELECT COUNT(*) as count FROM tiered_memories');
-        const res = stmt.get() as { count: number };
-        return res.count;
+        const res = stmt.get() as { count: number } | undefined;
+        return res?.count ?? 0;
       } catch {
         return this.mockDbEntries.length;
       }

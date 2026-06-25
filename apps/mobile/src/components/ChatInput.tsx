@@ -5,7 +5,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { View, TextInput, TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { ThemeColors } from '../theme/colors';
+import type { ThemeColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { FontSize, Spacing, Radius } from '../theme/styles';
 import { useTranslation } from '../i18n/context';
@@ -63,39 +63,40 @@ export function ChatInput({
   );
 }
 
-const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-    alignItems: 'center',
-  },
-  input: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1,
-    borderColor: colors.borderPrimary,
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    color: colors.textPrimary,
-    fontSize: FontSize.md,
-  },
-  inputDisabled: {
-    opacity: 0.5,
-  },
-  sendButton: {
-    backgroundColor: colors.primary,
-    borderRadius: Radius.md,
-    minWidth: 48,
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sendButtonDisabled: {
-    opacity: 0.4,
-  },
-  sendIcon: {
-    color: colors.white,
-    fontSize: FontSize.lg,
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      gap: Spacing.md,
+      alignItems: 'center',
+    },
+    input: {
+      flex: 1,
+      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+      borderWidth: 1,
+      borderColor: colors.borderPrimary,
+      borderRadius: Radius.md,
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: Spacing.md,
+      color: colors.textPrimary,
+      fontSize: FontSize.md,
+    },
+    inputDisabled: {
+      opacity: 0.5,
+    },
+    sendButton: {
+      backgroundColor: colors.primary,
+      borderRadius: Radius.md,
+      minWidth: 48,
+      minHeight: 48,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    sendButtonDisabled: {
+      opacity: 0.4,
+    },
+    sendIcon: {
+      color: colors.white,
+      fontSize: FontSize.lg,
+    },
+  });

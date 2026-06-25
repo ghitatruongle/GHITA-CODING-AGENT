@@ -16,7 +16,9 @@ export class PayoutScheduler {
   /**
    * Register or replace a payout schedule for a recipient.
    */
-  upsertSchedule(schedule: Omit<PayoutSchedule, 'id' | 'nextRun'> & { id?: string }): PayoutSchedule {
+  upsertSchedule(
+    schedule: Omit<PayoutSchedule, 'id' | 'nextRun'> & { id?: string },
+  ): PayoutSchedule {
     const id = schedule.id ?? randomUUID();
     const nextRun = this.computeNextRun(schedule.cadence, schedule.dayOfMonth);
     const full: PayoutSchedule = { ...schedule, id, nextRun };
@@ -35,14 +37,23 @@ export class PayoutScheduler {
    * Mark payouts ready for a given recipient (those above threshold for their schedule).
    */
   readyForRecipient(recipientId: string): Payout[] {
-    const sched = Array.from(this.schedules.values()).find((s) => s.recipientId === recipientId && s.active);
+    const sched = Array.from(this.schedules.values()).find(
+      (s) => s.recipientId === recipientId && s.active,
+    );
     if (!sched) return [];
 
-    const matching = this.pending.filter((p) => p.recipientId === recipientId && p.status === 'pending');
+    const matching = this.pending.filter(
+      (p) => p.recipientId === recipientId && p.status === 'pending',
+    );
     const total = matching.reduce((acc, p) => acc + p.amount, 0);
     if (total < sched.threshold) return [];
 
-    return matching.map((p) => ({ ...p, status: 'scheduled', scheduledFor: sched.nextRun }));
+    for (const p of matching) {
+      p.status = 'scheduled';
+      p.scheduledFor = sched.nextRun;
+    }
+
+    return matching;
   }
 
   /**
@@ -53,7 +64,9 @@ export class PayoutScheduler {
     for (const sched of this.schedules.values()) {
       if (!sched.active) continue;
       if (sched.nextRun > now) continue;
-      const due = this.pending.filter((p) => p.recipientId === sched.recipientId && p.status === 'scheduled');
+      const due = this.pending.filter(
+        (p) => p.recipientId === sched.recipientId && p.status === 'scheduled',
+      );
       for (const p of due) {
         p.status = 'paid';
         p.paidAt = now;
@@ -79,7 +92,11 @@ export class PayoutScheduler {
     return [...this.pending];
   }
 
-  private computeNextRun(cadence: PayoutSchedule['cadence'], dayOfMonth?: number, from: number = Date.now()): number {
+  private computeNextRun(
+    cadence: PayoutSchedule['cadence'],
+    dayOfMonth?: number,
+    from: number = Date.now(),
+  ): number {
     const d = new Date(from);
     switch (cadence) {
       case 'daily':

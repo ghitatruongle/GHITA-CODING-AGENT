@@ -6,11 +6,7 @@
 // ==============================================================================
 
 import type { AIStreamChunk } from '@ghita/shared';
-import type {
-  SSEStreamEvent,
-  SSEEventType,
-  ResponseBufferState,
-} from './types.js';
+import type { SSEStreamEvent, SSEEventType, ResponseBufferState } from './types.js';
 import { TokenCalculator } from '../utils/streaming.js';
 
 // ---------------------------------------------------------------------------
@@ -47,7 +43,11 @@ export class SSEEncoder {
   static messageStart(provider: string, model: string): SSEStreamEvent {
     return {
       type: 'message_start',
-      data: { provider: provider as SSEStreamEvent['data']['provider'], model, timestamp: Date.now() },
+      data: {
+        provider: provider as SSEStreamEvent['data']['provider'],
+        model,
+        timestamp: Date.now(),
+      },
     };
   }
 
@@ -66,7 +66,11 @@ export class SSEEncoder {
   static contentDone(provider?: string, model?: string): SSEStreamEvent {
     return {
       type: 'content_done',
-      data: { provider: provider as SSEStreamEvent['data']['provider'], model, timestamp: Date.now() },
+      data: {
+        provider: provider as SSEStreamEvent['data']['provider'],
+        model,
+        timestamp: Date.now(),
+      },
     };
   }
 
@@ -144,17 +148,20 @@ export class SSEDecoder {
 
   private parseEventPart(raw: string): SSEStreamEvent | null {
     let type: SSEEventType | undefined;
-    let data: string | undefined;
+    const dataLines: string[] = [];
 
     for (const line of raw.split('\n')) {
       if (line.startsWith('event: ')) {
         type = line.slice(7).trim() as SSEEventType;
       } else if (line.startsWith('data: ')) {
-        data = line.slice(6);
+        // Per SSE spec, multiple data: lines should be concatenated with '\n'
+        dataLines.push(line.slice(6));
       }
     }
 
-    if (!type || !data) return null;
+    if (!type || dataLines.length === 0) return null;
+
+    const data = dataLines.join('\n');
 
     try {
       const parsed = JSON.parse(data) as SSEStreamEvent['data'];
@@ -298,23 +305,28 @@ export class ResponseBuffer {
 
     for (let i = 0; i < this.state.buffer.length; i++) {
       const char = this.state.buffer[i];
+      if (char === undefined) continue;
 
       if (escaped) {
         escaped = false;
         continue;
       }
 
-      if (char === '\\') {
-        escaped = true;
+      if (inString) {
+        // Only handle escape sequences inside strings
+        if (char === '\\') {
+          escaped = true;
+        } else if (char === '"') {
+          inString = false;
+        }
         continue;
       }
 
+      // Outside of strings
       if (char === '"') {
-        inString = !inString;
+        inString = true;
         continue;
       }
-
-      if (inString) continue;
 
       if (char === '{' || char === '[') {
         if (depth === 0) start = i;
@@ -367,9 +379,7 @@ export class ResponseBuffer {
  * }
  * ```
  */
-export async function* toSSEStream(
-  stream: AsyncGenerator<AIStreamChunk>,
-): AsyncGenerator<string> {
+export async function* toSSEStream(stream: AsyncGenerator<AIStreamChunk>): AsyncGenerator<string> {
   let first = true;
 
   for await (const chunk of stream) {
@@ -382,15 +392,11 @@ export async function* toSSEStream(
     }
 
     if (chunk.content) {
-      yield SSEEncoder.encode(
-        SSEEncoder.contentDelta(chunk.content, chunk.provider, chunk.model),
-      );
+      yield SSEEncoder.encode(SSEEncoder.contentDelta(chunk.content, chunk.provider, chunk.model));
     }
 
     if (chunk.done) {
-      yield SSEEncoder.encode(
-        SSEEncoder.messageStop('stop', chunk.usage),
-      );
+      yield SSEEncoder.encode(SSEEncoder.messageStop('stop', chunk.usage));
       return;
     }
   }

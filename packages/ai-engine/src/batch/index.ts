@@ -21,18 +21,11 @@ export type {
 export { DEFAULT_BATCH_CONFIG } from './types.js';
 
 // --- Concatenation ---
-export {
-  concatenateRequests,
-  splitResponse,
-} from './prompt-concatenator.js';
+export { concatenateRequests, splitResponse } from './prompt-concatenator.js';
 export type { SplitResult } from './prompt-concatenator.js';
 
 // --- Parallel execution ---
-export {
-  executeBatch,
-  executeBatchesParallel,
-  executeIndividual,
-} from './parallel-executor.js';
+export { executeBatch, executeBatchesParallel, executeIndividual } from './parallel-executor.js';
 export type { ProviderResolver } from './parallel-executor.js';
 
 // --- Cost tracking ---

@@ -11,6 +11,7 @@
 
 import type { MCPServerConfig } from './types.js';
 import type { MCPTransport } from './transport.js';
+import { createTransport } from './transport.js';
 
 // -----------------------------------------------------------------------
 // Public types
@@ -51,9 +52,7 @@ export class HttpTransport implements MCPTransport {
 
   async connect(): Promise<void> {
     if (!this.config.url) {
-      throw new Error(
-        `MCP server "${this.config.name}": url is required for http transport`,
-      );
+      throw new Error(`MCP server "${this.config.name}": url is required for http transport`);
     }
     this.connected = true;
   }
@@ -93,9 +92,7 @@ export class HttpTransport implements MCPTransport {
 
       if (!response.ok) {
         const text = await response.text().catch(() => '');
-        throw new Error(
-          `MCP server "${this.config.name}" returned ${response.status}: ${text}`,
-        );
+        throw new Error(`MCP server "${this.config.name}" returned ${response.status}: ${text}`);
       }
 
       return (await response.json()) as Record<string, unknown>;
@@ -199,10 +196,6 @@ export function createExtendedTransport(
     case 'in-process':
       return new InProcessTransport(config);
     default: {
-      // Re-export the base factory for the legacy transport types
-      // (we import lazily to avoid a cycle with transport.ts)
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { createTransport } = require('./transport.js') as { createTransport: (cfg: MCPServerConfig) => MCPTransport };
       return createTransport(config);
     }
   }

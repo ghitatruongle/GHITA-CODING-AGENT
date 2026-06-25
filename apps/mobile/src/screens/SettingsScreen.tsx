@@ -15,9 +15,15 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { clearAllData, loadPairedDevices, loadSettings, removePairedDevice, saveSettings as saveSettingsToStorage } from '../services/storageService';
+import {
+  clearAllData,
+  loadPairedDevices,
+  loadSettings,
+  removePairedDevice,
+  saveSettings as saveSettingsToStorage,
+} from '../services/storageService';
 import { useTheme } from '../theme/ThemeContext';
-import { ThemeColors } from '../theme/colors';
+import type { ThemeColors } from '../theme/colors';
 import { FontSize, Spacing, Radius } from '../theme/styles';
 import type { MobileSettings, PairedDevice } from '../types';
 import { DEFAULT_MOBILE_SETTINGS } from '../types';
@@ -168,19 +174,31 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): React.JSX.E
                 style={[styles.langBtn, themeType === 'system' && styles.langBtnActive]}
                 onPress={() => setThemeType('system')}
               >
-                <Text style={[styles.langBtnText, themeType === 'system' && styles.langBtnTextActive]}>System</Text>
+                <Text
+                  style={[styles.langBtnText, themeType === 'system' && styles.langBtnTextActive]}
+                >
+                  System
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.langBtn, themeType === 'light' && styles.langBtnActive]}
                 onPress={() => setThemeType('light')}
               >
-                <Text style={[styles.langBtnText, themeType === 'light' && styles.langBtnTextActive]}>Light</Text>
+                <Text
+                  style={[styles.langBtnText, themeType === 'light' && styles.langBtnTextActive]}
+                >
+                  Light
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.langBtn, themeType === 'dark' && styles.langBtnActive]}
                 onPress={() => setThemeType('dark')}
               >
-                <Text style={[styles.langBtnText, themeType === 'dark' && styles.langBtnTextActive]}>Dark</Text>
+                <Text
+                  style={[styles.langBtnText, themeType === 'dark' && styles.langBtnTextActive]}
+                >
+                  Dark
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -218,6 +236,14 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): React.JSX.E
               >
                 <Text style={[styles.langBtnText, lang === 'ru' && styles.langBtnTextActive]}>
                   RU (beta)
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.langBtn, lang === 'ja' && styles.langBtnActive]}
+                onPress={() => handleLanguageChange('ja')}
+              >
+                <Text style={[styles.langBtnText, lang === 'ja' && styles.langBtnTextActive]}>
+                  JA (beta)
                 </Text>
               </TouchableOpacity>
             </View>
@@ -263,149 +289,150 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): React.JSX.E
   );
 }
 
-const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  backBtn: {
-    minWidth: 44,
-    minHeight: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backBtnText: {
-    color: colors.primaryLight,
-    fontSize: FontSize.xxl,
-    fontWeight: '700',
-  },
-  headerTitle: {
-    color: colors.primaryLight,
-    fontSize: FontSize.lg,
-    fontWeight: '700',
-  },
-  headerSpacer: {
-    width: 44,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: Spacing.xl,
-    gap: Spacing.lg,
-    paddingBottom: Spacing.huge,
-  },
-  section: {
-    backgroundColor: colors.surface,
-    borderRadius: Radius.xl,
-    padding: Spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  sectionTitle: {
-    color: colors.primaryLight,
-    fontSize: FontSize.sm,
-    fontWeight: '600',
-    marginBottom: Spacing.md,
-    textTransform: 'uppercase',
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  label: {
-    fontSize: FontSize.md,
-    color: colors.textPrimary,
-  },
-  input: {
-    fontSize: FontSize.md,
-    color: colors.textPrimary,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingVertical: Spacing.xs,
-    minWidth: 150,
-    textAlign: 'right',
-  },
-  emptyText: {
-    fontSize: FontSize.sm,
-    color: colors.textDark,
-    fontStyle: 'italic',
-  },
-  deviceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  deviceInfo: {
-    flex: 1,
-  },
-  deviceName: {
-    fontSize: FontSize.md,
-    color: colors.textPrimary,
-  },
-  deviceId: {
-    fontSize: FontSize.xs,
-    color: colors.textDark,
-  },
-  removeBtn: {
-    fontSize: FontSize.sm,
-    color: colors.error,
-  },
-  dangerBtn: {
-    backgroundColor: colors.error,
-    padding: Spacing.md,
-    borderRadius: Radius.md,
-    alignItems: 'center',
-  },
-  dangerBtnText: {
-    color: colors.white,
-    fontSize: FontSize.md,
-    fontWeight: '600',
-  },
-  version: {
-    fontSize: FontSize.xs,
-    color: colors.textDark,
-    textAlign: 'center',
-    marginTop: Spacing.xl,
-    marginBottom: Spacing.xl,
-  },
-  langSelector: {
-    flexDirection: 'row',
-    gap: Spacing.xs,
-  },
-  langBtn: {
-    backgroundColor: colors.backgroundTertiary,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: Radius.sm,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-  },
-  langBtnActive: {
-    backgroundColor: colors.primaryMuted,
-    borderColor: colors.primary,
-  },
-  langBtnText: {
-    color: colors.textSecondary,
-    fontSize: FontSize.sm,
-    fontWeight: '600',
-  },
-  langBtnTextActive: {
-    color: colors.primary,
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: Spacing.xl,
+      paddingVertical: Spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    backBtn: {
+      minWidth: 44,
+      minHeight: 44,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    backBtnText: {
+      color: colors.primaryLight,
+      fontSize: FontSize.xxl,
+      fontWeight: '700',
+    },
+    headerTitle: {
+      color: colors.primaryLight,
+      fontSize: FontSize.lg,
+      fontWeight: '700',
+    },
+    headerSpacer: {
+      width: 44,
+    },
+    scroll: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: Spacing.xl,
+      gap: Spacing.lg,
+      paddingBottom: Spacing.huge,
+    },
+    section: {
+      backgroundColor: colors.surface,
+      borderRadius: Radius.xl,
+      padding: Spacing.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    sectionTitle: {
+      color: colors.primaryLight,
+      fontSize: FontSize.sm,
+      fontWeight: '600',
+      marginBottom: Spacing.md,
+      textTransform: 'uppercase',
+    },
+    row: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: Spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    label: {
+      fontSize: FontSize.md,
+      color: colors.textPrimary,
+    },
+    input: {
+      fontSize: FontSize.md,
+      color: colors.textPrimary,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      paddingVertical: Spacing.xs,
+      minWidth: 150,
+      textAlign: 'right',
+    },
+    emptyText: {
+      fontSize: FontSize.sm,
+      color: colors.textDark,
+      fontStyle: 'italic',
+    },
+    deviceRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: Spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    deviceInfo: {
+      flex: 1,
+    },
+    deviceName: {
+      fontSize: FontSize.md,
+      color: colors.textPrimary,
+    },
+    deviceId: {
+      fontSize: FontSize.xs,
+      color: colors.textDark,
+    },
+    removeBtn: {
+      fontSize: FontSize.sm,
+      color: colors.error,
+    },
+    dangerBtn: {
+      backgroundColor: colors.error,
+      padding: Spacing.md,
+      borderRadius: Radius.md,
+      alignItems: 'center',
+    },
+    dangerBtnText: {
+      color: colors.white,
+      fontSize: FontSize.md,
+      fontWeight: '600',
+    },
+    version: {
+      fontSize: FontSize.xs,
+      color: colors.textDark,
+      textAlign: 'center',
+      marginTop: Spacing.xl,
+      marginBottom: Spacing.xl,
+    },
+    langSelector: {
+      flexDirection: 'row',
+      gap: Spacing.xs,
+    },
+    langBtn: {
+      backgroundColor: colors.backgroundTertiary,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: Radius.sm,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.xs,
+    },
+    langBtnActive: {
+      backgroundColor: colors.primaryMuted,
+      borderColor: colors.primary,
+    },
+    langBtnText: {
+      color: colors.textSecondary,
+      fontSize: FontSize.sm,
+      fontWeight: '600',
+    },
+    langBtnTextActive: {
+      color: colors.primary,
+    },
+  });

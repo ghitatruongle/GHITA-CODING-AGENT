@@ -228,13 +228,12 @@ export class TemplateForkManager {
     }
 
     // Check config changes
-    const allConfigKeys = new Set([
-      ...Object.keys(original.config),
-      ...Object.keys(forked.config),
-    ]);
+    const allConfigKeys = new Set([...Object.keys(original.config), ...Object.keys(forked.config)]);
     for (const key of allConfigKeys) {
-      if (JSON.stringify((original.config as Record<string, unknown>)[key]) !==
-          JSON.stringify((forked.config as Record<string, unknown>)[key])) {
+      if (
+        JSON.stringify((original.config as Record<string, unknown>)[key]) !==
+        JSON.stringify((forked.config as Record<string, unknown>)[key])
+      ) {
         modifiedConfig.push(key);
       }
     }

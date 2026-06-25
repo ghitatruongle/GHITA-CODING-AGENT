@@ -85,9 +85,18 @@ export class PluginDiffer {
    * Filter diff to only show breaking changes (heuristic: removed/modified of API/manifest files).
    */
   breakingChanges(diff: PluginDiff): PluginDiffEntry[] {
-    const breaking = new Set(['package.json', 'manifest.json', 'plugin.json', 'api.d.ts', 'index.js', 'index.ts']);
+    const breaking = new Set([
+      'package.json',
+      'manifest.json',
+      'plugin.json',
+      'api.d.ts',
+      'index.js',
+      'index.ts',
+    ]);
     return diff.entries.filter(
-      (e) => (e.type === 'removed' || e.type === 'modified') && breaking.has(e.path.split('/').pop() ?? ''),
+      (e) =>
+        (e.type === 'removed' || e.type === 'modified') &&
+        breaking.has(e.path.split('/').pop() ?? ''),
     );
   }
 

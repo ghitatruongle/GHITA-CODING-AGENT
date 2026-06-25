@@ -13,6 +13,10 @@ import type { Platform } from './types.js';
 export function getPlatform(): Platform {
   // React Native (mobile)
   if (typeof navigator !== 'undefined' && navigator.product === 'ReactNative') {
+    if (typeof navigator !== 'undefined') {
+      const ua = navigator.userAgent?.toLowerCase() ?? '';
+      if (ua.includes('iphone') || ua.includes('ipad') || ua.includes('ipod')) return 'ios';
+    }
     return 'android';
   }
   // Tauri v2 — check for __TAURI_INTERNALS__ (available even without withGlobalTauri)
@@ -32,13 +36,17 @@ export function getPlatform(): Platform {
     if (tauri) {
       const os = tauri['os'] as Record<string, unknown> | undefined;
       if (os && typeof os === 'object' && 'platform' in os) {
-        return os['platform'] === 'win32' ? 'windows' : 'linux';
+        const platform = os['platform'];
+        if (platform === 'win32') return 'windows';
+        if (platform === 'darwin') return 'macos';
+        return 'linux';
       }
     }
   }
   // Browser / WebView (fallback for mobile)
   if (typeof navigator !== 'undefined') {
     const ua = navigator.userAgent?.toLowerCase() ?? '';
+    if (ua.includes('iphone') || ua.includes('ipad') || ua.includes('ipod')) return 'ios';
     if (ua.includes('android')) return 'android';
     if (ua.includes('windows') || ua.includes('win32')) return 'windows';
     if (ua.includes('mac os') || ua.includes('macintosh')) return 'macos';
@@ -60,7 +68,7 @@ export function isDesktop(): boolean {
 
 export function isMobile(): boolean {
   const p = getPlatform();
-  return p === 'android';
+  return p === 'android' || p === 'ios';
 }
 
 export function isWindows(): boolean {
@@ -75,10 +83,10 @@ export function isLinux(): boolean {
 
 /** Generate a UUID v4 string with fallback for non-secure contexts */
 export function generateUUID(): string {
-  // Try crypto.randomUUID first (secure context)
-  if (typeof crypto !== 'undefined') {
+  // Try Web Crypto API first (secure context, Node, Tauri)
+  if (typeof globalThis !== 'undefined' && globalThis.crypto) {
     try {
-      const result = (crypto as unknown as { randomUUID?: () => string }).randomUUID?.();
+      const result = (globalThis.crypto as unknown as { randomUUID?: () => string }).randomUUID?.();
       if (result) return result;
     } catch {
       // fall through
@@ -100,8 +108,32 @@ export function generateId(prefix = ''): string {
 export function generatePairingCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I, O, 0, 1 for clarity
   let code = '';
+
+  // Try using Web Crypto API if available (Node >= 19, Browser, Tauri)
+  if (
+    typeof globalThis !== 'undefined' &&
+    globalThis.crypto &&
+    typeof globalThis.crypto.getRandomValues === 'function'
+  ) {
+    try {
+      const buffer = new Uint8Array(6);
+      globalThis.crypto.getRandomValues(buffer);
+      for (let i = 0; i < 6; i++) {
+        const val = buffer[i];
+        if (val !== undefined) {
+          code += chars.charAt(val % chars.length);
+        }
+      }
+      return code;
+    } catch {
+      // fall through to Math.random fallback
+    }
+  }
+
+  // Fallback: Math.random
   for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
+    const randIndex = Math.floor(Math.random() * chars.length);
+    code += chars.charAt(randIndex);
   }
   return code;
 }
@@ -109,7 +141,7 @@ export function generatePairingCode(): string {
 // --- String Helpers ---
 export function truncate(str: string, maxLength: number): string {
   if (str.length <= maxLength) return str;
-  return str.substring(0, maxLength - 3) + '...';
+  return `${str.substring(0, maxLength - 3)}...`;
 }
 
 export function capitalize(str: string): string {

@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { ThemeColors } from '../theme/colors';
+import type { ThemeColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { FontSize, Spacing, Radius } from '../theme/styles';
 
@@ -35,40 +35,41 @@ export function ErrorFallback({ error, resetError }: ErrorFallbackProps): React.
   );
 }
 
-const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.xxxl,
-  },
-  icon: {
-    fontSize: 48,
-    marginBottom: Spacing.xl,
-  },
-  title: {
-    color: colors.error,
-    fontSize: FontSize.xl,
-    fontWeight: '700',
-    marginBottom: Spacing.md,
-  },
-  message: {
-    color: colors.textSecondary,
-    fontSize: FontSize.sm,
-    textAlign: 'center',
-    marginBottom: Spacing.xxl,
-    lineHeight: 20,
-  },
-  retryButton: {
-    backgroundColor: colors.primary,
-    borderRadius: Radius.md,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.xxxl,
-  },
-  retryText: {
-    color: colors.white,
-    fontSize: FontSize.md,
-    fontWeight: '700',
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: Spacing.xxxl,
+    },
+    icon: {
+      fontSize: 48,
+      marginBottom: Spacing.xl,
+    },
+    title: {
+      color: colors.error,
+      fontSize: FontSize.xl,
+      fontWeight: '700',
+      marginBottom: Spacing.md,
+    },
+    message: {
+      color: colors.textSecondary,
+      fontSize: FontSize.sm,
+      textAlign: 'center',
+      marginBottom: Spacing.xxl,
+      lineHeight: 20,
+    },
+    retryButton: {
+      backgroundColor: colors.primary,
+      borderRadius: Radius.md,
+      paddingVertical: Spacing.md,
+      paddingHorizontal: Spacing.xxxl,
+    },
+    retryText: {
+      color: colors.white,
+      fontSize: FontSize.md,
+      fontWeight: '700',
+    },
+  });

@@ -30,7 +30,8 @@ ABC123XYZ	unauthorized
       const serial = parts[0];
       const stateRaw = parts[1];
       if (!serial || !stateRaw) continue;
-      const state = (['device', 'unauthorized', 'offline'] as const).find((s) => s === stateRaw) ?? 'unknown';
+      const state =
+        (['device', 'unauthorized', 'offline'] as const).find((s) => s === stateRaw) ?? 'unknown';
       const product = parts.find((p) => p.startsWith('product:'))?.split(':')[1];
       devices.push({ serial, state, product });
     }
@@ -115,6 +116,10 @@ ABC123XYZ	unauthorized
 }, 20000);
 
 // Maintain runAllMobileAdbTests compatibility for external execution if any
-export async function runAllMobileAdbTests(): Promise<{ passed: number; failed: number; results: string[] }> {
+export async function runAllMobileAdbTests(): Promise<{
+  passed: number;
+  failed: number;
+  results: string[];
+}> {
   return { passed: 10, failed: 0, results: [] };
 }

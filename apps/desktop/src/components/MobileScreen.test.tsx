@@ -10,6 +10,10 @@ import { MobileScreen } from './MobileScreen.js';
 
 const mockInvoke = vi.fn();
 
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: (...args: unknown[]) => mockInvoke(...args),
+}));
+
 beforeEach(() => {
   mockInvoke.mockReset();
   Object.defineProperty(window, '__TAURI__', {
@@ -99,15 +103,15 @@ describe('MobileScreen', () => {
       if (cmd === 'mobile_adb_tap') return undefined;
       return [];
     });
-    
+
     const onTap = vi.fn();
     render(<MobileScreen onTap={onTap} refreshIntervalMs={999999} />);
     await waitFor(() => screen.getByAltText(/Mobile screen/));
-    
+
     const img = screen.getByAltText(/Mobile screen/) as HTMLImageElement;
     Object.defineProperty(img, 'naturalWidth', { value: 1080 });
     Object.defineProperty(img, 'naturalHeight', { value: 1920 });
-    
+
     // Simulate click (tap detection)
     fireEvent.click(img, { clientX: 50, clientY: 100 });
     await waitFor(() => {

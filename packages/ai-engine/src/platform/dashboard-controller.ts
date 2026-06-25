@@ -2,6 +2,7 @@
 // GHITA CODING AGENT - Dashboard Controller
 // ==============================================================================
 
+import * as crypto from 'node:crypto';
 import type { AIGatewayServer } from './gateway.js';
 
 export interface DashboardStats {
@@ -49,7 +50,7 @@ export class DashboardController {
   }
 
   createAPIKey(): string {
-    const key = `ghita-${Math.random().toString(36).substring(2, 15)}-${Date.now().toString(36)}`;
+    const key = `ghita-${crypto.randomBytes(24).toString('hex')}-${Date.now().toString(36)}`;
     this.apiKeys.push(key);
     return key;
   }

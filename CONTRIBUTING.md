@@ -62,18 +62,33 @@ Use [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```
 ├── apps/
-│   ├── desktop/    # Tauri + React desktop app
-│   └── mobile/     # React Native Android app
+│   ├── desktop/           # Tauri + React desktop app
+│   ├── mobile/            # React Native Android app
+│   └── vscode-extension/  # VS Code extension
 ├── packages/
-│   ├── shared/     # Types, constants, utils, logger
-│   ├── ai-engine/  # Multi-provider AI engine
-│   ├── skills/     # Skill registry
-│   ├── agents/     # Agent management
-│   ├── browser-control/
-│   ├── computer-use/
-│   ├── communication/
-│   └── memory/
-└── refer_project/  # Reference open-source projects (not project code)
+│   ├── a11y/              # Accessibility utilities
+│   ├── agents/            # Agent management
+│   ├── ai-engine/         # Multi-provider AI engine
+│   ├── browser-control/   # Playwright + CloakBrowser
+│   ├── code-graph/        # Code analysis & graph
+│   ├── communication/     # Desktop ↔ Mobile (Socket.IO)
+│   ├── computer-use/      # nut.js + UI-TARS
+│   ├── gui/               # Shared UI components
+│   ├── i18n/              # Internationalization
+│   ├── integration/       # Cross-package integration
+│   ├── marketplace/       # Skill marketplace & plugins
+│   ├── memory/            # Agent memory
+│   ├── migration/         # Data migration utilities
+│   ├── mobile-companion/  # Mobile helper modules
+│   ├── monitoring/        # Observability & metrics
+│   ├── notification/      # Push notification system
+│   ├── quotas/            # Rate limiting & quotas
+│   ├── relay-server/      # Relay server for comms
+│   ├── security/          # Security & sandboxing
+│   ├── shared/            # Types, constants, utils, logger
+│   ├── skills/            # Skill registry & execution
+│   └── voice/             # Voice input/output
+└── tests/                 # Unit, integration, E2E tests
 ```
 
 ## Pull Request Guidelines
@@ -181,18 +196,33 @@ Sử dụng chuẩn [Conventional Commits](https://www.conventionalcommits.org/)
 
 ```
 ├── apps/
-│   ├── desktop/    # Ứng dụng máy tính sử dụng Tauri + React
-│   └── mobile/     # Ứng dụng Android viết bằng React Native
+│   ├── desktop/           # Ứng dụng máy tính sử dụng Tauri + React
+│   ├── mobile/            # Ứng dụng Android viết bằng React Native
+│   └── vscode-extension/  # Tiện ích mở rộng VS Code
 ├── packages/
-│   ├── shared/     # Các kiểu dữ liệu, hằng số, bộ logger và tiện ích dùng chung
-│   ├── ai-engine/  # Bộ điều phối đa nhà cung cấp AI
-│   ├── skills/     # Bộ đăng ký và quản lý kỹ năng AI
-│   ├── agents/     # Bộ quản lý và thiết lập đại lý AI
-│   ├── browser-control/
-│   ├── computer-use/
-│   ├── communication/
-│   └── memory/
-└── refer_project/  # Các dự án mã nguồn mở tham khảo (không thuộc mã nguồn dự án)
+│   ├── a11y/              # Tiện ích trợ năng
+│   ├── agents/            # Quản lý đại lý AI
+│   ├── ai-engine/         # Bộ điều phối đa nhà cung cấp AI
+│   ├── browser-control/   # Điều khiển trình duyệt (Playwright)
+│   ├── code-graph/        # Phân tích & đồ thị mã nguồn
+│   ├── communication/     # Giao tiếp Desktop ↔ Mobile (Socket.IO)
+│   ├── computer-use/      # Điều khiển máy tính (nut.js + UI-TARS)
+│   ├── gui/               # Thành phần UI dùng chung
+│   ├── i18n/              # Quốc tế hóa
+│   ├── integration/       # Tích hợp liên gói
+│   ├── marketplace/       # Chợ kỹ năng & plugin
+│   ├── memory/            # Bộ nhớ của đại lý
+│   ├── migration/         # Tiện ích di chuyển dữ liệu
+│   ├── mobile-companion/  # Module hỗ trợ di động
+│   ├── monitoring/        # Quan sát & đo lường
+│   ├── notification/      # Hệ thống thông báo đẩy
+│   ├── quotas/            # Giới hạn tốc độ & quota
+│   ├── relay-server/      # Máy chủ trung gian giao tiếp
+│   ├── security/          # Bảo mật & sandbox
+│   ├── shared/            # Các kiểu dữ liệu, hằng số, bộ logger
+│   ├── skills/            # Đăng ký & thực thi kỹ năng
+│   └── voice/             # Đầu vào/ra giọng nói
+└── tests/                 # Bài kiểm thử unit, integration, E2E
 ```
 
 ## Hướng dẫn gửi Pull Request (PR)

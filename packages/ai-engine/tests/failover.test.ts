@@ -35,7 +35,11 @@ describe('FallbackManager & Cost Tracker', () => {
       manager.close();
     }
     if (fs.existsSync(tempDir)) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
+      try {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      } catch (err) {
+        console.warn(`[Cleanup] Failed to remove tempDir in afterEach:`, err);
+      }
     }
     vi.restoreAllMocks();
   });

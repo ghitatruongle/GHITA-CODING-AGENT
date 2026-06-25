@@ -2,11 +2,7 @@
 // GHITA CODING AGENT - WebSocket Channel (Topic-Based Demux) (Phase 29)
 // ==============================================================================
 
-import type {
-  ChannelMessage,
-  ChannelHandler,
-  ChannelSubscriptionOptions,
-} from './types.js';
+import type { ChannelMessage, ChannelHandler, ChannelSubscriptionOptions } from './types.js';
 
 const DEFAULT_OPTIONS: ChannelSubscriptionOptions = {
   autoReconnect: true,
@@ -24,7 +20,10 @@ export class WsChannel<T = unknown> {
   private options: ChannelSubscriptionOptions;
   private handlers = new Set<ChannelHandler<T>>();
   private buffer: ChannelMessage<T>[] = [];
-  private pendingAcks = new Map<string, { message: ChannelMessage<T>; timer: ReturnType<typeof setTimeout> }>();
+  private pendingAcks = new Map<
+    string,
+    { message: ChannelMessage<T>; timer: ReturnType<typeof setTimeout> }
+  >();
   private _active = true;
   private sendFn: ((msg: ChannelMessage<T>) => void) | null = null;
 

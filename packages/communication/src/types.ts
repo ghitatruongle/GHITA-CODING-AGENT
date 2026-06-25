@@ -9,7 +9,13 @@ export interface ServerConfig {
   port: number;
   host?: string;
   cors?: {
-    origin: string | string[];
+    origin:
+      | string
+      | string[]
+      | ((
+          origin: string | undefined,
+          callback: (err: Error | null, allow?: boolean) => void,
+        ) => void);
     methods?: string[];
   };
   pairedDevicesFile?: string;
@@ -26,7 +32,8 @@ export interface PairedDevice extends DeviceInfo {
 export interface CommandPayload {
   action: string;
   params?: Record<string, unknown>;
-  timestamp: number;
+  timestamp?: number;
+  [key: string]: unknown;
 }
 
 // --- Screen Stream Configuration ---

@@ -262,7 +262,7 @@ describe('useChatSessions', () => {
     });
 
     await waitFor(() => {
-      expect(result.current.sessions[0]?.title).toBe('A'.repeat(25) + '...');
+      expect(result.current.sessions[0]?.title).toBe(`${'A'.repeat(25)  }...`);
     });
   });
 

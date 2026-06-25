@@ -34,7 +34,11 @@ describe('FallbackManager Router Optimization Tests', () => {
       manager.close();
     }
     if (fs.existsSync(tempDir)) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
+      try {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      } catch (err) {
+        console.warn(`[Cleanup] Failed to remove tempDir in afterEach:`, err);
+      }
     }
     vi.restoreAllMocks();
     vi.useRealTimers();
@@ -108,7 +112,7 @@ describe('FallbackManager Router Optimization Tests', () => {
       const response = await manager.executeWithFailover(failingCallFn, []);
       expect(response.model).toBe('claude-3-7-sonnet');
       expect(failingCallFn).toHaveBeenCalledTimes(1); // Only called once for claude-3-7-sonnet
-      expect(failingCallFn).not.toHaveBeenCalledWith('gpt-4o-mini');
+      expect(failingCallFn.mock.calls.some(call => call[0] === 'gpt-4o-mini')).toBe(false);
 
       // Now advance the mock time by 61 seconds (breaker reset window)
       fakeTime += 61000;
@@ -117,7 +121,7 @@ describe('FallbackManager Router Optimization Tests', () => {
       const response2 = await manager.executeWithFailover(failingCallFn, []);
 
       // Breaker is reset, so gpt-4o-mini is tried again
-      expect(failingCallFn).toHaveBeenCalledWith('gpt-4o-mini');
+      expect(failingCallFn.mock.calls.some(call => call[0] === 'gpt-4o-mini')).toBe(true);
 
       dateSpy.mockRestore();
     });

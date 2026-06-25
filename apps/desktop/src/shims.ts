@@ -79,13 +79,30 @@ export const promises = {
 
 // path exports
 export const dirname = (p: string) => {
-  const sep = p.includes('\\') ? '\\' : '/';
+  const hasWinSep = p.includes('\\');
+  const sep = hasWinSep ? '\\' : '/';
+  // Handle Windows drive-letter roots (e.g., 'C:\file' → 'C:\\')
+  if (hasWinSep && /^[a-zA-Z]:\\[^\\]*$/.test(p)) {
+    return p.slice(0, 3); // e.g. 'C:\\'
+  }
+  if (hasWinSep && /^[a-zA-Z]:$/.test(p)) {
+    return p + '\\'; // e.g. 'C:\\'
+  }
   const parts = p.split(sep).filter(Boolean);
   if (parts.length <= 1) return sep;
   parts.pop();
-  return parts.join(sep);
+  const result = parts.join(sep);
+  // Preserve Windows drive letter root
+  if (hasWinSep && /^[a-zA-Z]:$/.test(result)) return result + '\\';
+  return result;
 };
 export const resolve = (...args: string[]) => {
+  // Detect if any arg uses Windows-style paths
+  const hasWindowsPath = args.some((a) => /^[a-zA-Z]:[\\/]/.test(a) || a.includes('\\'));
+  if (hasWindowsPath) {
+    const joined = args.filter(Boolean).join('\\');
+    return joined.replace(/[\\/]+/g, '\\').replace(/\\+$/, '');
+  }
   const joined = args.filter(Boolean).join('/');
   return joined.replace(/\/+/g, '/');
 };
@@ -141,6 +158,9 @@ export const randomBytes = (size: number) => {
   if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
     crypto.getRandomValues(arr);
   } else {
+    // WARNING: Math.random is NOT cryptographically secure.
+    // This fallback should only be used in non-security contexts.
+    console.warn('[shims] randomBytes: Web Crypto unavailable, using Math.random (insecure)');
     for (let i = 0; i < size; i++) arr[i] = Math.floor(Math.random() * 256);
   }
   return {
@@ -155,10 +175,13 @@ export const randomBytes = (size: number) => {
   };
 };
 export const timingSafeEqual = (a: any, b: any) => {
-  if (a.length !== b.length) return false;
-  let result = 0;
-  for (let i = 0; i < a.length; i++) {
-    result |= a[i] ^ b[i];
+  // Always iterate the full length to avoid timing leaks
+  const len = Math.max(a.length ?? 0, b.length ?? 0);
+  let result = (a.length ?? 0) !== (b.length ?? 0) ? 1 : 0;
+  for (let i = 0; i < len; i++) {
+    const av = i < (a.length ?? 0) ? a[i] : 0;
+    const bv = i < (b.length ?? 0) ? b[i] : 0;
+    result |= av ^ bv;
   }
   return result === 0;
 };

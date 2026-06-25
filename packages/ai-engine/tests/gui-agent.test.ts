@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  StatusEnum,
-  parseModelOutput,
-  validateGuiAction,
-  GuiAction,
-} from '../src/index.js';
+import { StatusEnum, parseModelOutput, validateGuiAction, GuiAction } from '../src/index.js';
 
 describe('GUI Agent StatusEnum', () => {
   it('should support the 5 required states', () => {
@@ -24,7 +19,10 @@ describe('GUI Agent Action Validation (10 Actions)', () => {
     expect(actClick.params.y).toBe(200);
     expect(actClick.params.button).toBe('left');
 
-    const actRightClick = validateGuiAction({ type: 'right_click', params: { x: 150, y: 250, button: 'right' } });
+    const actRightClick = validateGuiAction({
+      type: 'right_click',
+      params: { x: 150, y: 250, button: 'right' },
+    });
     expect(actRightClick.type).toBe('right_click');
     expect(actRightClick.params.button).toBe('right');
 
@@ -38,11 +36,17 @@ describe('GUI Agent Action Validation (10 Actions)', () => {
 
   it('should validate drag with from/to coords', () => {
     // Valid cases
-    const actDrag1 = validateGuiAction({ type: 'drag', params: { fromX: 10, fromY: 20, toX: 30, toY: 40 } });
+    const actDrag1 = validateGuiAction({
+      type: 'drag',
+      params: { fromX: 10, fromY: 20, toX: 30, toY: 40 },
+    });
     expect(actDrag1.params).toEqual({ fromX: 10, fromY: 20, toX: 30, toY: 40 });
 
     // Alternates: x1, y1, x2, y2
-    const actDrag2 = validateGuiAction({ type: 'drag', params: { x1: 50, y1: 50, x2: 100, y2: 100 } });
+    const actDrag2 = validateGuiAction({
+      type: 'drag',
+      params: { x1: 50, y1: 50, x2: 100, y2: 100 },
+    });
     expect(actDrag2.params).toEqual({ fromX: 50, fromY: 50, toX: 100, toY: 100 });
 
     // Invalid
@@ -78,7 +82,9 @@ describe('GUI Agent Action Validation (10 Actions)', () => {
     expect(act.params.amount).toBe(3);
     expect(act.params.direction).toBe('down');
 
-    expect(() => validateGuiAction({ type: 'scroll', params: { amount: 3, direction: 'middle' } })).toThrow();
+    expect(() =>
+      validateGuiAction({ type: 'scroll', params: { amount: 3, direction: 'middle' } }),
+    ).toThrow();
     expect(() => validateGuiAction({ type: 'scroll', params: { direction: 'down' } })).toThrow();
   });
 

@@ -35,14 +35,19 @@ export class NotificationHistory {
    * List for a user, newest first.
    */
   listForUser(userId: string, limit = 100): Notification[] {
-    return this.store.filter((n) => n.userId === userId).reverse().slice(0, limit);
+    return this.store
+      .filter((n) => n.userId === userId)
+      .reverse()
+      .slice(0, limit);
   }
 
   /**
    * Count unread for a user.
    */
   unreadCount(userId: string): number {
-    return this.store.filter((n) => n.userId === userId && n.status !== 'read' && n.status !== 'failed').length;
+    return this.store.filter(
+      (n) => n.userId === userId && n.status !== 'read' && n.status !== 'failed',
+    ).length;
   }
 
   /**

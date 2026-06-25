@@ -21,29 +21,18 @@ export class HealthChecker {
   private snapshots: Map<string, HealthSnapshot> = new Map();
   private intervals: Map<string, ReturnType<typeof setInterval>> = new Map();
   private listeners: Array<(snapshot: HealthSnapshot) => void> = [];
-  private onStateChange: (
-    providerId: string,
-    state: HealthState,
-    previous: HealthState,
-  ) => void;
+  private onStateChange: (providerId: string, state: HealthState, previous: HealthState) => void;
 
   constructor(
     config: Partial<HealthCheckConfig>,
-    onStateChange: (
-      providerId: string,
-      state: HealthState,
-      previous: HealthState,
-    ) => void,
+    onStateChange: (providerId: string, state: HealthState, previous: HealthState) => void,
   ) {
     this.config = { ...DEFAULT_HEALTH_CONFIG, ...config };
     this.onStateChange = onStateChange;
   }
 
   /** Start health checks for a single provider. */
-  start(
-    provider: LoadBalancedProvider,
-    adapter: LoadBalancedAdapter,
-  ): void {
+  start(provider: LoadBalancedProvider, adapter: LoadBalancedAdapter): void {
     if (!this.config.enabled) return;
     if (this.intervals.has(provider.id)) return;
 
@@ -130,10 +119,7 @@ export class HealthChecker {
 
   // --- Internals ---------------------------------------------------------
 
-  private async probe(
-    provider: LoadBalancedProvider,
-    adapter: LoadBalancedAdapter,
-  ): Promise<void> {
+  private async probe(provider: LoadBalancedProvider, adapter: LoadBalancedAdapter): Promise<void> {
     const snapshot = this.snapshots.get(provider.id);
     if (!snapshot) return;
 
@@ -142,10 +128,7 @@ export class HealthChecker {
 
     try {
       if (adapter.healthCheck) {
-        await this.withTimeout(
-          adapter.healthCheck(this.config.timeoutMs),
-          this.config.timeoutMs,
-        );
+        await this.withTimeout(adapter.healthCheck(this.config.timeoutMs), this.config.timeoutMs);
       } else if (provider.baseUrl) {
         // Default probe: GET /models (or configured endpoint) on provider base URL
         const url = new URL(this.config.endpoint, provider.baseUrl).toString();
@@ -180,9 +163,7 @@ export class HealthChecker {
       snapshot.lastCheckedAt = Date.now();
       snapshot.lastLatencyMs = latency;
       snapshot.averageLatencyMs =
-        snapshot.averageLatencyMs === 0
-          ? latency
-          : snapshot.averageLatencyMs * 0.7 + latency * 0.3;
+        snapshot.averageLatencyMs === 0 ? latency : snapshot.averageLatencyMs * 0.7 + latency * 0.3;
       snapshot.state = HealthChecker.computeState(
         snapshot.consecutiveSuccesses,
         snapshot.consecutiveFailures,

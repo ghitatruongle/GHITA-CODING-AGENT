@@ -17,9 +17,7 @@ export function createCostMiddleware(config: CostMiddlewareConfig): {
     const g = globalThis as Record<string, unknown>;
     if (typeof globalThis !== 'undefined' && g.broadcastCostTelemetryHandler) {
       try {
-        const handler = g.broadcastCostTelemetryHandler as (
-          data: Record<string, unknown>,
-        ) => void;
+        const handler = g.broadcastCostTelemetryHandler as (data: Record<string, unknown>) => void;
         handler({
           costUsd: costTracker.getTotalCost(),
           limitUsd: budgetManager.getLimit(),

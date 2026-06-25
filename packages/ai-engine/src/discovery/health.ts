@@ -96,6 +96,9 @@ export class ProviderHealthCheck {
     this.intervalHandle = setInterval(() => {
       void this.runCycle();
     }, this.config.intervalMs);
+    if (this.intervalHandle && typeof this.intervalHandle === 'object' && 'unref' in this.intervalHandle) {
+      this.intervalHandle.unref();
+    }
   }
 
   /** Stop periodic health checks */

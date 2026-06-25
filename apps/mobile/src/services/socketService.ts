@@ -43,10 +43,11 @@ export class SocketService {
   private authToken: string | null = null;
   private lastUrl: string | null = null;
   private lastLocalAddress: string | null = null;
-  /** Reserved for future cloud failover re-enablement (currently disabled) */
-  private cloudAddress: string = 'https://ghita-relay-server.onrender.com';
   private healthCheckInterval: ReturnType<typeof setInterval> | null = null;
   private languageListeners: ((lang: string) => void)[] = [];
+  // Pairing rate limiting
+  private pairingFailCount = 0;
+  private pairingCooldownUntil = 0;
 
   get connectionState(): ConnectionState {
     return this._connectionState;
@@ -117,6 +118,8 @@ export class SocketService {
       reconnectionDelayMax: 30000,
       timeout: 10000,
       forceNew: true,
+      // C5: Send auth token in handshake (not in event payloads)
+      auth: this.authToken ? { token: this.authToken } : undefined,
     });
 
     this.registerEventHandlers();
@@ -143,14 +146,38 @@ export class SocketService {
 
   sendPairingCode(code: string, deviceId?: string): void {
     if (!this.socket) return;
+
+    // Rate limiting: lock out after 5 failed attempts for 5 minutes
+    const now = Date.now();
+    if (now < this.pairingCooldownUntil) {
+      const remainingSec = Math.ceil((this.pairingCooldownUntil - now) / 1000);
+      this.callbacks.onError?.(`Too many attempts. Try again in ${remainingSec}s`);
+      return;
+    }
+
     this.setConnectionState('pairing');
     this.lastPairingCode = code;
-    const authToken = this.authToken;
+    // C5: Token sent via socket.io handshake auth, not in event payload
     if (this.connectionType === 'cloud') {
       this.socket.emit('pair_mobile', { pairingCode: code });
     } else {
-      this.socket.emit(SOCKET_EVENTS.PAIR, { code, deviceId, authToken, timestamp: Date.now() });
+      this.socket.emit(SOCKET_EVENTS.PAIR, { code, deviceId, timestamp: Date.now() });
     }
+  }
+
+  /** Call when pairing fails to track rate limit */
+  onPairingFailed(): void {
+    this.pairingFailCount++;
+    if (this.pairingFailCount >= 5) {
+      this.pairingCooldownUntil = Date.now() + 5 * 60 * 1000;
+      this.pairingFailCount = 0;
+    }
+  }
+
+  /** Reset pairing rate limit on success */
+  onPairingSuccess(): void {
+    this.pairingFailCount = 0;
+    this.pairingCooldownUntil = 0;
   }
 
   /**
@@ -257,32 +284,30 @@ export class SocketService {
         resolve({ success: false, error: 'Not connected' });
         return;
       }
-      this.socket
-        .timeout(10000)
-        .emit(
-          'list_skills',
-          {},
-          (
-            err: unknown,
-            response: {
-              success: boolean;
-              skills?: Array<{
-                id: string;
-                name: string;
-                description: string;
-                category: string;
-                enabled: boolean;
-              }>;
-              error?: string;
-            },
-          ) => {
-            if (err) {
-              resolve({ success: false, error: 'Request timed out' });
-            } else {
-              resolve(response);
-            }
+      this.socket.timeout(10000).emit(
+        'list_skills',
+        {},
+        (
+          err: unknown,
+          response: {
+            success: boolean;
+            skills?: Array<{
+              id: string;
+              name: string;
+              description: string;
+              category: string;
+              enabled: boolean;
+            }>;
+            error?: string;
           },
-        );
+        ) => {
+          if (err) {
+            resolve({ success: false, error: 'Request timed out' });
+          } else {
+            resolve(response);
+          }
+        },
+      );
     });
   }
 
@@ -468,6 +493,7 @@ export class SocketService {
           void saveAuthToken(data.authToken);
         }
         this.setConnectionState('connected');
+        this.onPairingSuccess();
 
         // Stop healthcheck once we successfully pair in local mode
         if (this.connectionType === 'local') {
@@ -599,6 +625,27 @@ export class SocketService {
       this.callbacks.onError?.(data.message ?? 'Unknown error from server');
     });
 
+    // C18: Action required (tool approval)
+    this.socket.on('action_required', (data: { id: string; command: string }) => {
+      this.callbacks.onApprovalRequest?.(data);
+    });
+
+    // C19: File approval required
+    this.socket.on(
+      SOCKET_EVENTS.REQUIRE_FILE_APPROVAL,
+      (data: { id: string; path: string; action: string }) => {
+        this.callbacks.onApprovalRequest?.({
+          id: data.id,
+          command: `[File] ${data.action}: ${data.path}`,
+        });
+      },
+    );
+
+    // H3: Chat start event
+    this.socket.on('chat_start', () => {
+      // Prepare for incoming AI response
+    });
+
     // Ping-pong keepalive
     this.socket.on(SOCKET_EVENTS.PING, () => {
       this.socket?.emit(SOCKET_EVENTS.PONG, { timestamp: Date.now() });
@@ -606,5 +653,14 @@ export class SocketService {
   }
 }
 
-// Singleton instance
-export const socketService = new SocketService();
+// Singleton instance — survive React Native Fast Refresh (HMR) by stashing
+// the instance on globalThis so re-evaluating this module doesn't create
+// a fresh (disconnected) SocketService each time.
+const GLOBAL_KEY = '__ghita_socket_service__';
+export const socketService: SocketService =
+  ((globalThis as Record<string, unknown>)[GLOBAL_KEY] as SocketService) ??
+  (() => {
+    const instance = new SocketService();
+    (globalThis as Record<string, unknown>)[GLOBAL_KEY] = instance;
+    return instance;
+  })();

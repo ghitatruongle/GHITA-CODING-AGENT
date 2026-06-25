@@ -57,11 +57,7 @@ export type BrowserAction =
  * Walk an accessibility tree and find a node by role + accessible name.
  * Performs a depth-first search, exact match on role + name.
  */
-export function findByRoleAndName(
-  root: AxTreeNode,
-  role: string,
-  name: string,
-): AxTreeNode | null {
+export function findByRoleAndName(root: AxTreeNode, role: string, name: string): AxTreeNode | null {
   if (root.role === role && root.name === name) return root;
   if (!root.children) return null;
   for (const child of root.children) {

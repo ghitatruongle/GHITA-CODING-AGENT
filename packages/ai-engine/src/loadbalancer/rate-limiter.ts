@@ -3,10 +3,7 @@
 // Token-bucket based rate limiter with sliding window counters.
 // ==============================================================================
 
-import type {
-  RateLimitState,
-  RateLimiterConfig,
-} from './types.js';
+import type { RateLimitState, RateLimiterConfig } from './types.js';
 import { DEFAULT_RATE_LIMITER_CONFIG } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -26,7 +23,10 @@ export class RateLimiter {
    * Returns `{ allowed: true }` on success, or
    * `{ allowed: false, retryAfterMs }` if rate-limited.
    */
-  tryAcquire(providerId: string, customLimit?: number): {
+  tryAcquire(
+    providerId: string,
+    customLimit?: number,
+  ): {
     allowed: boolean;
     retryAfterMs: number;
     state: RateLimitState;
@@ -52,7 +52,7 @@ export class RateLimiter {
     // Refill tokens based on elapsed time
     const elapsed = now - s.windowStart;
     if (elapsed > 0) {
-      const refilled = (elapsed * refillRate);
+      const refilled = elapsed * refillRate;
       s.tokensRemaining = Math.min(burst, s.tokensRemaining + refilled);
       s.windowStart = now;
     }

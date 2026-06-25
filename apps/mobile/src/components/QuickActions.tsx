@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { ThemeColors } from '../theme/colors';
+import type { ThemeColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { FontSize, Spacing, Radius } from '../theme/styles';
 import type { QuickAction } from '../types';
@@ -68,38 +68,39 @@ export function QuickActions({ disabled = false, onAction }: QuickActionsProps):
   );
 }
 
-const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.md,
-  },
-  actionButton: {
-    flex: 1,
-    minWidth: '42%',
-    backgroundColor: colors.primaryMuted,
-    borderWidth: 1,
-    borderColor: colors.borderPrimary,
-    borderRadius: Radius.md,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.xs,
-    minHeight: 64,
-  },
-  actionButtonDisabled: {
-    opacity: 0.4,
-  },
-  actionIcon: {
-    fontSize: 22,
-  },
-  actionLabel: {
-    color: colors.primary,
-    fontSize: FontSize.sm,
-    fontWeight: '600',
-  },
-  actionLabelDisabled: {
-    color: colors.textDark,
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    grid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: Spacing.md,
+    },
+    actionButton: {
+      flex: 1,
+      minWidth: '42%',
+      backgroundColor: colors.primaryMuted,
+      borderWidth: 1,
+      borderColor: colors.borderPrimary,
+      borderRadius: Radius.md,
+      paddingVertical: Spacing.md,
+      paddingHorizontal: Spacing.lg,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: Spacing.xs,
+      minHeight: 64,
+    },
+    actionButtonDisabled: {
+      opacity: 0.4,
+    },
+    actionIcon: {
+      fontSize: 22,
+    },
+    actionLabel: {
+      color: colors.primary,
+      fontSize: FontSize.sm,
+      fontWeight: '600',
+    },
+    actionLabelDisabled: {
+      color: colors.textDark,
+    },
+  });

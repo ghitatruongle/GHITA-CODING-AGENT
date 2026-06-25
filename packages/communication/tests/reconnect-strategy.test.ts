@@ -162,7 +162,9 @@ describe('ReconnectStrategy', () => {
   describe('schedule', () => {
     it('15. schedule returns delay and fires callback', () => {
       let called = false;
-      const delay = strategy.schedule(() => { called = true; });
+      const delay = strategy.schedule(() => {
+        called = true;
+      });
       expect(delay).toBe(1000);
       vi.advanceTimersByTime(1000);
       expect(called).toBe(true);
@@ -170,7 +172,9 @@ describe('ReconnectStrategy', () => {
 
     it('16. cancel prevents scheduled callback', () => {
       let called = false;
-      strategy.schedule(() => { called = true; });
+      strategy.schedule(() => {
+        called = true;
+      });
       strategy.cancel();
       vi.advanceTimersByTime(5000);
       expect(called).toBe(false);
@@ -179,8 +183,12 @@ describe('ReconnectStrategy', () => {
     it('17. new schedule cancels previous', () => {
       let first = false;
       let second = false;
-      strategy.schedule(() => { first = true; });
-      strategy.schedule(() => { second = true; });
+      strategy.schedule(() => {
+        first = true;
+      });
+      strategy.schedule(() => {
+        second = true;
+      });
       vi.advanceTimersByTime(3000);
       expect(first).toBe(false);
       expect(second).toBe(true);

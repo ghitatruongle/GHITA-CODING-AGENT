@@ -186,7 +186,7 @@ export async function extractInteractiveElements(page: Page): Promise<Interactiv
         // Truncate text content
         let text = (el.innerText || el.textContent || '').trim().replace(/\s+/g, ' ');
         if (text.length > 80) {
-          text = text.substring(0, 77) + '...';
+          text = `${text.substring(0, 77)  }...`;
         }
 
         const tag = el.tagName.toLowerCase();

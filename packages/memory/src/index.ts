@@ -193,7 +193,7 @@ export { MemoryNudgeEngine } from './nudge.js';
 export type { NudgeSuggestion, NudgeConfig, NudgePattern } from './nudge.js';
 
 // --- Phase 19: SQLite FTS5 Memory Indexer & Rust Cosine similarity Addon ---
-export { RustMemoryAddon } from './semantic/rustAddon.js';
+export { RustMemoryAddon, cosineSimilarityJS } from './semantic/rustAddon.js';
 export type {
   ChatLogEntry,
   CacheEntry,
@@ -232,4 +232,3 @@ export type {
 
 // --- Phase 30: Memory Compression ---
 export * from './compression/index.js';
-

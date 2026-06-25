@@ -68,7 +68,9 @@ export class ResponseCacheEngine<T = unknown> {
    * Get a cached response by key.
    * Falls back to semantic dedup if exact match not found.
    */
-  async get(key: string): Promise<{ value: T; source: 'exact' | 'semantic'; score?: number } | null> {
+  async get(
+    key: string,
+  ): Promise<{ value: T; source: 'exact' | 'semantic'; score?: number } | null> {
     const start = Date.now();
     const namespacedKey = this.namespaceKey(key);
 
@@ -99,11 +101,7 @@ export class ResponseCacheEngine<T = unknown> {
    * Set a cached response.
    * Also indexes in semantic dedup if available.
    */
-  async set(
-    key: string,
-    value: T,
-    options?: { ttl?: number; tags?: string[] },
-  ): Promise<void> {
+  async set(key: string, value: T, options?: { ttl?: number; tags?: string[] }): Promise<void> {
     const namespacedKey = this.namespaceKey(key);
 
     this.lru.set(namespacedKey, value, {

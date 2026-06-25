@@ -27,7 +27,11 @@ export interface PruneResult {
   freshnessDropped: string[];
 }
 
-export function pruneGraph(graph: AssociationList, freshness: FreshnessSignal, options: PruneOptions = {}): PruneResult {
+export function pruneGraph(
+  graph: AssociationList,
+  freshness: FreshnessSignal,
+  options: PruneOptions = {},
+): PruneResult {
   const cohesionMinSize = options.cohesionMinSize ?? 1;
   const cohesionMinDegree = options.cohesionMinDegree ?? 1;
   const maxAgeMs = options.maxAgeMs;
@@ -59,5 +63,9 @@ export function pruneGraph(graph: AssociationList, freshness: FreshnessSignal, o
   }
 
   const toRemove = Array.from(new Set<string>([...cohesionDropped, ...freshnessDropped]));
-  return { toRemove, cohesionDropped: Array.from(cohesionDropped), freshnessDropped: Array.from(freshnessDropped) };
+  return {
+    toRemove,
+    cohesionDropped: Array.from(cohesionDropped),
+    freshnessDropped: Array.from(freshnessDropped),
+  };
 }

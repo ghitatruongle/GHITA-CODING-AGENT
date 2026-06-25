@@ -28,6 +28,7 @@ Cảm ơn bạn đã quan tâm đến GHITA! Mọi contribution đều welcome.
 ```
 
 Ví dụ:
+
 ```
 feat(ai-engine): add kimi provider via defineVendor
 

@@ -147,9 +147,7 @@ export class TemplateReviewSystem {
    * Get reviews by a specific user across all templates.
    */
   getReviewsByUser(userId: string): TemplateReview[] {
-    return Array.from(this.reviews.values()).filter(
-      (r) => r.reviewer.id === userId,
-    );
+    return Array.from(this.reviews.values()).filter((r) => r.reviewer.id === userId);
   }
 
   /**

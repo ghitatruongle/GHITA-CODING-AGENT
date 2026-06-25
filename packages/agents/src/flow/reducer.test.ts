@@ -23,7 +23,12 @@ function ts(seq: number): string {
   return `2026-06-04T00:00:${String(seq).padStart(2, '0')}Z`;
 }
 
-function makeMessage(seq: number, eventId: string, content: string, role: 'user' | 'assistant' = 'user'): MessageEvent {
+function makeMessage(
+  seq: number,
+  eventId: string,
+  content: string,
+  role: 'user' | 'assistant' = 'user',
+): MessageEvent {
   return {
     type: 'message',
     eventId,
@@ -36,7 +41,11 @@ function makeMessage(seq: number, eventId: string, content: string, role: 'user'
   };
 }
 
-function makeToolCall(seq: number, eventId: string, status: 'pending' | 'running' | 'completed' | 'failed' = 'completed'): ToolCallEvent {
+function makeToolCall(
+  seq: number,
+  eventId: string,
+  status: 'pending' | 'running' | 'completed' | 'failed' = 'completed',
+): ToolCallEvent {
   return {
     type: 'tool_call',
     eventId,
@@ -92,7 +101,8 @@ export function testIdempotency() {
   const s1 = processEvent(state, event);
   const s2 = processEvent(s1, event);
   if (s2.messages.length !== 1) throw new Error('idempotency: messages should still be 1');
-  if (s2.processedEventIds.length !== 1) throw new Error('idempotency: processedEventIds should still be 1');
+  if (s2.processedEventIds.length !== 1)
+    throw new Error('idempotency: processedEventIds should still be 1');
   if (s2.tokenUsage.input !== 10) throw new Error('idempotency: tokens should not double-count');
   if (s2.lastSeq !== 0) throw new Error('idempotency: lastSeq should remain 0');
   return 'PASS: idempotency';
@@ -157,17 +167,15 @@ export function testToolCallFailed() {
 // ----- Test 9: resumeThread from store -----
 export function testResumeFromStore() {
   const store = new InMemoryThreadStore();
-  const events = [
-    makeMessage(0, 'e1', 'first'),
-    makeMessage(1, 'e2', 'second'),
-  ];
+  const events = [makeMessage(0, 'e1', 'first'), makeMessage(1, 'e2', 'second')];
   let state = createInitialThreadState('t1');
   for (const e of events) state = processEvent(state, e);
   store.save(state);
 
   const resumed = resumeThread(store, 't1', events);
   if (resumed.messages.length !== 2) throw new Error('resume: expected 2 messages');
-  if (resumed.tokenUsage.input !== 20) throw new Error('resume: tokens should remain 20 (idempotent)');
+  if (resumed.tokenUsage.input !== 20)
+    throw new Error('resume: tokens should remain 20 (idempotent)');
   return 'PASS: resume from store';
 }
 

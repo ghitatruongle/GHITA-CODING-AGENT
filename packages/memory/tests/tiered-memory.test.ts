@@ -142,7 +142,7 @@ describe('TieredMemoryStore & AgentMemory Tiered Storage (Phase 15)', () => {
     };
 
     store.add(entry);
-    
+
     // Evict it to Tier 2 by adding others
     store.add({ id: 'a', type: 'fact', content: 'a', timestamp: Date.now() });
     store.add({ id: 'b', type: 'fact', content: 'b', timestamp: Date.now() });
@@ -160,10 +160,14 @@ describe('TieredMemoryStore & AgentMemory Tiered Storage (Phase 15)', () => {
   });
 
   it('should search across tiers using AgentMemory integration', () => {
-    const agentMemory = new AgentMemory([], {}, {
-      dbPath: ':memory:',
-      maxWorkingMemorySize: 2,
-    });
+    const agentMemory = new AgentMemory(
+      [],
+      {},
+      {
+        dbPath: ':memory:',
+        maxWorkingMemorySize: 2,
+      },
+    );
 
     agentMemory.add({
       id: 'm1',

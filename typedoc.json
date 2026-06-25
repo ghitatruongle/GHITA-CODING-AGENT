@@ -1,0 +1,52 @@
+{
+  "name": "GHITA CODING AGENT API Reference",
+  "entryPointStrategy": "packages",
+  "entryPoints": [
+    "packages/ai-engine",
+    "packages/skills",
+    "packages/agents",
+    "packages/memory",
+    "packages/computer-use",
+    "packages/security",
+    "packages/communication",
+    "packages/shared",
+    "packages/browser-control",
+    "packages/voice",
+    "packages/monitoring",
+    "packages/quotas",
+    "packages/marketplace",
+    "packages/notification",
+    "packages/code-graph",
+    "packages/gui",
+    "packages/i18n",
+    "packages/a11y",
+    "packages/migration",
+    "packages/integration",
+    "packages/relay-server",
+    "packages/mobile-companion"
+  ],
+  "out": "docs/docs/api",
+  "plugin": ["typedoc-plugin-markdown"],
+  "readme": "none",
+  "disableSources": false,
+  "excludeExternals": true,
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "categorizeByGroup": true,
+  "categoryOrder": [
+    "Core",
+    "Providers",
+    "Router",
+    "Tools",
+    "Cost",
+    "Hooks",
+    "MCP",
+    "*"
+  ],
+  "visibilityFilters": {
+    "protected": false,
+    "private": false,
+    "@alpha": false,
+    "@beta": true
+  }
+}

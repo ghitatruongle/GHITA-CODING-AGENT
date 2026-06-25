@@ -88,7 +88,10 @@ export class CodeKnowledgeGraph {
   /**
    * Index all source files in a directory.
    */
-  indexDirectory(dir: string, options?: ParseOptions): {
+  indexDirectory(
+    dir: string,
+    options?: ParseOptions,
+  ): {
     files: number;
     nodes: number;
     edges: number;

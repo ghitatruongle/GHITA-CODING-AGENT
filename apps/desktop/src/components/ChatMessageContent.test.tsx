@@ -12,6 +12,9 @@ const tMock = vi.fn((key: string) => {
     'chat.runningCmd': 'Running...',
     'chat.runSuccessNoOutput': 'Success — no output',
     'chat.runError': 'Error',
+    'common.copy': 'Copy',
+    'common.copied': 'Copied',
+    'common.run': 'Run',
   };
   return translations[key] ?? key;
 });
@@ -177,7 +180,7 @@ describe('MarkdownMessage', () => {
       // Simulate deeply nested blockquotes (> 20 levels deep)
       const nestedDepth = 30;
       const nested =
-        Array.from({ length: nestedDepth }, () => '> ').join('') + `Level ${nestedDepth}`;
+        `${Array.from({ length: nestedDepth }, () => '> ').join('')  }Level ${nestedDepth}`;
 
       expect(() => render(<MarkdownMessage content={nested} />)).not.toThrow();
       expect(screen.getByText(`Level ${nestedDepth}`)).toBeInTheDocument();

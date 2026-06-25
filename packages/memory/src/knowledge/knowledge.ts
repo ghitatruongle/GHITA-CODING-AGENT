@@ -11,6 +11,7 @@ import type {
   KnowledgeSearchResult,
   EmbeddingFunction,
 } from './types.js';
+import { cosineSimilarityJS } from '../semantic/rustAddon.js';
 
 const TOKEN_PATTERN = /[\p{L}\p{N}_-]+/gu;
 
@@ -31,20 +32,6 @@ function hashContent(content: string): string {
 function tokenize(text: string): Set<string> {
   const matches = text.toLowerCase().match(TOKEN_PATTERN) ?? [];
   return new Set(matches.filter((t) => t.length > 1));
-}
-
-function cosineSimilarity(a: number[], b: number[]): number {
-  if (a.length !== b.length) return 0;
-  let dot = 0;
-  let normA = 0;
-  let normB = 0;
-  for (let i = 0; i < a.length; i++) {
-    dot += (a[i] ?? 0) * (b[i] ?? 0);
-    normA += (a[i] ?? 0) * (a[i] ?? 0);
-    normB += (b[i] ?? 0) * (b[i] ?? 0);
-  }
-  const denom = Math.sqrt(normA) * Math.sqrt(normB);
-  return denom === 0 ? 0 : dot / denom;
 }
 
 /**
@@ -316,7 +303,7 @@ export class KnowledgeEngine {
       if (!doc) continue;
       if (options.type && doc.type !== options.type) continue;
 
-      const score = cosineSimilarity(queryEmbedding, chunk.embedding);
+      const score = cosineSimilarityJS(queryEmbedding, chunk.embedding);
       if (score >= minScore) {
         results.push({ chunk, score, document: doc });
       }

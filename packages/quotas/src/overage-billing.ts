@@ -26,65 +26,68 @@ export interface OverageBillingOptions {
   onBill?: (item: InvoiceLineItem) => void | Promise<void>;
 }
 
+/**
+ * OverageBilling — lưu trữ invoice + gọi billing hook khi overage xảy ra.
+ *
+ * Sử dụng:
+ *   const billing = new OverageBilling({ onBill: async (item) => await stripe.invoices.create(...) });
+ *   const policy: OveragePolicy = { ..., onOverage: (e) => billing.handleOverage(e) };
+ */
+export class OverageBilling {
+  private readonly invoices: InvoiceLineItem[] = [];
+  private readonly onLog?: (message: string, level: 'debug' | 'info' | 'warn' | 'error') => void;
+  private readonly onBill?: (item: InvoiceLineItem) => void | Promise<void>;
+  private totalBilled = 0;
+
+  constructor(options: OverageBillingOptions = {}) {
+    this.onLog = options.logger;
+    this.onBill = options.onBill;
+  }
+
   /**
-   * OverageBilling — lưu trữ invoice + gọi billing hook khi overage xảy ra.
-   *
-   * Sử dụng:
-   *   const billing = new OverageBilling({ onBill: async (item) => await stripe.invoices.create(...) });
-   *   const policy: OveragePolicy = { ..., onOverage: (e) => billing.handleOverage(e) };
+   * Xử lý overage event từ QuotaManager.
    */
-  export class OverageBilling {
-    private readonly invoices: InvoiceLineItem[] = [];
-    private readonly onLog?: (message: string, level: 'debug' | 'info' | 'warn' | 'error') => void;
-    private readonly onBill?: (item: InvoiceLineItem) => void | Promise<void>;
-    private totalBilled = 0;
+  async handleOverage(event: OverageEvent): Promise<InvoiceLineItem> {
+    const item: InvoiceLineItem = {
+      userId: event.userId,
+      plan: event.plan,
+      overageTokens: event.overageTokens,
+      pricePer1k: event.billingAmount > 0 ? event.billingAmount / (event.overageTokens / 1000) : 0,
+      subtotal: event.billingAmount,
+      timestamp: event.timestamp,
+    };
+    this.invoices.push(item);
+    this.totalBilled += event.billingAmount;
+    this.onLog?.(
+      `[Billing] Invoice: user=${event.userId} overage=${event.overageTokens} cost=$${event.billingAmount.toFixed(4)}`,
+      'info',
+    );
 
-    constructor(options: OverageBillingOptions = {}) {
-      this.onLog = options.logger;
-      this.onBill = options.onBill;
-    }
-
-    /**
-     * Xử lý overage event từ QuotaManager.
-     */
-    async handleOverage(event: OverageEvent): Promise<InvoiceLineItem> {
-      const item: InvoiceLineItem = {
-        userId: event.userId,
-        plan: event.plan,
-        overageTokens: event.overageTokens,
-        pricePer1k: event.billingAmount > 0 ? event.billingAmount / (event.overageTokens / 1000) : 0,
-        subtotal: event.billingAmount,
-        timestamp: event.timestamp,
-      };
-      this.invoices.push(item);
-      this.totalBilled += event.billingAmount;
-      this.onLog?.(`[Billing] Invoice: user=${event.userId} overage=${event.overageTokens} cost=$${event.billingAmount.toFixed(4)}`, 'info');
-
-      if (this.onBill) {
-        try {
-          await this.onBill(item);
-        } catch (err) {
-          this.onLog?.(`[Billing] onBill failed: ${(err as Error).message}`, 'error');
-        }
+    if (this.onBill) {
+      try {
+        await this.onBill(item);
+      } catch (err) {
+        this.onLog?.(`[Billing] onBill failed: ${(err as Error).message}`, 'error');
       }
-      return item;
     }
+    return item;
+  }
 
-    /**
-     * Tạo policy mặc định trỏ về instance này.
-     */
-    defaultPolicy(pricePer1k: number, options: Partial<OveragePolicy> = {}): OveragePolicy {
-      return {
-        allowOverage: true,
-        maxOveragePercent: options.maxOveragePercent ?? 20,
-        overagePricePer1k: pricePer1k,
-        blockAtMax: options.blockAtMax ?? true,
-        onOverage: (e) => {
-          void this.handleOverage(e);
-        },
-        ...options,
-      };
-    }
+  /**
+   * Tạo policy mặc định trỏ về instance này.
+   */
+  defaultPolicy(pricePer1k: number, options: Partial<OveragePolicy> = {}): OveragePolicy {
+    return {
+      allowOverage: true,
+      maxOveragePercent: options.maxOveragePercent ?? 20,
+      overagePricePer1k: pricePer1k,
+      blockAtMax: options.blockAtMax ?? true,
+      onOverage: (e) => {
+        void this.handleOverage(e);
+      },
+      ...options,
+    };
+  }
 
   /**
    * Lấy tất cả invoice.

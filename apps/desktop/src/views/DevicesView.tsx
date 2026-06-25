@@ -7,6 +7,7 @@ import { invoke } from '@tauri-apps/api/core';
 import type { DeviceInfo } from '@ghita/shared';
 import { useAppStore } from '../stores/appStore';
 import { useTranslation } from '../i18n';
+import { ConnectionGuide } from '../components/ConnectionGuide';
 
 interface ServerHealth {
   status?: string;
@@ -201,7 +202,7 @@ export function DevicesView() {
   };
 
   const primaryIp = health?.localIP || health?.localIps?.[0] || null;
-  const port = health?.port || 8080;
+  const port = health?.port || 39001;
 
   return (
     <div style={{ padding: '24px', overflow: 'auto', height: '100%' }}>
@@ -713,41 +714,7 @@ export function DevicesView() {
       )}
 
       {/* Instructions when server is off */}
-      {serverStatus !== 'listening' && (
-        <div
-          style={{
-            background: 'var(--bg-surface)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-lg)',
-            padding: '24px',
-          }}
-        >
-          <h3
-            style={{
-              fontSize: '14px',
-              fontWeight: 600,
-              color: 'var(--text-primary)',
-              marginBottom: '12px',
-            }}
-          >
-            {t('devices.connectionGuide')}
-          </h3>
-          <ol
-            style={{
-              color: 'var(--text-secondary)',
-              fontSize: '13px',
-              lineHeight: 1.8,
-              paddingLeft: '20px',
-            }}
-          >
-            <li>{t('devices.guideStep1')}</li>
-            <li>{t('devices.guideStep2')}</li>
-            <li>{t('devices.guideStep3')}</li>
-            <li>{t('devices.guideStep4')}</li>
-            <li>{t('devices.guideStep5')}</li>
-          </ol>
-        </div>
-      )}
+      {serverStatus !== 'listening' && <ConnectionGuide />}
     </div>
   );
 }

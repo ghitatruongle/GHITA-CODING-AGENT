@@ -1,11 +1,15 @@
 // ==============================================================================
 // Phase 32: Sentry Client Wrapper
 // ==============================================================================
-// Thin wrapper quanh Sentry SDK. Cố tình KHÔNG import @sentry/node trực tiếp
-// để package vẫn build được khi Sentry chưa cài. Khi deploy production,
-// cài @sentry/node và thay thế phần TODO bằng dynamic import.
+// Thin wrapper around Sentry SDK. Now @sentry/node is installed.
 
-import type { SentryConfig, CapturedError, MonitoringContext, PerformanceTransaction, PerformanceSpan } from './types.js';
+import type {
+  SentryConfig,
+  CapturedError,
+  MonitoringContext,
+  PerformanceTransaction,
+  PerformanceSpan,
+} from './types.js';
 
 export interface SentryBreadcrumb {
   category?: string;
@@ -13,6 +17,31 @@ export interface SentryBreadcrumb {
   level?: 'debug' | 'info' | 'warning' | 'error';
   timestamp?: number;
   data?: Record<string, unknown>;
+}
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+type SentryModuleType = {
+  init(options: Record<string, unknown>): void;
+  captureException(exception: unknown, hint?: Record<string, unknown>): string;
+  addBreadcrumb(breadcrumb: Record<string, unknown>): void;
+  setUser(user: Record<string, unknown> | null): void;
+  flush(timeout?: number): Promise<boolean>;
+  startSpan<T>(options: Record<string, unknown>, callback: (span: any) => T): T;
+  startInactiveSpan(options: Record<string, unknown>): {
+    end(endTimestamp?: number): void;
+    setAttribute(key: string, value: unknown): void;
+  };
+  setTag(key: string, value: string): void;
+  setContext(name: string, context: Record<string, unknown> | null): void;
+};
+
+let SentryModule: SentryModuleType | null = null;
+
+async function getSentry(): Promise<SentryModuleType> {
+  if (!SentryModule) {
+    SentryModule = (await import('@sentry/node')) as unknown as SentryModuleType;
+  }
+  return SentryModule;
 }
 
 /**
@@ -46,25 +75,30 @@ export class SentryClient {
 
   /**
    * Khởi tạo Sentry SDK (lazy + graceful).
-   * Trong production, dynamic import @sentry/node và init ở đây.
    */
   async init(): Promise<void> {
     if (this.initialized) return;
     try {
-      // TODO: Production — uncomment khi @sentry/node đã cài
-      // const Sentry = await import('@sentry/node');
-      // Sentry.init({
-      //   dsn: this.config.dsn,
-      //   environment: this.config.environment,
-      //   release: this.config.release,
-      //   sampleRate: this.config.sampleRate ?? 1.0,
-      //   tracesSampleRate: this.config.tracesSampleRate ?? 0.1,
-      //   debug: this.config.debug ?? false,
-      // });
+      const Sentry = await getSentry();
+      Sentry.init({
+        dsn: this.config.dsn,
+        environment: this.config.environment,
+        release: this.config.release,
+        sampleRate: this.config.sampleRate ?? 1.0,
+        tracesSampleRate: this.config.tracesSampleRate ?? 0.1,
+        debug: this.config.debug ?? false,
+      });
       this.initialized = true;
+      // Flush any queued events
+      for (const event of this.eventQueue) {
+        Sentry.captureException(new Error(event.message), {
+          extra: this.contextToExtras(event.context),
+          tags: { type: event.type, severity: event.severity },
+        });
+      }
+      this.eventQueue = [];
     } catch (err) {
       // Fallback: chỉ log warning, monitoring vẫn hoạt động locally
-       
       console.warn('[SentryClient] init failed, using in-memory queue:', err);
       this.initialized = true;
     }
@@ -81,7 +115,11 @@ export class SentryClient {
   /**
    * Capture message (non-fatal log).
    */
-  async captureMessage(message: string, severity: 'info' | 'warning' | 'error' = 'info', context?: MonitoringContext): Promise<string> {
+  async captureMessage(
+    message: string,
+    severity: 'info' | 'warning' | 'error' = 'info',
+    context?: MonitoringContext,
+  ): Promise<string> {
     const event = this.toCapturedError(new Error(message), severity, context);
     return this.sendEvent(event);
   }
@@ -89,7 +127,12 @@ export class SentryClient {
   /**
    * Bắt đầu performance transaction.
    */
-  startTransaction(params: { name: string; op: string; traceId?: string; tags?: Record<string, string> }): PerformanceTransaction {
+  startTransaction(params: {
+    name: string;
+    op: string;
+    traceId?: string;
+    tags?: Record<string, string>;
+  }): PerformanceTransaction {
     const now = Date.now();
     const traceId = params.traceId ?? this.generateId('trace');
     const tx: PerformanceTransaction = {
@@ -123,9 +166,46 @@ export class SentryClient {
     tx.finished = true;
     tx.status = status;
     this.transactions.delete(traceId);
-    this.transactionQueue.push(tx);
-    if (this.transactionQueue.length > this.maxQueueSize) {
-      this.transactionQueue.shift();
+
+    if (this.initialized) {
+      try {
+        const Sentry = await getSentry();
+        Sentry.startSpan(
+          {
+            name: tx.name,
+            op: tx.op,
+            forceTransaction: true,
+            attributes: { traceId: tx.traceId },
+          },
+          (transactionSpan) => {
+            transactionSpan.setAttribute('traceId', tx.traceId);
+            if (tx.tags) {
+              for (const [k, v] of Object.entries(tx.tags)) {
+                transactionSpan.setAttribute(k, v);
+              }
+            }
+            for (const span of tx.spans) {
+              const childSpan = Sentry.startInactiveSpan({
+                name: span.description || span.op,
+                op: span.op,
+                parentSpan: transactionSpan,
+              });
+              if (span.endTimestamp) {
+                childSpan.end(span.endTimestamp / 1000);
+              } else {
+                childSpan.end();
+              }
+            }
+          },
+        );
+      } catch (err) {
+        console.warn('[SentryClient] Failed to send transaction:', err);
+      }
+    } else {
+      this.transactionQueue.push(tx);
+      if (this.transactionQueue.length > this.maxQueueSize) {
+        this.transactionQueue.shift();
+      }
     }
   }
 
@@ -159,22 +239,37 @@ export class SentryClient {
   /**
    * Add breadcrumb (debug trail).
    */
-  addBreadcrumb(_breadcrumb: SentryBreadcrumb): void {
-    // TODO: Production — Sentry.addBreadcrumb(breadcrumb)
-    // Hiện tại chỉ lưu trong memory
+  addBreadcrumb(breadcrumb: SentryBreadcrumb): void {
+    if (this.initialized) {
+      getSentry()
+        .then((Sentry) => {
+          Sentry.addBreadcrumb(breadcrumb as unknown as Record<string, unknown>);
+        })
+        .catch(() => {});
+    }
   }
 
   /**
    * Set user context.
    */
-  setUser(_user: { id: string; email?: string; username?: string } | null): void {
-    // TODO: Production — Sentry.setUser(user)
+  setUser(user: { id: string; email?: string; username?: string } | null): void {
+    if (this.initialized) {
+      getSentry()
+        .then((Sentry) => {
+          Sentry.setUser(user);
+        })
+        .catch(() => {});
+    }
   }
 
   /**
    * Flush queue (gửi tất cả event đang chờ).
    */
-  async flush(_timeoutMs = 2000): Promise<void> {
+  async flush(timeoutMs = 2000): Promise<void> {
+    if (this.initialized) {
+      const Sentry = await getSentry();
+      await Sentry.flush(timeoutMs);
+    }
     this.eventQueue = [];
     this.transactionQueue = [];
   }
@@ -191,15 +286,45 @@ export class SentryClient {
   // Private helpers
   // ============================================================================
 
+  private contextToExtras(context?: MonitoringContext): Record<string, unknown> {
+    if (!context) return {};
+    const extras: Record<string, unknown> = {};
+    if (context.userId) extras.userId = context.userId;
+    if (context.sessionId) extras.sessionId = context.sessionId;
+    if (context.provider) extras.provider = context.provider;
+    if (context.model) extras.model = context.model;
+    if (context.requestId) extras.requestId = context.requestId;
+    if (context.tags) extras.tags = context.tags;
+    if (context.extra) Object.assign(extras, context.extra);
+    return extras;
+  }
+
   private async sendEvent(event: CapturedError): Promise<string> {
     this.eventQueue.push(event);
     if (this.eventQueue.length > this.maxQueueSize) {
       this.eventQueue.shift();
     }
+
+    if (this.initialized) {
+      try {
+        const Sentry = await getSentry();
+        Sentry.captureException(new Error(event.message), {
+          extra: this.contextToExtras(event.context),
+          tags: { type: event.type, severity: event.severity },
+        });
+      } catch (err) {
+        console.warn('[SentryClient] Failed to send event:', err);
+      }
+    }
+
     return event.id;
   }
 
-  private toCapturedError(error: Error | string, severity: 'error' | 'fatal' | 'info' | 'warning', context?: MonitoringContext): CapturedError {
+  private toCapturedError(
+    error: Error | string,
+    severity: 'error' | 'fatal' | 'info' | 'warning',
+    context?: MonitoringContext,
+  ): CapturedError {
     const err = typeof error === 'string' ? new Error(error) : error;
     return {
       id: this.generateId('evt'),

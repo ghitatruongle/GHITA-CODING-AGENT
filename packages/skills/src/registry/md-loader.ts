@@ -26,17 +26,32 @@ export function validateSkill(skill: Partial<SkillDefinition>): void {
   if (!skill.name || typeof skill.name !== 'string' || skill.name.trim() === '') {
     errors.push('Skill name is required and must be a non-empty string');
   }
-  if (!skill.description || typeof skill.description !== 'string' || skill.description.trim() === '') {
+  if (
+    !skill.description ||
+    typeof skill.description !== 'string' ||
+    skill.description.trim() === ''
+  ) {
     errors.push('Skill description is required and must be a non-empty string');
   }
 
-  const validCategories: SkillCategory[] = ['file', 'terminal', 'browser', 'computer', 'screenshot', 'app'];
+  const validCategories: SkillCategory[] = [
+    'file',
+    'terminal',
+    'browser',
+    'computer',
+    'screenshot',
+    'app',
+  ];
   if (!skill.category || !validCategories.includes(skill.category)) {
-    errors.push(`Skill category must be one of: ${validCategories.join(', ')}. Received: ${skill.category}`);
+    errors.push(
+      `Skill category must be one of: ${validCategories.join(', ')}. Received: ${skill.category}`,
+    );
   }
 
   if (errors.length > 0) {
-    throw new Error(`Skill validation failed for "${skill.id || 'unknown'}":\n- ${errors.join('\n- ')}`);
+    throw new Error(
+      `Skill validation failed for "${skill.id || 'unknown'}":\n- ${errors.join('\n- ')}`,
+    );
   }
 }
 
@@ -75,7 +90,7 @@ function parseFrontmatter(yamlStr: string): Record<string, unknown> {
  */
 export function loadSkillMd(filePath: string): SkillDefinition {
   const content = fs.readFileSync(filePath, 'utf8');
-  
+
   // Normalize line endings
   const normalized = content.replace(/\r\n/g, '\n');
   const parts = normalized.split(/^---$/m);
@@ -96,7 +111,7 @@ export function loadSkillMd(filePath: string): SkillDefinition {
   const category = (frontmatter.category || 'computer') as SkillCategory;
   const version = frontmatter.version || '0.1.0';
   const enabled = frontmatter.enabled !== 'false';
-  
+
   // Scopes parse
   let scopes: SkillScope[] = ['workspace', 'system'];
   if (frontmatter.scopes) {
@@ -179,7 +194,7 @@ export class SkillDirectoryWatcher {
 
   constructor(
     private readonly dirPath: string,
-    private readonly registry: SkillRegistryLike
+    private readonly registry: SkillRegistryLike,
   ) {}
 
   /**
@@ -199,7 +214,7 @@ export class SkillDirectoryWatcher {
     // Start watching
     this.watcher = fs.watch(this.dirPath, { recursive: true }, (_eventType, filename) => {
       if (!filename) return;
-      
+
       const fullPath = path.join(this.dirPath, filename);
       const isMd = filename.toLowerCase() === 'skill.md' || filename.endsWith('.md');
       if (!isMd) return;
@@ -223,7 +238,7 @@ export class SkillDirectoryWatcher {
   private loadFile(filePath: string): void {
     try {
       const skill = loadSkillMd(filePath);
-      
+
       // If already registered, unregister first (avoid duplicate errors)
       if (this.filePathToSkillId.has(filePath)) {
         const oldId = this.filePathToSkillId.get(filePath);
@@ -235,9 +250,14 @@ export class SkillDirectoryWatcher {
 
       this.registry.register(skill);
       this.filePathToSkillId.set(filePath, skill.id);
-      console.info(`[SkillWatcher] Loaded/reloaded skill: ${skill.id} from ${path.basename(filePath)}`);
+      console.info(
+        `[SkillWatcher] Loaded/reloaded skill: ${skill.id} from ${path.basename(filePath)}`,
+      );
     } catch (err: unknown) {
-      console.error(`[SkillWatcher] Error loading file ${filePath}:`, err instanceof Error ? err.message : String(err));
+      console.error(
+        `[SkillWatcher] Error loading file ${filePath}:`,
+        err instanceof Error ? err.message : String(err),
+      );
     }
   }
 

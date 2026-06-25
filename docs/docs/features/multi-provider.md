@@ -11,23 +11,23 @@ GHITA hỗ trợ **30+ LLM providers** thông qua cùng 1 interface.
 
 ## Danh sách providers
 
-| Provider | Native | OpenAI-compat | Streaming | Embeddings |
-|----------|--------|---------------|-----------|------------|
-| OpenAI | ✅ | — | ✅ | ✅ |
-| Anthropic | ✅ | — | ✅ | ❌ |
-| Google AI | ✅ | — | ✅ | ✅ |
-| Ollama | — | ✅ | ✅ | ✅ |
-| Groq | — | ✅ | ✅ | ❌ |
-| DeepSeek | — | ✅ | ✅ | ❌ |
-| OpenRouter | — | ✅ | ✅ | ❌ |
-| Together | — | ✅ | ✅ | ❌ |
-| Fireworks | — | ✅ | ✅ | ❌ |
-| Mistral | ✅ | ✅ | ✅ | ✅ |
-| xAI (Grok) | — | ✅ | ✅ | ❌ |
-| Perplexity | — | ✅ | ✅ | ❌ |
-| Cohere | ✅ | — | ✅ | ✅ |
-| Replicate | ✅ | — | ✅ | ❌ |
-| ... | | | | |
+| Provider   | Native | OpenAI-compat | Streaming | Embeddings |
+| ---------- | ------ | ------------- | --------- | ---------- |
+| OpenAI     | ✅     | —             | ✅        | ✅         |
+| Anthropic  | ✅     | —             | ✅        | ❌         |
+| Google AI  | ✅     | —             | ✅        | ✅         |
+| Ollama     | —      | ✅            | ✅        | ✅         |
+| Groq       | —      | ✅            | ✅        | ❌         |
+| DeepSeek   | —      | ✅            | ✅        | ❌         |
+| OpenRouter | —      | ✅            | ✅        | ❌         |
+| Together   | —      | ✅            | ✅        | ❌         |
+| Fireworks  | —      | ✅            | ✅        | ❌         |
+| Mistral    | ✅     | ✅            | ✅        | ✅         |
+| xAI (Grok) | —      | ✅            | ✅        | ❌         |
+| Perplexity | —      | ✅            | ✅        | ❌         |
+| Cohere     | ✅     | —             | ✅        | ✅         |
+| Replicate  | ✅     | —             | ✅        | ❌         |
+| ...        |        |               |           |            |
 
 Xem đầy đủ tại `packages/shared/src/constants.ts`.
 
@@ -64,6 +64,7 @@ Phase 6 (`fix-phase6.md`) mô tả chi tiết pattern này.
 ## Routing
 
 `SmartRouter` (Phase 11) tự động:
+
 - Chọn provider theo task type (chat, embed, image, code, ...)
 - Failover nếu provider lỗi
 - Load balancing giữa các API key (Phase 28)

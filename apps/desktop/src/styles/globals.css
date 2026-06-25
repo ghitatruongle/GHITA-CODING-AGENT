@@ -2,6 +2,70 @@
    GHITA CODING AGENT — Global Styles
    ============================================================================== */
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* --- ACCESSIBILITY (audit fix 1.3) — focus ring utility ---
+ * Several components inline `style={{ outline: 'none' }}` which suppresses
+ * the browser default focus indicator and makes keyboard navigation
+ * invisible. The `.focus-ring` utility restores a high-contrast outline
+ * that respects the user's `prefers-reduced-motion` and dark/light themes.
+ */
+.focus-ring:focus,
+.focus-ring:focus-visible,
+button.focus-ring:focus,
+a.focus-ring:focus,
+[role='button'].focus-ring:focus,
+[role='treeitem'].focus-ring:focus,
+[role='option'].focus-ring:focus,
+input.focus-ring:focus,
+textarea.focus-ring:focus,
+select.focus-ring:focus {
+  outline: 2px solid var(--accent-primary) !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(129, 140, 248, 0.25) !important;
+  border-radius: var(--radius-sm);
+}
+
+/* Honor users who explicitly prefer reduced motion: tone down the
+ * focus-shadow pulse animation but keep the outline visible. */
+@media (prefers-reduced-motion: reduce) {
+  .focus-ring:focus {
+    transition: none !important;
+  }
+}
+
+/* Skip-to-content link for keyboard users (WCAG 2.4.1 Bypass Blocks). */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  padding: 8px 16px;
+  background: var(--accent-primary);
+  color: var(--bg-primary);
+  z-index: 9999;
+  border-radius: 0 0 var(--radius-sm) 0;
+  font-weight: 600;
+  text-decoration: none;
+}
+.skip-link:focus {
+  top: 0;
+}
+
+/* Visually-hidden text for screen readers (sr-only). */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
 /* --- CSS Variables (Dark Theme - Default) --- */
 :root {
   /* Backgrounds */
@@ -66,7 +130,9 @@
   --transition-slow: 400ms ease;
 
   /* Typography */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-sans:
+    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans SC', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
 }
 
@@ -191,6 +257,12 @@ body {
 /* --- Focus --- */
 :focus-visible {
   outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.focus-ring:focus-visible {
+  outline: 2px solid var(--accent-primary) !important;
   outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
@@ -385,7 +457,9 @@ textarea::placeholder {
 
 /* --- View transitions --- */
 .view-enter {
-  animation: fadeIn var(--transition-normal) ease forwards, slideUp var(--transition-normal) ease forwards;
+  animation:
+    fadeIn var(--transition-normal) ease forwards,
+    slideUp var(--transition-normal) ease forwards;
 }
 
 /* --- Premium Glassmorphism Cards --- */
@@ -396,7 +470,10 @@ textarea::placeholder {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    border-color var(--transition-fast);
 }
 
 .glass-card:hover {
@@ -509,5 +586,45 @@ textarea::placeholder {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* --- Responsive Breakpoints --- */
+/* Mobile sidebar overlay */
+@media (max-width: 767px) {
+  .sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 900;
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  .sidebar-mobile {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 280px;
+    z-index: 950;
+    transform: translateX(-100%);
+    transition: transform var(--transition-normal);
+  }
+
+  .sidebar-mobile.open {
+    transform: translateX(0);
+  }
+}
+
+/* Tablet adjustments */
+@media (min-width: 768px) and (max-width: 1023px) {
+  :root {
+    --sidebar-width: 240px;
+  }
+}
+
+/* Small desktop */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  :root {
+    --sidebar-width: 260px;
   }
 }

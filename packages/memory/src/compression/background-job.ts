@@ -43,10 +43,7 @@ export class BackgroundCompressionJob {
   private nextRunId = 1;
   private isRunning = false;
 
-  constructor(
-    storage: MemoryStorageAdapter,
-    config?: Partial<CompressionConfig>,
-  ) {
+  constructor(storage: MemoryStorageAdapter, config?: Partial<CompressionConfig>) {
     this.config = {
       summarizer: { ...DEFAULT_COMPRESSION_CONFIG.summarizer, ...config?.summarizer },
       dedup: { ...DEFAULT_COMPRESSION_CONFIG.dedup, ...config?.dedup },
@@ -240,8 +237,7 @@ export class BackgroundCompressionJob {
     }));
     const avgDur =
       this.stats.durationSamples.length > 0
-        ? this.stats.durationSamples.reduce((a, b) => a + b, 0) /
-          this.stats.durationSamples.length
+        ? this.stats.durationSamples.reduce((a, b) => a + b, 0) / this.stats.durationSamples.length
         : 0;
     return {
       totalRuns: this.stats.totalRuns,

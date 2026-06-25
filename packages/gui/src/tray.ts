@@ -45,7 +45,7 @@ export class TrayController {
    */
   removeItem(id: string): boolean {
     const before = this.items.length;
-    this.items = this.items.filter((i) => i.id !== id && !(i.submenu?.some((s) => s.id === id)));
+    this.items = this.items.filter((i) => i.id !== id && !i.submenu?.some((s) => s.id === id));
     return this.items.length !== before;
   }
 

@@ -53,6 +53,7 @@ export interface TranslationKeys {
     pairErrBtFail: string;
     pairErrBtFindFail: string;
     pairErrApiKeyMissing: string;
+    pairErrCloudDisabled: string;
     noCodeFromServer: string;
   };
   remote: {
@@ -122,6 +123,20 @@ export interface TranslationKeys {
     error: string;
     lanConnection: string;
     cloudConnection: string;
+  };
+  dashboard: {
+    title: string;
+    totalTokens: string;
+    estCost: string;
+    tokensUsage: string;
+    insights: string;
+    loading: string;
+    clearBtn: string;
+    confirmTitle: string;
+    confirmDesc: string;
+    mostUsage: string;
+    noUsage: string;
+    averageDaily: string;
   };
   errorFallback: {
     title: string;

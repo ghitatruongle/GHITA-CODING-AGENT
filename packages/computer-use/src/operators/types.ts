@@ -4,11 +4,14 @@
 //
 // Operator is the abstract contract for any input/output driver that the
 // ComputerUseController can dispatch against. Concrete implementations include
-// NutJSOperator (desktop, native), MobileAdbOperator (Android via adb),
-// MockOperator (tests / CI without display server), and future headless
+// TauriOperator (desktop, Rust-backed native), MobileAdbOperator (Android via
+// adb), MockOperator (tests / CI without display server), and future headless
 // drivers. The interface is intentionally narrow: capture, move, click, type,
 // press. Anything more sophisticated (drag, scroll, multi-touch) is composed
 // from these primitives in higher layers (e.g. ReAct loop, ActionParser).
+//
+// 'nutjs' is preserved in OperatorKind for telemetry backwards-compat only;
+// new code must use 'tauri'.
 //
 // Design notes:
 //   - All coordinates are PHYSICAL pixels in the OS coordinate space, not the
@@ -23,7 +26,7 @@
 
 import type { MouseButton, Point, ScreenCapture, ScreenSize } from '../index.js';
 
-export type OperatorKind = 'nutjs' | 'mobile-adb' | 'mock' | 'unknown';
+export type OperatorKind = 'tauri' | 'mobile-adb' | 'mock' | 'unknown' | 'nutjs';
 
 export interface OperatorCapabilities {
   /** True if the driver can capture the screen. */
@@ -32,7 +35,7 @@ export interface OperatorCapabilities {
   readonly canMouse: boolean;
   /** True if the driver can send keyboard input. */
   readonly canKeyboard: boolean;
-  /** True if the driver supports DPI scaling (nutjs only on some platforms). */
+  /** True if the driver supports DPI scaling (Tauri backend on all OSes). */
   readonly supportsDpiScaling: boolean;
 }
 
@@ -60,7 +63,7 @@ export interface OperatorContext {
  * Operator is the abstract contract every desktop/mobile driver must satisfy.
  * Methods are async because some drivers (adb) shell out, and the rest still
  * need to release the JS event loop for the React UI to stay responsive.
- */
+ */ 
 export interface Operator {
   /** Identifier for logs / metrics. */
   readonly kind: OperatorKind;
@@ -97,30 +100,28 @@ export interface Operator {
 export interface ReActStep {
   iteration: number;
   thought: string;
-  action: {
-    type: string;
-    inputs: Record<string, unknown>;
-  };
+  action: { type: string; inputs: Record<string, unknown> };
+  success: boolean;
+  error?: string;
+  durationMs: number;
   observation?: {
     capture: ScreenCapture;
     capturedAt: number;
   };
-  success: boolean;
-  error?: string;
-  /** Wall-clock duration for this iteration in ms. */
-  durationMs: number;
 }
 
-/** Termination signal for the ReAct loop. */
 export type ReActStopReason =
-  | 'completed'        // model returned a finished/None action
-  | 'max-iterations'   // hit the safety ceiling
-  | 'unsupported'      // model returned an action we cannot execute
-  | 'error';           // an action execution failed
+  | 'completed'
+  | 'unsupported'
+  | 'max-iterations'
+  | 'timeout'
+  | 'error'
+  | 'cancelled';
 
+/** Final outcome emitted by runReActLoop. */
 export interface ReActRunResult {
-  steps: ReActStep[];
   stopReason: ReActStopReason;
+  steps: ReActStep[];
   totalIterations: number;
   startedAt: number;
   finishedAt: number;

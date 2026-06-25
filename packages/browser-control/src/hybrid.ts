@@ -66,10 +66,11 @@ export class HybridBrowserController {
         await this.page.click(selectorOrDescription, { timeout: 3000 });
         return;
       } catch (err) {
-        console.warn(
-          `[HybridController] DOM click failed for "${selectorOrDescription}". Falling back to vision grounding.`,
-          err,
-        );
+        if (process.env.NODE_ENV !== 'production')
+          console.warn(
+            `[HybridController] DOM click failed for "${selectorOrDescription}". Falling back to vision grounding.`,
+            err,
+          );
       }
     }
 
@@ -108,10 +109,11 @@ export class HybridBrowserController {
         await this.page.fill(selectorOrDescription, value, { timeout: 3000 });
         return;
       } catch (err) {
-        console.warn(
-          `[HybridController] DOM fill failed for "${selectorOrDescription}". Falling back to vision grounding.`,
-          err,
-        );
+        if (process.env.NODE_ENV !== 'production')
+          console.warn(
+            `[HybridController] DOM fill failed for "${selectorOrDescription}". Falling back to vision grounding.`,
+            err,
+          );
       }
     }
 

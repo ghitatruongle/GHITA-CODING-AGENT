@@ -103,6 +103,11 @@ export const SOCKET_EVENTS = {
   MOBILE_TOUCH: 'mobile_touch',
   MOBILE_TYPE: 'mobile_type',
   MOBILE_KEY: 'mobile_key',
+  // Phase 2: File approval
+  FILE_APPROVAL: 'file_approval',
+  REQUIRE_FILE_APPROVAL: 'require_file_approval',
+  // Phase 2: Chat start event
+  CHAT_START: 'chat_start',
 } as const;
 
 // --- Screen Stream Defaults ---

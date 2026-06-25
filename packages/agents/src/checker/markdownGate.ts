@@ -53,21 +53,21 @@ function matchGlob(pattern: string, path: string): boolean {
   const norm = path.replace(/\\/g, '/');
   const pat = pattern.replace(/\\/g, '/');
   const re = new RegExp(
-    '^' +
+    `^${ 
       pat
         .replace(/[.+^${}()|[\]\\]/g, '\\$&')
         .replace(/^\*\*\//, '(?:.*/)?')
         .replace(/\/\*\*$/, '(?:/.*)?')
         .replace(/\*\*/g, '.*')
-        .replace(/\*/g, '[^/]*') +
-      '$',
+        .replace(/\*/g, '[^/]*') 
+      }$`,
   );
   return re.test(norm);
 }
 
 function joinFn(a: string, b: string): string {
   if (a.endsWith('/') || a.endsWith('\\')) return a + b;
-  return a + '/' + b;
+  return `${a  }/${  b}`;
 }
 
 // ----------------------------------------------------------------------------

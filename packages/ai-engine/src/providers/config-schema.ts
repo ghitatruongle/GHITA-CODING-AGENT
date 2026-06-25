@@ -249,9 +249,7 @@ export class ProviderConfigLoader {
       const errors = result.error.issues
         .map((i) => `  - ${i.path.join('.')}: ${i.message}`)
         .join('\n');
-      throw new Error(
-        `Invalid provider config${source ? ` (${source})` : ''}:\n${errors}`,
-      );
+      throw new Error(`Invalid provider config${source ? ` (${source})` : ''}:\n${errors}`);
     }
 
     return result.data as ProvidersYAMLRoot;

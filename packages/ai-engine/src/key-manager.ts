@@ -111,8 +111,10 @@ export class KeyManager {
       // Auth error — deactivate until user re-validates
       entry.isActive = false;
     } else if (entry.consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-      // Too many failures — deactivate
-      entry.isActive = false;
+      // Consecutive errors (like network timeouts) — place on a 30s cooldown
+      // and reset consecutiveFailures count so it can retry later, instead of deactivating.
+      entry.cooldownUntil = Date.now() + 30_000;
+      entry.consecutiveFailures = 0;
     }
   }
 
@@ -196,12 +198,21 @@ export class KeyManager {
   private selectByStrategy(pool: KeyEntry[]): string {
     switch (this.strategy) {
       case 'round-robin': {
-        this.roundRobinIndex = this.roundRobinIndex % pool.length;
-        const entry = pool[this.roundRobinIndex];
-        if (!entry) return pool[0]?.key ?? '';
-        const key = entry.key;
+        // Use stable index based on full key pool size rather than the
+        // healthy pool size, so the round-robin index doesn't jump when
+        // the healthy pool temporarily shrinks (e.g., a key is marked
+        // unhealthy and then recovers).
+        const fullLen = this.keys.length || pool.length;
+        this.roundRobinIndex = this.roundRobinIndex % fullLen;
+        // Find the entry at this index in the full pool, then check
+        // if it's in the healthy pool.
+        const fullEntry = this.keys[this.roundRobinIndex];
         this.roundRobinIndex++;
-        return key;
+        if (fullEntry && pool.some((e) => e.key === fullEntry.key)) {
+          return fullEntry.key;
+        }
+        // If the indexed key is unhealthy, fall back to first healthy
+        return pool[0]?.key ?? '';
       }
       case 'random': {
         const idx = Math.floor(Math.random() * pool.length);

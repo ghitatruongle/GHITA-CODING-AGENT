@@ -41,7 +41,9 @@ export class LockManager {
 
         // Validate lockfile version
         if (parsed.lockfileVersion !== 1) {
-          console.warn(`[LockManager] Unknown lockfile version: ${parsed.lockfileVersion}, resetting`);
+          console.warn(
+            `[LockManager] Unknown lockfile version: ${parsed.lockfileVersion}, resetting`,
+          );
           return { ...DEFAULT_LOCK };
         }
 
@@ -147,7 +149,10 @@ export class LockManager {
   /**
    * Verify a single locked entry's integrity hash.
    */
-  verifyEntry(skillId: string, computeHash: (entry: LockEntry) => string): {
+  verifyEntry(
+    skillId: string,
+    computeHash: (entry: LockEntry) => string,
+  ): {
     ok: boolean;
     expected: string;
     actual: string;
@@ -178,7 +183,7 @@ export class LockManager {
     actual: string;
     error?: string;
   }> {
-    return this.listIds().map(id => ({
+    return this.listIds().map((id) => ({
       skillId: id,
       ...this.verifyEntry(id, computeHash),
     }));
@@ -233,7 +238,7 @@ export class LockManager {
         currentMap.set(id, entry);
       }
     }
-    const newMap = new Map(newEntries.map(e => [e.id, e]));
+    const newMap = new Map(newEntries.map((e) => [e.id, e]));
 
     const added: LockEntry[] = [];
     const removed: string[] = [];
@@ -245,7 +250,10 @@ export class LockManager {
         added.push(entry);
       } else {
         const current = currentMap.get(id);
-        if (current && (current.version !== entry.version || current.integrity !== entry.integrity)) {
+        if (
+          current &&
+          (current.version !== entry.version || current.integrity !== entry.integrity)
+        ) {
           updated.push(entry);
         } else {
           unchanged.push(id);

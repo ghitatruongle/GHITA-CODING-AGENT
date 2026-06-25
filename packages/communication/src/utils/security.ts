@@ -2,6 +2,28 @@ import { lookup } from 'node:dns/promises';
 import { URL } from 'node:url';
 
 /**
+ * Expand an IPv6 address to its full 8-group canonical form for safe comparison.
+ * E.g. '::1' → '0000:0000:0000:0000:0000:0000:0000:0001'
+ */
+function normalizeIPv6(ip: string): string {
+  // Remove brackets
+  const clean = ip.replace(/[[\]]/g, '').toLowerCase().trim();
+
+  // Split on '::' to handle compression
+  const halves = clean.split('::');
+  const left = halves[0] ? halves[0].split(':') : [];
+  const right = halves.length > 1 && halves[1] ? halves[1].split(':') : [];
+
+  // Pad to fill 8 groups
+  const missing = 8 - left.length - right.length;
+  const middle = new Array(Math.max(0, missing)).fill('0');
+  const groups = [...left, ...middle, ...right];
+
+  // Pad each group to 4 hex digits
+  return groups.map((g) => g.padStart(4, '0')).join(':');
+}
+
+/**
  * Checks if a URL is safe from SSRF attacks by resolving its hostname
  * and checking if the resolved IP is in private/loopback/local subnets.
  */
@@ -46,15 +68,19 @@ export async function isSafeUrl(urlStr: string): Promise<boolean> {
 
     // Check IPv6 private and loopback ranges
     if (ip.includes(':')) {
-      const cleanIp = ip.replace(/[[\]]/g, '').toLowerCase().trim();
-      // Loopback (::1 or 0:0:0:0:0:0:0:1)
-      if (cleanIp === '::1' || cleanIp === '::' || cleanIp.endsWith(':1') && cleanIp.replace(/0/g, '').replace(/:/g, '') === '1') {
+      const normalized = normalizeIPv6(ip);
+      // Loopback ::1
+      if (normalized === '0000:0000:0000:0000:0000:0000:0000:0001') {
+        return false;
+      }
+      // Unspecified ::
+      if (normalized === '0000:0000:0000:0000:0000:0000:0000:0000') {
         return false;
       }
       // Link-local (fe80::/10)
-      if (cleanIp.startsWith('fe80:')) return false;
-      // Unique Local (fc00::/7)
-      if (cleanIp.startsWith('fc00:') || cleanIp.startsWith('fd00:')) return false;
+      if (normalized.startsWith('fe80:')) return false;
+      // Unique Local (fc00::/7 — fc00:: and fd00::)
+      if (normalized.startsWith('fc00:') || normalized.startsWith('fd00:')) return false;
     }
 
     return true;
