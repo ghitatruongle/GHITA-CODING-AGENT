@@ -30,10 +30,10 @@ export default defineConfig({
         'src/plugins/**',
       ],
       thresholds: {
-        statements: 25,
+        statements: 30,
         branches: 50,
         functions: 60,
-        lines: 25,
+        lines: 30,
       },
     },
   },

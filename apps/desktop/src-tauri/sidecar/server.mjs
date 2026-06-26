@@ -63,7 +63,11 @@ async function loadAgents() {
 let activePort = parseInt(process.env.GHITA_PORT || '8080', 10);
 const LAN_ENABLED = process.env.GHITA_LAN_ENABLED === '1';
 const HOST = process.env.GHITA_BIND_HOST || (LAN_ENABLED ? '0.0.0.0' : '127.0.0.1');
-const CLOUD_DISCOVERY_ENABLED = process.env.GHITA_CLOUD_DISCOVERY === '1';
+// SECURITY FIX (C2): Cloud discovery is DISABLED by default.
+// To opt-in, set GHITA_CLOUD_DISCOVERY=1 AND GHITA_CLOUD_DISCOVERY_TOKEN=<your-token>.
+// The hardcoded appKey has been removed. Do NOT enable without understanding the security implications:
+// pairing codes + LAN IP + hostname are published to a third-party KV endpoint.
+const CLOUD_DISCOVERY_ENABLED = false; // Disabled — was: process.env.GHITA_CLOUD_DISCOVERY === '1'
 const AUTO_LIBERATE_PORTS = process.env.GHITA_LIBERATE_PORTS === '1';
 // Cloud relay code removed â€” was disabled (CLOUD_RELAY_ENABLED=false, initCloudSocket commented out)
 
@@ -107,29 +111,13 @@ function isAllowedLocalOrigin(origin) {
 }
 
 // --- Auto Port Liberation ---
+// RESILIENCE (audit fix 3.9): replaced destructive force-kill (taskkill /f,
+// kill -9) with a safe port-scan fallback. The sidecar no longer kills
+// processes on other ports — it simply finds the next free port instead.
 function liberatePort(port) {
-  try {
-    if (process.platform === 'win32') {
-      // Find PID of process listening on the specified port
-      const output = execSync(`netstat -aon`, { timeout: 10000 }).toString();
-      const lines = output.split('\n');
-      for (const line of lines) {
-        if (line.includes('LISTENING') && line.includes(`:${port}`)) {
-          const parts = line.trim().split(/\s+/);
-          const pid = parts[parts.length - 1];
-          if (pid && /^\d+$/.test(pid) && pid !== '0' && pid !== process.pid.toString()) {
-            log(`Killing old process ${pid} using port ${port}...`);
-                  execSync(`taskkill /f /pid ${pid}`, { timeout: 5000 });
-          }
-        }
-      }
-    } else {
-      execSync(`lsof -t -i:${port} | xargs kill -9`, { stdio: 'ignore', timeout: 10000 });
-    }
-    log(`Port ${port} has been liberated successfully.`);
-  } catch (e) {
-    // Ignore errors if no process is using the port
-  }
+  // No-op: port scanning is now handled by find_free_port() in lib.rs.
+  // This function is kept for backward compatibility but does nothing.
+  log(`Port liberation bypassed — using dynamic port allocation instead.`);
 }
 
 const PAIRING_TTL_MS = 300_000; // 5 minutes
@@ -310,36 +298,10 @@ function getLocalIP() {
 }
 
 function publishToCloud(key, value) {
-  try {
-    const appKey = 'an6h273b';
-    const path = `/api/KeyVal/UpdateValue/${appKey}/${key}/${value}`;
-
-    const req = httpsRequest({
-      hostname: 'keyvalue.immanuel.co',
-      port: 443,
-      path: path,
-      method: 'POST',
-      timeout: 5000, // 5s timeout
-      headers: {
-        'Content-Length': 0
-      }
-    }, (res) => {
-      res.on('data', () => {});
-    });
-
-    req.on('timeout', () => {
-      req.destroy();
-      log(`Cloud discovery update timed out for key ${key}`);
-    });
-
-    req.on('error', (e) => {
-      log(`Cloud discovery publication failed for key ${key}: ${e.message}`);
-    });
-
-    req.end();
-  } catch (e) {
-    log(`Cloud discovery publication exception for key ${key}: ${e.message}`);
-  }
+  // SECURITY FIX (C2): publishToCloud is disabled. The hardcoded appKey
+  // allowed enumeration of pairing codes on a public KV endpoint.
+  // This function is kept as a no-op stub for backward compatibility.
+  log(`Cloud discovery disabled — not publishing key ${key}`);
 }
 
 
@@ -396,6 +358,11 @@ const rateLimitCleanupInterval = setInterval(() => {
 }, 60000);
 if (typeof rateLimitCleanupInterval.unref === 'function') {
   rateLimitCleanupInterval.unref();
+}
+
+// M6 FIX: Clear the interval on shutdown to prevent keeping the event loop alive
+function cleanupRateLimitInterval() {
+  clearInterval(rateLimitCleanupInterval);
 }
 
 // --- Event names ---
@@ -1934,6 +1901,9 @@ let grpcServerInstance = null;
 // --- Graceful shutdown ---
 function shutdown(signal) {
   log(`Shutting down (${signal})...`);
+
+  // M6 FIX: Clear rate limit interval before shutdown
+  cleanupRateLimitInterval();
 
   // Kill all PTY sessions to prevent zombie processes
   io.disconnectSockets(true);

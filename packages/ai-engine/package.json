@@ -2,6 +2,7 @@
   "name": "@ghita/ai-engine",
   "version": "0.1.0",
   "private": true,
+  "sideEffects": false,
   "description": "AI multi-provider engine cho GHITA CODING AGENT",
   "main": "./dist/index.js",
   "type": "module",
@@ -34,9 +35,6 @@
     "@types/better-sqlite3": "^7.6.12",
     "@types/ws": "^8.5.12",
     "cross-env": "^10.1.0",
-    "debug": "^4.4.0",
-    "socket.io-client": "^4.8.3",
-    "socket.io-parser": "^4.2.6",
     "typescript": "^5.6.0",
     "vitest": "^3.2.4",
     "yaml": "^2.9.0"

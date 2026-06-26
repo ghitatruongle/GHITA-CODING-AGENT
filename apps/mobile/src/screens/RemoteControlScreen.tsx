@@ -4,7 +4,16 @@
 // ==============================================================================
 
 import React from 'react';
-import { View, Text, ScrollView, StatusBar, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  StatusBar,
+  TouchableOpacity,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { ThemeColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
@@ -14,12 +23,7 @@ import { socketService } from '../services/socketService';
 import type { RemoteControlScreenProps } from '../navigation/types';
 import { useTranslation } from '../i18n/context';
 
-import {
-  ScreenPreviewPanel,
-  RemoteChatPanel,
-  RemoteActionBar,
-  useRemoteControl,
-} from './remote';
+import { ScreenPreviewPanel, RemoteChatPanel, RemoteActionBar, useRemoteControl } from './remote';
 
 export function RemoteControlScreen({
   route,
@@ -31,12 +35,25 @@ export function RemoteControlScreen({
   const { deviceName } = route.params;
 
   const {
-    connectionState, isConnected,
-    screenshotBase64, screenshotLoading,
-    chatMessages, activeApproval, costTelemetry,
-    showSkills, setShowSkills, skillsList, skillsLoading, skillRunning,
-    handleQuickAction, handleChatSend, handleScreenTouch, handleDisconnect,
-    handleApproveCommand, handleRejectCommand, runSkill,
+    connectionState,
+    isConnected,
+    screenshotBase64,
+    screenshotLoading,
+    chatMessages,
+    activeApproval,
+    costTelemetry,
+    showSkills,
+    setShowSkills,
+    skillsList,
+    skillsLoading,
+    skillRunning,
+    handleQuickAction,
+    handleChatSend,
+    handleScreenTouch,
+    handleDisconnect,
+    handleApproveCommand,
+    handleRejectCommand,
+    runSkill,
   } = useRemoteControl(route, navigation);
 
   return (
@@ -70,6 +87,7 @@ export function RemoteControlScreen({
               onPress={() => navigation.navigate('Dashboard')}
               style={styles.btnTouchable}
               accessibilityLabel="Dashboard"
+              accessibilityRole="button"
             >
               <Text style={styles.btnText}>📊</Text>
             </TouchableOpacity>
@@ -77,6 +95,7 @@ export function RemoteControlScreen({
               onPress={() => navigation.navigate('Settings')}
               style={styles.btnTouchable}
               accessibilityLabel="Settings"
+              accessibilityRole="button"
             >
               <Text style={styles.btnText}>&#9881;</Text>
             </TouchableOpacity>
@@ -84,6 +103,7 @@ export function RemoteControlScreen({
               onPress={handleDisconnect}
               style={styles.disconnectTouchable}
               accessibilityLabel="Disconnect"
+              accessibilityRole="button"
             >
               <Text style={styles.disconnectText}>&#10005;</Text>
             </TouchableOpacity>
@@ -146,11 +166,19 @@ const createStyles = (colors: ThemeColors) =>
     deviceName: { color: colors.primaryLight, fontSize: FontSize.lg, fontWeight: '700' },
     headerRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
     btnTouchable: {
-      minWidth: 44, minHeight: 44, justifyContent: 'center', alignItems: 'center', borderRadius: Radius.md,
+      minWidth: 44,
+      minHeight: 44,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderRadius: Radius.md,
     },
     btnText: { color: colors.textSecondary, fontSize: FontSize.xxl },
     disconnectTouchable: {
-      minWidth: 44, minHeight: 44, justifyContent: 'center', alignItems: 'center', borderRadius: Radius.md,
+      minWidth: 44,
+      minHeight: 44,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderRadius: Radius.md,
     },
     disconnectText: { color: colors.textDark, fontSize: FontSize.xxl },
     connectionRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },

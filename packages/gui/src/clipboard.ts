@@ -10,7 +10,6 @@
 export class ClipboardService {
   private tauriAvailable: boolean | null = null;
 
-  // eslint-disable-next-line @typescript-eslint/no-implied-eval
   private dynamicImport = new Function('specifier', 'return import(specifier)') as (
     specifier: string,
   ) => Promise<Record<string, unknown>>;

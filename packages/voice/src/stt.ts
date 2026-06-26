@@ -79,8 +79,7 @@ export class SpeechToText {
   private async transcribeViaWhisperApi(req: SttRequest): Promise<SttResult> {
     const durationMs = this.computeDuration(req);
 
-    // Build FormData with the audio blob
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument -- Uint8Array is a valid BlobPart at runtime
+    // Build FormData with the audio blob — Uint8Array is a valid BlobPart at runtime
     const audioBlob = new Blob([req.audio.data as unknown as BlobPart], { type: 'audio/wav' });
     const form = new FormData();
     form.append('file', audioBlob, 'audio.wav');
@@ -164,8 +163,7 @@ export class SpeechToText {
   private computeDuration(req: SttRequest): number {
     const bytesPerSample = 2; // 16-bit PCM
     return (
-      (req.audio.data.byteLength /
-        (req.audio.sampleRate * req.audio.channels * bytesPerSample)) *
+      (req.audio.data.byteLength / (req.audio.sampleRate * req.audio.channels * bytesPerSample)) *
       1000
     );
   }

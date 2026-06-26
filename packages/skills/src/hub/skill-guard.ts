@@ -72,7 +72,7 @@ export function computeSkillHash(meta: SkillMeta, contentPaths?: string[]): stri
     // Backwards-compatible behaviour: callers that haven't been updated
     // to pass content paths still get a metadata-only hash. We emit a
     // warning so the gap is visible at install time.
-     
+
     console.warn(
       `[SkillGuard] computeSkillHash(${meta.id}) called without contentPaths — ` +
         'integrity check is metadata-only and can be bypassed by editing script files.',
@@ -86,14 +86,14 @@ export function computeSkillHash(meta: SkillMeta, contentPaths?: string[]): stri
       const content = fs.readFileSync(p, 'utf8');
       fileHashes.push(`${p}:${computeContentHash(content)}`);
     } catch (err) {
-       
       console.warn(
-        `[SkillGuard] failed to hash file ${p} for skill ${meta.id}: ${ 
-          err instanceof Error ? err.message : String(err)}`,
+        `[SkillGuard] failed to hash file ${p} for skill ${meta.id}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
       );
     }
   }
-  return computeContentHash(`${metaHash  }\n${  fileHashes.sort().join('\n')}`);
+  return computeContentHash(`${metaHash}\n${fileHashes.sort().join('\n')}`);
 }
 
 // --- Trust Level Resolution ---
@@ -161,9 +161,15 @@ export function normalizeRepoUrl(url: string): string {
 
 /**
  * Verify a skill's content hash matches expected hash.
+ * SECURITY (audit fix 2.17): forwards contentPaths to computeSkillHash
+ * so script files are included in the integrity check, not just metadata.
  */
-export function verifySkillHash(meta: SkillMeta, expectedHash: string): VerifyResult {
-  const actualHash = computeSkillHash(meta);
+export function verifySkillHash(
+  meta: SkillMeta,
+  expectedHash: string,
+  contentPaths?: string[],
+): VerifyResult {
+  const actualHash = computeSkillHash(meta, contentPaths);
   const ok = actualHash === expectedHash;
 
   return {
@@ -206,15 +212,18 @@ export interface IntegrityReport {
 
 /**
  * Full integrity check for a SkillMeta entry.
+ * SECURITY (audit fix 2.17): forwards contentPaths to computeSkillHash
+ * so script files are included in the integrity check, not just metadata.
  */
 export function checkIntegrity(
   meta: SkillMeta,
   trustedRepos: string[] = DEFAULT_TRUSTED_REPOS,
+  contentPaths?: string[],
 ): IntegrityReport {
   const issues: string[] = [];
 
   // Check hash consistency
-  const computedHash = computeSkillHash(meta);
+  const computedHash = computeSkillHash(meta, contentPaths);
   const hashValid = computedHash === meta.contentHash;
   if (!hashValid) {
     issues.push(`Content hash mismatch: stored=${meta.contentHash}, computed=${computedHash}`);
@@ -281,19 +290,19 @@ export class SkillGuard {
     return this.trustedRepos.some((tr) => normalizeRepoUrl(tr) === normalized);
   }
 
-  /** Compute content hash for a skill */
-  computeHash(meta: SkillMeta): string {
-    return computeSkillHash(meta);
+  /** Compute content hash for a skill (SECURITY audit fix 2.17: forwards contentPaths) */
+  computeHash(meta: SkillMeta, contentPaths?: string[]): string {
+    return computeSkillHash(meta, contentPaths);
   }
 
-  /** Verify a skill's integrity */
-  verify(meta: SkillMeta, expectedHash: string): VerifyResult {
-    return verifySkillHash(meta, expectedHash);
+  /** Verify a skill's integrity (SECURITY audit fix 2.17: forwards contentPaths) */
+  verify(meta: SkillMeta, expectedHash: string, contentPaths?: string[]): VerifyResult {
+    return verifySkillHash(meta, expectedHash, contentPaths);
   }
 
-  /** Full integrity check */
-  checkIntegrity(meta: SkillMeta): IntegrityReport {
-    return checkIntegrity(meta, this.trustedRepos);
+  /** Full integrity check (SECURITY audit fix 2.17: forwards contentPaths) */
+  checkIntegrity(meta: SkillMeta, contentPaths?: string[]): IntegrityReport {
+    return checkIntegrity(meta, this.trustedRepos, contentPaths);
   }
 
   /** Resolve trust level for a skill */

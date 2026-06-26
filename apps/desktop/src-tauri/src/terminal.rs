@@ -125,12 +125,14 @@ fn resolve_shell(shell_type: &str) -> String {
         "powershell" | "pwsh" => "powershell.exe".to_string(),
         "cmd" => "cmd.exe".to_string(),
         #[cfg(not(target_os = "windows"))]
+        "zsh" => "zsh".to_string(),
+        #[cfg(not(target_os = "windows"))]
         "bash" => "bash".to_string(),
         #[cfg(not(target_os = "windows"))]
         "sh" => "sh".to_string(),
         #[cfg(target_os = "windows")]
-        "bash" | "sh" => {
-            // CORRECTNESS (audit fix 3.5): bash/sh are only available on
+        "bash" | "sh" | "zsh" => {
+            // CORRECTNESS (audit fix 3.5): bash/sh/zsh are only available on
             // Windows via WSL or Git-Bash — both are not assumed to be
             // installed. Fall back to powershell.exe so the terminal
             // always launches something rather than a confusing
@@ -138,9 +140,12 @@ fn resolve_shell(shell_type: &str) -> String {
             "powershell.exe".to_string()
         }
         _ => {
-            // Platform default
+            // Platform default — macOS prefers zsh (default since Catalina),
+            // Linux prefers bash, Windows prefers powershell.
             if cfg!(target_os = "windows") {
                 "powershell.exe".to_string()
+            } else if cfg!(target_os = "macos") {
+                "zsh".to_string()
             } else {
                 "bash".to_string()
             }

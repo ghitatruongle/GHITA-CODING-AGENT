@@ -2,6 +2,7 @@
   "name": "@ghita/browser-control",
   "version": "0.1.0",
   "private": true,
+  "sideEffects": false,
   "description": "Browser automation (Playwright + CloakBrowser) cho GHITA CODING AGENT",
   "main": "./dist/index.js",
   "type": "module",
@@ -19,6 +20,9 @@
   "scripts": {
     "build": "tsc -b",
     "dev": "tsc -b --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
     "clean": "node -e \"const fs=require('fs'); fs.rmSync('dist',{recursive:true,force:true}); fs.readdirSync('.').filter(f=>f.endsWith('.tsbuildinfo')).forEach(f=>fs.rmSync(f,{force:true}))\""
@@ -27,11 +31,11 @@
     "@ghita/skills": "workspace:*",
     "@ghita/shared": "workspace:*",
     "@ghita/computer-use": "workspace:*",
-    "playwright": "^1.60.0",
-    "playwright-stealth": "^0.0.1"
+    "playwright": "^1.60.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
-    "typescript": "^5.6.0"
+    "typescript": "^5.6.0",
+    "vitest": "^3.2.4"
   }
 }

@@ -35,7 +35,7 @@ export const ko: TranslationKeys = {
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v0.0.4',
+    version: 'v0.0.5 beta',
     deviceReconnected: '기기에 다시 연결됨: {{name}}',
     devicePaired: '기기 페어링 성공: {{name}}',
     commandReceived: '기기로부터 명령 수신: {{action}}',
@@ -142,8 +142,7 @@ export const ko: TranslationKeys = {
     bluetoothConnection: '무선 블루투스 연결',
     bluetoothGuide: '휴대폰에서 블루투스 탭으로 전환하고 다음 컴퓨터 이름을 입력하세요:',
     bluetoothHostname: '컴퓨터 이름',
-    bluetoothHint:
-      '참고: 블루투스 연결을 사용할 때는 IP 주소나 페어링 코드가 필요하지 않습니다.',
+    bluetoothHint: '참고: 블루투스 연결을 사용할 때는 IP 주소나 페어링 코드가 필요하지 않습니다.',
     connectedDevices: '연결된 기기 목록',
     lastSeen: '최근 활성 시간:',
     unpair: '기기 페어링 해제',
@@ -178,7 +177,8 @@ export const ko: TranslationKeys = {
     hooksEmpty: '구성된 후크가 없습니다. 설정에서 새 스크립트를 구성하세요.',
     contextWindow: '컨텍스트 메모리 한계',
     tokenUsage: '토큰 사용 통계',
-    contextWarning: '경고: 컨텍스트 메모리가 거의 가득 찼습니다! 시스템이 필요에 따라 자동 압축합니다.',
+    contextWarning:
+      '경고: 컨텍스트 메모리가 거의 가득 찼습니다! 시스템이 필요에 따라 자동 압축합니다.',
     contextRemaining: '{{percent}}% 남음',
     modelContextProtocol: 'Model Context Protocol',
     ralphLoopSession: 'Ralph 루프 및 세션',
@@ -251,11 +251,9 @@ export const ko: TranslationKeys = {
   },
   ecosystem: {
     title: '생태계 및 구성 요소 통합',
-    subtitle:
-      '백그라운드 gRPC 통신, 표준화된 Agent Protocol API 및 LLM 비용 라우터를 관리합니다.',
+    subtitle: '백그라운드 gRPC 통신, 표준화된 Agent Protocol API 및 LLM 비용 라우터를 관리합니다.',
     grpcDaemon: 'gRPC 데몬 코어 서버',
-    grpcDesc:
-      'VS Code 확장에 특화된 고성능 이진 통신 채널입니다.',
+    grpcDesc: 'VS Code 확장에 특화된 고성능 이진 통신 채널입니다.',
     serverPort: '데몬 포트:',
     daemonConsole: '데몬 라이브 콘솔:',
     startDaemon: '데몬 시작',
@@ -358,8 +356,7 @@ export const ko: TranslationKeys = {
     running: '명령 실행 중...',
     placeholder: '여기에 명령 입력...',
     failedToExecute: '실행 실패. 권한을 확인하고 명령이 유효한지 확인하세요.',
-    permissionHint:
-      '호스트 머신에 명령이 존재하고 충분한 권한이 있는지 확인하세요.',
+    permissionHint: '호스트 머신에 명령이 존재하고 충분한 권한이 있는지 확인하세요.',
     pathNotFound: "디렉토리 또는 파일 경로 '{{path}}'가 존재하지 않습니다",
   },
   errorFallback: {
@@ -421,8 +418,7 @@ export const ko: TranslationKeys = {
   },
   skillManager: {
     title: '스킬 관리',
-    subtitle:
-      '내장 기능 및 맞춤형 자동화 스킬을 활성화, 비활성화하고 진단 테스트를 실행합니다.',
+    subtitle: '내장 기능 및 맞춤형 자동화 스킬을 활성화, 비활성화하고 진단 테스트를 실행합니다.',
     enabledSkills: '활성 기능',
     testRun: '진단 테스트 실행',
     running: '진단 실행 중...',
@@ -455,8 +451,7 @@ export const ko: TranslationKeys = {
     socraticQuestions: '반성적 소크라테스식 질문 ({{count}}개)',
     sources: '참조 소스:',
     designDecisions: '아키텍처 설계 결정',
-    allConsistent:
-      '모든 문서가 완전히 일치하는 것으로 보입니다. 감지된 아키텍처 모순이 없습니다.',
+    allConsistent: '모든 문서가 완전히 일치하는 것으로 보입니다. 감지된 아키텍처 모순이 없습니다.',
   },
   sandbox: {
     loadingStatus: '샌드박스 환경 상태 확인 중...',

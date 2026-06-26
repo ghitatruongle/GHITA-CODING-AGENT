@@ -125,12 +125,13 @@ jobs:
                 FAILED=1
               fi
             else
-              echo "$pkg: no coverage data (skipped)"
+              echo "  ❌ No coverage data for $pkg (missing vitest config or no tests?)"
+              FAILED=1
             fi
           done
           if [ "$FAILED" -eq 1 ]; then
             echo ""
-            echo "❌ Coverage gate FAILED — one or more packages are below 80% line coverage."
+            echo "❌ Coverage gate FAILED — one or more packages are below 80% or missing coverage."
             exit 1
           fi
           echo ""
@@ -197,8 +198,12 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: npm audit (critical+ only)
+      - name: pnpm audit (critical+ only)
         run: pnpm audit --audit-level=critical
+        continue-on-error: true
+
+      - name: Check unused dependencies (knip)
+        run: pnpm knip --no-progress
         continue-on-error: true
 
       - name: Upload audit report

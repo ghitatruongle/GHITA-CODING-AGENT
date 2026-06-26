@@ -32,7 +32,7 @@ function normalizeUrl(raw: string): string {
   if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
     try {
       // Thử parse xem có phải domain không
-      const withHttps = `https://${  trimmed}`;
+      const withHttps = `https://${trimmed}`;
       new URL(withHttps);
       // Phải có dấu chấm thì mới là domain
       if (trimmed.includes('.') && !trimmed.includes(' ')) {
@@ -302,7 +302,7 @@ export function WebViewPanel() {
                   />
                 ) : tab.displayUrl ? (
                   <img
-                    src={`https://www.google.com/s2/favicons?domain=${tab.displayUrl}&sz=16`}
+                    src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(tab.displayUrl)}&sz=16`}
                     style={{ width: 14, height: 14, borderRadius: 2 }}
                     onError={(e) => (e.currentTarget.style.display = 'none')}
                   />
@@ -509,7 +509,7 @@ export function WebViewPanel() {
                 borderRadius: 20,
                 color: TEXT_PRIMARY,
                 fontSize: '13px',
-                outline: 'none',
+                // ACCESSIBILITY (audit fix 1.3): removed outline:none
                 transition: 'all 0.15s',
                 fontFamily: 'inherit',
               }}
@@ -599,7 +599,7 @@ export function WebViewPanel() {
 
         {activeTab?.url ? (
           <iframe
-            key={`${activeTab.id  }_${  activeTab.url}`}
+            key={`${activeTab.id}_${activeTab.url}`}
             ref={iframeRef}
             src={activeTab.url}
             style={{ width: '100%', height: '100%', border: 'none', background: 'white' }}
@@ -639,11 +639,7 @@ export function WebViewPanel() {
             </div>
 
             {/* Quick access links */}
-            <QuickAccessLinks
-              onNavigate={navigateTo}
-              border={BORDER}
-              textPrimary={TEXT_PRIMARY}
-            />
+            <QuickAccessLinks onNavigate={navigateTo} border={BORDER} textPrimary={TEXT_PRIMARY} />
           </div>
         )}
       </div>

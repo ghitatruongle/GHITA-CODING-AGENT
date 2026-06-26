@@ -164,6 +164,51 @@ jobs:
             apps/desktop/src-tauri/target/release/bundle/macos/*.app
             apps/desktop/src-tauri/target/release/bundle/dmg/*.dmg
 
+  build-ios:
+    needs: create-release
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build shared package
+        run: pnpm --filter @ghita/shared build
+
+      - name: Install CocoaPods
+        working-directory: apps/mobile/ios
+        run: pod install
+
+      - name: Build iOS Release
+        working-directory: apps/mobile/ios
+        run: |
+          xcodebuild -workspace GhitaMobile.xcworkspace \
+            -scheme GhitaMobile \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Upload iOS build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-release-build
+          path: |
+            apps/mobile/ios/build/Build/Products/*/*.app
+            apps/mobile/ios/build/Build/Products/*/*.app.dSYM
+          retention-days: 30
+
   generate-updater-json:
     needs: [build-windows, build-linux, build-macos]
     runs-on: ubuntu-latest
@@ -186,6 +231,14 @@ jobs:
               "linux-x86_64": {
                 "signature": "",
                 "url": "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/ghita-coding-agent_${VERSION}_amd64.deb"
+              },
+              "darwin-x86_64": {
+                "signature": "",
+                "url": "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/GHITA-CODING-AGENT_${VERSION}_x64.dmg"
+              },
+              "darwin-aarch64": {
+                "signature": "",
+                "url": "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/GHITA-CODING-AGENT_${VERSION}_aarch64.dmg"
               }
             }
           }

@@ -206,12 +206,16 @@ function XtermPane({
 
         // Send user input to Rust PTY
         term.onData((data: string) => {
-          invoke('terminal_write', { id: currentTabId, data }).catch(() => {});
+          invoke('terminal_write', { id: currentTabId, data }).catch((e) =>
+            console.warn('[terminal] write failed:', e),
+          );
         });
 
         // Handle terminal resize
         term.onResize(({ cols, rows }: { cols: number; rows: number }) => {
-          invoke('terminal_resize', { id: currentTabId, cols, rows }).catch(() => {});
+          invoke('terminal_resize', { id: currentTabId, cols, rows }).catch((e) =>
+            console.warn('[terminal] resize failed:', e),
+          );
         });
 
         term.writeln(`\x1b[38;5;82m✓ PTY connected (native Rust)\x1b[0m`);

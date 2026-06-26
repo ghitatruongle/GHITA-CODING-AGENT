@@ -125,7 +125,7 @@ export function ChatInput({
             <button
               key={cmd.trigger}
               onClick={() => {
-                setInput(`${cmd.trigger  } `);
+                setInput(`${cmd.trigger} `);
                 setShowSlashMenu(false);
               }}
               style={{
@@ -188,7 +188,7 @@ export function ChatInput({
             borderRadius: '8px',
             color: '#f8fafc',
             fontSize: '13px',
-            outline: 'none',
+            // ACCESSIBILITY (audit fix 1.3): removed outline:none
             transition: 'border 0.2s',
           }}
           className="focus-ring"

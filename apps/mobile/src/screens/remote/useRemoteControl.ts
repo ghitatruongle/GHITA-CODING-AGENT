@@ -75,7 +75,11 @@ export function useRemoteControl(
     null,
   );
   const [costTelemetry, setCostTelemetry] = useState<CostTelemetry>({
-    inputTokens: 0, outputTokens: 0, totalTokens: 0, costUsd: 0.0, limitUsd: 5.0,
+    inputTokens: 0,
+    outputTokens: 0,
+    totalTokens: 0,
+    costUsd: 0.0,
+    limitUsd: 5.0,
   });
   const [showSkills, setShowSkills] = useState(false);
   const [skillsList, setSkillsList] = useState<SkillItem[]>([]);
@@ -87,7 +91,9 @@ export function useRemoteControl(
 
   useEffect(() => {
     mountedRef.current = true;
-    return () => { mountedRef.current = false; };
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   const clearScreenshotTimeout = useCallback(() => {
@@ -113,11 +119,19 @@ export function useRemoteControl(
           if (settings.vibrationEnabled && state === 'connected') {
             Vibration.vibrate(Platform.OS === 'ios' ? [0, 15, 60, 15] : [0, 50, 50, 50]);
           }
-        } catch {}
+        } catch (e) {
+          console.warn('[useRemoteControl] loadSettings failed:', e);
+        }
         if (state === 'error') {
           Alert.alert(t('remote.lostConnectionTitle'), t('remote.lostConnectionDesc'), [
             { text: t('remote.stay'), style: 'cancel' },
-            { text: t('remote.goBack'), onPress: () => { socketService.disconnect(); navigation.replace('Pairing'); } },
+            {
+              text: t('remote.goBack'),
+              onPress: () => {
+                socketService.disconnect();
+                navigation.replace('Pairing');
+              },
+            },
           ]);
         }
       },
@@ -129,7 +143,8 @@ export function useRemoteControl(
       onChatResponse: async (message) => {
         setChatMessages((prev) => {
           const updated = [...prev, message];
-          if (updated.length > MAX_CHAT_MESSAGES) updated.splice(0, updated.length - MAX_CHAT_MESSAGES);
+          if (updated.length > MAX_CHAT_MESSAGES)
+            updated.splice(0, updated.length - MAX_CHAT_MESSAGES);
           chatHistoryRef.current = [...updated];
           return updated;
         });
@@ -141,16 +156,23 @@ export function useRemoteControl(
           if (settings.vibrationEnabled) {
             Vibration.vibrate(Platform.OS === 'ios' ? 15 : 100);
           }
-        } catch {}
+        } catch (e) {
+          console.warn('[useRemoteControl] vibration settings failed:', e);
+        }
       },
       onApprovalRequest: (data) => {
         setActiveApproval(data);
         if (AppState.currentState !== 'active') {
-          notificationService.displayNotification('Approval Required', `The agent wants to run: ${data.command}`);
+          notificationService.displayNotification(
+            'Approval Required',
+            `The agent wants to run: ${data.command}`,
+          );
         }
         try {
           Vibration.vibrate(Platform.OS === 'ios' ? [0, 30, 60, 40] : [0, 100, 50, 150]);
-        } catch {}
+        } catch (e) {
+          console.warn('[useRemoteControl] vibration failed:', e);
+        }
       },
       onCostTelemetry: (data) => {
         setCostTelemetry(data);
@@ -165,18 +187,27 @@ export function useRemoteControl(
       onError: (error) => {
         clearScreenshotTimeout();
         setScreenshotLoading(false);
-        Alert.alert(t('common.error'), error, [{
-          text: t('common.ok'),
-          onPress: () => {
-            if (error.includes('Session expired') || error.includes('re-pair') || error.includes('Unauthorized')) {
-              socketService.disconnect();
-              navigation.replace('Pairing');
-            }
+        Alert.alert(t('common.error'), error, [
+          {
+            text: t('common.ok'),
+            onPress: () => {
+              if (
+                error.includes('Session expired') ||
+                error.includes('re-pair') ||
+                error.includes('Unauthorized')
+              ) {
+                socketService.disconnect();
+                navigation.replace('Pairing');
+              }
+            },
           },
-        }]);
+        ]);
       },
     });
-    return () => { clearScreenshotTimeout(); socketService.clearCallbacks(); };
+    return () => {
+      clearScreenshotTimeout();
+      socketService.clearCallbacks();
+    };
   }, [clearScreenshotTimeout, navigation, t]);
 
   // Auto-reconnect
@@ -208,7 +239,13 @@ export function useRemoteControl(
       }
       Alert.alert(t('remote.disconnectTitle'), t('remote.disconnectDesc'), [
         { text: t('common.cancel'), style: 'cancel' },
-        { text: t('remote.disconnectBtn'), onPress: () => { socketService.disconnect(); navigation.replace('Pairing'); } },
+        {
+          text: t('remote.disconnectBtn'),
+          onPress: () => {
+            socketService.disconnect();
+            navigation.replace('Pairing');
+          },
+        },
       ]);
       return true;
     };
@@ -216,32 +253,46 @@ export function useRemoteControl(
     return () => handler.remove();
   }, [navigation, t, activeApproval]);
 
-  const handleQuickAction = useCallback((type: QuickAction['type']) => {
-    switch (type) {
-      case 'screenshot':
-        if (!isConnected) return;
-        clearScreenshotTimeout();
-        setScreenshotLoading(true);
-        screenshotTimeoutRef.current = setTimeout(() => {
-          screenshotTimeoutRef.current = null;
-          setScreenshotLoading(false);
-          Alert.alert(t('remote.chatTimeoutTitle'), t('remote.screenshotTimeoutDesc'));
-        }, SCREENSHOT_TIMEOUT_MS);
-        socketService.requestScreenshot();
-        break;
-      case 'approve': socketService.sendApprove(); break;
-      case 'reject': socketService.sendReject(); break;
-      case 'cancel': socketService.sendCommand('cancel'); break;
-      case 'skills':
-        if (!isConnected) return;
-        setShowSkills(true);
-        loadSkills();
-        break;
-    }
-  }, [clearScreenshotTimeout, isConnected, t]);
+  const handleQuickAction = useCallback(
+    (type: QuickAction['type']) => {
+      switch (type) {
+        case 'screenshot':
+          if (!isConnected) return;
+          clearScreenshotTimeout();
+          setScreenshotLoading(true);
+          screenshotTimeoutRef.current = setTimeout(() => {
+            screenshotTimeoutRef.current = null;
+            setScreenshotLoading(false);
+            Alert.alert(t('remote.chatTimeoutTitle'), t('remote.screenshotTimeoutDesc'));
+          }, SCREENSHOT_TIMEOUT_MS);
+          socketService.requestScreenshot();
+          break;
+        case 'approve':
+          socketService.sendApprove();
+          break;
+        case 'reject':
+          socketService.sendReject();
+          break;
+        case 'cancel':
+          socketService.sendCommand('cancel');
+          break;
+        case 'skills':
+          if (!isConnected) return;
+          setShowSkills(true);
+          loadSkills();
+          break;
+      }
+    },
+    [clearScreenshotTimeout, isConnected, t],
+  );
 
   const handleChatSend = useCallback((text: string) => {
-    const userMessage: ChatMessage = { id: generateMessageId(), text, sender: 'user', timestamp: Date.now() };
+    const userMessage: ChatMessage = {
+      id: generateMessageId(),
+      text,
+      sender: 'user',
+      timestamp: Date.now(),
+    };
     setChatMessages((prev) => {
       const updated = [...prev, userMessage];
       if (updated.length > MAX_CHAT_MESSAGES) updated.splice(0, updated.length - MAX_CHAT_MESSAGES);
@@ -251,15 +302,25 @@ export function useRemoteControl(
     socketService.sendChatMessage(text);
   }, []);
 
-  const handleScreenTouch = useCallback((rx: number, ry: number) => {
-    if (!isConnected) return;
-    socketService.sendTouch(rx, ry, 'left', 'click');
-  }, [isConnected]);
+  const handleScreenTouch = useCallback(
+    (rx: number, ry: number) => {
+      if (!isConnected) return;
+      socketService.sendTouch(rx, ry, 'left', 'click');
+    },
+    [isConnected],
+  );
 
   const handleDisconnect = useCallback(() => {
     Alert.alert(t('remote.disconnectTitle'), t('remote.disconnectDesc'), [
       { text: t('common.cancel'), style: 'cancel' },
-      { text: t('remote.disconnectBtn'), style: 'destructive', onPress: () => { socketService.disconnect(); navigation.replace('Pairing'); } },
+      {
+        text: t('remote.disconnectBtn'),
+        style: 'destructive',
+        onPress: () => {
+          socketService.disconnect();
+          navigation.replace('Pairing');
+        },
+      },
     ]);
   }, [navigation, t]);
 
@@ -312,10 +373,25 @@ export function useRemoteControl(
   }, []);
 
   return {
-    connectionState, isConnected, screenshotBase64, screenshotLoading,
-    chatMessages, activeApproval, costTelemetry,
-    showSkills, setShowSkills, skillsList, skillsLoading, skillRunning,
-    handleQuickAction, handleChatSend, handleScreenTouch, handleDisconnect,
-    handleApproveCommand, handleRejectCommand, loadSkills, runSkill,
+    connectionState,
+    isConnected,
+    screenshotBase64,
+    screenshotLoading,
+    chatMessages,
+    activeApproval,
+    costTelemetry,
+    showSkills,
+    setShowSkills,
+    skillsList,
+    skillsLoading,
+    skillRunning,
+    handleQuickAction,
+    handleChatSend,
+    handleScreenTouch,
+    handleDisconnect,
+    handleApproveCommand,
+    handleRejectCommand,
+    loadSkills,
+    runSkill,
   };
 }

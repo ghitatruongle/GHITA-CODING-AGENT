@@ -39,20 +39,15 @@ export default defineConfig({
       reporter: ['text', 'text-summary', 'html', 'lcov', 'json-summary'],
       reportsDirectory: './coverage',
       include: ['src/**/*.ts'],
-      exclude: [
-        'src/**/*.test.ts',
-        'src/**/*.d.ts',
-        'node_modules/**',
-        'dist/**',
-      ],
+      exclude: ['src/**/*.test.ts', 'src/**/*.d.ts', 'node_modules/**', 'dist/**'],
       thresholds: {
         // ai-engine is the largest package and has many runtime-only code
         // paths (providers, transports) that need live credentials to exercise.
         // Raise incrementally as new integration tests are added.
-        statements: 30,
-        branches: 40,
-        functions: 35,
-        lines: 30,
+        statements: 40,
+        branches: 45,
+        functions: 45,
+        lines: 40,
       },
     },
     server: {
