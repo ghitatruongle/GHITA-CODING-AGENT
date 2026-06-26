@@ -22,7 +22,6 @@ interface ChatHeaderProps {
   setModelDropdownOpen: (v: boolean) => void;
   modelSearch: string;
   setModelSearch: (v: string) => void;
-
 }
 
 export function ChatHeader({
@@ -224,7 +223,8 @@ export function ChatHeader({
                   border: '1px solid rgba(255,255,255,0.1)',
                   borderRadius: '4px',
                   color: '#e2e8f0',
-                  outline: 'none',
+                  // ACCESSIBILITY (audit fix 1.3): removed outline:none;
+                  // focus-ring class in globals.css handles focus indicator
                   boxSizing: 'border-box',
                 }}
               />
@@ -236,8 +236,7 @@ export function ChatHeader({
                 const q = modelSearch.toLowerCase().trim();
                 const filtered = q
                   ? modelOptions.filter(
-                      (o) =>
-                        o.label.toLowerCase().includes(q) || o.model.toLowerCase().includes(q),
+                      (o) => o.label.toLowerCase().includes(q) || o.model.toLowerCase().includes(q),
                     )
                   : modelOptions;
 

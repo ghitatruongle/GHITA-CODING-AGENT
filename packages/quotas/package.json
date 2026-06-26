@@ -2,6 +2,7 @@
   "name": "@ghita/quotas",
   "version": "0.0.3-beta1",
   "private": true,
+  "sideEffects": false,
   "type": "module",
   "description": "GHITA CODING AGENT - Rate Limiting & Quota Management (Phase 43)",
   "main": "dist/index.js",
@@ -15,6 +16,8 @@
   "scripts": {
     "build": "tsc -b",
     "dev": "tsc -b --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
     "clean": "node -e \"const fs=require('fs'); fs.rmSync('dist',{recursive:true,force:true}); fs.readdirSync('.').filter(f=>f.endsWith('.tsbuildinfo')).forEach(f=>fs.rmSync(f,{force:true}))\""
@@ -24,6 +27,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "typescript": "^5.6.0"
+    "typescript": "^5.6.0",
+    "vitest": "^3.2.4"
   }
 }

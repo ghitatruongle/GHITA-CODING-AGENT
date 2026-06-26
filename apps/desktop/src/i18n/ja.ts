@@ -35,7 +35,7 @@ export const ja: TranslationKeys = {
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v0.0.4',
+    version: 'v0.0.5 beta',
     deviceReconnected: 'デバイスに再接続しました: {{name}}',
     devicePaired: 'デバイスのペアリングに成功しました: {{name}}',
     commandReceived: 'デバイスからコマンドを受信しました: {{action}}',
@@ -114,8 +114,10 @@ export const ja: TranslationKeys = {
     shortcutSave: 'Ctrl+S: 保存',
     shortcutClose: 'Ctrl+W: 閉じる',
     shortcutSaveAll: 'Ctrl+Shift+S: 全て保存',
-    unsavedChangesConfirm: 'ファイル「{{name}}」には未保存の変更があります。閉じて変更を破棄しますか？',
-    binaryNotSupported: 'バイナリファイル「{{name}}」はテキストエディターではサポートされていません。',
+    unsavedChangesConfirm:
+      'ファイル「{{name}}」には未保存の変更があります。閉じて変更を破棄しますか？',
+    binaryNotSupported:
+      'バイナリファイル「{{name}}」はテキストエディターではサポートされていません。',
     readFailed: 'ファイルの読み取りに失敗しました: {{error}}',
   },
   devices: {
@@ -139,7 +141,8 @@ export const ja: TranslationKeys = {
     expiresAfter: '有効期限:',
     pairingInstructions: 'モバイルアプリでこのPINコードを入力して接続を認証してください',
     bluetoothConnection: 'Bluetooth無線接続',
-    bluetoothGuide: 'スマートフォンでBluetoothタブに切り替え、このコンピューター名を入力してください:',
+    bluetoothGuide:
+      'スマートフォンでBluetoothタブに切り替え、このコンピューター名を入力してください:',
     bluetoothHostname: 'コンピューター名',
     bluetoothHint: '注意: Bluetooth接続ではIPアドレスやペアリングコードは不要です。',
     connectedDevices: '関連デバイス',
@@ -152,7 +155,8 @@ export const ja: TranslationKeys = {
     guideStep4: '4. 安全な接続が確立されるまで待機',
     guideStep5: '5. 接続完了！コマンドの送信とタスクの承認が可能です。',
     lanEnabled: 'モバイルデバイスの接続を許可（LAN/Wi-Fi）',
-    lanEnabledDesc: '同じローカルネットワーク上のモバイルデバイスがこのコンピューターを検出して接続することを許可します。',
+    lanEnabledDesc:
+      '同じローカルネットワーク上のモバイルデバイスがこのコンピューターを検出して接続することを許可します。',
   },
   dashboard: {
     title: 'ダッシュボード',
@@ -205,14 +209,20 @@ export const ja: TranslationKeys = {
     sortByDownloads: 'ダウンロード数順',
     sortByRating: '評価順',
     sortByNewest: '新着順',
-    plugin_ghita_github_assistant_desc: 'Git同期、コミットプッシュ、プルリクエストとイシュートラッカーの管理を自動化。',
-    plugin_ghita_docker_orchestrator_desc: 'Dockerコンテナの管理、ログ確認、イメージビルド、ボリューム管理のスキルパッケージ。',
+    plugin_ghita_github_assistant_desc:
+      'Git同期、コミットプッシュ、プルリクエストとイシュートラッカーの管理を自動化。',
+    plugin_ghita_docker_orchestrator_desc:
+      'Dockerコンテナの管理、ログ確認、イメージビルド、ボリューム管理のスキルパッケージ。',
     skill_docker_list_desc: '実行中のコンテナを一覧表示',
-    plugin_ghita_vercel_deployer_desc: 'プロジェクトのリンク、プレビュー・本番デプロイの自動トリガー、CI/CDログの監査。',
-    plugin_ghita_db_client_desc: 'PostgreSQL、MySQL、SQLite、MongoDBとの高速インタラクション。AIによるスキーマプレビューとクエリ最適化。',
+    plugin_ghita_vercel_deployer_desc:
+      'プロジェクトのリンク、プレビュー・本番デプロイの自動トリガー、CI/CDログの監査。',
+    plugin_ghita_db_client_desc:
+      'PostgreSQL、MySQL、SQLite、MongoDBとの高速インタラクション。AIによるスキーマプレビューとクエリ最適化。',
     skill_db_query_desc: '安全なSELECTクエリの実行とスキーマ分析',
-    plugin_ghita_jira_connector_desc: 'Jiraチケットの読み取り・更新、イシューステータスの遷移、Gitコミットとストーリーの紐付け。',
-    plugin_ghita_vision_grounding_extra_desc: '大画面でのComputer Use座標認識精度をサポートするローカルビジョンモデル。',
+    plugin_ghita_jira_connector_desc:
+      'Jiraチケットの読み取り・更新、イシューステータスの遷移、Gitコミットとストーリーの紐付け。',
+    plugin_ghita_vision_grounding_extra_desc:
+      '大画面でのComputer Use座標認識精度をサポートするローカルビジョンモデル。',
   },
   workflow: {
     dragNodes: 'アクションノードをドラッグ',
@@ -257,7 +267,8 @@ export const ja: TranslationKeys = {
     enableAp: 'AP有効',
     disableAp: 'AP無効',
     dynamicRouter: 'ダイナミックLLMコスト＆複雑性ルーター',
-    dynamicRouterDesc: 'プロンプト/タスクの複雑さを分析し、最もコスト効率の高いモデルにルーティングする自動アルゴリズム。',
+    dynamicRouterDesc:
+      'プロンプト/タスクの複雑さを分析し、最もコスト効率の高いモデルにルーティングする自動アルゴリズム。',
     maxCostPerTask: '最大タスクコスト閾値（$）:',
     complexityRouting: '複雑性境界ルーティング:',
     automaticRouting: '自動ルーティング（推奨）',
@@ -330,7 +341,8 @@ export const ja: TranslationKeys = {
     runSuccess: '成功',
     runError: 'エラー',
     messagesCount: '{{count}} メッセージ',
-    compactSuccess: 'コンテキストが圧縮されました: このセッションでは最近のメッセージのみ保持されます。',
+    compactSuccess:
+      'コンテキストが圧縮されました: このセッションでは最近のメッセージのみ保持されます。',
     noWorkspace:
       'ワークスペースディレクトリが開かれていません。Agent、Review、Feature、Ralphを実行する前にエクスプローラーでプロジェクト/フォルダーを開いてください。',
     permissionCustom: 'カスタム: すべてのコマンドとファイル編集を確認',
@@ -412,7 +424,8 @@ export const ja: TranslationKeys = {
   },
   agentGroups: {
     title: 'AIエージェントグループ',
-    subtitle: 'エージェントプロファイルの管理、タスクフォースの割り当て、共有コンテキストメモリの維持。',
+    subtitle:
+      'エージェントプロファイルの管理、タスクフォースの割り当て、共有コンテキストメモリの維持。',
     registeredAgents: 'ワークスペースに登録されたエージェント',
     runGroupTask: 'グループにタスクを委任',
     runningGroup: 'AIタスクフォース実行中...',
@@ -425,7 +438,8 @@ export const ja: TranslationKeys = {
     title: 'DocsGriller — ソクラテス式アーキテクチャ監査',
     scanDocs: '/grill-me',
     scanning: 'ドキュメントを監査中...',
-    scanPrompt: '/grill-meと入力してプロジェクトドキュメントをスキャンし、アーキテクチャの矛盾を自動検出',
+    scanPrompt:
+      '/grill-meと入力してプロジェクトドキュメントをスキャンし、アーキテクチャの矛盾を自動検出',
     supportedFormats: '.mdと.txtファイル形式の分析をサポート',
     docsScanned: 'スキャン済みドキュメント',
     contradictions: '検出された矛盾',
@@ -436,7 +450,8 @@ export const ja: TranslationKeys = {
     socraticQuestions: 'ソクラテス式反省質問 ({{count}})',
     sources: '参照ソース:',
     designDecisions: 'アーキテクチャ設計決定',
-    allConsistent: 'すべてのドキュメントは完全に一貫しています。アーキテクチャの矛盾は検出されませんでした。',
+    allConsistent:
+      'すべてのドキュメントは完全に一貫しています。アーキテクチャの矛盾は検出されませんでした。',
   },
   sandbox: {
     loadingStatus: 'サンドボックス環境のステータスを確認中...',

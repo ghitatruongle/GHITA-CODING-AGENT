@@ -132,7 +132,6 @@ export class TauriNotificationSink implements NotificationSink {
   readonly channel: NotificationChannel = 'desktop';
 
   // Use indirect import to avoid compile-time module resolution
-  // eslint-disable-next-line @typescript-eslint/no-implied-eval
   private dynamicImport = new Function('specifier', 'return import(specifier)') as (
     specifier: string,
   ) => Promise<Record<string, unknown>>;
@@ -174,9 +173,7 @@ export class TauriNotificationSink implements NotificationSink {
         }
       }
 
-      const sendNotification = mod['sendNotification'] as (
-        opts: Record<string, unknown>,
-      ) => void;
+      const sendNotification = mod['sendNotification'] as (opts: Record<string, unknown>) => void;
 
       sendNotification({
         title: n.title,

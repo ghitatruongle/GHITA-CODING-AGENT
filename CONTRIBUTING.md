@@ -99,6 +99,9 @@ Use [Conventional Commits](https://www.conventionalcommits.org/):
 - [ ] No TypeScript errors (`pnpm typecheck`)
 - [ ] Passes lint (`pnpm lint`)
 - [ ] Code is formatted (`pnpm format:check`)
+- [ ] Tests pass (`pnpm test`)
+- [ ] New features have accompanying tests
+- [ ] Breaking changes are documented in the PR description
 
 ### PR Rules
 
@@ -233,6 +236,9 @@ Sử dụng chuẩn [Conventional Commits](https://www.conventionalcommits.org/)
 - [ ] Không có lỗi kiểm tra kiểu TypeScript (`pnpm typecheck`)
 - [ ] Vượt qua tất cả kiểm tra cú pháp (`pnpm lint`)
 - [ ] Mã nguồn đã được định dạng chuẩn xác (`pnpm format:check`)
+- [ ] Tất cả bài kiểm thử đều pass (`pnpm test`)
+- [ ] Tính năng mới có bài kiểm thử đi kèm
+- [ ] Thay đổi breaking được mô tả trong PR
 
 ### Quy tắc PR
 

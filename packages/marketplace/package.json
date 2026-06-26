@@ -2,6 +2,7 @@
   "name": "@ghita/marketplace",
   "version": "0.1.0",
   "private": true,
+  "sideEffects": false,
   "description": "Plugin marketplace: install, uninstall, update, dependency resolution, lockfile",
   "main": "./dist/index.js",
   "type": "module",
@@ -18,7 +19,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
     "clean": "node -e \"const fs=require('fs'); fs.rmSync('dist',{recursive:true,force:true}); fs.readdirSync('.').filter(f=>f.endsWith('.tsbuildinfo')).forEach(f=>fs.rmSync(f,{force:true}))\"",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run"
   },
   "dependencies": {
     "@ghita/shared": "workspace:*",

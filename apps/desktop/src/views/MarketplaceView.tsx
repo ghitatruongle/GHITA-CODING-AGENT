@@ -275,7 +275,7 @@ export function MarketplaceView() {
               border: '1px solid rgba(255,255,255,0.08)',
               color: 'var(--text-primary)',
               fontSize: '14px',
-              outline: 'none',
+              // ACCESSIBILITY (audit fix 1.3): removed outline:none
               transition: 'border-color 0.2s',
             }}
             onFocus={(e) => (e.target.style.borderColor = 'var(--accent-primary)')}
@@ -297,9 +297,9 @@ export function MarketplaceView() {
           {(['all', 'code', 'bundle', 'installed'] as const).map((type) => {
             const label = {
               all: t('marketplace.filterAll'),
-              code: `${t('marketplace.filterCode')  } ⚙️`,
-              bundle: `${t('marketplace.filterBundle')  } 📦`,
-              installed: `${t('marketplace.filterInstalled')  } ✅`,
+              code: `${t('marketplace.filterCode')} ⚙️`,
+              bundle: `${t('marketplace.filterBundle')} 📦`,
+              installed: `${t('marketplace.filterInstalled')} ✅`,
             }[type];
 
             const active = filterType === type;

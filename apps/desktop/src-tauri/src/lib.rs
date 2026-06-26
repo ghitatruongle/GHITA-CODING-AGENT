@@ -186,7 +186,7 @@ async fn start_server(
 
         let bundled_node = server_script
             .parent()
-            .map(|dir| dir.join("node.exe"))
+            .map(|dir| dir.join(format!("node{}", std::env::consts::EXE_SUFFIX)))
             .filter(|path| path.exists());
         let node_command = bundled_node
             .as_ref()
@@ -201,7 +201,10 @@ async fn start_server(
             .env("GHITA_PORT", port.to_string())
             .env("GHITA_DATA_DIR", &data_dir)
             .env("GHITA_LAN_ENABLED", if lan_enabled { "1" } else { "0" })
-            .env("GHITA_LIBERATE_PORTS", "1")
+            // RESILIENCE (audit fix 3.9): disabled auto port liberation
+            // to prevent force-killing other processes. Dynamic port
+            // allocation via find_free_port() handles port conflicts.
+            .env("GHITA_LIBERATE_PORTS", "0")
             .env("GHITA_SESSION_TOKEN", session_token)
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::inherit())
@@ -236,6 +239,8 @@ async fn start_server(
                         let payload = &line_str["__GHITA_IPC__:".len()..];
                         if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(payload) {
                             let _ = app_handle.emit("sidecar-event", parsed);
+                        } else {
+                            eprintln!("[sidecar] malformed IPC payload: {}", payload);
                         }
                     } else {
                         // Print ordinary log to console
@@ -335,6 +340,88 @@ async fn get_server_status(state: tauri::State<'_, Mutex<ServerState>>) -> Resul
         "port": port,
         "localIps": ips
     }))
+}
+
+// --- DocsGriller types (must match frontend GrillSession interface) ---
+#[derive(serde::Serialize)]
+struct GrillContradiction {
+    topic: String,
+    doc_a: GrillDocRef,
+    doc_b: GrillDocRef,
+    severity: String,
+    recommendation: String,
+}
+
+#[derive(serde::Serialize)]
+struct GrillDocRef {
+    file: String,
+    excerpt: String,
+}
+
+#[derive(serde::Serialize)]
+struct GrillQuestion {
+    question: String,
+    source_docs: Vec<String>,
+    severity: String,
+}
+
+#[derive(serde::Serialize)]
+struct GrillSession {
+    id: String,
+    timestamp: String,
+    docs_path: String,
+    docs_scanned: u32,
+    questions: Vec<GrillQuestion>,
+    contradictions: Vec<GrillContradiction>,
+    user_answers: std::collections::HashMap<String, String>,
+    design_decisions: Vec<String>,
+}
+
+/// Run a DocsGriller session: scan docs directory for markdown files and
+/// return a session with analysis results. Currently returns a stub session
+/// with file count; full Socratic analysis is planned for v2.0.
+#[tauri::command]
+fn run_grill_session(docs_path: String) -> Result<GrillSession, String> {
+    let path = std::path::PathBuf::from(&docs_path);
+    if !path.exists() {
+        return Err(format!("Docs path does not exist: {}", docs_path));
+    }
+    if !path.is_dir() {
+        return Err(format!("Docs path is not a directory: {}", docs_path));
+    }
+
+    // Count markdown files in the directory
+    let mut docs_scanned: u32 = 0;
+    fn count_md(dir: &std::path::Path, count: &mut u32) {
+        if let Ok(entries) = fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let p = entry.path();
+                if p.is_dir() {
+                    count_md(&p, count);
+                } else if p.extension().map_or(false, |e| e == "md" || e == "mdx") {
+                    *count += 1;
+                }
+            }
+        }
+    }
+    count_md(&path, &mut docs_scanned);
+
+    let session_id = format!(
+        "grill_{:016x}{:016x}",
+        rand::random::<u64>(),
+        rand::random::<u64>()
+    );
+
+    Ok(GrillSession {
+        id: session_id,
+        timestamp: chrono::Utc::now().to_rfc3339(),
+        docs_path: docs_path,
+        docs_scanned,
+        questions: Vec::new(),
+        contradictions: Vec::new(),
+        user_answers: std::collections::HashMap::new(),
+        design_decisions: Vec::new(),
+    })
 }
 
 fn app_storage_path(app: &tauri::AppHandle, file_name: &str) -> Result<PathBuf, String> {
@@ -585,6 +672,8 @@ pub fn run() {
             terminal::terminal_resize,
             terminal::terminal_kill,
             terminal::terminal_list,
+            // DocsGriller
+            run_grill_session,
         ])
         .setup(|app| {
             // Get splash and main windows — gracefully handle if not found
@@ -614,7 +703,7 @@ pub fn run() {
                 let main_handle = main.clone();
                 let splash_handle = splash.clone();
                 let shown_clone = shown.clone();
-                main_handle.clone().listen("ready", move |_event| {
+                main_handle.clone().once("ready", move |_event| {
                     if shown_clone.swap(true, std::sync::atomic::Ordering::SeqCst) {
                         return; // Already handled
                     }

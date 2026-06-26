@@ -14,6 +14,8 @@ const LANGUAGE_OPTIONS = [
   { value: 'en', label: 'English' },
   { value: 'zh', label: '简体中文' },
   { value: 'ru', label: 'Русский' },
+  { value: 'ja', label: '日本語' },
+  { value: 'ko', label: '한국어' },
 ];
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -164,9 +166,7 @@ export function SettingsView() {
             >
               <div className="flex gap-2">
                 <Badge variant={server.connected ? 'success' : 'neutral'} dot>
-                  {server.connected
-                    ? t('common.connected')
-                    : t('common.disconnected')}
+                  {server.connected ? t('common.connected') : t('common.disconnected')}
                 </Badge>
                 <Button
                   size="sm"
@@ -174,9 +174,11 @@ export function SettingsView() {
                   onClick={() => {
                     setMcpServers(
                       mcpServers.map((s) =>
-                        (server.id
-                          ? s.id === server.id
-                          : s.name === server.name && s.transport === server.transport)
+                        (
+                          server.id
+                            ? s.id === server.id
+                            : s.name === server.name && s.transport === server.transport
+                        )
                           ? { ...s, enabled: !s.enabled }
                           : s,
                       ),

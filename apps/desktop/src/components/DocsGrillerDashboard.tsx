@@ -131,6 +131,8 @@ export function DocsGrillerDashboard() {
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <input
             type="text"
+            id="docs-griller-path"
+            aria-label={t('docsGriller.title')}
             value={docsPath}
             onChange={(e) => setDocsPath(e.target.value)}
             placeholder="docs/"

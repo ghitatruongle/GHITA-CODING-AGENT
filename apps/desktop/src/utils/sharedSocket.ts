@@ -35,7 +35,10 @@ export async function getSharedSocket(): Promise<Socket | null> {
       const status = await invoke<{ port: number }>('get_server_status');
       const port = status.port || 39001;
 
-      const sessionToken = await invoke<string>('get_session_token').catch(() => '');
+      const sessionToken = await invoke<string>('get_session_token').catch((e) => {
+        console.warn('[sharedSocket] get_session_token failed, using empty token:', e);
+        return '';
+      });
 
       socket = io(`http://127.0.0.1:${port}`, {
         transports: ['websocket'],

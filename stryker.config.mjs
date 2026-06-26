@@ -7,6 +7,7 @@ const config = {
   tsconfigFile: 'tsconfig.base.json',
   mutate: [
     'packages/security/src/**/*.ts',
+    'packages/browser-control/src/**/*.ts',
     'packages/ai-engine/src/utils/security.ts',
     'packages/ai-engine/src/utils/crypto.ts',
     'packages/communication/src/utils/security.ts',

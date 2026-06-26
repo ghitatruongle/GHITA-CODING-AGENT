@@ -32,7 +32,6 @@ export class DialogService {
   private tauriAvailable: boolean | null = null;
 
   // Use indirect import to avoid compile-time module resolution
-  // eslint-disable-next-line @typescript-eslint/no-implied-eval
   private dynamicImport = new Function('specifier', 'return import(specifier)') as (
     specifier: string,
   ) => Promise<Record<string, unknown>>;
@@ -53,7 +52,10 @@ export class DialogService {
     if (await this.isTauriAvailable()) {
       try {
         const mod = await this.dynamicImport('@tauri-apps/plugin-dialog');
-        const tauriConfirm = mod['confirm'] as (msg: string, opts: Record<string, unknown>) => Promise<boolean>;
+        const tauriConfirm = mod['confirm'] as (
+          msg: string,
+          opts: Record<string, unknown>,
+        ) => Promise<boolean>;
         const result = await tauriConfirm(message, {
           title: opts?.title ?? 'Confirm',
           kind: opts?.kind ?? 'info',
@@ -71,7 +73,11 @@ export class DialogService {
   }
 
   /** Show a text prompt dialog. */
-  async prompt(message: string, defaultValue = '', _opts?: DialogOptions): Promise<DialogResult<string>> {
+  async prompt(
+    message: string,
+    defaultValue = '',
+    _opts?: DialogOptions,
+  ): Promise<DialogResult<string>> {
     if (await this.isTauriAvailable()) {
       // Tauri doesn't have a built-in prompt, use a custom approach
       // For now, fall back to browser prompt
@@ -85,7 +91,9 @@ export class DialogService {
     if (await this.isTauriAvailable()) {
       try {
         const mod = await this.dynamicImport('@tauri-apps/plugin-dialog');
-        const open = mod['open'] as (opts: Record<string, unknown>) => Promise<string | string[] | null>;
+        const open = mod['open'] as (
+          opts: Record<string, unknown>,
+        ) => Promise<string | string[] | null>;
         const result = await open({
           multiple,
           filters: filters?.map((f) => ({ name: f.name, extensions: f.extensions })),

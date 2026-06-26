@@ -282,7 +282,7 @@ export function EcosystemView() {
                   background: 'var(--bg-surface)',
                   border: '1px solid var(--border-default)',
                   color: 'var(--text-primary)',
-                  outline: 'none',
+                  // ACCESSIBILITY (audit fix 1.3): removed outline:none
                   opacity: grpcActive ? 0.6 : 1,
                 }}
               />
@@ -408,7 +408,7 @@ export function EcosystemView() {
                   background: 'var(--bg-surface)',
                   border: '1px solid var(--border-default)',
                   color: 'var(--text-primary)',
-                  outline: 'none',
+                  // ACCESSIBILITY (audit fix 1.3): removed outline:none
                   opacity: apActive ? 0.6 : 1,
                 }}
               />
@@ -574,7 +574,7 @@ export function EcosystemView() {
                 background: 'rgba(15, 23, 42, 0.6)',
                 border: '1px solid rgba(255, 255, 255, 0.08)',
                 color: 'var(--text-secondary)',
-                outline: 'none',
+                // ACCESSIBILITY (audit fix 1.3): removed outline:none
               }}
             />
           </div>
@@ -593,7 +593,7 @@ export function EcosystemView() {
                 background: 'rgba(15, 23, 42, 0.6)',
                 border: '1px solid rgba(255, 255, 255, 0.08)',
                 color: 'var(--text-secondary)',
-                outline: 'none',
+                // ACCESSIBILITY (audit fix 1.3): removed outline:none
               }}
             >
               <option value="automatic">{t('ecosystem.automaticRouting')}</option>

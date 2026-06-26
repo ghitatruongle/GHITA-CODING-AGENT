@@ -182,9 +182,15 @@ export class AdvancedWorkflowEngine {
       };
 
       const runStep = async (step: AdvancedWorkflowStep): Promise<void> => {
+        // ROBUSTNESS (audit fix 2.2): validate that every declared dependency exists
         for (const depId of step.dependsOn ?? []) {
           const depStep = this.steps.find((s) => s.id === depId);
-          if (depStep) await tryStep(depStep);
+          if (!depStep) {
+            throw new Error(
+              `Step "${step.id}" depends on "${depId}" which does not exist in workflow "${this.name}"`,
+            );
+          }
+          await tryStep(depStep);
         }
 
         // Conditional skip

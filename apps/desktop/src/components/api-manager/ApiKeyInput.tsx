@@ -89,10 +89,7 @@ export function ApiKeyInput({
           }}
           className={`${INPUT_STYLE} flex-1`}
         />
-        <button
-          onClick={() => onToggleShow(`${provider.id}-new`)}
-          className={ICON_BTN}
-        >
+        <button onClick={() => onToggleShow(`${provider.id}-new`)} className={ICON_BTN}>
           {showKey === `${provider.id}-new` ? '🙈' : '👁️'}
         </button>
         <button onClick={onAddKey} className={ICON_BTN} title={t('apiManager.addKey')}>
@@ -103,8 +100,11 @@ export function ApiKeyInput({
       {/* Rotation strategy selector */}
       {entry.apiKeys.length > 1 && (
         <div className="mt-2">
-          <label className={LABEL_STYLE}>{t('apiManager.keyStrategy')}</label>
+          <label className={LABEL_STYLE} htmlFor={`rotation-strategy-${entry.providerId}`}>
+            {t('apiManager.keyStrategy')}
+          </label>
           <select
+            id={`rotation-strategy-${entry.providerId}`}
             value={entry.rotationStrategy}
             onChange={(e) => onRotationChange(e.target.value as KeyRotationStrategy)}
             className={INPUT_STYLE}

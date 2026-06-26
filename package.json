@@ -1,6 +1,6 @@
 {
   "name": "ghita-coding-agent",
-  "version": "0.0.4",
+  "version": "0.0.5-beta",
   "private": true,
   "type": "module",
   "description": "GHITA CODING AGENT - Desktop AI Agent với multi-provider, skills, computer use",
@@ -28,6 +28,8 @@
     "rebuild": "rm -rf node_modules packages/*/node_modules apps/*/node_modules && pnpm install && turbo build --filter=./packages/* --filter=./apps/desktop --filter=./apps/vscode-extension --force && pnpm --filter @ghita/mobile build",
     "build:docs": "node --max-old-space-size=8192 node_modules/typedoc/bin/typedoc --options typedoc.json",
     "docs:serve": "cd docs && pnpm start",
+    "knip": "knip",
+    "dogfood": "node scripts/dogfood.mjs",
     "prepare": "husky"
   },
   "devDependencies": {
@@ -40,7 +42,8 @@
     "eslint": "^9.15.0",
     "globals": "^15.12.0",
     "husky": "^9.1.7",
-    "lint-staged": "^16.1.0",
+    "lint-staged": "^15.4.3",
+    "knip": "^6.18.0",
     "playwright": "^1.60.0",
     "png-to-ico": "^3.0.1",
     "prettier": "^3.4.0",
@@ -52,6 +55,24 @@
     "typescript": "^5.6.0",
     "typescript-eslint": "8.59.4",
     "vitest": "^3.2.4"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.{js,jsx}": [
+      "prettier --write"
+    ],
+    "*.json": [
+      "prettier --write"
+    ],
+    "*.css": [
+      "prettier --write"
+    ],
+    "*.md": [
+      "prettier --write"
+    ]
   },
   "engines": {
     "node": ">=20.0.0"

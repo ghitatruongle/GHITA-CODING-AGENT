@@ -11,6 +11,8 @@ export type { ErrorGrouperOptions } from './error-grouper.js';
 export { Tracer } from './performance-tracer.js';
 export type { TracerOptions } from './performance-tracer.js';
 export { AlertEngine } from './alert-rules.js';
+export { UsageTelemetry, getTelemetry, initTelemetry } from './telemetry.js';
+export type { TelemetryEvent, TelemetryConfig } from './telemetry.js';
 
 export type {
   Severity,

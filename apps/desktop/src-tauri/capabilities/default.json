@@ -17,6 +17,21 @@
           "name": "powershell",
           "cmd": "powershell",
           "args": true
+        },
+        {
+          "name": "bash",
+          "cmd": "bash",
+          "args": true
+        },
+        {
+          "name": "sh",
+          "cmd": "sh",
+          "args": true
+        },
+        {
+          "name": "zsh",
+          "cmd": "zsh",
+          "args": true
         }
       ]
     },
