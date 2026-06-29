@@ -24,7 +24,7 @@
     "@ghita/shared": "workspace:*",
     "@ghita/skills": "workspace:*",
     "@monaco-editor/react": "^4.7.0",
-    "@tauri-apps/api": "^2.5.0",
+    "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-dialog": "^2.7.1",
     "@tauri-apps/plugin-fs": "^2.2.0",
     "@tauri-apps/plugin-shell": "^2.2.0",
@@ -41,7 +41,7 @@
     "remark-gfm": "^4.0.1",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
-    "zustand": "^5.0.5"
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.5.0",
