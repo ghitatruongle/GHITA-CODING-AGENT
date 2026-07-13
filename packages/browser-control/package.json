@@ -31,7 +31,7 @@
     "@ghita/skills": "workspace:*",
     "@ghita/shared": "workspace:*",
     "@ghita/computer-use": "workspace:*",
-    "playwright": "^1.60.0"
+    "playwright": "^1.61.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
