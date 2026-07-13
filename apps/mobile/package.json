@@ -28,7 +28,7 @@
     "react-native-keychain": "^8.2.0",
     "react-native-paper": "^5.15.3",
     "react-native-safe-area-context": "^5.4.1",
-    "react-native-screens": "^3.35.0",
+    "react-native-screens": "^3.37.0",
     "react-native-vector-icons": "^10.3.0",
     "socket.io-client": "^4.8.0"
   },
