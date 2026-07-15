@@ -38,6 +38,13 @@ export class RateLimiter {
   }
 
   /**
+   * List all registered rate limit specs.
+   */
+  listLimits(): RateLimit[] {
+    return Array.from(this.limits.values());
+  }
+
+  /**
    * Xóa rate limit spec.
    */
   unregisterLimit(id: string): boolean {

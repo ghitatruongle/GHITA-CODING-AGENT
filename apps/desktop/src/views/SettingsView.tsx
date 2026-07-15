@@ -9,7 +9,14 @@ import { useTranslation } from '../i18n';
 import { isWindows, isLinux } from '@ghita/shared';
 import { Button, Badge, Input } from '../components/ui';
 
-const LANGUAGE_OPTIONS = [
+import { isLocaleCode, type LocaleCode } from '../i18n/types';
+
+// The local `Select` component is a generic UI primitive that types its
+// options as `string`. We keep the array typed as `Array<{ value: string; ... }>`
+// for compatibility but every `value` is a known LocaleCode, and we cast
+// at the boundary in the onChange handler so the store still receives
+// strongly-typed values.
+const LANGUAGE_OPTIONS: Array<{ value: LocaleCode; label: string }> = [
   { value: 'vi', label: 'Tiếng Việt' },
   { value: 'en', label: 'English' },
   { value: 'zh', label: '简体中文' },
@@ -129,7 +136,17 @@ export function SettingsView() {
           />
         </SettingRow>
         <SettingRow label={t('settings.language')} description={t('settings.languageDesc')}>
-          <Select value={language} options={LANGUAGE_OPTIONS} onChange={setLanguage} />
+          <Select
+            value={language}
+            options={LANGUAGE_OPTIONS}
+            onChange={(v) => {
+              // Run-time guard (review fix): the local Select is typed
+              // `(val: string) => void`, so we cannot trust the cast would
+              // be safe. Validate against LocaleCode before forwarding.
+              // setLanguage itself also re-validates as a defence-in-depth.
+              if (isLocaleCode(v)) setLanguage(v);
+            }}
+          />
         </SettingRow>
       </Section>
 

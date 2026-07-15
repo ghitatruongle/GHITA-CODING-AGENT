@@ -18,6 +18,8 @@ out/
 *.tsbuildinfo
 apps/desktop/src-tauri/sidecar/server.bundle.mjs
 apps/desktop/src-tauri/sidecar/node.exe
+# esbuild sidecar metadata (build artifact, regenerated on every `vite build`)
+apps/desktop/src-tauri/sidecar/meta.json
 
 # Android / native build caches
 apps/mobile/android/.gradle/

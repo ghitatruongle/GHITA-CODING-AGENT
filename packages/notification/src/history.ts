@@ -32,6 +32,16 @@ export class NotificationHistory {
   }
 
   /**
+   * Remove a notification by id. Returns true if removed.
+   */
+  remove(id: string): boolean {
+    const idx = this.store.findIndex((x) => x.id === id);
+    if (idx === -1) return false;
+    this.store.splice(idx, 1);
+    return true;
+  }
+
+  /**
    * List for a user, newest first.
    */
   listForUser(userId: string, limit = 100): Notification[] {

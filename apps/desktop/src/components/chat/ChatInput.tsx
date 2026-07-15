@@ -4,6 +4,7 @@
 // ==============================================================================
 
 import React, { useRef } from 'react';
+import { VoiceInputButton } from '../VoiceInputButton';
 
 interface SlashCommand {
   trigger: string;
@@ -215,6 +216,8 @@ export function ChatInput({
         >
           ➤
         </button>
+        {/* Voice input button */}
+        <VoiceInputButton onResult={(text) => setInput(text)} />
         {/* Image attach button */}
         <input
           ref={fileInputRef}

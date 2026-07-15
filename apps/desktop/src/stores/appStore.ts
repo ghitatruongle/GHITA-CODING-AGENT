@@ -5,6 +5,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { DeviceInfo, PluginManifest } from '@ghita/shared';
+import { DEFAULT_LOCALE, isLocaleCode, type LocaleCode } from '../i18n/types';
 
 // Cache file contents outside of React state to prevent massive re-renders
 // and out-of-memory errors on large files.
@@ -17,6 +18,9 @@ export type TabId =
   | 'agents'
   | 'devices'
   | 'dashboard'
+  | 'monitoring'
+  | 'quota'
+  | 'code-graph'
   | 'settings'
   | 'marketplace'
   | 'workflow'
@@ -58,10 +62,10 @@ interface AppState {
 
   // Settings
   theme: ThemeMode;
-  language: string;
+  language: LocaleCode;
   logLevel: string;
   setTheme: (theme: ThemeMode) => void;
-  setLanguage: (lang: string) => void;
+  setLanguage: (lang: LocaleCode) => void;
   setLogLevel: (level: string) => void;
 
   // Communication (Phase 6)
@@ -157,13 +161,20 @@ export const useAppStore = create<AppState>()(
 
       // Settings
       theme: 'dark' as ThemeMode,
-      language: 'vi',
+      language: DEFAULT_LOCALE,
       logLevel: 'info',
       setTheme: (theme) => {
         document.documentElement.setAttribute('data-theme', theme);
         set({ theme });
       },
-      setLanguage: (lang) => set({ language: lang }),
+      setLanguage: (lang) => {
+        // Runtime guard (review fix): setLanguage's signature is typed
+        // `LocaleCode`, but TypeScript types are erased at runtime. Sanitize
+        // here so callers like SettingsView (`v as LocaleCode`) or legacy
+        // IPC messages cannot poison the persisted locale with a value that
+        // isn't in the translations map.
+        set({ language: isLocaleCode(lang) ? lang : DEFAULT_LOCALE });
+      },
       setLogLevel: (level) => set({ logLevel: level }),
 
       // Communication (Phase 6)
@@ -238,24 +249,45 @@ export const useAppStore = create<AppState>()(
         permissionMode: state.permissionMode,
       }),
       merge: (persistedState: unknown, currentState: AppState) => {
-        const persisted = persistedState as Record<string, unknown>;
+        // Debug-fix: guard against localStorage corruption where the
+        // persisted blob is not a plain object (e.g. a serialized Array,
+        // a primitive, or `null`). The `as Record<string, unknown>` cast
+        // is a TypeScript-only lie; at runtime we must check before
+        // spreading because `{...someNonObject}` can put garbage keys
+        // onto `merged` (e.g. array indexes) that later fields then
+        // overwrite — silently dropping our defaults.
+        const persisted =
+          typeof persistedState === 'object' && persistedState !== null
+            ? (persistedState as Record<string, unknown>)
+            : {};
         const merged = { ...currentState, ...persisted } as AppState;
+        // Sanitize the persisted locale — older installs may have `es`/`fr`/`pt`
+        // saved before they were removed in v0.0.5. Fall back to DEFAULT_LOCALE
+        // if the value is no longer a supported LocaleCode.
+        if (!isLocaleCode(merged.language)) {
+          merged.language = DEFAULT_LOCALE;
+        }
         // Rehydrated codeOpenFiles only has {path, language} — fill in defaults
         // for the remaining required fields so CodeView doesn't get undefined.
+        // The `path` runtime check (review fix) catches corrupt localStorage
+        // entries where `path` is not a string (e.g., a number from a manual
+        // edit); without it, `f.path.split(...)` would throw at startup.
         if (Array.isArray(merged.codeOpenFiles)) {
-          merged.codeOpenFiles = merged.codeOpenFiles.map(
-            (f: Partial<AppState['codeOpenFiles'][number]> & { path: string }) => {
-              if (!fileContentCache.has(f.path)) {
-                fileContentCache.set(f.path, { content: '', originalContent: '' });
-              }
-              return {
-                path: f.path,
-                name: f.name ?? f.path.split(/[/\\]/).pop() ?? '',
-                language: f.language ?? '',
-                modified: f.modified ?? false,
-              };
-            },
-          );
+          const safeEntries: AppState['codeOpenFiles'] = [];
+          for (const raw of merged.codeOpenFiles as unknown[]) {
+            const f = raw as Partial<AppState['codeOpenFiles'][number]>;
+            if (typeof f.path !== 'string') continue;
+            if (!fileContentCache.has(f.path)) {
+              fileContentCache.set(f.path, { content: '', originalContent: '' });
+            }
+            safeEntries.push({
+              path: f.path,
+              name: typeof f.name === 'string' ? f.name : (f.path.split(/[/\\]/).pop() ?? ''),
+              language: typeof f.language === 'string' ? f.language : '',
+              modified: typeof f.modified === 'boolean' ? f.modified : false,
+            });
+          }
+          merged.codeOpenFiles = safeEntries;
         }
         return merged;
       },

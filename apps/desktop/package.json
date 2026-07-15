@@ -1,6 +1,6 @@
 {
   "name": "@ghita/desktop",
-  "version": "0.0.5-beta",
+  "version": "0.0.5",
   "private": true,
   "description": "GHITA CODING AGENT — Desktop App (Tauri + React)",
   "type": "module",
@@ -32,6 +32,7 @@
     "@xterm/xterm": "^5.5.0",
     "framer-motion": "^12.40.0",
     "lucide-react": "^1.18.0",
+    "screenshot-desktop": "^1.15.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-error-boundary": "^4.1.2",
