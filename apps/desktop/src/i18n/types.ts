@@ -2,6 +2,29 @@
 // GHITA CODING AGENT — i18n Type Definitions
 // ==============================================================================
 
+/**
+ * Canonical locale codes supported by the desktop app.
+ * Adding a new language requires: a translation file under `apps/desktop/src/i18n/`,
+ * an entry in the `translations` map in `context.tsx`, and an entry in
+ * `LANGUAGE_OPTIONS` in `apps/desktop/src/views/SettingsView.tsx`.
+ */
+export type LocaleCode = 'vi' | 'en' | 'zh' | 'ru' | 'ja' | 'ko';
+
+export const SUPPORTED_LOCALES: readonly LocaleCode[] = [
+  'vi',
+  'en',
+  'zh',
+  'ru',
+  'ja',
+  'ko',
+] as const;
+
+export const DEFAULT_LOCALE: LocaleCode = 'vi';
+
+export function isLocaleCode(value: unknown): value is LocaleCode {
+  return typeof value === 'string' && (SUPPORTED_LOCALES as readonly string[]).includes(value);
+}
+
 export interface TranslationKeys {
   common: {
     save: string;
@@ -49,6 +72,9 @@ export interface TranslationKeys {
     agents: string;
     devices: string;
     dashboard: string;
+    monitoring: string;
+    quota: string;
+    codeGraph: string;
     marketplace: string;
     workflow: string;
     ecosystem: string;
@@ -445,5 +471,92 @@ export interface TranslationKeys {
     networkIo: string;
     noContainers: string;
     noContainersDesc: string;
+  };
+  // Phase 7: Notification System (Q3 2026)
+  notification: {
+    ariaLabel: string;
+    title: string;
+    empty: string;
+    unread: string;
+    unreadBadge: string;
+    dismiss: string;
+  };
+  // Phase 8: Voice I/O (Q3 2026)
+  voice: {
+    start: string;
+    stop: string;
+    listening: string;
+    unsupported: string;
+    unsupportedHint: string;
+  };
+  // Phase 9: Monitoring Dashboard (Q3 2026)
+  monitoring: {
+    title: string;
+    loading: string;
+    totalErrors: string;
+    errorGroups: string;
+    alertRules: string;
+    telemetryEvents: string;
+    recentErrors: string;
+    recentTelemetry: string;
+    noErrors: string;
+    noTelemetry: string;
+    severityCritical: string;
+    severityError: string;
+    severityWarning: string;
+    severityInfo: string;
+    errorLoadFailed: string;
+    buildDuration: string;
+    occurrences: string;
+    lastSeen: string;
+    refresh: string;
+  };
+  // Phase 10: Quota & Rate Limiting (Q3 2026)
+  quota: {
+    title: string;
+    loading: string;
+    monthlyBudget: string;
+    spent: string;
+    cap: string;
+    remaining: string;
+    activeRateLimits: string;
+    noRateLimits: string;
+    usageByModel: string;
+    recentUsage: string;
+    noUsage24h: string;
+    noRecentUsage: string;
+    period: string;
+    totalRequests: string;
+    totalTokens: string;
+    totalCost: string;
+    noUsage: string;
+    rateLimitRequests: string;
+    perWindow: string;
+    refresh: string;
+    budgetUsage: string;
+  };
+  // Phase 11: Code Knowledge Graph (Q3 2026)
+  codeGraph: {
+    title: string;
+    workspacePath: string;
+    workspacePathPlaceholder: string;
+    build: string;
+    building: string;
+    cancel: string;
+    empty: string;
+    filterPlaceholder: string;
+    filterAriaLabel: string;
+    noWorkspacePath: string;
+    errorEnterPath: string;
+    errorBuildFailed: string;
+    columnName: string;
+    columnKind: string;
+    columnFile: string;
+    columnLine: string;
+    showingNofM: string;
+    type: string;
+    count: string;
+    lastSeen: string;
+    lastUpdated: string;
   };
 }

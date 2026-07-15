@@ -10,6 +10,7 @@ import { useAppStore, type TabId } from '../stores/appStore';
 import { useTranslation } from '../i18n';
 import { isWindows, isLinux } from '@ghita/shared';
 import { TabBar } from '../components/TabBar';
+import { NotificationTray } from '../components/NotificationTray';
 
 const Terminal = lazy(() =>
   import('../components/Terminal').then((module) => ({ default: module.Terminal })),
@@ -34,6 +35,15 @@ const DevicesView = lazy(() =>
 );
 const DashboardView = lazy(() =>
   import('../views/DashboardView').then((module) => ({ default: module.DashboardView })),
+);
+const MonitoringView = lazy(() =>
+  import('../views/MonitoringView').then((module) => ({ default: module.MonitoringView })),
+);
+const QuotaView = lazy(() =>
+  import('../views/QuotaView').then((module) => ({ default: module.QuotaView })),
+);
+const CodeGraphView = lazy(() =>
+  import('../views/CodeGraphView').then((module) => ({ default: module.CodeGraphView })),
 );
 const SettingsView = lazy(() =>
   import('../views/SettingsView').then((module) => ({ default: module.SettingsView })),
@@ -160,6 +170,9 @@ function ActiveView() {
     agents: <AgentsView />,
     devices: <DevicesView />,
     dashboard: <DashboardView />,
+    monitoring: <MonitoringView />,
+    quota: <QuotaView />,
+    'code-graph': <CodeGraphView />,
     marketplace: <MarketplaceView />,
     workflow: <WorkflowView />,
     ecosystem: <EcosystemView />,
@@ -247,7 +260,10 @@ export function MainLayout() {
           {terminalCwd && (
             <>
               <span className="text-text-muted text-[10px] select-none shrink-0">/</span>
-              <span className="text-xs text-text-muted font-medium truncate max-w-[180px]" title={terminalCwd}>
+              <span
+                className="text-xs text-text-muted font-medium truncate max-w-[180px]"
+                title={terminalCwd}
+              >
                 {terminalCwd.split(/[/\\]/).pop()}
               </span>
             </>
@@ -263,7 +279,9 @@ export function MainLayout() {
             onClick={toggleTerminal}
             title={t('mainLayout.terminal')}
             className={`flex items-center gap-1.5 px-3 py-1 text-xs rounded-md transition-colors ${
-              isTerminalOpen ? 'bg-bg-active text-accent-primary' : 'hover:bg-bg-hover text-text-muted'
+              isTerminalOpen
+                ? 'bg-bg-active text-accent-primary'
+                : 'hover:bg-bg-hover text-text-muted'
             }`}
           >
             <TerminalIcon size={14} /> {t('mainLayout.terminal')}
@@ -282,8 +300,17 @@ export function MainLayout() {
         </div>
       </motion.div>
 
-      {/* Tab Bar */}
-      <TabBar />
+      {/* Tab Bar + Notification Tray */}
+      <div
+        style={{ display: 'flex', alignItems: 'center', minHeight: 'var(--tabbar-height, 40px)' }}
+      >
+        <TabBar />
+        <div
+          style={{ marginLeft: 'auto', padding: '0 12px', display: 'flex', alignItems: 'center' }}
+        >
+          <NotificationTray />
+        </div>
+      </div>
 
       {/* Main area */}
       <div className="flex flex-1 min-h-0 relative">
@@ -316,7 +343,10 @@ export function MainLayout() {
                 className="flex flex-col shrink-0 border-t border-border-subtle bg-bg-secondary"
               >
                 {/* Drag handle */}
-                <div onMouseDown={onDragStart} className="h-1 bg-border-subtle hover:bg-accent-primary cursor-row-resize transition-colors shrink-0" />
+                <div
+                  onMouseDown={onDragStart}
+                  className="h-1 bg-border-subtle hover:bg-accent-primary cursor-row-resize transition-colors shrink-0"
+                />
                 <div className="flex-1 overflow-hidden relative">
                   <Suspense fallback={<LoadingPanel />}>
                     <Terminal />
@@ -367,8 +397,16 @@ export function MainLayout() {
           </div>
         </div>
         <div className="flex gap-3 min-w-0 overflow-hidden justify-end items-center">
-          <span className={serverStatus === 'listening' ? 'text-success flex items-center gap-1' : 'flex items-center gap-1'}>
-            <div className={`w-2 h-2 rounded-full ${serverStatus === 'listening' ? 'bg-success animate-pulse' : 'bg-text-muted'}`} />
+          <span
+            className={
+              serverStatus === 'listening'
+                ? 'text-success flex items-center gap-1'
+                : 'flex items-center gap-1'
+            }
+          >
+            <div
+              className={`w-2 h-2 rounded-full ${serverStatus === 'listening' ? 'bg-success animate-pulse' : 'bg-text-muted'}`}
+            />
             {connectedDevices.length > 0
               ? t('mainLayout.devices', {
                   count: connectedDevices.length,

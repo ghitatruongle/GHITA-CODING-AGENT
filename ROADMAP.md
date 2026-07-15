@@ -1,11 +1,11 @@
 # 🗺️ GHITA CODING AGENT — Public Roadmap
 
-> **Current version:** v0.0.5-beta
-> **Last updated:** 2026-06-25
+> **Current version:** v0.0.5
+> **Last updated:** 2026-07-XX
 
 ---
 
-## ✅ Done — v0.1.0 Foundation
+## ✅ Done — v0.0.5 Official (2026-07-XX)
 
 | Khu vực            | Tính năng                                                   | Trạng thái |
 | ------------------ | ----------------------------------------------------------- | ---------- |
@@ -23,20 +23,25 @@
 | 🔐 Security        | Pairing auth, CSP, input sanitization, CORS                 | ✅         |
 | 📦 Build           | Turborepo + pnpm, CI/CD (Windows/Linux/macOS/Android)       | ✅         |
 | 🐳 Docker          | Multi-stage sidecar container                               | ✅         |
+| 🔔 Notification    | System with priority, channels, DND, history                | ✅ v0.0.5  |
+| 💰 Quota           | Rate Limiter + Usage Tracker + BudgetManager                | ✅ v0.0.5  |
+| 📊 Monitoring      | ErrorGrouper + AlertEngine + UsageTelemetry                 | ✅ v0.0.5  |
+| 🧬 Code Graph      | AST parsing, knowledge graph, symbol search                 | ✅ v0.0.5  |
+| 🎤 Voice           | Web Speech API STT, VAD, TTS support                        | ✅ v0.0.5  |
+| 🍎 iOS             | Ad-hoc build verified, App Store deferred to 0.0.6          | ✅ v0.0.5  |
+| 🛡️ Audit           | 44 findings (P1+P2+P3) all closed                           | ✅ v0.0.5  |
 
 ---
 
-## 🔜 In Progress — v0.1.0 (current sprint)
+## 🔜 In Progress — v0.0.6
 
-| Tính năng                                                           | Target                  | ETA              |
-| ------------------------------------------------------------------- | ----------------------- | ---------------- |
-| Code Knowledge Graph — AST parsing, dependency graph, symbol search | `packages/code-graph`   | Q3 2026          |
-| Plugin Marketplace — install, uninstall, dependency resolution      | `packages/marketplace`  | Q3 2026          |
-| Voice I/O — Whisper STT, TTS, wake-word detection                   | `packages/voice`        | Q3 2026          |
-| iOS beta build — ad-hoc distribution for testers                    | `apps/mobile/ios`       | ✅ Done (v0.0.5) |
-| Notification system — priority, channels, DND                       | `packages/notification` | Q3 2026          |
-| Rate Limiting & Quota Management                                    | `packages/quotas`       | Q3 2026          |
-| Monitoring & Performance Tracing (Sentry)                           | `packages/monitoring`   | Q3 2026          |
+| Tính năng                                                          | Target                 | ETA     |
+| ------------------------------------------------------------------ | ---------------------- | ------- |
+| Plugin Marketplace — install, uninstall, dependency resolution     | `packages/marketplace` | Q3 2026 |
+| iOS App Store submission + TestFlight setup                        | `apps/mobile/ios`      | Q3 2026 |
+| MCP Server Integration — Model Context Protocol                    | `packages/mcp`         | Q3 2026 |
+| Voice improvements — Whisper STT (replace Web Speech API fallback) | `packages/voice`       | Q3 2026 |
+| Monitoring v2 — Sentry DSN transport, real performance tracing     | `packages/monitoring`  | Q3 2026 |
 
 ---
 

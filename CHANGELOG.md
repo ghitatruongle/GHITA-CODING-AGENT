@@ -5,6 +5,104 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.0.5] - 2026-07-XX
+
+### 🎯 Theme: Stable Foundation — 44 audit fixes + 5 Q3 features
+
+First official release. Closes all 44 findings from the codebase audit (run on 2026-06-13) and ships 5 Q3 2026 features with full UI integration.
+
+### ✨ Added
+
+#### 🧪 Q3 2026 features (full UI)
+
+- **Notification System** — Bell icon in header with badge counter, dropdown panel, mark-read on open, dismiss button, OS-level notifications via Tauri `show_notification` command. Hook: `useNotifications`. Component: `NotificationTray`.
+- **Monitoring Dashboard** — Real-time stats grid (total errors, error groups, active alert rules, telemetry events), top errors list from `ErrorGrouper`, telemetry log. View: `MonitoringView`. Auto-refresh every 15s.
+- **Quota & Rate Limiting** — Monthly budget gauge (color-coded by usage %), rate limit cards, usage summary table, recent usage log. Persistence to `appDataDir/budget.json`. View: `QuotaView`.
+- **Code Knowledge Graph** — Workspace path input, builds AST graph via `CodeKnowledgeGraph`, kind statistics, filter by name/file, results table. View: `CodeGraphView`.
+- **Voice I/O (STT)** — Mic button in chat input, Web Speech API integration with graceful fallback, live interim transcript, listening indicator. Hook: `useVoiceInput`. Component: `VoiceInputButton`.
+
+#### 🔒 Security (10 P1 fixes)
+
+- **2.14** SSRF + DNS Rebinding — both `input-sanitizer.ts` and `communication/security.ts` now resolve DNS once, validate IP, fetch by IP with `Host` header
+- **2.7** PII stream — 32-token sliding window buffer before PII regex
+- **2.11** Secret rotator — rotated key now returned and stored; `getActiveKey()` exposes it
+- **2.18** Daemon restart — real stop → start cycle (not just state update)
+- **2.8** Stream content filter + secret detector — wired into `chatStream` middleware
+- **2.10** HTTP timeout — `AbortController` cancels in-flight requests
+- **2.3** Workflow setTimeout — `clearTimeout` in `finally`
+- **2.4** Workflow circular false positive — `try/finally` cleans `inProgress`
+- **2.5** Subagent initial sync — diff against empty parent state at version 0
+- **2.6** Subagent queue — FIFO when at `maxConcurrency`
+
+#### 🖥️ A11y + Tauri hardening (16 P2 fixes)
+
+- **1.1, 1.2** Keyboard nav on FileExplorer, ApiManager (`role="treeitem"`, `tabIndex`, `onKeyDown` for Enter/Space)
+- **1.3** `.focus-ring` global class with `!important` outline; removed `outline: 'none'` from 4 files
+- **1.4** `id`/`htmlFor` pairing on ApiManager form inputs
+- **1.5** Mobile touch coords: letterbox/pillarbox math in `ScreenPreview`
+- **1.6** `accessibilityRole="button"` on `TouchableOpacity` in `RemoteControlScreen`
+- **1.7** LocaleCode unified to `vi, en, zh, ru, ja, ko` across packages
+- **1.8** Hardcoded chat strings → `t('chat.copy')` etc, all 6 locales translated
+- **2.1** DebateEngine JSON: string-aware brace matching
+- **2.2** Workflow deps: validation + cycle detection (Kahn's algorithm)
+- **2.9** Budget persistence: `budget.json` v1 with daily/monthly reset scheduler
+- **2.12** Keychain: throw on decrypt failure (no destructive clear)
+- **2.13** Hardcoded keychain password: `process.env.GHITA_KEYCHAIN_PASSWORD`
+- **2.15** `import crypto from 'node:crypto'` in session.ts
+- **2.16** Tier 3 `get(id)`: direct SQLite ID lookup (no vector search)
+- **2.17** Skill guard hash: include `index.js` content
+- **2.19** Tier manager math: `+` not `-`
+- **3.1** Tokio panic: `tauri::async_runtime::block_on`
+- **3.2** Sidecar production path: `resource_dir()` + dev fallback
+- **3.3** IPC hijacking RCE: `GHITA_SESSION_TOKEN` env, constant-time compare
+- **3.4** Capabilities: `bash` + `sh` in `shell:allow-execute`
+- **3.5** PTY shell: `#[cfg(target_os = "...")]` for `bash`/`zsh`/`powershell.exe`
+- **3.6** UTF-8 buffer: carry incomplete bytes across reads
+- **3.7** CSP: `frame-src 'self' http://localhost:* http://127.0.0.1:*`
+- **3.8** Terminal session leak: `sessions.remove()` on EOF
+- **3.9** Port liberation: scan free port starting from configured (no `taskkill`)
+
+#### 📱 Android (8 P2 fixes)
+
+- **4.1** `MainActivity.onCreate(null)` to prevent Fragment restore crash
+- **4.2** Proguard `-keep class kjd.reactnative.bluetooth.** { *; }`
+- **4.3** `<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />`
+- **4.4** Remove duplicate `includeBuild` in `settings.gradle`
+- **4.5** `Platform.Version >= 31` skips `ACCESS_FINE_LOCATION`; `android:maxSdkVersion="30"`
+- **4.6** Release task detection: any of `release|bundle|assemble|install`
+- **4.7** `<uses-feature android:name="android.hardware.bluetooth" android:required="false" />`
+- **4.8** `cleartextTrafficPermitted="false"` in `network_security_config.xml`, debug config separate
+
+#### 🍎 iOS Build
+
+- iOS ad-hoc build verified on Xcode 15+ / iOS 16+ Simulator (`CODE_SIGNING_ALLOWED=NO`)
+- Build artifact: `apps/mobile/ios/build/Build/Products/Debug-iphonesimulator/GhitaMobile.app`
+- App Store submission deferred to 0.0.6 (requires paid Apple Developer account + TestFlight setup)
+
+### 🔧 Changed
+
+- iOS beta build pipeline retained (ad-hoc only, `CODE_SIGNING_ALLOWED=NO`)
+- Knip + `pnpm audit` checks in CI
+- All packages have `sideEffects: false` (preserved from beta)
+- New `reactflow` dep added to desktop for code graph visualization
+
+### 📊 Key Metrics
+
+| Metric                  | v0.0.4 | v0.0.5-beta | v0.0.5                  |
+| ----------------------- | ------ | ----------- | ----------------------- |
+| Audit findings closed   | 0/44   | 0/44        | **44/44**               |
+| Features with full UI   | 0      | 0           | **5**                   |
+| Packages with tests     | 15/22  | 22/22       | 22/22                   |
+| Coverage threshold avg  | ~28%   | ~35%        | ~35%+ (root ≥50%)       |
+| macOS auto-updater      | ❌     | ✅          | ✅                      |
+| iOS release build       | ❌     | ✅ ad-hoc   | ✅ ad-hoc               |
+| IPC token enforcement   | ❌     | ❌          | **✅**                  |
+| PII stream coverage     | ❌     | ❌          | **✅**                  |
+| Sidecar production path | ❌     | ❌          | **✅**                  |
+| Total dependencies      | 239    | ~222        | ~225 (react-flow added) |
+
+---
+
 ## [0.0.5-beta] - 2026-06-25
 
 ### 🎯 Theme: Quality & Platform — 5 trụ cột cho beta

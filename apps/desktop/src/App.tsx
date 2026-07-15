@@ -5,6 +5,7 @@
 import { useEffect, useRef, lazy, Suspense } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { ErrorFallback } from './components/ErrorFallback';
+import { isLocaleCode } from './i18n/types';
 
 const MainLayout = lazy(() =>
   import('./layouts/MainLayout').then((m) => ({ default: m.MainLayout })),
@@ -139,13 +140,31 @@ function AppContent() {
             const tr = tRef.current;
             switch (event) {
               case 'sync_language': {
-                const lang = data.language;
-                if (lang && typeof lang === 'string') {
-                  if (import.meta.env.DEV)
-                    console.info('[AppContent] Sync language received from sidecar:', lang);
-                  lastSyncedLangRef.current = lang;
-                  useAppStore.getState().setLanguage(lang);
+                // Guard (debug fix): the sidecar contract specifies
+                // `data: { language: string }`, but a misbehaving or older
+                // sidecar can send `{ event: 'sync_language' }` with no
+                // `data` at all. Accessing `data.language` directly would
+                // throw a TypeError and tear down the listener.
+                const dataObj = (data ?? {}) as { language?: unknown };
+                const lang = dataObj.language;
+                // Validate the incoming language is a supported LocaleCode.
+                // The sidecar may be running on an older install that still
+                // sends `es`/`fr`/`pt` which were removed in v0.0.5; those
+                // are dropped (review fix: now logged for diagnosability
+                // instead of silently swallowed).
+                if (typeof lang !== 'string' || !isLocaleCode(lang)) {
+                  if (import.meta.env.DEV) {
+                    console.warn(
+                      '[AppContent] Ignoring sync_language — unsupported or missing locale:',
+                      lang,
+                    );
+                  }
+                  break;
                 }
+                if (import.meta.env.DEV)
+                  console.info('[AppContent] Sync language received from sidecar:', lang);
+                lastSyncedLangRef.current = lang;
+                useAppStore.getState().setLanguage(lang);
                 break;
               }
               case 'pair_confirm': {

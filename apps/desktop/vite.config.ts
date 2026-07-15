@@ -81,6 +81,11 @@ export default defineConfig({
       '@ghita/communication',
       '@ghita/agents',
       '@ghita/skills',
+      '@ghita/monitoring',
+      '@ghita/quotas',
+      '@sentry/node-core',
+      '@sentry/node',
+      '@opentelemetry/api',
       '@grpc/grpc-js',
       '@grpc/proto-loader',
       'playwright',
@@ -111,9 +116,28 @@ export default defineConfig({
     // Tauri uses Chromium on Windows and WebKit on Linux/macOS
     target: process.env.TAURI_PLATFORM === 'windows' ? 'chrome105' : 'safari15',
     minify: !process.env.TAURI_DEBUG ? 'esbuild' : false,
-    sourcemap: !!process.env.TAURI_DEBUG,
+    sourcemap: Boolean(process.env.TAURI_DEBUG),
     rollupOptions: {
-      external: [],
+      // Sentry Node-side modules are server-only; they leak into the browser
+      // bundle via @ghita/monitoring re-exports. Mark them external so the
+      // bundler skips them entirely on the WebView target.
+      external: [
+        '@sentry/node-core',
+        '@sentry/node',
+        '@sentry-internal/node-core',
+        '@opentelemetry/api',
+        '@opentelemetry/sdk-node',
+        '@opentelemetry/auto-instrumentations-node',
+        'diagnostics_channel',
+        'node:diagnostics_channel',
+        'worker_threads',
+        'node:worker_threads',
+        'inspector',
+        'node:inspector',
+        'zlib',
+        'node:zlib',
+        'module',
+      ],
       output: {
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-dom/client'],
@@ -131,8 +155,8 @@ export default defineConfig({
         },
       },
     },
-    // 500 KB is realistic for the markdown/vendor chunks; 300 KB caused
-    // constant warnings without actionable signal.
-    chunkSizeWarningLimit: 500,
+    // 4 MB covers the code-graph dynamic chunk (tree-sitter WASM ~3 MB);
+    // smaller chunks split cleanly into the manualChunks groups.
+    chunkSizeWarningLimit: 4000,
   },
 });

@@ -6,12 +6,12 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-0.0.4-purple.svg)
+![Version](https://img.shields.io/badge/version-0.0.5-purple.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Node](https://img.shields.io/badge/node-%3E%3D20-green.svg)
 ![TypeScript](https://img.shields.io/badge/typescript-5.6-blue.svg)
 ![Tauri](https://img.shields.io/badge/tauri-2.x-orange.svg)
-![Tests](https://img.shields.io/badge/tests-1%2C918%20passed-brightgreen.svg)
+![Tests](https://img.shields.io/badge/tests-1%2C550%2B%20passed-brightgreen.svg)
 ![Coverage](https://img.shields.io/badge/coverage-v8%2Fc8-informational.svg)
 ![Build](https://img.shields.io/badge/build-turborepo-blueviolet.svg)
 [![Docs](https://img.shields.io/badge/docs-api-blueviolet.svg)](https://ghitatruongle.github.io/GHITA-CODING-AGENT/)
@@ -205,29 +205,29 @@ pnpm dev:android
 
 ## Changelog
 
-| Version            | Date          | Description                                                                                                                                                                                                                                                                               |
-| ------------------ | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| DEMO               | 19/05/2026    | Initial demo release                                                                                                                                                                                                                                                                      |
-| Update 0.0.1       | 21/05/2026    | Optimized phone-computer connection and fixed minor bugs                                                                                                                                                                                                                                  |
-| Update 0.0.2 beta1 | 21/05/2026    | Code Editor VSCode-style, File Explorer, Multi-tab, 13 AI providers, Dashboard real-time, API Manager redesign, Chat markdown rendering, Token counter                                                                                                                                    |
-| Update 0.0.2 beta2 | 22/05/2026    | Sandboxed workspace tools (CRUD, pure-Node grep search, block traversal), Socket.IO live telemetry and terminal command approval consent gate, integration testing and compilation                                                                                                        |
-| Update 0.0.2       | 26/05/2026    | Added 6 breakthrough features: SCTI trajectory self-healing, AST-Lock method protection, Live Telepresence stream, Rust memory addon, AHPI performance heatmap, DebateEngine reviewer panel, and /deep-research command                                                                   |
-| Update 0.0.3 beta1 | 02/06/2026    | Real Terminal PTY (node-pty sidecar), Playwright-Stealth multi-tab browser, Agentic Observe & Act layer, Sandbox guardrails, VS Code extension WebSocket sync, Monaco linter diagnostics & diff view, Mobile touch remote control, Embedded Tauri webview, E2E integration & CI benchmark |
-| Update 0.0.3       | 07-08/06/2026 | Native AI agent runtime, skills & memory graph, tool-calling engine, performance layer. Critical security hardening (shell injection, Tauri permissions). Production-ready debug→test→publish CI pipeline.                                                                                |
+| Version            | Date          | Description                                                                                                                                                                                                                                                                                                                  |
+| ------------------ | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DEMO               | 19/05/2026    | Initial demo release                                                                                                                                                                                                                                                                                                         |
+| Update 0.0.1       | 21/05/2026    | Optimized phone-computer connection and fixed minor bugs                                                                                                                                                                                                                                                                     |
+| Update 0.0.2 beta1 | 21/05/2026    | Code Editor VSCode-style, File Explorer, Multi-tab, 13 AI providers, Dashboard real-time, API Manager redesign, Chat markdown rendering, Token counter                                                                                                                                                                       |
+| Update 0.0.2 beta2 | 22/05/2026    | Sandboxed workspace tools (CRUD, pure-Node grep search, block traversal), Socket.IO live telemetry and terminal command approval consent gate, integration testing and compilation                                                                                                                                           |
+| Update 0.0.2       | 26/05/2026    | Added 6 breakthrough features: SCTI trajectory self-healing, AST-Lock method protection, Live Telepresence stream, Rust memory addon, AHPI performance heatmap, DebateEngine reviewer panel, and /deep-research command                                                                                                      |
+| Update 0.0.3 beta1 | 02/06/2026    | Real Terminal PTY (node-pty sidecar), Playwright-Stealth multi-tab browser, Agentic Observe & Act layer, Sandbox guardrails, VS Code extension WebSocket sync, Monaco linter diagnostics & diff view, Mobile touch remote control, Embedded Tauri webview, E2E integration & CI benchmark                                    |
+| Update 0.0.3       | 07-08/06/2026 | Native AI agent runtime, skills & memory graph, tool-calling engine, performance layer. Critical security hardening (shell injection, Tauri permissions). Production-ready debug→test→publish CI pipeline.                                                                                                                   |
 | Update 0.0.4       | 18/06/2026    | Push notification system (toast + queue + sound), multi-channel communication plugin architecture (WebSocket/mDNS/Bluetooth), marketplace double-entry bookkeeping revenue, i18n key validation, mobile screen decomposition. Security & stability: tax calculation fix, Bluetooth error handling, health check latency fix. |
 
 ---
 
 ## 🤝 Community & Support
 
-| Kênh | Mục đích |
-|---|---|
-| [![Discord](https://img.shields.io/badge/chat-discord-5865F2.svg)](https://discord.gg/ghita) | Community chat, Q&A, feature requests |
-| [![GitHub Issues](https://img.shields.io/badge/issues-bug_report-red.svg)](https://github.com/ghitatruongle/GHITA-CODING-AGENT/issues/new?labels=bug) | Bug reports |
-| [![GitHub Issues](https://img.shields.io/badge/issues-feature_request-brightgreen.svg)](https://github.com/ghitatruongle/GHITA-CODING-AGENT/issues/new?labels=enhancement) | Feature requests |
-| [![Security](https://img.shields.io/badge/security-policy-green.svg)](SECURITY.md) | Report vulnerabilities |
-| [![Roadmap](https://img.shields.io/badge/roadmap-public-yellow.svg)](ROADMAP.md) | Planned features |
-| [![API Docs](https://img.shields.io/badge/docs-api-blueviolet.svg)](https://ghitatruongle.github.io/GHITA-CODING-AGENT/) | API reference |
+| Kênh                                                                                                                                                                       | Mục đích                              |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| [![Discord](https://img.shields.io/badge/chat-discord-5865F2.svg)](https://discord.gg/ghita)                                                                               | Community chat, Q&A, feature requests |
+| [![GitHub Issues](https://img.shields.io/badge/issues-bug_report-red.svg)](https://github.com/ghitatruongle/GHITA-CODING-AGENT/issues/new?labels=bug)                      | Bug reports                           |
+| [![GitHub Issues](https://img.shields.io/badge/issues-feature_request-brightgreen.svg)](https://github.com/ghitatruongle/GHITA-CODING-AGENT/issues/new?labels=enhancement) | Feature requests                      |
+| [![Security](https://img.shields.io/badge/security-policy-green.svg)](SECURITY.md)                                                                                         | Report vulnerabilities                |
+| [![Roadmap](https://img.shields.io/badge/roadmap-public-yellow.svg)](ROADMAP.md)                                                                                           | Planned features                      |
+| [![API Docs](https://img.shields.io/badge/docs-api-blueviolet.svg)](https://ghitatruongle.github.io/GHITA-CODING-AGENT/)                                                   | API reference                         |
 
 ---
 
@@ -417,15 +417,15 @@ pnpm dev:android
 
 ## Nhật ký Thay đổi (Changelog)
 
-| Phiên bản            | Ngày          | Mô tả                                                                                                                                                                                                                                                                               |
-| -------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| DEMO                 | 19/05/2026    | Bản demo phát hành đầu tiên                                                                                                                                                                                                                                                         |
-| Cập nhật 0.0.1       | 21/05/2026    | Tối ưu kết nối điện thoại-máy tính và sửa các lỗi nhỏ                                                                                                                                                                                                                               |
-| Cập nhật 0.0.2 beta1 | 21/05/2026    | Tích hợp trình biên tập mã kiểu VSCode, Trình quản lý tệp, Đa thẻ (Multi-tab), 13 nhà cung cấp AI, Bảng điều khiển thời gian thực, Thiết kế lại quản lý API, Hiển thị chat định dạng markdown, Bộ đếm token                                                                         |
-| Cập nhật 0.0.2 beta2 | 22/05/2026    | Các công cụ không gian làm việc an toàn (CRUD, tìm kiếm grep thuần Node, duyệt khối), Kết nối Socket.IO trực tiếp và cơ chế phê duyệt lệnh terminal, kiểm thử tích hợp và biên dịch                                                                                                 |
-| Cập nhật 0.0.2       | 26/05/2026    | Thêm 6 tính năng đột phá: Tự chữa lành quỹ đạo SCTI, Bảo vệ phương thức AST-Lock, Stream hiện diện trực tiếp, Addon bộ nhớ Rust, Bản đồ nhiệt hiệu năng AHPI, Bảng đánh giá tranh biện DebateEngine và lệnh /deep-research                                                          |
-| Cập nhật 0.0.3 beta1 | 02/06/2026    | Terminal PTY thật (node-pty sidecar), Trình duyệt Playwright-Stealth đa thẻ, Lớp Agentic Observe & Act, Bảo vệ sandbox, VS Code extension đồng bộ WebSocket, Monaco chẩn đoán linter & diff view, Mobile điều khiển cảm ứng từ xa, Tauri webview nhúng, Tích hợp E2E & CI benchmark |
-| Cập nhật 0.0.3       | 07-08/06/2026 | Runtime AI agent gốc, đồ thị kỹ năng & bộ nhớ, công cụ gọi tool, lớp hiệu năng. Tăng cường bảo mật quan trọng (shell injection, quyền Tauri). Pipeline CI debug→test→publish sẵn sàng production.                                                                                   |
+| Phiên bản            | Ngày          | Mô tả                                                                                                                                                                                                                                                                                     |
+| -------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DEMO                 | 19/05/2026    | Bản demo phát hành đầu tiên                                                                                                                                                                                                                                                               |
+| Cập nhật 0.0.1       | 21/05/2026    | Tối ưu kết nối điện thoại-máy tính và sửa các lỗi nhỏ                                                                                                                                                                                                                                     |
+| Cập nhật 0.0.2 beta1 | 21/05/2026    | Tích hợp trình biên tập mã kiểu VSCode, Trình quản lý tệp, Đa thẻ (Multi-tab), 13 nhà cung cấp AI, Bảng điều khiển thời gian thực, Thiết kế lại quản lý API, Hiển thị chat định dạng markdown, Bộ đếm token                                                                               |
+| Cập nhật 0.0.2 beta2 | 22/05/2026    | Các công cụ không gian làm việc an toàn (CRUD, tìm kiếm grep thuần Node, duyệt khối), Kết nối Socket.IO trực tiếp và cơ chế phê duyệt lệnh terminal, kiểm thử tích hợp và biên dịch                                                                                                       |
+| Cập nhật 0.0.2       | 26/05/2026    | Thêm 6 tính năng đột phá: Tự chữa lành quỹ đạo SCTI, Bảo vệ phương thức AST-Lock, Stream hiện diện trực tiếp, Addon bộ nhớ Rust, Bản đồ nhiệt hiệu năng AHPI, Bảng đánh giá tranh biện DebateEngine và lệnh /deep-research                                                                |
+| Cập nhật 0.0.3 beta1 | 02/06/2026    | Terminal PTY thật (node-pty sidecar), Trình duyệt Playwright-Stealth đa thẻ, Lớp Agentic Observe & Act, Bảo vệ sandbox, VS Code extension đồng bộ WebSocket, Monaco chẩn đoán linter & diff view, Mobile điều khiển cảm ứng từ xa, Tauri webview nhúng, Tích hợp E2E & CI benchmark       |
+| Cập nhật 0.0.3       | 07-08/06/2026 | Runtime AI agent gốc, đồ thị kỹ năng & bộ nhớ, công cụ gọi tool, lớp hiệu năng. Tăng cường bảo mật quan trọng (shell injection, quyền Tauri). Pipeline CI debug→test→publish sẵn sàng production.                                                                                         |
 | Cập nhật 0.0.4       | 18/06/2026    | Hệ thống thông báo đẩy (toast + hàng đợi + âm thanh), kiến trúc plugin giao tiếp đa kênh (WebSocket/mDNS/Bluetooth), doanh thu marketplace sổ kế toán kép, xác thực khóa i18n, phân tách màn hình mobile. Bảo mật & ổn định: sửa tính thuế, xử lý lỗi Bluetooth, sửa độ trễ health check. |
 
 ---
@@ -434,12 +434,12 @@ pnpm dev:android
 
 ## 🤝 Cộng đồng & Hỗ trợ
 
-| Kênh | Mục đích |
-|---|---|
+| Kênh                                                                                         | Mục đích                                     |
+| -------------------------------------------------------------------------------------------- | -------------------------------------------- |
 | [![Discord](https://img.shields.io/badge/chat-discord-5865F2.svg)](https://discord.gg/ghita) | Trò chuyện cộng đồng, Q&A, yêu cầu tính năng |
-| [GitHub Issues](https://github.com/ghitatruongle/GHITA-CODING-AGENT/issues) | Báo cáo lỗi, đóng góp ý tưởng |
-| [![Security](https://img.shields.io/badge/security-policy-green.svg)](SECURITY.md) | Báo cáo lỗ hổng bảo mật |
-| [![Roadmap](https://img.shields.io/badge/roadmap-public-yellow.svg)](ROADMAP.md) | Lộ trình phát triển |
+| [GitHub Issues](https://github.com/ghitatruongle/GHITA-CODING-AGENT/issues)                  | Báo cáo lỗi, đóng góp ý tưởng                |
+| [![Security](https://img.shields.io/badge/security-policy-green.svg)](SECURITY.md)           | Báo cáo lỗ hổng bảo mật                      |
+| [![Roadmap](https://img.shields.io/badge/roadmap-public-yellow.svg)](ROADMAP.md)             | Lộ trình phát triển                          |
 
 ## Bản quyền
 
@@ -636,7 +636,7 @@ pnpm dev:android
 | 更新 0.0.2       | 26/05/2026    | 新增 6 项突破性功能:SCTI 轨迹自愈、AST-Lock 方法保护、实时远程呈现流、Rust 内存插件、AHPI 性能热力图、DebateEngine 评审面板以及 /deep-research 命令                                                                                          |
 | 更新 0.0.3 beta1 | 02/06/2026    | 真实终端 PTY(node-pty sidecar)、Playwright-Stealth 多标签页浏览器、Agentic Observe & Act 层、Sandbox 安全护栏、VS Code 扩展 WebSocket 同步、Monaco linter 诊断与 diff 视图、移动端触摸远程控制、嵌入式 Tauri webview、E2E 集成与 CI 基准测试 |
 | 更新 0.0.3       | 07-08/06/2026 | 原生 AI 代理运行时、技能与记忆图谱、工具调用引擎、性能层。关键安全加固(shell 注入、Tauri 权限)。生产就绪的 debug→test→publish CI 流水线。                                                                                                    |
-| 更新 0.0.4       | 18/06/2026    | 推送通知系统(toast + 队列 + 声音)、多通道通信插件架构(WebSocket/mDNS/蓝牙)、市场复式记账收入、i18n 键验证、移动端屏幕拆分。安全与稳定性:修复税务计算、蓝牙错误处理、健康检查延迟修复。 |
+| 更新 0.0.4       | 18/06/2026    | 推送通知系统(toast + 队列 + 声音)、多通道通信插件架构(WebSocket/mDNS/蓝牙)、市场复式记账收入、i18n 键验证、移动端屏幕拆分。安全与稳定性:修复税务计算、蓝牙错误处理、健康检查延迟修复。                                                       |
 
 ---
 
@@ -662,12 +662,12 @@ pnpm dev:android
 
 ## 🤝 社区与支持
 
-| 渠道 | 用途 |
-|---|---|
+| 渠道                                                                                         | 用途                     |
+| -------------------------------------------------------------------------------------------- | ------------------------ |
 | [![Discord](https://img.shields.io/badge/chat-discord-5865F2.svg)](https://discord.gg/ghita) | 社区聊天、问答、功能请求 |
-| [GitHub Issues](https://github.com/ghitatruongle/GHITA-CODING-AGENT/issues) | 报告错误、贡献想法 |
-| [![Security](https://img.shields.io/badge/security-policy-green.svg)](SECURITY.md) | 报告安全漏洞 |
-| [![Roadmap](https://img.shields.io/badge/roadmap-public-yellow.svg)](ROADMAP.md) | 开发路线图 |
+| [GitHub Issues](https://github.com/ghitatruongle/GHITA-CODING-AGENT/issues)                  | 报告错误、贡献想法       |
+| [![Security](https://img.shields.io/badge/security-policy-green.svg)](SECURITY.md)           | 报告安全漏洞             |
+| [![Roadmap](https://img.shields.io/badge/roadmap-public-yellow.svg)](ROADMAP.md)             | 开发路线图               |
 
 ## 许可证
 

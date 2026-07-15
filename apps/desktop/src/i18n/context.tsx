@@ -15,7 +15,14 @@ import type { TranslationKeys } from './types';
 type Translations = TranslationKeys;
 type TFunction = (key: string, params?: Record<string, string | number>) => string;
 
-const translations: Record<string, Translations> = { vi, en, zh, ru, ja, ko };
+const translations: Record<string, Translations> = {
+  vi,
+  en,
+  zh,
+  ru,
+  ja,
+  ko,
+};
 
 const I18nContext = createContext<{ t: TFunction; lang: string }>({
   // BUG FIX #10: the previous default swallowed params entirely, so
