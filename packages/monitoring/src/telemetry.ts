@@ -1,5 +1,5 @@
 // ==============================================================================
-// GHITA CODING AGENT — Opt-in Usage Telemetry (v0.0.5)
+// GHITA CODING AGENT — Opt-in Usage Telemetry (v0.1.0)
 // Local-only telemetry: all data stays on the user's machine.
 // ==============================================================================
 

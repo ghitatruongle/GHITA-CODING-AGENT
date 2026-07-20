@@ -18,13 +18,19 @@ export function fail(error: string, data?: unknown): SkillResult {
 }
 
 /** Read a string value from a parameter map. */
-export function readString(input: Record<string, unknown> | undefined, key: string): string | undefined {
+export function readString(
+  input: Record<string, unknown> | undefined,
+  key: string,
+): string | undefined {
   const value = input?.[key];
   return typeof value === 'string' && value.trim().length > 0 ? value : undefined;
 }
 
 /** Read a numeric value from a parameter map. */
-export function readNumber(input: Record<string, unknown> | undefined, key: string): number | undefined {
+export function readNumber(
+  input: Record<string, unknown> | undefined,
+  key: string,
+): number | undefined {
   const value = input?.[key];
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
@@ -41,7 +47,10 @@ export function readStringArray(
 }
 
 /** Read a boolean value from a parameter map. */
-export function readBoolean(input: Record<string, unknown> | undefined, key: string): boolean | undefined {
+export function readBoolean(
+  input: Record<string, unknown> | undefined,
+  key: string,
+): boolean | undefined {
   const value = input?.[key];
   return typeof value === 'boolean' ? value : undefined;
 }
@@ -49,7 +58,21 @@ export function readBoolean(input: Record<string, unknown> | undefined, key: str
 /** Escape a shell argument for safe command-line usage. */
 export function escapeShellArg(arg: string): string {
   if (process.platform === 'win32') {
-    return `"${arg.replace(/"/g, '""')}"`;
+    // Windows CMD: escape special characters & | ^ % ( ) < > ! and double quotes
+    // Also escape backslashes before quotes
+    const escaped = arg
+      .replace(/\\/g, '\\\\') // Backslashes first
+      .replace(/"/g, '""') // Double quotes
+      .replace(/&/g, '^&') // Ampersand
+      .replace(/\|/g, '^|') // Pipe
+      .replace(/\^/g, '^^') // Caret (must be before other escapes)
+      .replace(/%/g, '%%') // Percent
+      .replace(/\(/g, '^(') // Open paren
+      .replace(/\)/g, '^)') // Close paren
+      .replace(/</g, '^<') // Less than
+      .replace(/>/g, '^>') // Greater than
+      .replace(/!/g, '^!'); // Exclamation (for delayed expansion)
+    return `"${escaped}"`;
   }
   return `'${arg.replace(/'/g, "'\\''")}'`;
 }

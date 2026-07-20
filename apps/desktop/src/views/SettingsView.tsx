@@ -347,7 +347,7 @@ export function SettingsView() {
         </div>
       </Section>
 
-      <Section title={`ℹ️ ${t('settings.info')}`}>
+      <Section title={`ℹ ${t('settings.info')}`}>
         <SettingRow label={t('settings.version')} description="GHITA CODING AGENT">
           <span className="text-sm text-[var(--accent-primary)] font-semibold">
             {t('app.version')}

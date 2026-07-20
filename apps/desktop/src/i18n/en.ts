@@ -35,7 +35,7 @@ export const en: TranslationKeys = {
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v0.0.5',
+    version: 'v0.1.0',
     deviceReconnected: 'Reconnected to device: {{name}}',
     devicePaired: 'Successfully paired device: {{name}}',
     commandReceived: 'Command received from device: {{action}}',

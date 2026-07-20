@@ -103,13 +103,26 @@ impl TerminalManager {
                     Ok(s) => s.child.clone(),
                     Err(e) => {
                         eprintln!("[terminal] Mutex poisoned while killing session {id}: {e}");
+                        // Still clean up generations even on error
+                        self.generations.remove(id);
                         return;
                     }
                 }
             };
+            // Clean up generations map to prevent memory leak
+            self.generations.remove(id);
             if let Ok(mut child) = child_arc.lock() {
                 let _ = child.kill();
-                let _ = child.wait();
+                // Wait for process to exit — on Windows, kill() sends TerminateProcess
+                // which should be immediate. Log any wait errors but don't hang.
+                match child.wait() {
+                    Ok(status) => {
+                        eprintln!("[terminal] Session {id} exited with status: {status}");
+                    }
+                    Err(e) => {
+                        eprintln!("[terminal] Session {id} wait error: {e}");
+                    }
+                }
             };
         }
     }

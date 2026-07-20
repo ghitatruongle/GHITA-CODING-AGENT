@@ -18,6 +18,14 @@ export interface LocalConfig {
     default: string;
     [key: string]: string;
   };
+  mcpServers?: {
+    [name: string]: {
+      command: string;
+      args?: string[];
+      env?: Record<string, string>;
+      enabled?: boolean;
+    };
+  };
 }
 
 export class ConfigLoader {
@@ -97,6 +105,28 @@ export class ConfigLoader {
     return configs;
   }
 
+  /**
+   * Lấy danh sách MCP servers từ config
+   */
+  getMCPServers(localConfig: LocalConfig): Array<{
+    name: string;
+    command: string;
+    args?: string[];
+    env?: Record<string, string>;
+    enabled: boolean;
+  }> {
+    if (!localConfig.mcpServers) return [];
+    return Object.entries(localConfig.mcpServers)
+      .filter(([, server]) => server.enabled !== false)
+      .map(([name, server]) => ({
+        name,
+        command: server.command,
+        args: server.args,
+        env: server.env,
+        enabled: server.enabled ?? true,
+      }));
+  }
+
   private initializeDefaultConfig(): LocalConfig {
     const defaultConfig: LocalConfig = {
       agentModels: {
@@ -137,6 +167,7 @@ export class ConfigLoader {
         UI: 'openai-gpt-4o',
         default: 'opengateway-mimo',
       },
+      mcpServers: {},
     };
 
     this.save(defaultConfig);

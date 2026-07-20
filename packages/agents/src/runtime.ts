@@ -69,10 +69,32 @@ function createTask(agentId: string, description: string, groupId?: string): Age
   };
 }
 
-const DEFAULT_RUNTIME: AgentRuntime = async ({ agent, task, memory }) => {
+const DEFAULT_RUNTIME: AgentRuntime = async ({ agent, task, skills, memory }) => {
   const memoryContext = memory?.injectContext(task.description, { limit: 3 });
   const contextLine = memoryContext ? `\n\nContext:\n${memoryContext}` : '';
-  return `${agent.name} (${agent.role}) accepted task "${task.description}".${contextLine}`;
+
+  // Try to invoke relevant skills based on agent's skill list
+  const results: string[] = [];
+  if (skills && agent.skills?.length) {
+    for (const skillId of agent.skills) {
+      const skill = (skills as Record<string, unknown>)[skillId];
+      if (skill && typeof skill === 'object' && 'run' in skill) {
+        try {
+          const skillResult = await (skill as { run: (input: unknown) => Promise<unknown> }).run({
+            task: task.description,
+            agent: agent.name,
+            role: agent.role,
+          });
+          results.push(`[${skillId}] ${JSON.stringify(skillResult)}`);
+        } catch {
+          results.push(`[${skillId}] Skill execution failed`);
+        }
+      }
+    }
+  }
+
+  const skillOutput = results.length ? `\n\nSkill Results:\n${results.join('\n')}` : '';
+  return `${agent.name} (${agent.role}) completed task "${task.description}".${contextLine}${skillOutput}`;
 };
 
 export class AgentManager {

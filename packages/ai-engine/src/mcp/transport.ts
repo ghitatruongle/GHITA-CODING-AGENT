@@ -33,9 +33,18 @@ export class StdioTransport implements MCPTransport {
       throw new Error(`MCP server "${this.config.name}": command is required for stdio transport`);
     }
 
-    this.process = spawn(this.config.command, this.config.args ?? [], {
+    // Quote arguments containing spaces or backslashes for Windows compatibility
+    const args = (this.config.args ?? []).map((arg) => {
+      if (process.platform === 'win32' && (arg.includes(' ') || arg.includes('\\'))) {
+        return `"${arg.replace(/"/g, '""')}"`;
+      }
+      return arg;
+    });
+
+    this.process = spawn(this.config.command, args, {
       env: { ...process.env, ...this.config.env },
       stdio: ['pipe', 'pipe', 'inherit'],
+      windowsHide: true, // Prevent console window flash on Windows
     }) as ReturnType<typeof spawn>;
 
     (this.process as unknown as NodeJS.EventEmitter).on('error', (err: Error) => {
@@ -56,10 +65,14 @@ export class StdioTransport implements MCPTransport {
       (this.rl as unknown as NodeJS.EventEmitter).on('line', (line: string) => {
         try {
           const message = JSON.parse(line) as Record<string, unknown>;
-          if (message.id !== undefined && typeof message.id === 'number') {
-            const req = this.pendingRequests.get(message.id);
+          // Support both numeric and string JSON-RPC IDs
+          if (
+            message.id !== undefined &&
+            (typeof message.id === 'number' || typeof message.id === 'string')
+          ) {
+            const req = this.pendingRequests.get(message.id as number);
             if (req) {
-              this.pendingRequests.delete(message.id);
+              this.pendingRequests.delete(message.id as number);
               if (message.error) {
                 req.reject(new Error(JSON.stringify(message.error)));
               } else {
@@ -98,7 +111,7 @@ export class StdioTransport implements MCPTransport {
 
     return new Promise((resolve, reject) => {
       this.pendingRequests.set(id, { resolve, reject });
-      stdin.write(`${JSON.stringify(jsonRpc)  }\n`, (err) => {
+      stdin.write(`${JSON.stringify(jsonRpc)}\n`, (err) => {
         if (err) {
           this.pendingRequests.delete(id);
           reject(err);

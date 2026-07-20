@@ -87,10 +87,45 @@ export class ContextManager {
     return result;
   }
 
-  /** Compact bằng cách tóm tắt (placeholder — cần AI call) */
+  /** Compact bằng cách tóm tắt — trích xuất thông tin quan trọng từ messages cũ */
   private compactWithSummary(messages: ChatMessage[]): ChatMessage[] {
-    // Fallback to sliding window for now
-    return this.compactSlidingWindow(messages);
+    // Keep system messages and recent messages
+    const systemMessages = messages.filter((m) => m.role === 'system');
+    const nonSystemMessages = messages.filter((m) => m.role !== 'system');
+
+    if (nonSystemMessages.length <= 4) return messages;
+
+    // Keep last 4 messages intact for continuity
+    const recentMessages = nonSystemMessages.slice(-4);
+    const oldMessages = nonSystemMessages.slice(0, -4);
+
+    // Extract key information from old messages
+    const summaryParts: string[] = [];
+
+    // Extract important user requests
+    const userRequests = oldMessages
+      .filter((m) => m.role === 'user')
+      .slice(-3)
+      .map((m) => m.content.substring(0, 100));
+    if (userRequests.length > 0) {
+      summaryParts.push(`Recent user requests: ${userRequests.join(' | ')}`);
+    }
+
+    // Extract key decisions or results
+    const assistantMessages = oldMessages.filter((m) => m.role === 'assistant');
+    if (assistantMessages.length > 0) {
+      const lastDecision = assistantMessages[assistantMessages.length - 1];
+      if (lastDecision?.content) {
+        summaryParts.push(`Last assistant response: ${lastDecision.content.substring(0, 150)}...`);
+      }
+    }
+
+    const summaryContent =
+      summaryParts.length > 0
+        ? `[Context Summary]\n${summaryParts.join('\n')}`
+        : `[Context compacted: ${oldMessages.length} older messages summarized]`;
+
+    return [...systemMessages, { role: 'system', content: summaryContent }, ...recentMessages];
   }
 
   /** Lấy usage info */

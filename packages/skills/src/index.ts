@@ -154,6 +154,17 @@ export class SkillRegistry {
     if (!skill) return { success: false, error: `Skill not found: ${id}` };
     if (!skill.enabled) return { success: false, error: `Skill is disabled: ${id}` };
 
+    // Check if skill requires approval (dangerous skills)
+    if (skill.dangerous && !invocation.approved) {
+      return {
+        success: false,
+        error: `Skill "${skill.name}" requires user approval. Set invocation.approved = true to proceed.`,
+        requiresApproval: true,
+        skillId: id,
+        skillName: skill.name,
+      };
+    }
+
     try {
       const result = await skill.run(invocation, {
         registry: this,
@@ -231,7 +242,9 @@ export class SessionSkillRegistry {
   get(id: string): SkillDefinition | undefined {
     const skill = this.parent.get(id);
     if (!skill) return undefined;
-    const isEnabled = this.sessionEnabled.has(id) ? Boolean(this.sessionEnabled.get(id)) : skill.enabled;
+    const isEnabled = this.sessionEnabled.has(id)
+      ? Boolean(this.sessionEnabled.get(id))
+      : skill.enabled;
     return {
       ...skill,
       enabled: isEnabled,

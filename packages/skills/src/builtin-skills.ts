@@ -52,6 +52,7 @@ export function createBuiltinSkills(): SkillDefinition[] {
       version: SKILLS_VERSION,
       scopes: ['workspace'],
       status: 'ready',
+      dangerous: true,
       parameters: {
         path: { type: 'string', description: 'File path to write', required: true },
         content: { type: 'string', description: 'Text content', required: true },
@@ -103,6 +104,7 @@ export function createBuiltinSkills(): SkillDefinition[] {
       version: SKILLS_VERSION,
       scopes: ['workspace', 'system'],
       status: 'ready',
+      dangerous: true,
       parameters: {
         command: { type: 'string', description: 'Command to execute', required: true },
         timeoutMs: {
@@ -439,6 +441,7 @@ export function createBuiltinSkills(): SkillDefinition[] {
       version: SKILLS_VERSION,
       scopes: ['workspace'],
       status: 'disabled',
+      dangerous: true,
       parameters: {
         database: { type: 'string', description: 'Path to SQLite database file', required: true },
         query: { type: 'string', description: 'SQL query (SELECT only)', required: true },
