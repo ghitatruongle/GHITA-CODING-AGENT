@@ -1,6 +1,6 @@
 [package]
 name = "ghita-coding-agent"
-version = "0.0.5"
+version = "0.1.0"
 description = "GHITA CODING AGENT Desktop"
 authors = ["ghitatruongle"]
 edition = "2021"

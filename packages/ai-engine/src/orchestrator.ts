@@ -40,14 +40,25 @@ import type { DiscoveryResult } from './discovery/types.js';
 import type { OrchestratorContext } from './orchestrator/types.js';
 import { orchestratorChat, orchestratorChatStream } from './orchestrator/chat.js';
 import {
-  getMCPTools, callMCPTool, loadHooks, runPreToolHooks, runPostToolHooks,
-  getBuiltInTool, callBuiltInTool,
-  needsContextCompact, compactContext, getContextUsage,
+  getMCPTools,
+  callMCPTool,
+  loadHooks,
+  runPreToolHooks,
+  runPostToolHooks,
+  getBuiltInTool,
+  callBuiltInTool,
+  needsContextCompact,
+  compactContext,
+  getContextUsage,
 } from './orchestrator/tool-calling.js';
 import {
-  orchestratorEmbed, orchestratorEmbedMany, orchestratorGenerateObject,
-  orchestratorGenerateImage, orchestratorGenerateSpeech,
-  orchestratorGenerateVideo, orchestratorTranscribe,
+  orchestratorEmbed,
+  orchestratorEmbedMany,
+  orchestratorGenerateObject,
+  orchestratorGenerateImage,
+  orchestratorGenerateSpeech,
+  orchestratorGenerateVideo,
+  orchestratorTranscribe,
 } from './orchestrator/embedding.js';
 
 // Re-export helpers for backward compatibility
@@ -91,8 +102,13 @@ export class Orchestrator {
     if (config.mcpServers) {
       for (const server of config.mcpServers) {
         this.mcpClient.addServer({
-          name: server.name, command: server.command, args: server.args,
-          url: server.url, transport: server.transport, env: server.env, enabled: server.enabled,
+          name: server.name,
+          command: server.command,
+          args: server.args,
+          url: server.url,
+          transport: server.transport,
+          env: server.env,
+          enabled: server.enabled,
         });
       }
     }
@@ -106,7 +122,8 @@ export class Orchestrator {
     this.costTracker = new CostTracker();
     const limit = config.costLimitUsd ?? 5.0;
     this.budgetManager = new BudgetManager({
-      limit, period: 'monthly',
+      limit,
+      period: 'monthly',
       onAlert: (spent, limit, percentage) => {
         console.warn(
           `[Orchestrator] AI budget alert: spent $${spent.toFixed(4)} of $${limit.toFixed(4)} (${(percentage * 100).toFixed(1)}%)`,
@@ -114,22 +131,32 @@ export class Orchestrator {
       },
     });
     this.costMiddleware = createCostMiddleware({
-      costTracker: this.costTracker, budgetManager: this.budgetManager,
+      costTracker: this.costTracker,
+      budgetManager: this.budgetManager,
     });
 
     this.semanticCache = new SemanticCache(
-      { embed: async (text) => { const emb = await this.embed(text); return { embedding: emb.embedding }; } },
       {
-        qdrantUrl: config.qdrantUrl, collectionName: config.collectionName,
-        threshold: config.cacheThreshold ?? 0.95, fallbackToInMemory: true,
+        embed: async (text) => {
+          const emb = await this.embed(text);
+          return { embedding: emb.embedding };
+        },
+      },
+      {
+        qdrantUrl: config.qdrantUrl,
+        collectionName: config.collectionName,
+        threshold: config.cacheThreshold ?? 0.95,
+        fallbackToInMemory: true,
       },
     );
 
     this.modelDiscovery = new ModelDiscovery();
     if (config.smartRouting) {
       this.smartRouter = new SmartRouter({
-        strategy: config.smartRouting.strategy, maxCostPerRequest: config.smartRouting.maxCostPerRequest,
-        maxLatencyMs: config.smartRouting.maxLatencyMs, minQualityScore: config.smartRouting.minQualityScore,
+        strategy: config.smartRouting.strategy,
+        maxCostPerRequest: config.smartRouting.maxCostPerRequest,
+        maxLatencyMs: config.smartRouting.maxLatencyMs,
+        minQualityScore: config.smartRouting.minQualityScore,
       });
     }
   }
@@ -137,13 +164,19 @@ export class Orchestrator {
   /** Internal context for sub-modules */
   private get ctx(): OrchestratorContext {
     return {
-      config: this._config, registry: this._registry,
-      defaultProvider: this._defaultProvider, fallbackOrder: this._fallbackOrder,
-      mcpClient: this.mcpClient, hookRunner: this.hookRunner,
-      builtInTools: this.builtInTools, contextManager: this.contextManager,
+      config: this._config,
+      registry: this._registry,
+      defaultProvider: this._defaultProvider,
+      fallbackOrder: this._fallbackOrder,
+      mcpClient: this.mcpClient,
+      hookRunner: this.hookRunner,
+      builtInTools: this.builtInTools,
+      contextManager: this.contextManager,
       permissionManager: this.permissionManager,
-      costTracker: this.costTracker, budgetManager: this.budgetManager,
-      semanticCache: this.semanticCache, modelDiscovery: this.modelDiscovery,
+      costTracker: this.costTracker,
+      budgetManager: this.budgetManager,
+      semanticCache: this.semanticCache,
+      modelDiscovery: this.modelDiscovery,
       smartRouter: this.smartRouter,
       resolveProvider: (p, a) => this.resolveProvider(p, a),
       findFallbackProvider: (t) => this.findFallbackProvider(t),
@@ -153,22 +186,32 @@ export class Orchestrator {
 
   // --- Registry & Routing ---
 
-  getRegistry(): ProviderRegistry { return this._registry; }
+  getRegistry(): ProviderRegistry {
+    return this._registry;
+  }
 
   async discoverModels(providerType?: AIProviderType): Promise<DiscoveryResult> {
     const config = this._config.providers.find((p) => p.type === providerType);
     if (!config) throw new Error(`Provider ${providerType} not configured`);
     return this.modelDiscovery.discoverModels({
-      baseUrl: config.baseUrl ?? '', apiKey: config.apiKey,
-      providerType: providerType as string, authStyle: 'bearer',
+      baseUrl: config.baseUrl ?? '',
+      apiKey: config.apiKey,
+      providerType: providerType as string,
+      authStyle: 'bearer',
       parseResponse: (data: unknown) => {
         const d = data as { data?: { id: string }[] };
-        return (d.data ?? []).map((m) => ({ id: m.id, name: m.id, provider: providerType as string }));
+        return (d.data ?? []).map((m) => ({
+          id: m.id,
+          name: m.id,
+          provider: providerType as string,
+        }));
       },
     });
   }
 
-  getRoutingMetrics() { return this.smartRouter?.getMetrics() ?? []; }
+  getRoutingMetrics() {
+    return this.smartRouter?.getMetrics() ?? [];
+  }
 
   getRoutingDecision(_preferred?: AIProviderType, _agentRole?: string): RoutingDecision | null {
     if (!this.smartRouter) return null;
@@ -178,41 +221,69 @@ export class Orchestrator {
 
   // --- Chat (delegates to orchestrator/chat.ts) ---
 
-  async chat(messages: ChatMessage[], options?: ChatOptions & { provider?: AIProviderType }): Promise<ChatResponse> {
+  async chat(
+    messages: ChatMessage[],
+    options?: ChatOptions & { provider?: AIProviderType },
+  ): Promise<ChatResponse> {
     return orchestratorChat(this.ctx, messages, options);
   }
 
-  async *chatStream(messages: ChatMessage[], options?: ChatOptions & { provider?: AIProviderType }): AsyncGenerator<AIStreamChunk> {
+  async *chatStream(
+    messages: ChatMessage[],
+    options?: ChatOptions & { provider?: AIProviderType },
+  ): AsyncGenerator<AIStreamChunk> {
     yield* orchestratorChatStream(this.ctx, messages, options);
   }
 
   // --- Embedding & Media (delegates to orchestrator/embedding.ts) ---
 
-  async generateObject<T>(schema: z.ZodType<T>, messages: ChatMessage[], options?: ChatOptions & { provider?: AIProviderType }): Promise<GenerateObjectResponse<T>> {
+  async generateObject<T>(
+    schema: z.ZodType<T>,
+    messages: ChatMessage[],
+    options?: ChatOptions & { provider?: AIProviderType },
+  ): Promise<GenerateObjectResponse<T>> {
     return orchestratorGenerateObject(this.ctx, this, schema, messages, options);
   }
 
-  async embed(text: string, options?: { model?: string; provider?: AIProviderType }): Promise<EmbeddingResponse> {
+  async embed(
+    text: string,
+    options?: { model?: string; provider?: AIProviderType },
+  ): Promise<EmbeddingResponse> {
     return orchestratorEmbed(this.ctx, text, options);
   }
 
-  async embedMany(texts: string[], options?: { model?: string; provider?: AIProviderType }): Promise<EmbeddingManyResponse> {
+  async embedMany(
+    texts: string[],
+    options?: { model?: string; provider?: AIProviderType },
+  ): Promise<EmbeddingManyResponse> {
     return orchestratorEmbedMany(this.ctx, texts, options);
   }
 
-  async generateImage(prompt: string, options?: Record<string, unknown> & { provider?: AIProviderType }): Promise<{ url: string; b64?: string }> {
+  async generateImage(
+    prompt: string,
+    options?: Record<string, unknown> & { provider?: AIProviderType },
+  ): Promise<{ url: string; b64?: string }> {
     return orchestratorGenerateImage(this.ctx, prompt, options);
   }
 
-  async generateSpeech(text: string, options?: Record<string, unknown> & { provider?: AIProviderType }): Promise<{ audio: Buffer; contentType: string }> {
+  async generateSpeech(
+    text: string,
+    options?: Record<string, unknown> & { provider?: AIProviderType },
+  ): Promise<{ audio: Buffer; contentType: string }> {
     return orchestratorGenerateSpeech(this.ctx, text, options);
   }
 
-  async generateVideo(prompt: string, options?: Record<string, unknown> & { provider?: AIProviderType }): Promise<{ url: string }> {
+  async generateVideo(
+    prompt: string,
+    options?: Record<string, unknown> & { provider?: AIProviderType },
+  ): Promise<{ url: string }> {
     return orchestratorGenerateVideo(this.ctx, prompt, options);
   }
 
-  async transcribe(audio: Buffer, options?: Record<string, unknown> & { provider?: AIProviderType }): Promise<{ text: string }> {
+  async transcribe(
+    audio: Buffer,
+    options?: Record<string, unknown> & { provider?: AIProviderType },
+  ): Promise<{ text: string }> {
     return orchestratorTranscribe(this.ctx, audio, options);
   }
 
@@ -221,48 +292,116 @@ export class Orchestrator {
   async testAll(): Promise<Array<{ type: AIProviderType; ok: boolean; error?: string }>> {
     const results: Array<{ type: AIProviderType; ok: boolean; error?: string }> = [];
     for (const provider of this._registry.getAll()) {
-      try { const ok = await provider.test(); results.push({ type: provider.type, ok }); }
-      catch (error) { results.push({ type: provider.type, ok: false, error: error instanceof Error ? error.message : String(error) }); }
+      try {
+        const ok = await provider.test();
+        results.push({ type: provider.type, ok });
+      } catch (error) {
+        results.push({
+          type: provider.type,
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
     return results;
   }
 
   async getStatus(): Promise<OrchestratorStatus> {
     const allProviders = this._registry.getAll();
-    const statuses = await Promise.all(allProviders.map(async (p) => ({ type: p.type, ready: await p.isReady() })));
+    const statuses = await Promise.all(
+      allProviders.map(async (p) => ({ type: p.type, ready: await p.isReady() })),
+    );
     const readyProviders = statuses.filter((s) => s.ready);
     return {
       availableProviders: readyProviders.map((s) => s.type),
       defaultProvider: this._defaultProvider,
-      totalProviders: allProviders.length, readyProviders: readyProviders.length,
+      totalProviders: allProviders.length,
+      readyProviders: readyProviders.length,
     };
   }
 
-  setDefaultProvider(type: AIProviderType | null): void { this._defaultProvider = type; }
-  setFallbackOrder(order: AIProviderType[]): void { this._fallbackOrder = order; }
+  setDefaultProvider(type: AIProviderType | null): void {
+    this._defaultProvider = type;
+  }
+  setFallbackOrder(order: AIProviderType[]): void {
+    this._fallbackOrder = order;
+  }
 
   // --- Tool-Calling (delegates to orchestrator/tool-calling.ts) ---
 
-  getMCPTools(): MCPTool[] { return getMCPTools(this.ctx); }
-  async callMCPTool(serverName: string, toolName: string, args: Record<string, unknown>): Promise<MCPToolResult> { return callMCPTool(this.ctx, serverName, toolName, args); }
-  loadHooks(hooks: HookConfig[]): void { loadHooks(this.ctx, hooks); }
-  async runPreToolHooks(toolName: string, toolArgs?: Record<string, unknown>): Promise<HookResult[]> { return runPreToolHooks(this.ctx, toolName, toolArgs); }
-  async runPostToolHooks(toolName: string, toolArgs?: Record<string, unknown>, toolResult?: string): Promise<HookResult[]> { return runPostToolHooks(this.ctx, toolName, toolArgs, toolResult); }
-  getBuiltInTool(name: string): BuiltInTool | undefined { return getBuiltInTool(this.ctx, name); }
-  async callBuiltInTool(name: string, args: Record<string, unknown>): Promise<string> { return callBuiltInTool(this.ctx, name, args); }
-  needsContextCompact(messages: ChatMessage[]): boolean { return needsContextCompact(this.ctx, messages); }
-  compactContext(messages: ChatMessage[]): ChatMessage[] { return compactContext(this.ctx, messages); }
-  getContextUsage(messages: ChatMessage[]): { used: number; max: number; percentage: number } { return getContextUsage(this.ctx, messages); }
+  getMCPTools(): MCPTool[] {
+    return getMCPTools(this.ctx);
+  }
+  async callMCPTool(
+    serverName: string,
+    toolName: string,
+    args: Record<string, unknown>,
+  ): Promise<MCPToolResult> {
+    return callMCPTool(this.ctx, serverName, toolName, args);
+  }
+  loadHooks(hooks: HookConfig[]): void {
+    loadHooks(this.ctx, hooks);
+  }
+  async runPreToolHooks(
+    toolName: string,
+    toolArgs?: Record<string, unknown>,
+  ): Promise<HookResult[]> {
+    return runPreToolHooks(this.ctx, toolName, toolArgs);
+  }
+  async runPostToolHooks(
+    toolName: string,
+    toolArgs?: Record<string, unknown>,
+    toolResult?: string,
+  ): Promise<HookResult[]> {
+    return runPostToolHooks(this.ctx, toolName, toolArgs, toolResult);
+  }
+  getBuiltInTool(name: string): BuiltInTool | undefined {
+    return getBuiltInTool(this.ctx, name);
+  }
+  async callBuiltInTool(name: string, args: Record<string, unknown>): Promise<string> {
+    return callBuiltInTool(this.ctx, name, args);
+  }
+  needsContextCompact(messages: ChatMessage[]): boolean {
+    return needsContextCompact(this.ctx, messages);
+  }
+  compactContext(messages: ChatMessage[]): ChatMessage[] {
+    return compactContext(this.ctx, messages);
+  }
+  getContextUsage(messages: ChatMessage[]): { used: number; max: number; percentage: number } {
+    return getContextUsage(this.ctx, messages);
+  }
 
   // --- Private ---
 
   private mapModelKeyToProviderType(modelKey: string): AIProviderType | null {
     const key = modelKey.toLowerCase();
     const allTypes: AIProviderType[] = [
-      'openai', 'anthropic', 'google', 'ollama', 'custom', 'opengateway', 'mimo',
-      'openrouter', 'deepseek', 'groq', 'mistral', 'hicap', 'github-models',
-      'cerebras', 'together', 'fireworks', 'cohere', 'xai', 'replicate',
-      'perplexity', 'voyage', 'ai21', 'sambanova', 'novita', 'opencode-zen', 'nvidia-nim',
+      'openai',
+      'anthropic',
+      'google',
+      'ollama',
+      'custom',
+      'opengateway',
+      'mimo',
+      'openrouter',
+      'deepseek',
+      'groq',
+      'mistral',
+      'hicap',
+      'github-models',
+      'cerebras',
+      'together',
+      'fireworks',
+      'cohere',
+      'xai',
+      'replicate',
+      'perplexity',
+      'voyage',
+      'ai21',
+      'sambanova',
+      'novita',
+      'opencode-zen',
+      'nvidia-nim',
     ];
     for (const type of allTypes) {
       if (key === type || key.includes(type)) return type;
@@ -273,25 +412,61 @@ export class Orchestrator {
   }
 
   private resolveProvider(preferred?: AIProviderType, agentRole?: string): AIProvider {
-    if (preferred) { const p = this._registry.get(preferred); if (p) return this.wrapWithCostMiddleware(p); }
+    // 1. Explicit preference takes precedence
+    if (preferred) {
+      const p = this._registry.get(preferred);
+      if (p) return this.wrapWithCostMiddleware(p);
+    }
+
+    // 2. Try Smart Router if available (cost/quality/latency optimized)
+    if (this.smartRouter) {
+      const available = this._registry
+        .getAll()
+        .map((p) => ({ type: p.type, model: p.defaultModel }));
+      const decision = this.smartRouter.route(available);
+      if (decision) {
+        const p = this._registry.get(decision.provider);
+        if (p) return this.wrapWithCostMiddleware(p);
+      }
+    }
+
+    // 3. Agent role routing from config
     if (agentRole && this._config.routing) {
       const modelKey = this._config.routing[agentRole] || this._config.routing['default'];
       if (modelKey) {
         const providerType = this.mapModelKeyToProviderType(modelKey);
-        if (providerType) { const p = this._registry.get(providerType); if (p) return this.wrapWithCostMiddleware(p); }
+        if (providerType) {
+          const p = this._registry.get(providerType);
+          if (p) return this.wrapWithCostMiddleware(p);
+        }
       }
     }
-    if (this._defaultProvider) { const p = this._registry.get(this._defaultProvider); if (p) return this.wrapWithCostMiddleware(p); }
-    if (this._fallbackOrder.length > 0) {
-      for (const type of this._fallbackOrder) { const p = this._registry.get(type); if (p) return this.wrapWithCostMiddleware(p); }
+
+    // 4. Default provider
+    if (this._defaultProvider) {
+      const p = this._registry.get(this._defaultProvider);
+      if (p) return this.wrapWithCostMiddleware(p);
     }
+
+    // 5. Fallback order
+    if (this._fallbackOrder.length > 0) {
+      for (const type of this._fallbackOrder) {
+        const p = this._registry.get(type);
+        if (p) return this.wrapWithCostMiddleware(p);
+      }
+    }
+
+    // 6. Any available provider
     const all = this._registry.getAll();
     if (all.length > 0 && all[0]) return this.wrapWithCostMiddleware(all[0]);
     throw new Error('No AI providers registered');
   }
 
   private wrapWithCostMiddleware(provider: AIProvider): AIProvider {
-    return wrapProvider(provider, { chat: [this.costMiddleware.chat], chatStream: [this.costMiddleware.chatStream] });
+    return wrapProvider(provider, {
+      chat: [this.costMiddleware.chat],
+      chatStream: [this.costMiddleware.chatStream],
+    });
   }
 
   private findFallbackProvider(currentType: AIProviderType): AIProvider | null {
@@ -303,11 +478,22 @@ export class Orchestrator {
     return null;
   }
 
-  private async executeWithFallback<T>(fn: (provider: AIProvider) => Promise<T>, primary: AIProvider, maxAttempts: number): Promise<T> {
-    try { return await retry(() => fn(primary), maxAttempts, this._config.retryDelayMs ?? 1000); }
-    catch (primaryError) {
+  private async executeWithFallback<T>(
+    fn: (provider: AIProvider) => Promise<T>,
+    primary: AIProvider,
+    maxAttempts: number,
+  ): Promise<T> {
+    try {
+      return await retry(() => fn(primary), maxAttempts, this._config.retryDelayMs ?? 1000);
+    } catch (primaryError) {
       const fallback = this.findFallbackProvider(primary.type);
-      if (fallback) { try { return await fn(fallback); } catch { throw primaryError; } }
+      if (fallback) {
+        try {
+          return await fn(fallback);
+        } catch {
+          throw primaryError;
+        }
+      }
       throw primaryError;
     }
   }

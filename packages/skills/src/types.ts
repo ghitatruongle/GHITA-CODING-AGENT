@@ -23,6 +23,8 @@ export interface SkillInvocation {
   cwd?: string;
   /** Abort signal to cancel running shell commands or network requests. */
   signal?: AbortSignal;
+  /** Whether the user has approved this dangerous skill execution. */
+  approved?: boolean;
 }
 
 /** Execution context environment provided to running skill implementations. */
@@ -43,6 +45,8 @@ export interface SkillDefinition extends Skill {
   scopes: SkillScope[];
   /** Current ready status of the skill runtime. */
   status: SkillStatus;
+  /** Whether this skill requires explicit user approval before execution (e.g., terminal.run, db.query). */
+  dangerous?: boolean;
   /** Main executor executing the skill's business logic. */
   run: (invocation: SkillInvocation, context: SkillExecutionContext) => Promise<SkillResult>;
 }

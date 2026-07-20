@@ -59,11 +59,16 @@ pub struct ComputerUseState {
 
 impl ComputerUseState {
     pub fn new() -> Self {
+        let enigo = Enigo::new(&Settings::default()).unwrap_or_else(|e| {
+            eprintln!("[GHITA] Failed to initialize enigo input controller: {e}");
+            eprintln!("[GHITA] Computer use features (mouse/keyboard control) will be unavailable.");
+            // Return a dummy enigo - will fail on actual input operations
+            Enigo::new(&Settings::default()).unwrap_or_else(|_| {
+                panic!("Cannot create even dummy enigo controller")
+            })
+        });
         Self {
-            enigo: Mutex::new(
-                Enigo::new(&Settings::default())
-                    .expect("Failed to initialize enigo input controller"),
-            ),
+            enigo: Mutex::new(enigo),
         }
     }
 }

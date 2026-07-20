@@ -88,6 +88,12 @@ export interface SkillResult {
   output?: string;
   error?: string;
   data?: unknown;
+  /** Whether this skill requires user approval before execution */
+  requiresApproval?: boolean;
+  /** ID of the skill that requires approval */
+  skillId?: string;
+  /** Name of the skill that requires approval */
+  skillName?: string;
 }
 
 // --- Agent ---

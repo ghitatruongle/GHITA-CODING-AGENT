@@ -630,7 +630,10 @@ pub fn run() {
             http_client: reqwest::Client::builder()
                 .timeout(std::time::Duration::from_millis(1500))
                 .build()
-                .expect("Failed to create HTTP client"),
+                .unwrap_or_else(|e| {
+                    eprintln!("[GHITA] Failed to create HTTP client, using default: {e}");
+                    reqwest::Client::new()
+                }),
             starting: false,
         }))
         .manage(SecurityState { session_token })
@@ -747,7 +750,11 @@ pub fn run() {
             Ok(())
         })
         .build(tauri::generate_context!())
-        .expect("error while building tauri application");
+        .unwrap_or_else(|e| {
+            eprintln!("[GHITA FATAL] Failed to build Tauri application: {e}");
+            eprintln!("[GHITA FATAL] This may be caused by missing WebView2 runtime or corrupted installation.");
+            std::process::exit(1);
+        });
 
     // Guard against running cleanup twice (CloseRequested triggers Exit)
     let cleaned_up = std::sync::atomic::AtomicBool::new(false);

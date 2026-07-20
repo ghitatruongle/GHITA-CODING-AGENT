@@ -3,6 +3,9 @@ packages:
   - apps/*
   - docs
 
+overrides:
+  "@types/react": "^18.3.18"
+
 allowBuilds:
   better-sqlite3: true
   core-js: true

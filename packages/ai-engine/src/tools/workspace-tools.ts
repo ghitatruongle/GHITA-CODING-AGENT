@@ -425,13 +425,20 @@ export async function runCommand(args: { command: string; timeoutMs?: number }):
     const child = spawn(spawnCmd, spawnArgs, {
       cwd: sandbox,
       timeout,
-      killSignal: 'SIGTERM',
+      // On Windows, SIGTERM is not meaningful - use default kill signal
+      killSignal: process.platform === 'win32' ? undefined : 'SIGTERM',
       stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true, // Prevent console window flash on Windows
     });
-    // Hard-kill fallback if the process ignores SIGTERM (Bug #19)
+    // Hard-kill fallback if the process ignores termination signal
     const hardKillTimer = setTimeout(() => {
       try {
-        child.kill('SIGKILL');
+        // On Windows, use taskkill /F /T to kill process tree
+        if (process.platform === 'win32' && child.pid) {
+          spawn('taskkill', ['/F', '/T', '/PID', String(child.pid)], { windowsHide: true });
+        } else {
+          child.kill('SIGKILL');
+        }
       } catch {
         /* ignore if already exited */
       }

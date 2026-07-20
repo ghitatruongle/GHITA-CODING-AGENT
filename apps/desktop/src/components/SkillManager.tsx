@@ -308,7 +308,7 @@ export function SkillManager() {
     const updated = registry.setEnabled(skill.id, !skill.enabled);
     setSnapshot(registry.snapshot());
     if (connected && socket) {
-      socket.emit('set_skill_enabled', { id: updated.id, enabled: updated.enabled }, () => {});
+      socket.emit('set_skill_enabled', { skillId: updated.id, enabled: updated.enabled }, () => {});
     }
   };
 
@@ -323,7 +323,7 @@ export function SkillManager() {
           (resolvePromise) => {
             socket.emit(
               'set_skill_enabled',
-              { id: skill.id, enabled: skill.enabled },
+              { skillId: skill.id, enabled: skill.enabled },
               (res: { success: boolean; error?: string }) => {
                 resolvePromise(res);
               },

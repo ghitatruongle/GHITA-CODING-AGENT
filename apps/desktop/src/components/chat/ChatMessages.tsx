@@ -4,10 +4,7 @@
 // ==============================================================================
 
 import { useRef, useCallback, useEffect } from 'react';
-import {
-  ComputerUsePreviewComponent,
-  MarkdownMessage,
-} from '../ChatMessageContent';
+import { ComputerUsePreviewComponent, MarkdownMessage } from '../ChatMessageContent';
 import type { ChatMessage } from '../../hooks/useChatSessions';
 
 interface ChatMessagesProps {
@@ -76,18 +73,18 @@ export function ChatMessages({ messages, lang }: ChatMessagesProps) {
               borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
               background:
                 msg.role === 'user'
-                  ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(79, 70, 229, 0.2) 100%)'
-                  : 'rgba(30, 41, 59, 0.65)',
+                  ? 'linear-gradient(135deg, var(--bg-active) 0%, var(--accent-secondary) 100%)'
+                  : 'var(--bg-card)',
               border:
                 msg.role === 'user'
-                  ? '1px solid rgba(99, 102, 241, 0.3)'
-                  : '1px solid rgba(255, 255, 255, 0.05)',
-              color: '#f1f5f9',
+                  ? `1px solid var(--border-accent)`
+                  : `1px solid var(--border-subtle)`,
+              color: 'var(--text-primary)',
               fontSize: '13px',
               lineHeight: '1.6',
               whiteSpace: 'pre-wrap',
               wordBreak: 'break-word',
-              boxShadow: msg.role === 'user' ? '0 4px 14px rgba(99, 102, 241, 0.1)' : 'none',
+              boxShadow: msg.role === 'user' ? 'var(--shadow-glow)' : 'none',
             }}
           >
             <MarkdownMessage content={msg.content} />
@@ -100,7 +97,7 @@ export function ChatMessages({ messages, lang }: ChatMessagesProps) {
                   maxWidth: '100%',
                   borderRadius: '8px',
                   marginTop: '8px',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  border: '1px solid var(--border-default)',
                 }}
               />
             )}
@@ -114,10 +111,8 @@ export function ChatMessages({ messages, lang }: ChatMessagesProps) {
                 style={{
                   marginTop: '8px',
                   padding: '10px 12px',
-                  background: msg.mcpCard.isError
-                    ? 'rgba(239,68,68,0.1)'
-                    : 'rgba(99,102,241,0.1)',
-                  border: `1px solid ${msg.mcpCard.isError ? 'rgba(239,68,68,0.3)' : 'rgba(99,102,241,0.3)'}`,
+                  background: msg.mcpCard.isError ? 'var(--error-bg)' : 'var(--info-bg)',
+                  border: `1px solid ${msg.mcpCard.isError ? 'var(--error)' : 'var(--accent-primary)'}`,
                   borderRadius: '8px',
                   fontSize: '12px',
                 }}
@@ -125,21 +120,19 @@ export function ChatMessages({ messages, lang }: ChatMessagesProps) {
                 <div
                   style={{
                     fontWeight: 700,
-                    color: msg.mcpCard.isError ? '#f87171' : '#a5b4fc',
+                    color: msg.mcpCard.isError ? 'var(--error)' : 'var(--accent-primary)',
                     marginBottom: '4px',
                   }}
                 >
                   🔌 MCP: {msg.mcpCard.tool}
                 </div>
-                <div
-                  style={{ color: 'var(--text-muted)', fontSize: '11px', marginBottom: '4px' }}
-                >
+                <div style={{ color: 'var(--text-muted)', fontSize: '11px', marginBottom: '4px' }}>
                   Server: {msg.mcpCard.server}
                 </div>
                 <pre
                   style={{
                     margin: 0,
-                    color: '#cbd5e1',
+                    color: 'var(--text-secondary)',
                     fontSize: '11px',
                     whiteSpace: 'pre-wrap',
                     wordBreak: 'break-all',
@@ -157,13 +150,13 @@ export function ChatMessages({ messages, lang }: ChatMessagesProps) {
                 style={{
                   marginTop: '8px',
                   padding: '10px 12px',
-                  background: 'rgba(59,130,246,0.1)',
-                  border: '1px solid rgba(59,130,246,0.3)',
+                  background: 'var(--info-bg)',
+                  border: '1px solid var(--info)',
                   borderRadius: '8px',
                   fontSize: '12px',
                 }}
               >
-                <div style={{ fontWeight: 700, color: '#60a5fa', marginBottom: '6px' }}>
+                <div style={{ fontWeight: 700, color: 'var(--info)', marginBottom: '6px' }}>
                   🌐 Search: {msg.searchCard.query}
                 </div>
                 {msg.searchCard.results.map((r, i) => (
@@ -172,10 +165,10 @@ export function ChatMessages({ messages, lang }: ChatMessagesProps) {
                     style={{
                       marginBottom: '6px',
                       paddingLeft: '8px',
-                      borderLeft: '2px solid rgba(59,130,246,0.3)',
+                      borderLeft: '2px solid var(--info)',
                     }}
                   >
-                    <div style={{ fontWeight: 600, color: '#93c5fd' }}>{r.title}</div>
+                    <div style={{ fontWeight: 600, color: 'var(--info)' }}>{r.title}</div>
                     <div style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
                       {r.snippet.substring(0, 100)}...
                     </div>
@@ -211,9 +204,9 @@ export function ChatMessages({ messages, lang }: ChatMessagesProps) {
           >
             <span>
               {new Date(msg.timestamp).toLocaleTimeString(
-              lang === 'vi' ? 'vi-VN' : lang === 'zh' ? 'zh-CN' : 'en-US',
-              { hour: '2-digit', minute: '2-digit' },
-            )}
+                lang === 'vi' ? 'vi-VN' : lang === 'zh' ? 'zh-CN' : 'en-US',
+                { hour: '2-digit', minute: '2-digit' },
+              )}
             </span>
             <span style={{ opacity: 0.5 }}>~{Math.ceil(msg.content.length / 4)} tok</span>
           </span>
