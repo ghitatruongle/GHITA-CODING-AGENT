@@ -20,7 +20,8 @@
     "test": "cross-env NODE_OPTIONS='--experimental-vm-modules' vitest run",
     "test:watch": "vitest",
     "lint": "eslint src/",
-    "clean": "node -e \"const fs=require('fs'); fs.rmSync('dist',{recursive:true,force:true}); fs.readdirSync('.').filter(f=>f.endsWith('.tsbuildinfo')).forEach(f=>fs.rmSync(f,{force:true}))\""
+    "clean": "node -e \"const fs=require('fs'); fs.rmSync('dist',{recursive:true,force:true}); fs.readdirSync('.').filter(f=>f.endsWith('.tsbuildinfo')).forEach(f=>fs.rmSync(f,{force:true}))\"",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@ghita/shared": "workspace:*",

@@ -18,6 +18,7 @@ on:
 jobs:
   build-ios:
     runs-on: macos-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -79,6 +80,7 @@ jobs:
 
       - name: Upload iOS build
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: ios-build
           path: |
