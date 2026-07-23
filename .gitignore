@@ -55,6 +55,13 @@ pnpm-debug.log*
 # Test
 coverage/
 .nyc_output/
+*.sqlite
+**/test-ledger.sqlite
+test-output.log
+
+# Windows accidental null device file
+/nul
+nul
 
 # Turbo
 .turbo/
@@ -87,6 +94,7 @@ agents/**/handoff.md
 docs/superpowers/
 .agents/
 .kimchi/
+.zcode/
 progress.md
 PROJECT.md
 TEST_INFRA.md

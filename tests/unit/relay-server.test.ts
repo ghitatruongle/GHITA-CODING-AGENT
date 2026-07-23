@@ -5,33 +5,35 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Initialize global registries on globalThis to share across Vitest module boundaries
-(globalThis as any).activeSockets = (globalThis as any).activeSockets || new Map<string, any>();
+(globalThis as unknown as { activeSockets?: Map<string, unknown> }).activeSockets =
+  (globalThis as unknown as { activeSockets?: Map<string, unknown> }).activeSockets ||
+  new Map<string, unknown>();
 // Do not overwrite connectionHandler if already set by hoisted ESM imports
-(globalThis as any).connectionHandler = (globalThis as any).connectionHandler || null;
+(globalThis as unknown).connectionHandler = (globalThis as unknown).connectionHandler || null;
 
 // Import the relay server (it will use our mocked socket.io Server from alias)
 import { pairings, socketMeta, eventCounts } from '../../packages/relay-server/src/index.js';
 
 // Helper to create a mock socket object
 function createMockSocket(id: string) {
-  const handlers = new Map<string, (...args: any[]) => void>();
-  let wildcardHandler: ((event: string, ...args: any[]) => void) | null = null;
+  const handlers = new Map<string, (...args: unknown[]) => void>();
+  let wildcardHandler: ((event: string, ...args: unknown[]) => void) | null = null;
 
   const mockSocket = {
     id,
     handshake: { address: '127.0.0.1' },
     emit: vi.fn(),
     disconnect: vi.fn(),
-    on: vi.fn((event: string, handler: (...args: any[]) => void) => {
+    on: vi.fn((event: string, handler: (...args: unknown[]) => void) => {
       handlers.set(event, handler);
       return mockSocket;
     }),
-    onAny: vi.fn((handler: (event: string, ...args: any[]) => void) => {
+    onAny: vi.fn((handler: (event: string, ...args: unknown[]) => void) => {
       wildcardHandler = handler;
       return mockSocket;
     }),
     // Test helper to simulate incoming events to this socket
-    trigger: (event: string, ...args: any[]) => {
+    trigger: (event: string, ...args: unknown[]) => {
       const handler = handlers.get(event);
       if (handler) {
         handler(...args);
@@ -43,20 +45,20 @@ function createMockSocket(id: string) {
     },
   };
 
-  (globalThis as any).activeSockets.set(id, mockSocket);
+  (globalThis as unknown).activeSockets.set(id, mockSocket);
   return mockSocket;
 }
 
 describe('6 - Cross-Network Socket.IO Relay Server', () => {
   beforeEach(() => {
-    (globalThis as any).activeSockets.clear();
+    (globalThis as unknown).activeSockets.clear();
     pairings.clear();
     socketMeta.clear();
     eventCounts.clear();
   });
 
   it('should allow Desktop and Mobile pairing with matching code', () => {
-    const handler = (globalThis as any).connectionHandler;
+    const handler = (globalThis as unknown).connectionHandler;
     expect(handler).toBeDefined();
     expect(handler).not.toBeNull();
 
@@ -90,7 +92,7 @@ describe('6 - Cross-Network Socket.IO Relay Server', () => {
   });
 
   it('should forward custom events bidirectionally between paired devices', () => {
-    const handler = (globalThis as any).connectionHandler;
+    const handler = (globalThis as unknown).connectionHandler;
     const desktopSocket = createMockSocket('desktop-123');
     const mobileSocket = createMockSocket('mobile-456');
 
@@ -119,7 +121,7 @@ describe('6 - Cross-Network Socket.IO Relay Server', () => {
   });
 
   it('should notify the other peer when one disconnects', () => {
-    const handler = (globalThis as any).connectionHandler;
+    const handler = (globalThis as unknown).connectionHandler;
     const desktopSocket = createMockSocket('desktop-123');
     const mobileSocket = createMockSocket('mobile-456');
 
@@ -145,7 +147,7 @@ describe('6 - Cross-Network Socket.IO Relay Server', () => {
   });
 
   it('should enforce rate limits and drop excessive events', () => {
-    const handler = (globalThis as any).connectionHandler;
+    const handler = (globalThis as unknown).connectionHandler;
     const desktopSocket = createMockSocket('desktop-123');
     const mobileSocket = createMockSocket('mobile-456');
 

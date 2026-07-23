@@ -230,9 +230,9 @@ describe('RustMemoryAddon — FTS5 Query Escaping Security', () => {
       const fallbackAddon = new RustMemoryAddon(':memory:');
 
       // Manually force fallback mode by clearing the db
-      (fallbackAddon as any).db = null;
-      (fallbackAddon as any).isFallbackDb = true;
-      (fallbackAddon as any).mockDbLogs = [...seedLogs];
+      (fallbackAddon as unknown).db = null;
+      (fallbackAddon as unknown).isFallbackDb = true;
+      (fallbackAddon as unknown).mockDbLogs = [...seedLogs];
 
       const results = await fallbackAddon.searchFTS5('CORS API');
       expect(results.length).toBeGreaterThanOrEqual(1);
@@ -245,9 +245,9 @@ describe('RustMemoryAddon — FTS5 Query Escaping Security', () => {
 
     it('should return empty for empty query in fallback mode', async () => {
       const fallbackAddon = new RustMemoryAddon(':memory:');
-      (fallbackAddon as any).db = null;
-      (fallbackAddon as any).isFallbackDb = true;
-      (fallbackAddon as any).mockDbLogs = [...seedLogs];
+      (fallbackAddon as unknown).db = null;
+      (fallbackAddon as unknown).isFallbackDb = true;
+      (fallbackAddon as unknown).mockDbLogs = [...seedLogs];
 
       const results = await fallbackAddon.searchFTS5('');
       expect(results).toHaveLength(0);
@@ -257,9 +257,9 @@ describe('RustMemoryAddon — FTS5 Query Escaping Security', () => {
 
     it('should return empty for whitespace-only query in fallback mode', async () => {
       const fallbackAddon = new RustMemoryAddon(':memory:');
-      (fallbackAddon as any).db = null;
-      (fallbackAddon as any).isFallbackDb = true;
-      (fallbackAddon as any).mockDbLogs = [...seedLogs];
+      (fallbackAddon as unknown).db = null;
+      (fallbackAddon as unknown).isFallbackDb = true;
+      (fallbackAddon as unknown).mockDbLogs = [...seedLogs];
 
       const results = await fallbackAddon.searchFTS5('   ');
       expect(results).toHaveLength(0);

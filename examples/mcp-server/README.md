@@ -1,16 +1,6 @@
-# MCP Server Example
+# MCP server example
 
-Demonstrates Model Context Protocol integration in GHITA CODING AGENT.
+Status: **incubating / stub** in v0.1.5.
 
-## Overview
-
-This example shows how to:
-- Create a custom MCP server
-- Register tools with the AI engine
-- Handle tool calls from the AI
-
-## Usage
-
-```typescript
-// Coming soon
-```
+A full MCP server package is deferred (see ROADMAP). This folder documents the
+intended shape only — do not claim production MCP support yet.

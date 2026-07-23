@@ -16,7 +16,7 @@ export {
   type HeadlessSearchResult,
 } from './scanner/headlessSearch.js';
 
-export const COMPUTER_USE_VERSION = '0.1.0';
+export const COMPUTER_USE_VERSION = '0.1.5';
 
 export interface Point {
   x: number;

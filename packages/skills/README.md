@@ -1,33 +1,58 @@
 # @ghita/skills
 
-![Version](https://img.shields.io/badge/version-0.1.0-blue)
+![Version](https://img.shields.io/badge/version-0.1.5-blue)
+![Coverage](https://img.shields.io/badge/coverage-50%25_lines-yellow)
+![Tier](https://img.shields.io/badge/tier-T1_core-orange)
 
-Skill registry and execution engine for GHITA Coding Agent -- builtin skills, plugin system, command routing, and marketplace integration for extensible agent capabilities.
+Skill hub, plugin system, marketplace catalog, and integrity guard (`SkillGuard`).
 
-## Key Features
-
-- **Skill registry** -- typed catalog of builtin and user-installed skills with versioning.
-- **Plugin system** -- dynamically loadable plugins that extend agent capabilities at runtime.
-- **Command routing** -- maps natural-language intents to specific skill handlers.
-- **Engineering helpers** -- pre-built skills for code review, testing, linting, and refactoring.
-- **Marketplace hooks** -- install and update skills from the GHITA marketplace.
-
-## Installation
+## Install
 
 ```bash
-pnpm install --filter @ghita/skills
+pnpm --filter @ghita/skills build
+pnpm --filter @ghita/skills test
 ```
+
+## Core modules
+
+| Module               | Responsibility                          |
+| -------------------- | --------------------------------------- |
+| `hub/skill-guard`    | SHA-256 content hash + trusted repos    |
+| `hub/hub-registry`   | skill registry / install metadata       |
+| `registry/md-loader` | load skills from markdown manifests     |
+| `plugin-system`      | plugin lifecycle                        |
+| `builtin-skills`     | built-in skill definitions              |
+| `marketplace/*`      | catalog + install (incubating features) |
 
 ## Usage
 
-```typescript
-import { SkillRegistry } from '@ghita/skills';
+```ts
+import { computeContentHash, computeSkillHash, DEFAULT_TRUSTED_REPOS } from '@ghita/skills';
 
-const registry = new SkillRegistry();
-const skill = registry.get('code-review');
-const result = await skill.execute({ filePath: './src/index.ts' });
+const hash = computeContentHash('export const x = 1');
+const skillHash = computeSkillHash(
+  {
+    id: 'demo',
+    name: 'Demo',
+    description: 'd',
+    category: 'util',
+    version: '1.0.0',
+    source: 'local',
+    tags: [],
+  } as never,
+  ['./index.js'],
+);
+
+console.log(DEFAULT_TRUSTED_REPOS);
 ```
 
-## API Docs
+## Security notes
 
-Generated via TypeDoc: `pnpm build:docs`
+- Prefer `computeSkillHash(meta, contentPaths)` — metadata-only hashes warn and can be bypassed (audit 2.17).
+- Coverage floor: **≥45% lines** (measured ~50%).
+
+## Test
+
+```bash
+pnpm --filter @ghita/skills exec vitest run --coverage
+```

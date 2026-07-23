@@ -1,6 +1,6 @@
 {
   "name": "ghita-coding-agent",
-  "version": "0.1.0",
+  "version": "0.1.5",
   "private": true,
   "type": "module",
   "description": "GHITA CODING AGENT - Desktop AI Agent với multi-provider, skills, computer use",
@@ -30,6 +30,10 @@
     "docs:serve": "cd docs && pnpm start",
     "knip": "knip",
     "dogfood": "node scripts/dogfood.mjs",
+    "integrity": "node scripts/sync-version.mjs --check && node scripts/check-artifacts.mjs",
+    "coverage:tiers": "node scripts/check-coverage-tiers.mjs",
+    "smells": "node scripts/count-smells.mjs",
+    "version:sync": "node scripts/sync-version.mjs",
     "prepare": "husky"
   },
   "devDependencies": {

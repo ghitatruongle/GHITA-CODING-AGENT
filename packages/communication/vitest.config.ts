@@ -23,12 +23,23 @@ export default defineConfig({
       reporter: ['text', 'text-summary', 'html', 'lcov', 'json-summary'],
       reportsDirectory: './coverage',
       include: ['src/**/*.ts'],
-      exclude: ['src/**/*.test.ts', 'src/**/*.d.ts', 'node_modules/**', 'dist/**'],
+      exclude: [
+        'src/**/*.test.ts',
+        'src/**/*.d.ts',
+        'src/**/types.ts',
+        'src/index.ts',
+        // Heavy channel adapters / gateway bots need live tokens — excluded from gate.
+        'src/channels/**',
+        'src/gateway/**',
+        'node_modules/**',
+        'dist/**',
+      ],
       thresholds: {
-        statements: 35,
-        branches: 40,
-        functions: 40,
-        lines: 35,
+        // Wave3 measured ~44% overall; after excluding token adapters, core should be higher.
+        statements: 50,
+        branches: 55,
+        functions: 50,
+        lines: 50,
       },
     },
   },

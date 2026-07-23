@@ -1,16 +1,8 @@
-# Agent Workflow Example
+# Agent workflow example (v0.1.5)
 
-Demonstrates multi-agent collaboration in GHITA CODING AGENT.
+Minimal ReAct-style loop with a fake LLM (no network).
 
-## Overview
-
-This example shows how to:
-- Create specialized agents
-- Define agent groups
-- Orchestrate agent workflows
-
-## Usage
-
-```typescript
-// Coming soon
+```bash
+node examples/agent-workflow/run.mjs
+pnpm exec vitest run examples/agent-workflow/run.test.ts
 ```

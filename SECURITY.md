@@ -1,8 +1,8 @@
 # Security Policy
 
-> **Version:** v0.0.4
+> **Version:** v0.1.5
 > **Maintainer:** GHITA Coding Agent Security Team (`security@ghita.dev`)
-> **Last updated:** 2026-06-18
+> **Last updated:** 2026-07-22
 
 GHITA CODING AGENT takes the security of its users, their devices, and their data seriously. This document describes how to report vulnerabilities, what we support, and the security guarantees built into the project.
 
@@ -12,11 +12,11 @@ GHITA CODING AGENT takes the security of its users, their devices, and their dat
 
 We provide security updates for the following versions:
 
-| Version | Supported           | Notes                                  |
-| ------- | ------------------- | -------------------------------------- |
-| `0.0.4` | ✅ Active           | Current development line               |
-| `0.0.3` | ⚠️ Critical only    | Patch-only for critical CVEs           |
-| `<0.0.3`| ❌ End of life      | Upgrade required                       |
+| Version  | Supported        | Notes                        |
+| -------- | ---------------- | ---------------------------- |
+| `0.1.5`  | ✅ Active        | Current development line     |
+| `0.1.0`  | ⚠️ Critical only | Patch-only for critical CVEs |
+| `<0.1.0` | ❌ End of life   | Upgrade required             |
 
 We follow [Semantic Versioning](https://semver.org/). Security fixes are released as soon as possible and may be back-ported to the previous minor version when feasible.
 
@@ -30,7 +30,7 @@ We follow [Semantic Versioning](https://semver.org/). Security fixes are release
 
 - **Email:** `security@ghita.dev`
 - **GitHub Security Advisories:** https://github.com/ghitatruongle/ghita-coding-agent/security/advisories/new (preferred for CVE-eligible reports)
-- **GPG fingerprint:** `4F2A 9C81 0D7B 3E55 8A02 7C19 B6D4 5E83` *(on request)*
+- **GPG fingerprint:** `4F2A 9C81 0D7B 3E55 8A02 7C19 B6D4 5E83` _(on request)_
 
 ### 2.2 What to include
 
@@ -83,15 +83,15 @@ GHITA bridges a desktop AI agent (Tauri + React) and a mobile companion app (Rea
 
 ### 3.3 Key risks addressed
 
-| Risk | Mitigation |
-| ---- | ---------- |
-| Malicious skill code | `SkillGuard` hash pin + AST-Lock + plugin manifest review |
-| Prompt-injection from web/UI | Guardrail middleware (`packages/communication/src/guardrail/`) |
-| Computer-use overreach | Per-action approval on mobile + sandbox isolation |
-| API-key leakage | OS keychain (`packages/security/src/secret-rotator.ts`) |
-| LAN MitM during pairing | 6-digit rotating PIN + TLS for cloud relay |
-| Outbound dependency compromise | `dependency-review.yml` workflow + `pnpm audit` in CI |
-| Insecure deserialization | `resolutions: serialize-javascript ^7.0.5` enforced |
+| Risk                           | Mitigation                                                     |
+| ------------------------------ | -------------------------------------------------------------- |
+| Malicious skill code           | `SkillGuard` hash pin + AST-Lock + plugin manifest review      |
+| Prompt-injection from web/UI   | Guardrail middleware (`packages/communication/src/guardrail/`) |
+| Computer-use overreach         | Per-action approval on mobile + sandbox isolation              |
+| API-key leakage                | OS keychain (`packages/security/src/secret-rotator.ts`)        |
+| LAN MitM during pairing        | 6-digit rotating PIN + TLS for cloud relay                     |
+| Outbound dependency compromise | `dependency-review.yml` workflow + `pnpm audit` in CI          |
+| Insecure deserialization       | `resolutions: serialize-javascript ^7.0.5` enforced            |
 
 ---
 
@@ -139,4 +139,4 @@ We thank the following reporters and projects:
 - The OWASP Top-10 and ASVS projects, which inform our threat model.
 - The Tauri security advisories and the Rust ecosystem CVE feed.
 
-*GHITA CODING AGENT © 2026 — Security is a feature, not a follow-up.*
+_GHITA CODING AGENT © 2026 — Security is a feature, not a follow-up._

@@ -6,7 +6,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-0.0.5-purple.svg)
+![Version](https://img.shields.io/badge/version-0.1.5-purple.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Node](https://img.shields.io/badge/node-%3E%3D20-green.svg)
 ![TypeScript](https://img.shields.io/badge/typescript-5.6-blue.svg)
@@ -85,6 +85,14 @@ GHITA-CODING-AGENT/
 ├── tests/               # Tests
 └── Plan/                # Development plan
 ```
+
+### Core vs Incubating (v0.1.5)
+
+| Tier           | Packages                                                                                                                                                            |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Core**       | `ai-engine`, `agents`, `skills`, `memory`, `security`, `communication`, `desktop`                                                                                   |
+| **Product**    | `computer-use`, `browser-control`, `shared`, `vscode-extension`, `mobile`                                                                                           |
+| **Incubating** | `marketplace`, `voice`, `monitoring`, `notification`, `quotas`, `code-graph`, `gui`, `a11y`, `i18n`, `integration`, `migration`, `mobile-companion`, `relay-server` |
 
 ---
 

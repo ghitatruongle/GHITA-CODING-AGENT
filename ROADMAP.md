@@ -1,7 +1,23 @@
 # 🗺️ GHITA CODING AGENT — Public Roadmap
 
-> **Current version:** v0.0.5
-> **Last updated:** 2026-07-XX
+> **Current version:** v0.1.5
+> **Last updated:** 2026-07-22
+
+---
+
+## ✅ Done — v0.1.5 Trust Hardening (2026-07-22)
+
+| Khu vực           | Tính năng                                 | Trạng thái |
+| ----------------- | ----------------------------------------- | ---------- |
+| 🔐 Integrity      | Unified version 0.1.5 across monorepo     | ✅         |
+| 🧪 Coverage       | Honest tiered coverage gate               | ✅         |
+| 🛡️ Security tests | Security unit blitz + deny-path tests     | ✅         |
+| 🤖 Agents tests   | ReAct + AdvancedWorkflow regressions      | ✅         |
+| 🧰 Toolchain      | pnpm 11.5.2 locked in packageManager + CI | ✅         |
+| 📘 Docs           | Coverage policy + Core vs Incubating      | ✅         |
+| 📦 Examples       | Runnable dry-run examples                 | ✅         |
+
+> Non-goals deferred: marketplace production, MCP package, iOS App Store, Whisper STT.
 
 ---
 

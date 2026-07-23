@@ -1,16 +1,8 @@
-# Computer Use Example
+# Computer-use example (v0.1.5)
 
-Demonstrates desktop automation in GHITA CODING AGENT.
+Dry-run security filter demo — does **not** move the real mouse/keyboard.
 
-## Overview
-
-This example shows how to:
-- Control mouse and keyboard
-- Take screenshots
-- Automate desktop applications
-
-## Usage
-
-```typescript
-// Coming soon
+```bash
+node examples/computer-use/run.mjs
+pnpm exec vitest run examples/computer-use/run.test.ts
 ```

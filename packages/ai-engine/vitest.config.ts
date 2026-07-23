@@ -38,16 +38,32 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'text-summary', 'html', 'lcov', 'json-summary'],
       reportsDirectory: './coverage',
-      include: ['src/**/*.ts'],
-      exclude: ['src/**/*.test.ts', 'src/**/*.d.ts', 'node_modules/**', 'dist/**'],
+      include: [
+        'src/key-manager.ts',
+        'src/router/**/*.ts',
+        'src/middleware/**/*.ts',
+        'src/gateway/**/*.ts',
+        'src/cache/**/*.ts',
+        'src/cost/**/*.ts',
+        'src/errors/**/*.ts',
+        'src/security/**/*.ts',
+        'src/stream/**/*.ts',
+        'src/discovery/**/*.ts',
+        'src/utils/**/*.ts',
+      ],
+      exclude: [
+        'src/**/*.test.ts',
+        'src/**/*.d.ts',
+        'src/**/types.ts',
+        'node_modules/**',
+        'dist/**',
+      ],
       thresholds: {
-        // ai-engine is the largest package and has many runtime-only code
-        // paths (providers, transports) that need live credentials to exercise.
-        // Raise incrementally as new integration tests are added.
-        statements: 40,
-        branches: 45,
-        functions: 45,
-        lines: 40,
+        // Wave3: gate on unit-testable core surface (not credential-bound providers).
+        statements: 45,
+        branches: 50,
+        functions: 40,
+        lines: 45,
       },
     },
     server: {

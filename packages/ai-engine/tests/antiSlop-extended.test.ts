@@ -4,7 +4,7 @@
 // Stream/Chat middleware, edge cases, unicode, adversarial scenarios
 // ==============================================================================
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
   AntiSlopFilter,
   cleanSlop,
@@ -356,9 +356,9 @@ describe('createAntiSlopStreamMiddleware', () => {
       yield { content: '}\n', done: true };
     }
 
-    const gen = await mw({ messages: [], provider: {} as any }, async () => mockStream());
+    const gen = await mw({ messages: [], provider: {} as unknown }, async () => mockStream());
 
-    const chunks: any[] = [];
+    const chunks: Array<{ content?: string; done?: boolean }> = [];
     for await (const chunk of gen) {
       chunks.push(chunk);
     }
@@ -376,9 +376,9 @@ describe('createAntiSlopStreamMiddleware', () => {
       yield { content: 'const x = 1;\n', done: true };
     }
 
-    const gen = await mw({ messages: [], provider: {} as any }, async () => mockStream());
+    const gen = await mw({ messages: [], provider: {} as unknown }, async () => mockStream());
 
-    const chunks: any[] = [];
+    const chunks: Array<{ content?: string; done?: boolean }> = [];
     for await (const chunk of gen) {
       chunks.push(chunk);
     }
@@ -395,9 +395,9 @@ describe('createAntiSlopStreamMiddleware', () => {
       // empty
     }
 
-    const gen = await mw({ messages: [], provider: {} as any }, async () => mockStream());
+    const gen = await mw({ messages: [], provider: {} as unknown }, async () => mockStream());
 
-    const chunks: any[] = [];
+    const chunks: Array<{ content?: string; done?: boolean }> = [];
     for await (const chunk of gen) {
       chunks.push(chunk);
     }
@@ -412,9 +412,9 @@ describe('createAntiSlopStreamMiddleware', () => {
       yield { content: 'Sure! const x = 1;', done: true };
     }
 
-    const gen = await mw({ messages: [], provider: {} as any }, async () => mockStream());
+    const gen = await mw({ messages: [], provider: {} as unknown }, async () => mockStream());
 
-    const chunks: any[] = [];
+    const chunks: Array<{ content?: string; done?: boolean }> = [];
     for await (const chunk of gen) {
       chunks.push(chunk);
     }
@@ -433,9 +433,9 @@ describe('createAntiSlopStreamMiddleware', () => {
       yield { content: '```\n', done: true };
     }
 
-    const gen = await mw({ messages: [], provider: {} as any }, async () => mockStream());
+    const gen = await mw({ messages: [], provider: {} as unknown }, async () => mockStream());
 
-    const chunks: any[] = [];
+    const chunks: Array<{ content?: string; done?: boolean }> = [];
     for await (const chunk of gen) {
       chunks.push(chunk);
     }
@@ -453,7 +453,7 @@ describe('createAntiSlopMiddleware', () => {
   it('should strip slop from non-stream response', async () => {
     const mw = createAntiSlopMiddleware({ trackSavings: false });
 
-    const response = await mw({ messages: [], provider: {} as any }, async () => ({
+    const response = await mw({ messages: [], provider: {} as unknown }, async () => ({
       content: 'Certainly! Here is the answer.',
       role: 'assistant' as const,
     }));
@@ -465,7 +465,7 @@ describe('createAntiSlopMiddleware', () => {
   it('should pass through response without slop', async () => {
     const mw = createAntiSlopMiddleware({ trackSavings: false });
 
-    const response = await mw({ messages: [], provider: {} as any }, async () => ({
+    const response = await mw({ messages: [], provider: {} as unknown }, async () => ({
       content: 'The answer is 42.',
       role: 'assistant' as const,
     }));
@@ -476,7 +476,7 @@ describe('createAntiSlopMiddleware', () => {
   it('should handle empty content response', async () => {
     const mw = createAntiSlopMiddleware({ trackSavings: false });
 
-    const response = await mw({ messages: [], provider: {} as any }, async () => ({
+    const response = await mw({ messages: [], provider: {} as unknown }, async () => ({
       content: '',
       role: 'assistant' as const,
     }));
@@ -487,7 +487,7 @@ describe('createAntiSlopMiddleware', () => {
   it('should not filter content inside code blocks', async () => {
     const mw = createAntiSlopMiddleware({ trackSavings: false });
 
-    const response = await mw({ messages: [], provider: {} as any }, async () => ({
+    const response = await mw({ messages: [], provider: {} as unknown }, async () => ({
       content: '```\nCertainly! const x = 1;\n```',
       role: 'assistant' as const,
     }));
@@ -560,9 +560,9 @@ describe('Edge cases & adversarial', () => {
       yield { content: 'Hello', done: true };
     }
 
-    const gen = await mw({ messages: [], provider: {} as any }, async () => mockStream());
+    const gen = await mw({ messages: [], provider: {} as unknown }, async () => mockStream());
 
-    const chunks: any[] = [];
+    const chunks: Array<{ content?: string; done?: boolean }> = [];
     for await (const chunk of gen) {
       chunks.push(chunk);
     }
