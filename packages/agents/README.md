@@ -1,33 +1,65 @@
 # @ghita/agents
 
-![Version](https://img.shields.io/badge/version-0.1.0-blue)
+![Version](https://img.shields.io/badge/version-0.1.5-blue)
+![Coverage](https://img.shields.io/badge/coverage-69%_core_surface-yellow)
+![Tier](https://img.shields.io/badge/tier-T0_critical-red)
 
-Agent manager and orchestration layer for the GHITA Coding Agent. Handles agent lifecycle, grouping, scheduling, and inter-agent communication.
+Orchestration layer: ReAct agents, workflows, middleware pipeline, sub-agent channels, debate engine, and Agent Protocol.
 
-## Key Features
-
-- **Agent lifecycle management** -- create, start, pause, and terminate agents programmatically.
-- **Agent grouping & hierarchy** -- organize agents into teams with role-based permissions.
-- **Workflow orchestration** -- pipeline-based execution with support for sequential and parallel steps.
-- **Subagent spawning** -- dynamic subagent creation with scoped context and resource limits.
-- **Git-aware scheduling** -- integrates with repository state to queue agent runs on branch events.
-
-## Installation
+## Install
 
 ```bash
-pnpm install --filter @ghita/agents
+pnpm --filter @ghita/agents build
+pnpm --filter @ghita/agents test
 ```
+
+## Core concepts
+
+| Module                              | Responsibility                         |
+| ----------------------------------- | -------------------------------------- |
+| `ReActAgent`                        | think → act → observe loop with tools  |
+| `AdvancedWorkflowEngine`            | DAG steps, retries, timeouts, rollback |
+| `MiddlewarePipeline`                | pre/post model & tool hooks            |
+| `AgentManager`                      | create/assign/list agents + tasks      |
+| `AgentChannel` / `StateSyncManager` | sub-agent messaging & state diffs      |
+| `DebateEngine`                      | multi-role debate → consensus spec     |
+| `AgentProtocolServer`               | Agent Protocol task/step surface       |
 
 ## Usage
 
-```typescript
-import { AgentManager, AgentRole } from '@ghita/agents';
+```ts
+import { ReActAgent, AgentManager, AdvancedWorkflowEngine } from '@ghita/agents';
+import { AIMessage } from '@ghita/agents';
 
-const manager = new AgentManager();
-const agent = await manager.create({ role: AgentRole.Coder, name: 'dev-1' });
-await agent.start();
+const agent = new ReActAgent({
+  config: {
+    name: 'coder',
+    model: 'fake',
+    maxIterations: 5,
+    tools: [
+      {
+        name: 'echo',
+        description: 'echo',
+        parameters: { type: 'object', properties: { text: { type: 'string' } } },
+        execute: async (input) => `echo:${input.text}`,
+      },
+    ],
+  },
+  llmCall: async () => new AIMessage('done'),
+});
+
+const result = await agent.run('hello');
 ```
 
-## API Docs
+## Security notes
 
-Generated via TypeDoc: `pnpm build:docs`
+- Tool execution errors become observations (no uncaught throw in loop).
+- Workflow timeouts clear timers in `finally` (audit 2.3).
+- Missing dependencies fail closed (audit 2.2).
+- Coverage ship floor: **≥55% lines** on gate scope (excludes adapters/git/markdownRules).
+
+## Test
+
+```bash
+pnpm --filter @ghita/agents exec vitest run --coverage
+```

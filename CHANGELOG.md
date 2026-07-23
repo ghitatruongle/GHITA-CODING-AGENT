@@ -5,6 +5,53 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.5] - 2026-07-23
+
+### Theme: Trust Hardening
+
+Integrity-first release. Prioritizes honest quality gates, core-package tests, and maintainability over new product features.
+
+### Added
+
+- Tiered coverage policy (`docs/coverage-policy.md`, `docs/coverage-tiers.json`) with honest floors
+- Integrity scripts: `sync-version`, `check-artifacts`, `check-coverage-tiers`, `count-smells`
+- CI `integrity` job (version/artifacts/smell budget) + honest coverage gate
+- Core unit suites for security, agents, communication, ai-engine, memory, skills
+- Security-path tests for computer-use / browser-control deny defaults
+- Runnable dry-run examples: agent-workflow, browser-automation, computer-use
+- Desktop maintainability split (helpers/presentational components; original UI preserved)
+
+### Fixed
+
+- Version drift across package.json / docs / security constants → unified `0.1.5`
+- Removed tracked junk artifacts (`nul`, logs, sqlite ledgers)
+- pnpm toolchain mismatch (root + CI locked to `11.5.2`)
+- Desktop god-file split regressions (WebView nav, Devices server panel, Ecosystem router, agent timeline restored from original JSX)
+
+### Changed
+
+- Dogfood is integrity-first and enforces T0/T1 coverage summaries + floors
+- Coverage no longer claims a fake global 80% floor
+- Package READMEs for T0/T1 rewritten with real API/security/test docs
+- README documents Core vs Incubating packages
+
+### Security
+
+- Expanded sanitizer / CORS / rotator / audit-runner unit coverage (~94% lines)
+- Deny-by-default regression tests for destructive computer-use commands
+- Pairing lockout / guardrail / SSRF helper tests for communication core
+
+### Coverage floors (gate scope)
+
+| Package       | Floor | Notes                                             |
+| ------------- | ----: | ------------------------------------------------- |
+| security      |   70% | full package                                      |
+| agents        |   55% | impl surface (excludes adapters/git/types barrel) |
+| communication |   50% | core surface (excludes live token adapters)       |
+| ai-engine     |   45% | unit-testable core surface                        |
+| memory        |   50% | impl surface                                      |
+| skills        |   45% | impl surface                                      |
+
 ## [0.0.5] - 2026-07-XX
 
 ### 🎯 Theme: Stable Foundation — 44 audit fixes + 5 Q3 features

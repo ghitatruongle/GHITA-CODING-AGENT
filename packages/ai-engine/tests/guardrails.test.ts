@@ -48,7 +48,7 @@ describe('Guardrails Middleware', () => {
         async () => ({
           content: 'Hi',
           model: 'test',
-          provider: 'test' as any,
+          provider: 'test' as unknown,
           usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
           finishReason: 'stop',
         }),
@@ -64,7 +64,7 @@ describe('Guardrails Middleware', () => {
         async () => ({
           content: 'Hi',
           model: 'test',
-          provider: 'test' as any,
+          provider: 'test' as unknown,
           usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
           finishReason: 'stop',
         }),
@@ -77,42 +77,42 @@ describe('Guardrails Middleware', () => {
     it('should mask email addresses', async () => {
       const middleware = createPIIDetectorMiddleware({ enabled: true });
       const provider = mockProvider();
-      let capturedMessages: any[] = [];
+      let capturedMessages: Array<{ role?: string; content?: string }> = [];
       await middleware(
         { messages: [{ role: 'user', content: 'Contact me at user@example.com' }], provider },
         async (msgs) => {
-          capturedMessages = msgs as any[];
+          capturedMessages = msgs as unknown[];
           return {
             content: 'OK',
             model: 'test',
-            provider: 'test' as any,
+            provider: 'test' as unknown,
             usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
             finishReason: 'stop',
           };
         },
       );
-      expect(capturedMessages[0]!.content).not.toContain('user@example.com');
-      expect(capturedMessages[0]!.content).toContain('***');
+      expect(capturedMessages[0]?.content).not.toContain('user@example.com');
+      expect(capturedMessages[0]?.content).toContain('***');
     });
 
     it('should pass when PII detector disabled', async () => {
       const middleware = createPIIDetectorMiddleware({ enabled: false });
       const provider = mockProvider();
-      let capturedMessages: any[] = [];
+      let capturedMessages: Array<{ role?: string; content?: string }> = [];
       await middleware(
         { messages: [{ role: 'user', content: 'Contact me at user@example.com' }], provider },
         async (msgs) => {
-          capturedMessages = msgs as any[];
+          capturedMessages = msgs as unknown[];
           return {
             content: 'OK',
             model: 'test',
-            provider: 'test' as any,
+            provider: 'test' as unknown,
             usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
             finishReason: 'stop',
           };
         },
       );
-      expect(capturedMessages[0]!.content).toContain('user@example.com');
+      expect(capturedMessages[0]?.content).toContain('user@example.com');
     });
   });
 
@@ -125,7 +125,7 @@ describe('Guardrails Middleware', () => {
         async () => ({
           content: 'OK',
           model: 'test',
-          provider: 'test' as any,
+          provider: 'test' as unknown,
           usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
           finishReason: 'stop',
         }),
@@ -141,7 +141,7 @@ describe('Guardrails Middleware', () => {
         async () => ({
           content: 'OK',
           model: 'test',
-          provider: 'test' as any,
+          provider: 'test' as unknown,
           usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
           finishReason: 'stop',
         }),
@@ -159,7 +159,7 @@ describe('Guardrails Middleware', () => {
         async () => ({
           content: 'OK',
           model: 'test',
-          provider: 'test' as any,
+          provider: 'test' as unknown,
           usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
           finishReason: 'stop',
         }),
@@ -174,7 +174,7 @@ describe('Guardrails Middleware', () => {
       await middleware({ messages: [{ role: 'user', content: 'Hello' }], provider }, async () => ({
         content: 'OK',
         model: 'test',
-        provider: 'test' as any,
+        provider: 'test' as unknown,
         usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
         finishReason: 'stop',
       }));
@@ -184,7 +184,7 @@ describe('Guardrails Middleware', () => {
         async () => ({
           content: 'OK',
           model: 'test',
-          provider: 'test' as any,
+          provider: 'test' as unknown,
           usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
           finishReason: 'stop',
         }),

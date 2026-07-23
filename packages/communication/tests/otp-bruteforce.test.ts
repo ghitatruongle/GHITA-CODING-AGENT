@@ -20,7 +20,11 @@ vi.mock('sharp', () => ({
 }));
 
 /** Minimal mock socket matching the subset of net.Socket used by verifyOTP */
-function createMockSocket(): { destroyed: boolean; write: ReturnType<typeof vi.fn>; destroy: ReturnType<typeof vi.fn> } {
+function createMockSocket(): {
+  destroyed: boolean;
+  write: ReturnType<typeof vi.fn>;
+  destroy: ReturnType<typeof vi.fn>;
+} {
   return { destroyed: false, write: vi.fn(), destroy: vi.fn() };
 }
 
@@ -50,9 +54,9 @@ describe('TelepresencePortal — OTP Brute-Force Protection', () => {
       // Advance 5 minutes — still valid
       vi.advanceTimersByTime(5 * 60 * 1000);
 
-      const result = portal.verifyOTP(socket as any, '123456');
+      const result = portal.verifyOTP(socket as unknown, '123456');
       expect(result).toBe(true);
-      expect(portal.isClientAuthenticated(socket as any)).toBe(true);
+      expect(portal.isClientAuthenticated(socket as unknown)).toBe(true);
     });
 
     it('should reject OTP exactly at the expiry boundary (10 min)', () => {
@@ -62,9 +66,9 @@ describe('TelepresencePortal — OTP Brute-Force Protection', () => {
       // Advance exactly 10 minutes + 1ms
       vi.advanceTimersByTime(10 * 60 * 1000 + 1);
 
-      const result = portal.verifyOTP(socket as any, '123456');
+      const result = portal.verifyOTP(socket as unknown, '123456');
       expect(result).toBe(false);
-      expect(portal.isClientAuthenticated(socket as any)).toBe(false);
+      expect(portal.isClientAuthenticated(socket as unknown)).toBe(false);
     });
 
     it('should reject OTP well past the expiry window (1 hour)', () => {
@@ -73,7 +77,7 @@ describe('TelepresencePortal — OTP Brute-Force Protection', () => {
 
       vi.advanceTimersByTime(60 * 60 * 1000); // 1 hour
 
-      const result = portal.verifyOTP(socket as any, '654321');
+      const result = portal.verifyOTP(socket as unknown, '654321');
       expect(result).toBe(false);
     });
 
@@ -82,7 +86,7 @@ describe('TelepresencePortal — OTP Brute-Force Protection', () => {
       vi.advanceTimersByTime(11 * 60 * 1000); // 11 min — expired
 
       const socket = createMockSocket();
-      portal.verifyOTP(socket as any, '111111');
+      portal.verifyOTP(socket as unknown, '111111');
       // Internal otpCode should have been cleared
       expect(portal.getOTP()).toBe('');
     });
@@ -98,14 +102,14 @@ describe('TelepresencePortal — OTP Brute-Force Protection', () => {
 
       // 5 wrong attempts
       for (let i = 0; i < 5; i++) {
-        const res = portal.verifyOTP(socket as any, '000000');
+        const res = portal.verifyOTP(socket as unknown, '000000');
         expect(res).toBe(false);
       }
 
       // 6th attempt with the CORRECT code should still be rejected
-      const result = portal.verifyOTP(socket as any, '999999');
+      const result = portal.verifyOTP(socket as unknown, '999999');
       expect(result).toBe(false);
-      expect(portal.isClientAuthenticated(socket as any)).toBe(false);
+      expect(portal.isClientAuthenticated(socket as unknown)).toBe(false);
     });
 
     it('should allow up to 4 wrong attempts then succeed on the 5th with correct code', () => {
@@ -114,13 +118,13 @@ describe('TelepresencePortal — OTP Brute-Force Protection', () => {
 
       // 4 wrong attempts
       for (let i = 0; i < 4; i++) {
-        portal.verifyOTP(socket as any, '000000');
+        portal.verifyOTP(socket as unknown, '000000');
       }
 
       // 5th attempt with correct code
-      const result = portal.verifyOTP(socket as any, '555555');
+      const result = portal.verifyOTP(socket as unknown, '555555');
       expect(result).toBe(true);
-      expect(portal.isClientAuthenticated(socket as any)).toBe(true);
+      expect(portal.isClientAuthenticated(socket as unknown)).toBe(true);
     });
 
     it('should track attempts independently per socket', () => {
@@ -130,16 +134,16 @@ describe('TelepresencePortal — OTP Brute-Force Protection', () => {
 
       // Socket A: 5 wrong attempts — locked out
       for (let i = 0; i < 5; i++) {
-        portal.verifyOTP(socketA as any, '000000');
+        portal.verifyOTP(socketA as unknown, '000000');
       }
 
       // Socket B: still has fresh attempts — should succeed
-      const result = portal.verifyOTP(socketB as any, '777777');
+      const result = portal.verifyOTP(socketB as unknown, '777777');
       expect(result).toBe(true);
-      expect(portal.isClientAuthenticated(socketB as any)).toBe(true);
+      expect(portal.isClientAuthenticated(socketB as unknown)).toBe(true);
 
       // Socket A remains locked out
-      const lockedResult = portal.verifyOTP(socketA as any, '777777');
+      const lockedResult = portal.verifyOTP(socketA as unknown, '777777');
       expect(lockedResult).toBe(false);
     });
   });
@@ -157,15 +161,15 @@ describe('TelepresencePortal — OTP Brute-Force Protection', () => {
 
       for (const socket of sockets) {
         for (let i = 0; i < 5; i++) {
-          portal.verifyOTP(socket as any, '000000');
+          portal.verifyOTP(socket as unknown, '000000');
         }
       }
 
       // A fresh socket should also be blocked by global lockout
       const freshSocket = createMockSocket();
-      const result = portal.verifyOTP(freshSocket as any, '888888');
+      const result = portal.verifyOTP(freshSocket as unknown, '888888');
       expect(result).toBe(false);
-      expect(portal.isClientAuthenticated(freshSocket as any)).toBe(false);
+      expect(portal.isClientAuthenticated(freshSocket as unknown)).toBe(false);
     });
 
     it('should allow authentication again after the 5-minute lockout expires', () => {
@@ -175,7 +179,7 @@ describe('TelepresencePortal — OTP Brute-Force Protection', () => {
       const sockets = Array.from({ length: 4 }, () => createMockSocket());
       for (const socket of sockets) {
         for (let i = 0; i < 5; i++) {
-          portal.verifyOTP(socket as any, '000000');
+          portal.verifyOTP(socket as unknown, '000000');
         }
       }
 
@@ -187,9 +191,9 @@ describe('TelepresencePortal — OTP Brute-Force Protection', () => {
 
       // A fresh socket should now succeed
       const freshSocket = createMockSocket();
-      const result = portal.verifyOTP(freshSocket as any, '888888');
+      const result = portal.verifyOTP(freshSocket as unknown, '888888');
       expect(result).toBe(true);
-      expect(portal.isClientAuthenticated(freshSocket as any)).toBe(true);
+      expect(portal.isClientAuthenticated(freshSocket as unknown)).toBe(true);
     });
 
     it('should reset global attempt counter after lockout is triggered', () => {
@@ -199,12 +203,12 @@ describe('TelepresencePortal — OTP Brute-Force Protection', () => {
       const sockets = Array.from({ length: 4 }, () => createMockSocket());
       for (const socket of sockets) {
         for (let i = 0; i < 5; i++) {
-          portal.verifyOTP(socket as any, '000000');
+          portal.verifyOTP(socket as unknown, '000000');
         }
       }
 
       // Internal counter should be reset to 0 after lockout triggers
-      expect((portal as any).otpGlobalAttempts).toBe(0);
+      expect((portal as unknown).otpGlobalAttempts).toBe(0);
     });
   });
 
@@ -244,15 +248,15 @@ describe('TelepresencePortal — OTP Brute-Force Protection', () => {
 
       // 3 wrong attempts
       for (let i = 0; i < 3; i++) {
-        portal.verifyOTP(socket as any, '000000');
+        portal.verifyOTP(socket as unknown, '000000');
       }
 
       // Correct attempt succeeds
-      const result = portal.verifyOTP(socket as any, '444444');
+      const result = portal.verifyOTP(socket as unknown, '444444');
       expect(result).toBe(true);
 
       // The socket's attempt counter should be deleted (internal state)
-      expect((portal as any).otpAttempts.has(socket)).toBe(false);
+      expect((portal as unknown).otpAttempts.has(socket)).toBe(false);
     });
 
     it('should reset per-socket attempts and global counter when generateOTP is called', () => {
@@ -261,14 +265,14 @@ describe('TelepresencePortal — OTP Brute-Force Protection', () => {
 
       // Accumulate some failures
       for (let i = 0; i < 3; i++) {
-        portal.verifyOTP(socket as any, '000000');
+        portal.verifyOTP(socket as unknown, '000000');
       }
 
       // Generate new OTP resets everything
       const newOtp = portal.generateOTP();
       expect(newOtp).toMatch(/^\d{6}$/);
-      expect((portal as any).otpAttempts.size).toBe(0);
-      expect((portal as any).otpGlobalAttempts).toBe(0);
+      expect((portal as unknown).otpAttempts.size).toBe(0);
+      expect((portal as unknown).otpGlobalAttempts).toBe(0);
     });
   });
 
@@ -279,16 +283,16 @@ describe('TelepresencePortal — OTP Brute-Force Protection', () => {
     it('should reject verification when no OTP has been set (empty otpCode)', () => {
       const socket = createMockSocket();
       // Default otpCode is '' before any generateOTP/setOTP call
-      const result = portal.verifyOTP(socket as any, '123456');
+      const result = portal.verifyOTP(socket as unknown, '123456');
       expect(result).toBe(false);
     });
 
     it('should reject wrong OTP code', () => {
       portal.setOTP('123456');
       const socket = createMockSocket();
-      const result = portal.verifyOTP(socket as any, '654321');
+      const result = portal.verifyOTP(socket as unknown, '654321');
       expect(result).toBe(false);
-      expect(portal.isClientAuthenticated(socket as any)).toBe(false);
+      expect(portal.isClientAuthenticated(socket as unknown)).toBe(false);
     });
 
     it('generateOTP should produce a 6-digit numeric string', () => {

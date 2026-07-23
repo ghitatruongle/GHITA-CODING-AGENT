@@ -1,32 +1,59 @@
 # @ghita/security
 
-![Version](https://img.shields.io/badge/version-0.0.4-blue)
+![Version](https://img.shields.io/badge/version-0.1.5-blue)
+![Coverage](https://img.shields.io/badge/coverage-94%25_lines-brightgreen)
+![Tier](https://img.shields.io/badge/tier-T0_critical-red)
 
-Security audit toolkit for GHITA Coding Agent -- input sanitization, XSS prevention, CORS review, API key rotation, and sandbox policy enforcement.
+Security toolkit for GHITA Coding Agent: input sanitization, CORS auditing, API key rotation, and audit reporting.
 
-## Key Features
-
-- **Input sanitization** -- strips dangerous payloads from user input and AI responses.
-- **XSS prevention** -- validates DOM-bound content and script-tag patterns.
-- **CORS auditing** -- reviews allowed origins and blocks wildcard or overly permissive rules.
-- **Secret rotation** -- automated API key and credential rotation with expiry tracking.
-- **Sandbox policies** -- enforces execution boundaries for untrusted agent actions.
-
-## Installation
+## Install
 
 ```bash
-pnpm install --filter @ghita/security
+pnpm --filter @ghita/security build
+pnpm --filter @ghita/security test
 ```
 
-## Usage
+## Public API
 
-```typescript
-import { sanitize, auditCORS } from '@ghita/security';
+```ts
+import {
+  InputSanitizer,
+  CorsAuditor,
+  SecretRotator,
+  maskKey,
+  AuditRunner,
+  SECURITY_VERSION,
+} from '@ghita/security';
 
-const clean = sanitize('<script>alert(1)</script>');
-const report = auditCORS(['*'], ['https://trusted.example.com']);
+const sanitizer = new InputSanitizer();
+const { issues, cleaned } = sanitizer.scan('<script>x</script>', 'chat.user');
+const safe = sanitizer.isSafeUrl('https://1.1.1.1/'); // SSRF blocklist for private IPs
+
+const cors = new CorsAuditor().audit(
+  { origins: ['*'], methods: ['GET'], headers: ['*'], credentials: true },
+  'api.ts',
+);
+
+const rotator = new SecretRotator({
+  generateKey: async () => 'new-key-material',
+});
+rotator.register({
+  id: 'k1',
+  provider: 'openai',
+  maskedKey: maskKey('sk-live-secret'),
+  createdAt: Date.now(),
+  unmaskedKey: 'sk-live-secret',
+});
 ```
 
-## API Docs
+## Security notes
 
-Generated via TypeDoc: `pnpm build:docs`
+- `isSafeUrl` rejects private/reserved IPs and non-literal hostnames (use `validateUrlAsync` for DNS pinning).
+- `SecretRotator.getActiveKey()` returns unmasked material only for **active** keys (audit fix 2.11).
+- Coverage floor: **≥70% lines** (`docs/coverage-tiers.json` T0).
+
+## Test
+
+```bash
+pnpm --filter @ghita/security exec vitest run --coverage
+```

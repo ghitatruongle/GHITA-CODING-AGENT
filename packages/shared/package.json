@@ -1,6 +1,6 @@
 {
   "name": "@ghita/shared",
-  "version": "0.1.0",
+  "version": "0.1.5",
   "private": true,
   "sideEffects": false,
   "description": "Shared types, constants, utils cho GHITA CODING AGENT",

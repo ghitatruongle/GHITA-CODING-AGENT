@@ -4,7 +4,7 @@
 // hooks, error handling, dry-run, timeout, metrics, and stats.
 // ==============================================================================
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { MiddlewarePipeline } from '../src/middleware/pipeline.js';
 import type {
   AgentMiddleware,
@@ -14,12 +14,12 @@ import type {
 
 // --- Mocks ---
 
-const mockAgent = { id: 'agent-1', name: 'TestAgent' } as any;
+const mockAgent = { id: 'agent-1', name: 'TestAgent' } as unknown;
 
 function makeCtx(overrides?: Partial<MiddlewareContext>): MiddlewareContext {
   return {
     agent: mockAgent,
-    messages: [{ role: 'user', content: 'hello' }] as any,
+    messages: [{ role: 'user', content: 'hello' }] as unknown,
     metadata: {},
     ...overrides,
   };
@@ -27,7 +27,7 @@ function makeCtx(overrides?: Partial<MiddlewareContext>): MiddlewareContext {
 
 function makeResult(overrides?: Partial<AgentStepResult>): AgentStepResult {
   return {
-    response: { role: 'assistant', content: 'reply' } as any,
+    response: { role: 'assistant', content: 'reply' } as unknown,
     shouldContinue: false,
     ...overrides,
   };
@@ -91,7 +91,9 @@ describe('MiddlewarePipeline', () => {
       pipeline.use(
         makeMiddleware('injector', 1, {
           async preModel(ctx) {
-            return { messages: [...ctx.messages, { role: 'system', content: 'injected' } as any] };
+            return {
+              messages: [...ctx.messages, { role: 'system', content: 'injected' } as unknown],
+            };
           },
         }),
       );
@@ -115,13 +117,13 @@ describe('MiddlewarePipeline', () => {
       pipeline.use(
         makeMiddleware('cache', 1, {
           async preModel() {
-            return { shortCircuit: { role: 'assistant', content: 'cached reply' } as any };
+            return { shortCircuit: { role: 'assistant', content: 'cached reply' } as unknown };
           },
         }),
       );
       const { shortCircuit } = await pipeline.runPreModel(makeCtx());
       expect(shortCircuit).toBeDefined();
-      expect((shortCircuit as any).content).toBe('cached reply');
+      expect((shortCircuit as unknown).content).toBe('cached reply');
     });
 
     it('10. runs middlewares in priority order', async () => {
@@ -170,12 +172,12 @@ describe('MiddlewarePipeline', () => {
       pipeline.use(
         makeMiddleware('filter', 1, {
           async postModel() {
-            return { response: { role: 'assistant', content: 'filtered' } as any };
+            return { response: { role: 'assistant', content: 'filtered' } as unknown };
           },
         }),
       );
       const { result } = await pipeline.runPostModel(makeCtx(), makeResult());
-      expect((result.response as any).content).toBe('filtered');
+      expect((result.response as unknown).content).toBe('filtered');
     });
 
     it('14. triggers retry', async () => {
@@ -249,7 +251,7 @@ describe('MiddlewarePipeline', () => {
         }),
       );
       const { args } = await pipeline.runPreTool('bash', { cmd: 'ls' }, makeCtx());
-      expect((args as any).sanitized).toBe(true);
+      expect((args as unknown).sanitized).toBe(true);
     });
   });
 
@@ -303,7 +305,7 @@ describe('MiddlewarePipeline', () => {
           },
         }),
       );
-      await pipeline.runOnComplete(makeCtx(), { role: 'assistant', content: 'done' } as any);
+      await pipeline.runOnComplete(makeCtx(), { role: 'assistant', content: 'done' } as unknown);
       expect(called).toBe(true);
     });
 
@@ -323,7 +325,7 @@ describe('MiddlewarePipeline', () => {
           },
         }),
       );
-      await pipeline.runOnComplete(makeCtx(), { role: 'assistant', content: 'done' } as any);
+      await pipeline.runOnComplete(makeCtx(), { role: 'assistant', content: 'done' } as unknown);
       expect(order).toEqual(['a', 'b']);
     });
   });
@@ -355,12 +357,12 @@ describe('MiddlewarePipeline', () => {
       dryPipeline.use(
         makeMiddleware('filter', 1, {
           async postModel() {
-            return { response: { role: 'assistant', content: 'filtered' } as any };
+            return { response: { role: 'assistant', content: 'filtered' } as unknown };
           },
         }),
       );
       const { result } = await dryPipeline.runPostModel(makeCtx(), makeResult());
-      expect((result.response as any).content).toBe('reply');
+      expect((result.response as unknown).content).toBe('reply');
     });
   });
 
@@ -418,7 +420,7 @@ describe('MiddlewarePipeline', () => {
       await pipeline.runPreModel(makeCtx());
       const metrics = pipeline.getMetrics({ middlewareName: 'ok' });
       expect(metrics).toHaveLength(1);
-      expect(metrics[0]!.success).toBe(true);
+      expect(metrics[0]?.success).toBe(true);
     });
 
     it('33. records metrics for failed calls', async () => {
@@ -432,7 +434,7 @@ describe('MiddlewarePipeline', () => {
       await pipeline.runPreModel(makeCtx());
       const metrics = pipeline.getMetrics({ middlewareName: 'fail' });
       expect(metrics).toHaveLength(1);
-      expect(metrics[0]!.success).toBe(false);
+      expect(metrics[0]?.success).toBe(false);
     });
 
     it('34. getStats returns aggregate stats', async () => {
@@ -440,8 +442,8 @@ describe('MiddlewarePipeline', () => {
       await pipeline.runPreModel(makeCtx());
       await pipeline.runPreModel(makeCtx());
       const stats = pipeline.getStats('agg');
-      expect(stats!.totalCalls).toBe(2);
-      expect(stats!.successCount).toBe(2);
+      expect(stats?.totalCalls).toBe(2);
+      expect(stats?.successCount).toBe(2);
     });
 
     it('35. clearMetrics resets all', async () => {

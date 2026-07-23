@@ -4,7 +4,7 @@
 // history persistence, formatReport, Socratic questions, edge cases
 // ==============================================================================
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { DocsGriller, createGrillMeCommand } from '../src/engineering/docsGriller.js';
 import type { GrillSession } from '../src/engineering/docsGriller.js';
 
@@ -86,9 +86,9 @@ describe('DocsGriller — scanLocalDocs', () => {
       'data.json',
       'notes.txt',
       'image.png',
-    ] as any);
+    ] as unknown);
     vi.mocked(readFileSync).mockReturnValue('content');
-    vi.mocked(statSync).mockReturnValue({ mtimeMs: 1000 } as any);
+    vi.mocked(statSync).mockReturnValue({ mtimeMs: 1000 } as unknown);
 
     const g = new DocsGriller({ docsPath: 'docs/', extensions: ['.md', '.txt'] });
     const docs = await g.scanLocalDocs();
@@ -525,7 +525,7 @@ describe('DocsGriller — runGrillSession', () => {
     vi.mocked(readdirSync).mockReturnValue([]);
     vi.mocked(readFileSync).mockReturnValue('');
     vi.mocked(writeFileSync).mockImplementation(() => {});
-    vi.mocked(mkdirSync).mockImplementation(() => undefined as any);
+    vi.mocked(mkdirSync).mockImplementation(() => undefined as unknown);
 
     const g = new DocsGriller({ docsPath: 'empty-docs/' });
     const session = await g.runGrillSession();
@@ -583,7 +583,10 @@ describe('DocsGriller — edge cases', () => {
   it('should handle special characters in file paths', async () => {
     const { existsSync, readdirSync, readFileSync } = await import('fs');
     vi.mocked(existsSync).mockReturnValue(true);
-    vi.mocked(readdirSync).mockReturnValue(['file with spaces.md', 'file-with-dashes.md'] as any);
+    vi.mocked(readdirSync).mockReturnValue([
+      'file with spaces.md',
+      'file-with-dashes.md',
+    ] as unknown);
     vi.mocked(readFileSync).mockReturnValue('content about authentication and authorization');
 
     const g = new DocsGriller({ docsPath: 'docs/' });
@@ -595,7 +598,7 @@ describe('DocsGriller — edge cases', () => {
   it('should handle empty file content', async () => {
     const { existsSync, readdirSync, readFileSync } = await import('fs');
     vi.mocked(existsSync).mockReturnValue(true);
-    vi.mocked(readdirSync).mockReturnValue(['empty.md'] as any);
+    vi.mocked(readdirSync).mockReturnValue(['empty.md'] as unknown);
     vi.mocked(readFileSync).mockReturnValue('');
 
     const g = new DocsGriller({ docsPath: 'docs/' });
@@ -606,7 +609,7 @@ describe('DocsGriller — edge cases', () => {
   it('should handle very long file content', async () => {
     const { existsSync, readdirSync, readFileSync } = await import('fs');
     vi.mocked(existsSync).mockReturnValue(true);
-    vi.mocked(readdirSync).mockReturnValue(['long.md'] as any);
+    vi.mocked(readdirSync).mockReturnValue(['long.md'] as unknown);
     vi.mocked(readFileSync).mockReturnValue('word '.repeat(10000));
 
     const g = new DocsGriller({ docsPath: 'docs/' });
@@ -617,7 +620,7 @@ describe('DocsGriller — edge cases', () => {
   it('should handle Vietnamese content in docs', async () => {
     const { existsSync, readdirSync, readFileSync } = await import('fs');
     vi.mocked(existsSync).mockReturnValue(true);
-    vi.mocked(readdirSync).mockReturnValue(['tieng-viet.md'] as any);
+    vi.mocked(readdirSync).mockReturnValue(['tieng-viet.md'] as unknown);
     vi.mocked(readFileSync).mockReturnValue(
       'Tài liệu về xác thực và phân quyền người dùng trong hệ thống',
     );
@@ -635,9 +638,9 @@ describe('DocsGriller — edge cases', () => {
 
     const { existsSync, readdirSync, readFileSync, statSync } = await import('fs');
     vi.mocked(existsSync).mockReturnValue(true);
-    vi.mocked(readdirSync).mockReturnValue(['file.md'] as any);
+    vi.mocked(readdirSync).mockReturnValue(['file.md'] as unknown);
     vi.mocked(readFileSync).mockReturnValue('content');
-    vi.mocked(statSync).mockReturnValue({ mtimeMs: 5000 } as any);
+    vi.mocked(statSync).mockReturnValue({ mtimeMs: 5000 } as unknown);
 
     const g = new DocsGriller({ docsPath: 'docs/' });
     const docs = await g.scanLocalDocs();
@@ -647,7 +650,7 @@ describe('DocsGriller — edge cases', () => {
   it('should handle unreadable file gracefully', async () => {
     const { existsSync, readdirSync, readFileSync } = await import('fs');
     vi.mocked(existsSync).mockReturnValue(true);
-    vi.mocked(readdirSync).mockReturnValue(['unreadable.md'] as any);
+    vi.mocked(readdirSync).mockReturnValue(['unreadable.md'] as unknown);
     vi.mocked(readFileSync).mockImplementation(() => {
       throw new Error('permission denied');
     });

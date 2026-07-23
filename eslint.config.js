@@ -59,7 +59,7 @@ export default tseslint.config(
       'no-console': ['error', { allow: ['warn', 'error', 'info'] }],
       'no-empty': ['error', { allowEmptyCatch: true }],
       'no-useless-escape': 'error',
-      'complexity': ['warn', { max: 15 }],
+      complexity: ['warn', { max: 15 }],
       'max-depth': ['warn', { max: 4 }],
       'max-lines': ['warn', { max: 500, skipBlankLines: true, skipComments: true }],
       'max-lines-per-function': ['warn', { max: 80, skipBlankLines: true, skipComments: true }],
@@ -75,6 +75,28 @@ export default tseslint.config(
       'no-useless-return': 'error',
       'prefer-template': 'error',
       'no-var': 'error',
+    },
+  },
+  // Presentational fidelity blocks extracted from large desktop views.
+  // Keep original JSX for product fidelity; structural max-lines noise is acceptable.
+  {
+    files: [
+      'apps/desktop/src/views/devices/**/*.{ts,tsx}',
+      'apps/desktop/src/views/ecosystem/**/*.{ts,tsx}',
+      'apps/desktop/src/components/webview/**/*.{ts,tsx}',
+      'apps/desktop/src/components/chat/AgentActivityTimeline.tsx',
+      'apps/desktop/src/components/chat/ChatStatusBar.tsx',
+      'apps/desktop/src/components/chat/ChatAdvancedPanel.tsx',
+      'apps/desktop/src/components/chat/RalphProgressCard.tsx',
+      'apps/desktop/src/components/chat/ChatAgentControls.tsx',
+      'apps/desktop/src/views/DevicesView.tsx',
+      'apps/desktop/src/views/EcosystemView.tsx',
+      'apps/desktop/src/components/WebViewPanel.tsx',
+    ],
+    rules: {
+      'max-lines-per-function': 'off',
+      'max-lines': 'off',
+      complexity: 'off',
     },
   },
 );

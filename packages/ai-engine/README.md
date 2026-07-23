@@ -1,34 +1,61 @@
 # @ghita/ai-engine
 
-![Version](https://img.shields.io/badge/version-0.1.0-blue)
+![Version](https://img.shields.io/badge/version-0.1.5-blue)
+![Coverage](https://img.shields.io/badge/coverage-66%_core_surface-yellow)
+![Tier](https://img.shields.io/badge/tier-T1_core-orange)
 
-Multi-provider AI engine that routes requests across LLM backends (OpenAI, Anthropic, Google, local models) with cost-aware load balancing and streaming support.
+Multi-provider AI gateway: key rotation, fallback/circuit breaker, routing, anti-slop filtering, streaming, and cost tracking.
 
-## Key Features
-
-- **Multi-provider routing** -- transparently dispatch to OpenAI, Anthropic, Gemini, or local models.
-- **Cost-aware load balancing** -- per-provider budgets, cost tracking, and automatic fallback on quota exhaustion.
-- **Streaming & batching** -- SSE-compatible streaming responses with concurrent batch inference.
-- **Context management** -- token budgeting, context window truncation, and conversation history compression.
-- **gRPC gateway** -- high-performance internal gateway for inter-service AI communication.
-
-## Installation
+## Install
 
 ```bash
-pnpm install --filter @ghita/ai-engine
+pnpm --filter @ghita/ai-engine build
+pnpm --filter @ghita/ai-engine test
 ```
+
+## Unit-testable core (coverage-gated)
+
+| Path                                           | Role                                        |
+| ---------------------------------------------- | ------------------------------------------- |
+| `src/key-manager.ts`                           | multi-key failover / cooldown / 429 backoff |
+| `src/router/**`                                | unified router + dynamic fallback           |
+| `src/middleware/**`                            | anti-slop and chat middleware               |
+| `src/gateway/**`                               | fallback manager / budgets                  |
+| `src/cache/**`, `src/cost/**`, `src/stream/**` | supporting utilities                        |
+
+Credential-bound providers (`src/providers/**`) and enterprise SSO surfaces are not required for the v0.1.5 gate.
 
 ## Usage
 
-```typescript
-import { AIEngine, Provider } from '@ghita/ai-engine';
+```ts
+import { KeyManager } from '@ghita/ai-engine';
+import { DynamicFallbackRouter } from '@ghita/ai-engine';
+import { cleanSlop } from '@ghita/ai-engine';
 
-const engine = new AIEngine({ defaultProvider: Provider.OpenAI });
-const response = await engine.chat({
-  messages: [{ role: 'user', content: 'Explain this code' }],
+const keys = new KeyManager(['sk-aaaa1111bbbb2222', 'sk-cccc3333dddd4444'], 'failover');
+const active = keys.getNextKey();
+keys.reportFailure(active!, 429);
+
+const router = new DynamicFallbackRouter({
+  chain: [
+    { id: 'primary', provider: 'openai', model: 'gpt-4o-mini' },
+    { id: 'backup', provider: 'anthropic', model: 'claude' },
+  ],
+  retry: { maxRetries: 0, jitter: false },
 });
+const out = await router.execute(async (t) => `ok:${t.id}`);
+
+const cleaned = cleanSlop('Certainly! Here is the fix.');
 ```
 
-## API Docs
+## Security notes
 
-Generated via TypeDoc: `pnpm build:docs`
+- 401 deactivates key; 429 applies exponential cooldown.
+- Circuit breaker opens after consecutive failures; emergency target optional.
+- Coverage floor (core surface): **≥45%** (measured ~66%).
+
+## Test
+
+```bash
+pnpm --filter @ghita/ai-engine exec vitest run --coverage
+```

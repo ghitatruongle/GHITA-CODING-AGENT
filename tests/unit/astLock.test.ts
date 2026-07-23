@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import * as agents from '../../packages/agents/src/index.js';
 import {
   ASTLockEngine,
   ASTLockMiddleware,
@@ -64,18 +63,18 @@ describe('3: AST-Lock Unit Tests', () => {
       const hierarchy = buildHierarchy(mockTags);
       const definitions = hierarchy.filter((d) => d.kind === 'definition');
 
-      const myClass = definitions.find((d) => d.name === 'MyClass')!;
-      const methodA = definitions.find((d) => d.name === 'methodA')!;
-      const methodB = definitions.find((d) => d.name === 'methodB')!;
-      const nestedHelper = definitions.find((d) => d.name === 'nestedHelper')!;
-      const externalFunc = definitions.find((d) => d.name === 'externalFunc')!;
+      const myClass = definitions.find((d) => d.name === 'MyClass');
+      const methodA = definitions.find((d) => d.name === 'methodA');
+      const methodB = definitions.find((d) => d.name === 'methodB');
+      const nestedHelper = definitions.find((d) => d.name === 'nestedHelper');
+      const externalFunc = definitions.find((d) => d.name === 'externalFunc');
 
       // Scope checks
-      expect(myClass.scope).toBe('MyClass');
-      expect(methodA.scope).toBe('MyClass.methodA');
-      expect(methodB.scope).toBe('MyClass.methodB');
-      expect(nestedHelper.scope).toBe('MyClass.methodA.nestedHelper');
-      expect(externalFunc.scope).toBe('externalFunc');
+      expect(myClass?.scope).toBe('MyClass');
+      expect(methodA?.scope).toBe('MyClass.methodA');
+      expect(methodB?.scope).toBe('MyClass.methodB');
+      expect(nestedHelper?.scope).toBe('MyClass.methodA.nestedHelper');
+      expect(externalFunc?.scope).toBe('externalFunc');
 
       // Parent relations
       expect(methodA.parentName).toBe('MyClass');
@@ -172,7 +171,7 @@ astLock:
       `;
 
       // Simulates PolyglotTagParser returning SymbolTags
-      const extractSpy = vi.spyOn((engine as any).parser, 'extractSymbols').mockResolvedValue([
+      const extractSpy = vi.spyOn((engine as unknown).parser, 'extractSymbols').mockResolvedValue([
         {
           name: 'Auth',
           kind: 'definition',
@@ -245,7 +244,7 @@ astLock:
         }
       `;
 
-      const extractSpy = vi.spyOn((engine as any).parser, 'extractSymbols').mockResolvedValue([
+      const extractSpy = vi.spyOn((engine as unknown).parser, 'extractSymbols').mockResolvedValue([
         {
           name: 'Engine',
           kind: 'definition',
@@ -325,7 +324,7 @@ astLock:
       middleware = new ASTLockMiddleware(engine);
 
       // Mock rules config path
-      (middleware as any).configPath = 'non-existent-rules.yaml';
+      (middleware as unknown).configPath = 'non-existent-rules.yaml';
     });
 
     afterEach(() => {
@@ -336,7 +335,7 @@ astLock:
     });
 
     it('should bypass checking for non-write tools', async () => {
-      const res = await middleware.preTool('readFile', { filePath: 'test.ts' }, {} as any);
+      const res = await middleware.preTool('readFile', { filePath: 'test.ts' }, {} as unknown);
       expect(res).toBeUndefined(); // Bypassed
     });
 
@@ -349,9 +348,8 @@ astLock:
       fs.writeFileSync(testFile, originalCode, 'utf8');
 
       // Mock PolyglotTagParser to yield symbol dynamically
-      const extractSpy = vi
-        .spyOn((engine as any).parser, 'extractSymbols')
-        .mockImplementation(async (code: string) => {
+      vi.spyOn((engine as unknown).parser, 'extractSymbols').mockImplementation(
+        async (code: string) => {
           if (code.includes('100')) {
             return [
               {
@@ -375,7 +373,8 @@ astLock:
               },
             ];
           }
-        });
+        },
+      );
 
       // Write physical rules.yaml mock
       const yamlContent = `
@@ -390,9 +389,9 @@ astLock:
 
       // Mock detectLanguageFromPath and configPath
       const loadConfigSpy = vi
-        .spyOn(middleware as any, 'detectLanguageFromPath')
+        .spyOn(middleware as unknown, 'detectLanguageFromPath')
         .mockReturnValue('typescript');
-      (middleware as any).configPath = '.ghita/rules.yaml.test-mock';
+      (middleware as unknown).configPath = '.ghita/rules.yaml.test-mock';
 
       // Lock original
       await engine.lockSymbols(testFile, originalCode, 'typescript', ['safeCalc']);
@@ -400,13 +399,13 @@ astLock:
       const res = await middleware.preTool(
         'writeFile',
         { targetFile: testFile, content: 'export function safeCalc() { return 200; }' },
-        { agent: { id: 'agent-1' } } as any,
+        { agent: { id: 'agent-1' } } as unknown,
       );
 
       expect(res).toBeDefined();
-      expect(res!.proceed).toBe(false);
-      expect(res!.reason).toContain('AST-LOCK ERROR');
-      expect(res!.reason).toContain('safeCalc');
+      expect(res?.proceed).toBe(false);
+      expect(res?.reason).toContain('AST-LOCK ERROR');
+      expect(res?.reason).toContain('safeCalc');
 
       // Check that violation was logged
       expect(fs.existsSync('.ghita/ast-lock-violations.log')).toBe(true);
@@ -421,12 +420,12 @@ astLock:
     });
 
     it('should correctly detect language from file extensions', () => {
-      expect((middleware as any).detectLanguageFromPath('file.ts')).toBe('typescript');
-      expect((middleware as any).detectLanguageFromPath('file.py')).toBe('python');
-      expect((middleware as any).detectLanguageFromPath('file.kt')).toBe('kotlin');
-      expect((middleware as any).detectLanguageFromPath('file.scala')).toBe('scala');
-      expect((middleware as any).detectLanguageFromPath('file.pas')).toBe('pascal');
-      expect((middleware as any).detectLanguageFromPath('file.unknown')).toBe('typescript');
+      expect((middleware as unknown).detectLanguageFromPath('file.ts')).toBe('typescript');
+      expect((middleware as unknown).detectLanguageFromPath('file.py')).toBe('python');
+      expect((middleware as unknown).detectLanguageFromPath('file.kt')).toBe('kotlin');
+      expect((middleware as unknown).detectLanguageFromPath('file.scala')).toBe('scala');
+      expect((middleware as unknown).detectLanguageFromPath('file.pas')).toBe('pascal');
+      expect((middleware as unknown).detectLanguageFromPath('file.unknown')).toBe('typescript');
     });
 
     it('should bypass validation for excluded files in config', async () => {
@@ -441,14 +440,14 @@ astLock:
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(configMockPath, yamlContent, 'utf-8');
 
-      (middleware as any).configPath = configMockPath;
+      (middleware as unknown).configPath = configMockPath;
 
       const mockExcludedFile = path.resolve('src/excluded/somefile.ts');
 
       const res = await middleware.preTool(
         'writeFile',
         { targetFile: mockExcludedFile, content: 'some code' },
-        { agent: { id: 'agent-1' } } as any,
+        { agent: { id: 'agent-1' } } as unknown,
       );
 
       expect(res).toBeUndefined();

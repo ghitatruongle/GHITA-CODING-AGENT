@@ -1,33 +1,56 @@
 # @ghita/memory
 
-![Version](https://img.shields.io/badge/version-0.1.0-blue)
+![Version](https://img.shields.io/badge/version-0.1.5-blue)
+![Coverage](https://img.shields.io/badge/coverage-53%25_lines-yellow)
+![Tier](https://img.shields.io/badge/tier-T1_core-orange)
 
-Agent memory system for GHITA Coding Agent -- semantic search, knowledge graph, session compression, and tiered storage for persistent context across conversations.
+Tiered agent memory: working memory, session store, vector embeddings, graph associations, and PII guardrails.
 
-## Key Features
-
-- **Semantic search** -- vector-based retrieval for finding relevant past context.
-- **Knowledge graph** -- persistent entity and relationship store for long-term facts.
-- **Session compression** -- summarizes conversation history to fit within token budgets.
-- **Tiered storage** -- hot (in-memory), warm (SQLite), and cold (file) memory tiers.
-- **Freshness scoring** -- decays memory relevance over time to prioritize recent information.
-
-## Installation
+## Install
 
 ```bash
-pnpm install --filter @ghita/memory
+pnpm --filter @ghita/memory build
+pnpm --filter @ghita/memory test
 ```
+
+## Core modules
+
+| Module                          | Responsibility                      |
+| ------------------------------- | ----------------------------------- |
+| `TieredMemoryStore`             | hot/warm/cold promotion + eviction  |
+| `getDeterministicMockEmbedding` | offline embedding fixture for tests |
+| `graph/path`                    | BFS / Dijkstra association paths    |
+| `guardrail`                     | PII scan for memory content         |
+| `session`                       | session lifecycle                   |
 
 ## Usage
 
-```typescript
-import { MemoryStore } from '@ghita/memory';
+```ts
+import { TieredMemoryStore, getDeterministicMockEmbedding } from '@ghita/memory';
+import { createAssociationList, addAssociation, findConnectionPath } from '@ghita/memory';
 
-const store = new MemoryStore();
-await store.save({ key: 'project:ghita', value: 'TypeScript monorepo' });
-const results = await store.search('monorepo structure');
+const store = new TieredMemoryStore({ maxWorkingMemorySize: 50 });
+store.add({
+  id: 'm1',
+  type: 'note',
+  content: 'user prefers pnpm',
+  timestamp: Date.now(),
+} as never);
+
+const vec = getDeterministicMockEmbedding('hello', 32);
+
+const g = createAssociationList();
+addAssociation(g, { from: 'a', to: 'b', type: 'related-to' });
+findConnectionPath(g, 'a', 'b');
 ```
 
-## API Docs
+## Security notes
 
-Generated via TypeDoc: `pnpm build:docs`
+- Guardrail package redacts sensitive patterns before long-term storage.
+- Coverage floor: **≥50% lines**.
+
+## Test
+
+```bash
+pnpm --filter @ghita/memory exec vitest run --coverage
+```

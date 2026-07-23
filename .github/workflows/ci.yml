@@ -7,6 +7,25 @@ on:
     branches: [main]
 
 jobs:
+  integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.5.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Version sync check
+        run: node scripts/sync-version.mjs --check
+      - name: Forbidden artifacts check
+        run: node scripts/check-artifacts.mjs
+      - name: Smell budget (as any ≤ 130)
+        run: node scripts/count-smells.mjs --max-as-any=130
+
   lint-and-typecheck:
     runs-on: ubuntu-latest
     steps:
@@ -14,7 +33,7 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: "11.5.2"
 
       - uses: actions/setup-node@v4
         with:
@@ -40,7 +59,7 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: "11.5.2"
 
       - uses: actions/setup-node@v4
         with:
@@ -73,7 +92,7 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: "11.5.2"
 
       - uses: actions/setup-node@v4
         with:
@@ -86,7 +105,7 @@ jobs:
         run: pnpm --filter @ghita/shared exec vitest run ../../tests/quality-loop/benchmark.test.ts
 
   # ---------------------------------------------------------------------------
-  # Coverage gate: fail the build if any package drops below 80% line coverage
+  # Coverage gate: honest tier floors from docs/coverage-tiers.json
   # ---------------------------------------------------------------------------
   coverage-gate:
     runs-on: ubuntu-latest
@@ -96,7 +115,7 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: "11.5.2"
 
       - uses: actions/setup-node@v4
         with:
@@ -111,31 +130,8 @@ jobs:
       - name: Run tests with coverage
         run: pnpm test:coverage
 
-      - name: Check coverage thresholds
-        run: |
-          echo "=== Coverage Gate (≥80% lines) ==="
-          FAILED=0
-          for pkg in packages/a11y packages/agents packages/ai-engine packages/browser-control packages/code-graph packages/communication packages/computer-use packages/gui packages/i18n packages/integration packages/marketplace packages/memory packages/migration packages/mobile-companion packages/monitoring packages/notification packages/quotas packages/relay-server packages/security packages/shared packages/skills packages/voice; do
-            SUMMARY_FILE="$pkg/coverage/coverage-summary.json"
-            if [ -f "$SUMMARY_FILE" ]; then
-              LINES=$(node -e "const c=require('./$SUMMARY_FILE');console.log(c.total.lines.pct)")
-              echo "$pkg: ${LINES}% lines"
-              if [ "$(echo "$LINES < 80" | bc -l)" -eq 1 ]; then
-                echo "  ⚠️  Below 80% threshold!"
-                FAILED=1
-              fi
-            else
-              echo "  ❌ No coverage data for $pkg (missing vitest config or no tests?)"
-              FAILED=1
-            fi
-          done
-          if [ "$FAILED" -eq 1 ]; then
-            echo ""
-            echo "❌ Coverage gate FAILED — one or more packages are below 80% or missing coverage."
-            exit 1
-          fi
-          echo ""
-          echo "✅ All packages meet the 80% line coverage threshold."
+      - name: Check coverage thresholds (honest tier floors)
+        run: node scripts/check-coverage-tiers.mjs --require-summaries
 
       - name: Upload coverage reports
         if: always()
@@ -156,7 +152,7 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: "11.5.2"
 
       - uses: actions/setup-node@v4
         with:
@@ -189,7 +185,7 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: "11.5.2"
 
       - uses: actions/setup-node@v4
         with:
@@ -225,7 +221,7 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: "11.5.2"
 
       - uses: actions/setup-node@v4
         with:
@@ -265,7 +261,7 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: "11.5.2"
 
       - uses: actions/setup-node@v4
         with:

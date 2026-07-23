@@ -1,16 +1,8 @@
-# Browser Automation Example
+# Browser automation example (v0.1.5)
 
-Demonstrates Playwright-based browser automation in GHITA CODING AGENT.
+Dry-run controller with a mock adapter (no real browser).
 
-## Overview
-
-This example shows how to:
-- Open Chrome via AI
-- Navigate web pages
-- Extract data from web pages
-
-## Usage
-
-```typescript
-// Coming soon
+```bash
+node examples/browser-automation/run.mjs
+pnpm exec vitest run examples/browser-automation/run.test.ts
 ```
