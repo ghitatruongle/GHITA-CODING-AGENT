@@ -27,7 +27,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
     "clean": "node -e \"const fs=require('fs'); fs.rmSync('dist',{recursive:true,force:true}); fs.readdirSync('.').filter(f=>f.endsWith('.tsbuildinfo')).forEach(f=>fs.rmSync(f,{force:true}))\"",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@ghita/shared": "workspace:*",

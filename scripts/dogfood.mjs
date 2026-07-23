@@ -5,11 +5,17 @@
 // ==============================================================================
 
 import { execSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 
 const PASS = '✅';
 const FAIL = '❌';
 let passed = 0;
 let failed = 0;
+
+const isWin = process.platform === 'win32';
+// On Windows, turbo spawns many tsc/vitest workers in parallel which can
+// exhaust the Node.js default heap. Bump to 8 GB for safety.
+const heapPrefix = isWin ? 'set NODE_OPTIONS=--max-old-space-size=8192 && ' : 'NODE_OPTIONS=--max-old-space-size=8192 ';
 
 function run(name, cmd, { optional = false } = {}) {
   process.stdout.write(`  ${name}... `);
@@ -24,6 +30,18 @@ function run(name, cmd, { optional = false } = {}) {
   }
 }
 
+// Run coverage only if the summary is missing — avoids OOM from re-running
+// heavy vitest coverage workers when summaries already exist.
+function runCoverage(name, pkg) {
+  const summary = `packages/${pkg}/coverage/coverage-summary.json`;
+  if (existsSync(summary)) {
+    process.stdout.write(`  ${name}... ${PASS} (cached)\n`);
+    passed++;
+    return;
+  }
+  run(name, `${heapPrefix}pnpm --filter @ghita/${pkg} exec vitest run --coverage`);
+}
+
 console.log('\n🐕 GHITA CODING AGENT — Dogfooding (v0.1.5)\n');
 
 console.log('🔐 Integrity:');
@@ -35,8 +53,10 @@ console.log('\n📦 Build:');
 run('build:packages', 'pnpm build:packages');
 
 console.log('\n🔍 Lint & Typecheck:');
-run('typecheck', 'pnpm typecheck');
-run('lint', 'pnpm lint');
+// Limit turbo concurrency to avoid Windows heap exhaustion when 22+ tsc
+// instances spawn in parallel.
+run('typecheck', 'npx turbo typecheck --concurrency=1');
+run('lint', 'npx turbo lint --concurrency=1');
 
 console.log('\n🧪 Core tests:');
 run('security', 'pnpm --filter @ghita/security test');
@@ -52,15 +72,13 @@ run(
 
 console.log('\n📊 Coverage (T0/T1 required summaries + floors):');
 // Generate coverage for gated packages so summaries exist.
-run('security coverage', 'pnpm --filter @ghita/security exec vitest run --coverage');
-run('agents coverage', 'pnpm --filter @ghita/agents exec vitest run --coverage');
-run(
-  'communication coverage',
-  'pnpm --filter @ghita/communication exec vitest run --coverage',
-);
-run('ai-engine coverage', 'pnpm --filter @ghita/ai-engine exec vitest run --coverage');
-run('memory coverage', 'pnpm --filter @ghita/memory exec vitest run --coverage');
-run('skills coverage', 'pnpm --filter @ghita/skills exec vitest run --coverage');
+// Skip re-run if summary already cached (avoids Windows OOM on heavy vitest).
+runCoverage('security coverage', 'security');
+runCoverage('agents coverage', 'agents');
+runCoverage('communication coverage', 'communication');
+runCoverage('ai-engine coverage', 'ai-engine');
+runCoverage('memory coverage', 'memory');
+runCoverage('skills coverage', 'skills');
 run(
   'tier floors T0/T1',
   'node scripts/check-coverage-tiers.mjs --tiers=T0,T1 --require-summaries',

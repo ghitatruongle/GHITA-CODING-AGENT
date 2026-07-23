@@ -26,6 +26,7 @@ jobs:
   build-windows:
     needs: create-release
     runs-on: windows-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -52,6 +53,7 @@ jobs:
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
+        if: always()
         with:
           files: |
             apps/desktop/src-tauri/target/release/bundle/msi/*.msi
@@ -60,6 +62,7 @@ jobs:
   build-linux:
     needs: create-release
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -91,6 +94,7 @@ jobs:
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
+        if: always()
         with:
           files: |
             apps/desktop/src-tauri/target/release/bundle/deb/*.deb
@@ -99,6 +103,7 @@ jobs:
   build-android:
     needs: create-release
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -127,12 +132,14 @@ jobs:
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
+        if: always()
         with:
           files: apps/mobile/android/app/build/outputs/apk/release/*.apk
 
   build-macos:
     needs: create-release
     runs-on: macos-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -159,6 +166,7 @@ jobs:
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
+        if: always()
         with:
           files: |
             apps/desktop/src-tauri/target/release/bundle/macos/*.app
@@ -167,6 +175,7 @@ jobs:
   build-ios:
     needs: create-release
     runs-on: macos-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -202,6 +211,7 @@ jobs:
 
       - name: Upload iOS build
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: ios-release-build
           path: |
@@ -212,6 +222,7 @@ jobs:
   generate-updater-json:
     needs: [build-windows, build-linux, build-macos]
     runs-on: ubuntu-latest
+    if: always()
     steps:
       - uses: actions/checkout@v4
 
