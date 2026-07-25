@@ -1,2 +1,8 @@
 [build]
-target-dir = "C:/Users/Acer/.cargo-target-ghita"
+rustflags = ["-C", "link-arg=/STACK:16777216"]
+
+[profile.dev]
+debug = 0
+
+[profile.dev.package."*"]
+opt-level = 0

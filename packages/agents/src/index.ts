@@ -559,3 +559,26 @@ export { GitSafePointManager, GitSafePointMiddleware } from './git/workflow.js';
 // --- Phase 11: Source-Controlled Markdown CI Checks Gates ---
 export { MarkdownRulesChecker, MarkdownChecksMiddleware } from './checker/markdownRules.js';
 export type { MarkdownRule, CheckIssue } from './checker/markdownRules.js';
+
+// --- Instinct System (ECC & Superpowers Inspired) ---
+export {
+  InstinctEngine,
+  BUILTIN_INSTINCTS,
+  type InstinctRule,
+  type InstinctContext,
+} from './instincts/instinct-engine.js';
+
+// --- Super-Agent Modules (v0.2.5) ---
+export {
+  AutoRepairGate,
+  type TestRunResult,
+  type RepairAttempt,
+  type AutoRepairOptions,
+} from './checker/autoRepairGate.js';
+export { SwarmSpawner, type SwarmTask, type SwarmTaskResult } from './subagent/swarmSpawner.js';
+export { DAGDecomposer, type DAGTaskNode } from './autogpt/dag-decomposer.js';
+export {
+  CrewAIOrchestrator,
+  type CrewMember,
+  type CrewTaskSpec,
+} from './crew/crewai-orchestrator.js';
