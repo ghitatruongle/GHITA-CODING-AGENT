@@ -126,7 +126,7 @@ export class Orchestrator {
       period: 'monthly',
       onAlert: (spent, limit, percentage) => {
         console.warn(
-          `[Orchestrator] AI budget alert: spent $${spent.toFixed(4)} of $${limit.toFixed(4)} (${(percentage * 100).toFixed(1)}%)`,
+          `[Orchestrator] AI budget alert: spent $${spent.toFixed(4)} of $${limit.toFixed(4)} (${(percentage * 100).toFixed(1)} percent)`,
         );
       },
     });

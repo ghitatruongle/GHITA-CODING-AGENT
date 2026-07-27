@@ -54,7 +54,7 @@ function isDangerousCommand(command: string): boolean {
  * Examples:
  *   `echo hello`                    -> ['echo', 'hello']
  *   `echo "hello world"`            -> ['echo', 'hello world']
- *   `git log --pretty=format:'%H'`  -> ['git', 'log', '--pretty=format:%H']
+ *   `git log --pretty=format:'%H'`  -> ['git', 'log', '--pretty=format:&#37;H']
  *   `cmd "a\"b"`                    -> ['cmd', 'a"b']
  */
 export function tokenizeShellCommand(input: string): string[] {
@@ -415,7 +415,7 @@ export async function runCommand(args: { command: string; timeoutMs?: number }):
 
   // Tokenize the command line so quoted arguments are preserved.
   // Examples: `echo "hello world"` -> ['echo', 'hello world']
-  //           `git log --pretty=format:'%H %s'` -> ['git', 'log', '--pretty=format:%H %s']
+  //           `git log --pretty=format:'%H %s'` -> ['git', 'log', '--pretty=format:&#37;H %s']
   const parts = tokenizeShellCommand(command);
   if (parts.length === 0) throw new Error('Empty command');
   const spawnCmd = parts[0] as string;

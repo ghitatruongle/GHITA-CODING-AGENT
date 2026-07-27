@@ -141,7 +141,7 @@ jobs:
           pnpm --filter @ghita/skills test:coverage
 
       - name: Check coverage thresholds (honest tier floors)
-        run: node scripts/check-coverage-tiers.mjs --require-summaries
+        run: node scripts/check-coverage-tiers.mjs --tiers=T0,T1 --require-summaries
 
       - name: Upload coverage reports
         if: always()

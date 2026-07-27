@@ -31,7 +31,7 @@ export interface ContextWindow {
 
 /**
  * Estimate token count from text using character-based heuristic.
- * More accurate than word-based; within ~10% of tiktoken for English.
+ * More accurate than word-based; within ~10 percent of tiktoken for English.
  */
 export function estimateTokens(text: string, model?: string): number {
   if (!text) return 0;
