@@ -1,6 +1,6 @@
 {
   "name": "@ghita/i18n",
-  "version": "0.1.5",
+  "version": "0.2.5",
   "private": true,
   "sideEffects": false,
   "description": "Internationalization engine for GHITA CODING AGENT",

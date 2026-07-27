@@ -1,6 +1,6 @@
 {
   "name": "@ghita/a11y",
-  "version": "0.1.5",
+  "version": "0.2.5",
   "private": true,
   "sideEffects": false,
   "description": "Accessibility utilities for GHITA CODING AGENT",

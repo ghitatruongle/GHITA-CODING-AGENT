@@ -141,3 +141,13 @@ apps/mobile/android/app/debug.keystore
 # Build artifacts
 apps/mobile/android/app/src/main/assets/index.android.bundle
 
+packages/*/coverage/
+packages/*/.turbo/
+apps/*/.turbo/
+apps/*/coverage/
+docs/.docusaurus/
+docs/.turbo/
+docs/node_modules/
+packages/*/dist/
+apps/*/dist/
+.DS_Store

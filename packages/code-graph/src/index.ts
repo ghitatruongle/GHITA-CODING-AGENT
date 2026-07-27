@@ -30,6 +30,13 @@ export { SearchEngine } from './search.js';
 // --- SQLite Store ---
 export { SQLiteGraphStore } from './store.js';
 
+// --- MCP Server Protocol ---
+export {
+  CodeGraphMCPServer,
+  type MCPToolCallRequest,
+  type MCPToolCallResponse,
+} from './mcp-server.js';
+
 // --- Main orchestrator ---
 import path from 'node:path';
 import { parseFile, parseFiles, discoverFiles } from './ast-parser.js';

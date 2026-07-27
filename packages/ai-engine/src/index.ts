@@ -616,3 +616,12 @@ export * from './batch/index.js';
 
 /** Provider load balancing logic with round-robin and performance routing rules. */
 export * from './loadbalancer/index.js';
+
+// --- OpenClaude, LiteLLM & Claude Code Integration (v0.2.5) ---
+export {
+  QueryEngine,
+  type CompactionConfig,
+  type CompactionResult,
+} from './compact/query-engine.js';
+export { LiteLLMGateway, type ProviderKeyPair } from './gateway/litellm-gateway.js';
+export { ClaudeCodeTerminalLoop, type TerminalFramingConfig } from './claude-code/terminal-loop.js';
