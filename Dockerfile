@@ -24,6 +24,10 @@ COPY packages/memory/package.json ./packages/memory/
 COPY packages/security/package.json ./packages/security/
 COPY packages/shared/package.json ./packages/shared/
 COPY packages/skills/package.json ./packages/skills/
+COPY apps/desktop/package.json ./apps/desktop/
+COPY apps/mobile/package.json ./apps/mobile/
+COPY apps/vscode-extension/package.json ./apps/vscode-extension/
+COPY docs/package.json ./docs/
 
 RUN corepack enable pnpm && pnpm install --frozen-lockfile --prod
 

@@ -67,7 +67,7 @@ export interface ObservabilityConfig {
   serviceName?: string;
   /** Environment (dev, staging, prod) */
   environment?: string;
-  /** Sample rate (0-1, default: 1 = 100%) */
+  /** Sample rate (0-1, default: 1 = 100 percent) */
   sampleRate?: number;
   /** Enable/disable */
   enabled?: boolean;
