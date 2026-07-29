@@ -23,6 +23,4 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Check licenses
-        run: |
-          npx license-checker --production --summary --failOn "GPL-3.0;AGPL-3.0;SSPL"
-        continue-on-error: true
+        run: pnpm licenses:check

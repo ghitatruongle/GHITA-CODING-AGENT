@@ -6,7 +6,7 @@ import type { AIProviderType, SkillCategory } from './types.js';
 
 // --- App Info ---
 export const APP_NAME = 'GHITA CODING AGENT';
-export const APP_VERSION = '0.2.5';
+export const APP_VERSION = '0.3.7';
 export const APP_DESCRIPTION = 'Desktop AI Agent với multi-provider, skills, computer use';
 
 // --- Default Config ---

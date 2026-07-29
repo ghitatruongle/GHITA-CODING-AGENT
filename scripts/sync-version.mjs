@@ -2,9 +2,9 @@
 /**
  * Sync / check monorepo package versions.
  *
- *   node scripts/sync-version.mjs            # write 0.1.5 everywhere
+ *   node scripts/sync-version.mjs            # sync root package version everywhere
  *   node scripts/sync-version.mjs --check    # fail if drift
- *   node scripts/sync-version.mjs --set 0.1.6
+ *   node scripts/sync-version.mjs --set 0.3.6
  */
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -15,7 +15,9 @@ const root = join(__dirname, '..');
 const args = process.argv.slice(2);
 const checkOnly = args.includes('--check');
 const setIdx = args.indexOf('--set');
-const TARGET = setIdx >= 0 ? args[setIdx + 1] : '0.1.5';
+const rootPackagePath = join(root, 'package.json');
+const rootPackage = JSON.parse(readFileSync(rootPackagePath, 'utf8'));
+const TARGET = setIdx >= 0 ? args[setIdx + 1] : rootPackage.version;
 
 if (!TARGET || !/^\d+\.\d+\.\d+([.-].+)?$/.test(TARGET)) {
   console.error(`Invalid version: ${TARGET}`);
@@ -27,11 +29,11 @@ function readJson(path) {
 }
 
 function writeJson(path, data) {
-  writeFileSync(path, JSON.stringify(data, null, 2) + '\n', 'utf8');
+  writeFileSync(path, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
 }
 
 function collectPackageJsons() {
-  const paths = [join(root, 'package.json')];
+  const paths = [rootPackagePath];
   for (const dir of ['packages', 'apps']) {
     const base = join(root, dir);
     if (!existsSync(base)) continue;
@@ -41,7 +43,44 @@ function collectPackageJsons() {
       if (existsSync(p)) paths.push(p);
     }
   }
+  const docsPackage = join(root, 'docs', 'package.json');
+  if (existsSync(docsPackage)) paths.push(docsPackage);
   return paths;
+}
+
+function updateTextVersion(relativePath, replacements) {
+  const full = join(root, relativePath);
+  if (!existsSync(full)) return;
+
+  const source = readFileSync(full, 'utf8');
+  let next = source;
+  for (const { pattern, replacement, label, all = false } of replacements) {
+    const effectivePattern = all
+      ? new RegExp(
+          pattern.source,
+          pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`,
+        )
+      : pattern;
+    const matches = all
+      ? [...next.matchAll(effectivePattern)]
+      : [next.match(effectivePattern)].filter(Boolean);
+    if (matches.length === 0) {
+      drifts.push(`${relativePath}: missing ${label}`);
+      continue;
+    }
+
+    for (const match of matches) {
+      const current = match[1];
+      if (current !== String(replacement)) {
+        drifts.push(`${relativePath} ${label}: ${current} != ${replacement}`);
+      }
+    }
+    next = next.replace(effectivePattern, (whole, current) =>
+      whole.replace(current, String(replacement)),
+    );
+  }
+
+  if (!checkOnly && next !== source) writeFileSync(full, next, 'utf8');
 }
 
 const drifts = [];
@@ -70,25 +109,91 @@ if (existsSync(manifestPath)) {
   }
 }
 
-// Lightweight prose checks (informational for --check, not auto-rewritten)
-const proseChecks = [
-  { file: 'packages/security/src/index.ts', re: /SECURITY_VERSION\s*=\s*['"]([^'"]+)['"]/ },
-  { file: 'packages/agents/src/index.ts', re: /AGENTS_VERSION\s*=\s*['"]([^'"]+)['"]/ },
-  { file: 'packages/computer-use/src/index.ts', re: /COMPUTER_USE_VERSION\s*=\s*['"]([^'"]+)['"]/ },
-  { file: 'packages/browser-control/src/index.ts', re: /BROWSER_CONTROL_VERSION\s*=\s*['"]([^'"]+)['"]/ },
-];
-
-for (const { file, re } of proseChecks) {
-  const full = join(root, file);
-  if (!existsSync(full)) continue;
-  const text = readFileSync(full, 'utf8');
-  const m = text.match(re);
-  if (m && m[1] !== TARGET) {
-    drifts.push(`${file}: ${m[1]} != ${TARGET}`);
+const tauriConfigPath = join(root, 'apps', 'desktop', 'src-tauri', 'tauri.conf.json');
+if (existsSync(tauriConfigPath)) {
+  const tauriConfig = readJson(tauriConfigPath);
+  if (tauriConfig.version !== TARGET) {
+    drifts.push(`apps/desktop/src-tauri/tauri.conf.json: ${tauriConfig.version} != ${TARGET}`);
     if (!checkOnly) {
-      writeFileSync(full, text.replace(re, (whole, _v) => whole.replace(_v, TARGET)), 'utf8');
+      tauriConfig.version = TARGET;
+      writeJson(tauriConfigPath, tauriConfig);
     }
   }
+}
+
+const [major, minor, patch] = TARGET.split(/[.-]/).slice(0, 3).map(Number);
+const nativeBuildNumber = major * 1_000_000 + minor * 1_000 + patch;
+
+updateTextVersion('apps/desktop/src-tauri/Cargo.toml', [
+  {
+    pattern: /^version\s*=\s*"([^"]+)"/m,
+    replacement: TARGET,
+    label: 'package version',
+  },
+]);
+updateTextVersion('apps/desktop/src-tauri/Cargo.lock', [
+  {
+    pattern: /(?<=\[\[package\]\]\r?\nname = "ghita-coding-agent"\r?\nversion = ")([^"]+)/,
+    replacement: TARGET,
+    label: 'workspace package version',
+  },
+]);
+updateTextVersion('apps/mobile/android/app/build.gradle', [
+  {
+    pattern: /versionCode\s+(\d+)/,
+    replacement: nativeBuildNumber,
+    label: 'versionCode',
+  },
+  {
+    pattern: /versionName\s+"([^"]+)"/,
+    replacement: TARGET,
+    label: 'versionName',
+  },
+]);
+updateTextVersion('apps/mobile/ios/GhitaMobile.xcodeproj/project.pbxproj', [
+  {
+    pattern: /CURRENT_PROJECT_VERSION = ([^;]+);/,
+    replacement: nativeBuildNumber,
+    label: 'CURRENT_PROJECT_VERSION',
+    all: true,
+  },
+  {
+    pattern: /MARKETING_VERSION = ([^;]+);/,
+    replacement: TARGET,
+    label: 'MARKETING_VERSION',
+    all: true,
+  },
+]);
+updateTextVersion('snap/snapcraft.yaml', [
+  {
+    pattern: /^version:\s*['"]?([^'"\r\n]+)['"]?/m,
+    replacement: TARGET,
+    label: 'snap version',
+  },
+]);
+
+const versionConstantFiles = [];
+const packagesRoot = join(root, 'packages');
+for (const entry of readdirSync(packagesRoot, { withFileTypes: true })) {
+  if (!entry.isDirectory()) continue;
+  const indexPath = join('packages', entry.name, 'src', 'index.ts');
+  if (existsSync(join(root, indexPath))) versionConstantFiles.push(indexPath);
+}
+versionConstantFiles.push('packages/shared/src/constants.ts', 'packages/skills/src/types.ts');
+
+for (const file of versionConstantFiles) {
+  const full = join(root, file);
+  if (!existsSync(full)) continue;
+  const source = readFileSync(full, 'utf8');
+  const pattern = /((?:APP|[A-Z][A-Z_]*)_VERSION\s*=\s*['"])([^'"]+)(['"])/g;
+  let found = false;
+  const next = source.replace(pattern, (whole, prefix, current, suffix) => {
+    found = true;
+    if (current === TARGET) return whole;
+    drifts.push(`${file}: ${current} != ${TARGET}`);
+    return `${prefix}${TARGET}${suffix}`;
+  });
+  if (found && !checkOnly && next !== source) writeFileSync(full, next, 'utf8');
 }
 
 if (checkOnly) {
@@ -97,13 +202,13 @@ if (checkOnly) {
     for (const d of drifts) console.error(' -', d);
     process.exit(1);
   }
-  console.log(`OK: all checked versions are ${TARGET}`);
+  console.info(`OK: all checked versions are ${TARGET}`);
   process.exit(0);
 }
 
-console.log(`Synced version -> ${TARGET}`);
+console.info(`Synced version -> ${TARGET}`);
 if (drifts.length) {
-  console.log(`Updated ${drifts.length} locations.`);
+  console.info(`Updated ${drifts.length} locations.`);
 } else {
-  console.log('Already in sync.');
+  console.info('Already in sync.');
 }

@@ -1,153 +1,197 @@
-# ============================================================
-# GHITA CODING AGENT - .gitignore
-# ============================================================
+# ==============================================================================
+# GHITA CODING AGENT - Master .gitignore
+# ==============================================================================
 
-# Dependencies
+# ──────────────────────────────────────────────────────────────────────────────
+# 1. SECURITY, SECRETS & KEYS (CRITICAL FOR OPEN-SOURCE RELEASE)
+# ──────────────────────────────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+*.env
+*.pem
+*.key
+*.p12
+*.pfx
+*.asc
+*.crt
+*.cer
+*.keystore
+*.jks
+*.mobileprovision
+secrets.json
+credentials.json
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 2. MONOREPO & NODE DEPENDENCIES
+# ──────────────────────────────────────────────────────────────────────────────
 node_modules/
 .pnp
 .pnp.js
 .pnp.cjs
 .pnp.mjs
+.pnpm-store/
+.turbo/
+packages/*/.turbo/
+apps/*/.turbo/
+docs/.turbo/
 
-# Build output
+# ──────────────────────────────────────────────────────────────────────────────
+# 3. BUILD OUTPUTS & COMPILATION ARTIFACTS
+# ──────────────────────────────────────────────────────────────────────────────
 dist/
 build/
-target/
 out/
+target/
 .next/
 *.tsbuildinfo
-apps/desktop/src-tauri/sidecar/server.bundle.mjs
-apps/desktop/src-tauri/sidecar/node.exe
-# esbuild sidecar metadata (build artifact, regenerated on every `vite build`)
-apps/desktop/src-tauri/sidecar/meta.json
-
-# Android / native build caches
-apps/mobile/android/.gradle/
-apps/mobile/android/app/.cxx/
-apps/mobile/android/app/build/
-apps/mobile/android/build/
-apps/mobile/android/.kotlin/
-
-# Rust / Tauri
-apps/desktop/src-tauri/target/
-
-# Environment
-.env
-.env.local
-.env.*.local
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# Test
-coverage/
-.nyc_output/
-*.sqlite
-**/test-ledger.sqlite
-test-output.log
-
-# Windows accidental null device file
-/nul
-nul
-
-# Turbo
-.turbo/
-
-# OpenClaude config
-.openclaude/
-
-# Refer projects (cloned repos - too large for main repo, local only)
-refer_project/
-
-# Local scripts (temp files only, NOT the directory itself)
-scripts/*.tmp
-scripts/*.log
-
-# OS
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# Plan
-Plan/
-
-# Generated TypeDoc API docs (auto-generated from source)
+*.vsix
+packages/*/dist/
+apps/*/dist/
+docs/.docusaurus/
 docs/docs/api/
 
-# Agent handoff documents (internal, not for git)
-agents/**/handoff.md
-
-# Internal planning docs (not for git)
-docs/superpowers/
-.agents/
-.kimchi/
-.zcode/
-progress.md
-PROJECT.md
-TEST_INFRA.md
-
-# Internal scripts
-scripts/clone-refer.sh
-scripts/inspect_*.py
-scripts/verify_doc.py
-scripts/sync_m1_doc.py
-
-# Test data
-tests/quality-loop/trends.jsonl
-tests/benchmark/history.jsonl
-tests/benchmark/results.json
-test-ledger.sqlite
-
-# Python scratch/fix scripts
-*.py
-
-# Root debug images / temp files
-/*.png
-window_dump.xml
-test_write.tmp
-
-# Compiled output in source dirs (should only exist in dist/)
+# Compiled JS/D.TS inside TS source directories
 packages/*/src/**/*.js
 packages/*/src/**/*.d.ts
 packages/*/src/**/*.js.map
 packages/*/src/**/*.d.ts.map
 
-# Temp analysis files from commands
-untracked_*.txt
-%TEMP%*.txt
+# Native C / C++ / Rust Object Files & Binaries
+*.o
+*.obj
+*.dll
+*.so
+*.dylib
+*.exe
+*.lib
+*.a
+*.exp
+*.pdb
+*.ilk
 
-# Build logs
+# ──────────────────────────────────────────────────────────────────────────────
+# 4. TAURI & RUST (DESKTOP APP)
+# ──────────────────────────────────────────────────────────────────────────────
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/sidecar/server.bundle.mjs
+apps/desktop/src-tauri/sidecar/node.exe
+apps/desktop/src-tauri/sidecar/meta.json
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 5. MOBILE CLIENTS (ANDROID & IOS)
+# ──────────────────────────────────────────────────────────────────────────────
+# Android
+apps/mobile/android/.gradle/
+apps/mobile/android/app/.cxx/
+apps/mobile/android/app/build/
+apps/mobile/android/build/
+apps/mobile/android/.kotlin/
+apps/mobile/android/local.properties
+apps/mobile/android/captures/
+apps/mobile/android/app/debug.keystore
+apps/mobile/android/app/src/main/assets/index.android.bundle
+*.apk
+*.aab
+*.dex
+*.class
+
+# iOS
+apps/mobile/ios/Pods/
+apps/mobile/ios/build/
+apps/mobile/ios/DerivedData/
+apps/mobile/ios/*.xcworkspace
+apps/mobile/ios/*.xcodeproj/project.xcworkspace
+apps/mobile/ios/*.xcodeproj/xcuserdata
+
+# Metro & Bundler Caches
+.metro-health-check*
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 6. PYTHON & VIRTUAL ENVS
+# ──────────────────────────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.venv/
+venv/
+ENV/
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 7. TESTING, LOGS & DIAGNOSTICS
+# ──────────────────────────────────────────────────────────────────────────────
+coverage/
+.nyc_output/
+packages/*/coverage/
+apps/*/coverage/
+test-results/
+playwright-report/
+blob-report/
+.vscode-test/
+*.sqlite
+**/test-ledger.sqlite
+test-ledger.sqlite
+
+# Logs & Diagnostics
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+debug.log
+test-output.log
+typedoc_error.log
 build_output.txt
 
-# Windows null device artifact
+# ──────────────────────────────────────────────────────────────────────────────
+# 8. OS & IDE ARTIFACTS
+# ──────────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+*~
+*.orig
+*.rej
+/nul
 nul
 
-# Debug keystores
-apps/mobile/android/app/debug.keystore
+# IDEs
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
 
-# Build artifacts
-apps/mobile/android/app/src/main/assets/index.android.bundle
+# ──────────────────────────────────────────────────────────────────────────────
+# 9. LOCAL AGENT WORKSPACES & REFER PROJECTS (LOCAL ONLY)
+# ──────────────────────────────────────────────────────────────────────────────
+refer_project/
+.openclaude/
+.agents/
+.kimchi/
+.zcode/
+Plan/
+agents/**/handoff.md
 
-packages/*/coverage/
-packages/*/.turbo/
-apps/*/.turbo/
-apps/*/coverage/
-docs/.docusaurus/
-docs/.turbo/
-docs/node_modules/
-packages/*/dist/
-apps/*/dist/
-.DS_Store
+# Internal & Temp Scripts
+scripts/*.tmp
+scripts/*.log
+scripts/clone-refer.sh
+scripts/inspect_*.py
+scripts/verify_doc.py
+scripts/sync_m1_doc.py
+untracked_*.txt
+%TEMP%*.txt
+window_dump.xml
+test_write.tmp
+/*.png
+
+# Test data & benchmarks
+tests/quality-loop/trends.jsonl
+tests/benchmark/history.jsonl
+tests/benchmark/results.json

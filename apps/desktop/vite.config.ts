@@ -74,6 +74,9 @@ export default defineConfig({
 
   // Pre-bundle heavy deps so Tauri WebView doesn't get a mid-session reload
   optimizeDeps: {
+    esbuildOptions: {
+      target: 'esnext',
+    },
     exclude: [
       '@ghita/browser-control',
       '@ghita/computer-use',

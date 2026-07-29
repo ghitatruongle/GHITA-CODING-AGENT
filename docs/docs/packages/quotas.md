@@ -6,7 +6,7 @@ sidebar_position: 7
 
 # `@ghita/quotas`
 
-Package `@ghita/quotas` cung cấp rate limiting, per-user quota management, và usage dashboard. ([Phase 43](../../Plan/Update%200.0.3.html))
+Package `@ghita/quotas` cung cấp rate limiting, per-user quota management và usage dashboard. Xem tiến độ trong [ROADMAP](https://github.com/ghitatruongle/ghita-coding-agent/blob/main/ROADMAP.md).
 
 ## Cài đặt
 

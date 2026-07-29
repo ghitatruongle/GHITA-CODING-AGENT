@@ -1,7 +1,23 @@
 # 🗺️ GHITA CODING AGENT — Public Roadmap
 
-> **Current version:** v0.1.5
-> **Last updated:** 2026-07-22
+> **Current version:** v0.3.6-dev
+> **Last updated:** 2026-07-28
+
+---
+
+## In progress — v0.3.6 Production Hardening
+
+This release is intentionally focused on trust rather than feature count:
+
+- One canonical version across JavaScript, Rust, Android, iOS and packaging manifests.
+- Blocking CI for integrity, tests, documentation, security and release artifacts.
+- Reproducible desktop and mobile builds from frozen lockfiles.
+- Authenticated and bounded AI gateway endpoints.
+- Real Discord, Slack and Telegram gateway lifecycles.
+- Dependency and command-execution hardening.
+
+The release remains `-dev` until every gate in
+[`docs/release-plan-v0.3.6.md`](docs/release-plan-v0.3.6.md) passes on a clean clone.
 
 ---
 

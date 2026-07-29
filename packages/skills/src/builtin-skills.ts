@@ -18,10 +18,24 @@ import {
   escapePowerShellString,
   missingAdapter,
 } from './helpers.js';
+import { presentationDeckSkill } from './builtin/presentation-deck.js';
+import {
+  BUILTIN_KNOWLEDGE_PLUGINS,
+  createKnowledgeWorkSkill,
+} from './adapters/knowledge-work-adapter.js';
+import { dotnetDiagSkill, dotnetUpgradeSkill } from './builtin/dotnet/dotnet-enterprise-suite.js';
+import { deepTechResearchSkill } from './builtin/academic/deep-tech-research.js';
 
 /** Create all built-in skill definitions. */
 export function createBuiltinSkills(): SkillDefinition[] {
+  const knowledgeSkills = BUILTIN_KNOWLEDGE_PLUGINS.map(createKnowledgeWorkSkill);
+
   return [
+    presentationDeckSkill,
+    dotnetDiagSkill,
+    dotnetUpgradeSkill,
+    deepTechResearchSkill,
+    ...knowledgeSkills,
     // ── File Skills ─────────────────────────────────────────────────────────
     {
       id: 'file.read',

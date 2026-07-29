@@ -1,7 +1,16 @@
 {
-  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "$schema": "https://unpkg.com/knip@5/schema.json",
   "entry": ["scripts/**/*.mjs", "vitest.workspace.ts"],
   "project": ["**/*.ts", "**/*.tsx", "**/*.mjs"],
+  "ignore": [
+    "**/build/**",
+    "**/coverage/**",
+    "**/dist/**",
+    "apps/desktop/src-tauri/sidecar/server.bundle.mjs",
+    "apps/desktop/src-tauri/target/**",
+    "docs/.docusaurus/**"
+  ],
+  "include": ["dependencies", "devDependencies", "unlisted", "binaries", "unresolved"],
   "ignoreDependencies": [
     "@types/node",
     "typescript",
@@ -10,6 +19,9 @@
     "esbuild",
     "tsx",
     "@react-native/babel-preset",
+    "@react-native-community/cli",
+    "@react-native-community/cli-platform-android",
+    "@react-native-community/cli-platform-ios",
     "@react-native/gradle-plugin",
     "@react-native/community-cli-plugin",
     "@napi-rs/cli",
@@ -20,9 +32,11 @@
     "@ghita/computer-use",
     "@ghita/memory",
     "@ghita/shared",
-    "socket.io"
+    "socket.io",
+    "@react-native/codegen",
+    "lint-staged"
   ],
-  "ignoreBinaries": ["stryker", "cargo", "AGPL-3.0", "SSPL"],
+  "ignoreBinaries": ["stryker", "cargo", "taskkill", "pod"],
   "rules": {
     "files": "off",
     "devDependencies": "warn",

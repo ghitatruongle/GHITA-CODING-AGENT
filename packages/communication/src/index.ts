@@ -31,6 +31,7 @@ export * from './gateway/types.js';
 export { TelegramGateway, startTelegramBot } from './gateway/telegram.js';
 export { DiscordGateway, startDiscordBot } from './gateway/discord.js';
 export { SlackGateway, startSlackBot } from './gateway/slack.js';
+export type { SlackGatewayConfig } from './gateway/slack.js';
 export { GatewayManager } from './gateway/manager.js';
 export {
   MultiChannelGateway,
@@ -69,4 +70,4 @@ export type {
   WsMuxStats,
 } from './ws/index.js';
 
-export const COMMUNICATION_VERSION = '0.1.0';
+export const COMMUNICATION_VERSION = '0.3.7';

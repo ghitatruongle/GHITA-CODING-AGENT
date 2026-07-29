@@ -1,8 +1,8 @@
 # Security Policy
 
-> **Version:** v0.1.5
+> **Version:** v0.3.6-dev
 > **Maintainer:** GHITA Coding Agent Security Team (`security@ghita.dev`)
-> **Last updated:** 2026-07-22
+> **Last updated:** 2026-07-28
 
 GHITA CODING AGENT takes the security of its users, their devices, and their data seriously. This document describes how to report vulnerabilities, what we support, and the security guarantees built into the project.
 
@@ -14,9 +14,9 @@ We provide security updates for the following versions:
 
 | Version  | Supported        | Notes                        |
 | -------- | ---------------- | ---------------------------- |
-| `0.1.5`  | ✅ Active        | Current development line     |
-| `0.1.0`  | ⚠️ Critical only | Patch-only for critical CVEs |
-| `<0.1.0` | ❌ End of life   | Upgrade required             |
+| `0.3.6`  | ✅ Active        | Current hardening line       |
+| `0.2.5`  | ⚠️ Critical only | Patch-only for critical CVEs |
+| `<0.2.5` | ❌ End of life   | Upgrade required             |
 
 We follow [Semantic Versioning](https://semver.org/). Security fixes are released as soon as possible and may be back-ported to the previous minor version when feasible.
 

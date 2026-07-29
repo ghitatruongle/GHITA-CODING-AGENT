@@ -1,21 +1,7 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import globals from 'globals';
-
-const reactHooksPlugin = {
-  rules: {
-    'exhaustive-deps': {
-      meta: {
-        type: 'suggestion',
-        docs: { description: 'Stub for react-hooks/exhaustive-deps' },
-        schema: [],
-      },
-      create() {
-        return {};
-      },
-    },
-  },
-};
+import reactHooksPlugin from 'eslint-plugin-react-hooks';
 
 export default tseslint.config(
   {
@@ -75,6 +61,8 @@ export default tseslint.config(
       'no-useless-return': 'error',
       'prefer-template': 'error',
       'no-var': 'error',
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
     },
   },
   // Presentational fidelity blocks extracted from large desktop views.

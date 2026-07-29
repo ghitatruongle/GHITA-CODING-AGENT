@@ -1,0 +1,12 @@
+{
+  "GHSA-mh99-v99m-4gvg": {
+    "expires": "2026-09-01",
+    "severity": "high",
+    "reason": "Build-time glob traversal inherited from screenshot-desktop and React Native 0.76 tooling. Inputs are repository-controlled; migrate those parents before expiry.",
+    "allowedPaths": [
+      "apps__desktop>screenshot-desktop>",
+      "apps__mobile>",
+      "packages__communication>screenshot-desktop>"
+    ]
+  }
+}

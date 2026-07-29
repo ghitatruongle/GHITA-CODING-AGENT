@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.3.6] - Unreleased
+
+### Theme: Production hardening
+
+- Established `0.3.6` as the canonical version across workspace, native and packaging manifests.
+- Extended integrity checks to cover Cargo, Tauri, Android, iOS, Snap and runtime constants.
+- Replaced mock-only communication gateway lifecycles with real Discord, Slack and Telegram transports.
+- Added bounded duplicate-event suppression and protocol tests for reconnect backoff and invalid signatures.
+- Added body-size, origin, metrics-authentication and bounded rate-limit protections to the AI gateway.
+- Blocked destructive commands at the Node skill adapter boundary and bounded process output.
+- Replaced the mobile placeholder build with a real Metro production bundle.
+- Made coverage, audit, license, documentation, Playwright and artifact-integrity checks blocking release gates.
+- Release remains unpublished until every gate in `docs/release-plan-v0.3.6.md` is green.
+
+---
+
 ## [0.2.5] - 2026-07-27
 
 ### Theme: Version Integrity + Core Hardening

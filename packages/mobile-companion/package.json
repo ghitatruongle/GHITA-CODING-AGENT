@@ -1,6 +1,6 @@
 {
   "name": "@ghita/mobile-companion",
-  "version": "0.2.5",
+  "version": "0.3.7",
   "private": true,
   "sideEffects": false,
   "description": "Mobile companion helper modules for GHITA CODING AGENT",

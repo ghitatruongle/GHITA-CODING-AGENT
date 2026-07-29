@@ -3,6 +3,7 @@
 // ==============================================================================
 
 import { createServer, type IncomingMessage, type ServerResponse, type Server } from 'http';
+import { timingSafeEqual } from 'node:crypto';
 import type { Orchestrator } from '../orchestrator.js';
 
 export interface GatewayConfig {
@@ -12,7 +13,13 @@ export interface GatewayConfig {
   rateLimitWindowMs?: number;
   monthlyBudget?: number; // USD
   piiFilteringEnabled?: boolean;
+  allowedOrigins?: string[];
+  maxRequestBodyBytes?: number;
+  metricsRequireAuth?: boolean;
+  maxRateLimitKeys?: number;
 }
+
+class RequestBodyTooLargeError extends Error {}
 
 export class AIGatewayServer {
   private orchestrator: Orchestrator;
@@ -46,6 +53,10 @@ export class AIGatewayServer {
       rateLimitWindowMs: config?.rateLimitWindowMs ?? 60000,
       monthlyBudget: config?.monthlyBudget ?? 100.0,
       piiFilteringEnabled: config?.piiFilteringEnabled ?? true,
+      allowedOrigins: config?.allowedOrigins ?? ['http://localhost:1420', 'http://127.0.0.1:1420'],
+      maxRequestBodyBytes: config?.maxRequestBodyBytes ?? 1024 * 1024,
+      metricsRequireAuth: config?.metricsRequireAuth ?? true,
+      maxRateLimitKeys: config?.maxRateLimitKeys ?? 10_000,
     };
   }
 
@@ -54,8 +65,16 @@ export class AIGatewayServer {
       this.metrics.httpRequestsTotal++;
       const startTime = Date.now();
 
-      // Enable CORS
-      res.setHeader('Access-Control-Allow-Origin', '*');
+      const origin = req.headers.origin;
+      if (origin && !this.config.allowedOrigins.includes(origin)) {
+        res.writeHead(403, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: { message: 'Forbidden: Origin is not allowed' } }));
+        return;
+      }
+      if (origin) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Vary', 'Origin');
+      }
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
       res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
@@ -69,6 +88,11 @@ export class AIGatewayServer {
 
       // Route: /metrics (Prometheus)
       if (url.pathname === '/metrics') {
+        if (this.config.metricsRequireAuth && !this.isAuthorized(req.headers.authorization)) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: { message: 'Unauthorized: Invalid API Key' } }));
+          return;
+        }
         res.writeHead(200, { 'Content-Type': 'text/plain; version=0.0.4' });
         res.end(this.generatePrometheusMetrics());
         return;
@@ -78,8 +102,7 @@ export class AIGatewayServer {
       if (url.pathname === '/v1/chat/completions' && req.method === 'POST') {
         try {
           // 1. Auth check
-          const authHeader = req.headers.authorization;
-          if (!authHeader || authHeader !== `Bearer ${this.config.apiKey}`) {
+          if (!this.isAuthorized(req.headers.authorization)) {
             res.writeHead(401, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: { message: 'Unauthorized: Invalid API Key' } }));
             return;
@@ -163,6 +186,11 @@ export class AIGatewayServer {
             }),
           );
         } catch (e: unknown) {
+          if (e instanceof RequestBodyTooLargeError) {
+            res.writeHead(413, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: { message: e.message } }));
+            return;
+          }
           const message = e instanceof Error ? e.message : 'Internal Server Error';
           res.writeHead(500, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: { message } }));
@@ -200,15 +228,47 @@ export class AIGatewayServer {
   // --- Helpers ---
 
   private async readRequestBody(req: IncomingMessage): Promise<Buffer> {
+    const declaredLength = Number(req.headers['content-length'] ?? 0);
+    if (Number.isFinite(declaredLength) && declaredLength > this.config.maxRequestBodyBytes) {
+      throw new RequestBodyTooLargeError(
+        `Request body exceeds ${this.config.maxRequestBodyBytes} bytes`,
+      );
+    }
+
     const chunks: Buffer[] = [];
+    let totalBytes = 0;
     for await (const chunk of req) {
-      chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+      const buffer = typeof chunk === 'string' ? Buffer.from(chunk) : chunk;
+      totalBytes += buffer.byteLength;
+      if (totalBytes > this.config.maxRequestBodyBytes) {
+        throw new RequestBodyTooLargeError(
+          `Request body exceeds ${this.config.maxRequestBodyBytes} bytes`,
+        );
+      }
+      chunks.push(buffer);
     }
     return Buffer.concat(chunks);
   }
 
+  private isAuthorized(authorization: string | undefined): boolean {
+    const prefix = 'Bearer ';
+    if (!authorization?.startsWith(prefix)) return false;
+    const candidate = Buffer.from(authorization.slice(prefix.length));
+    const expected = Buffer.from(this.config.apiKey);
+    return candidate.length === expected.length && timingSafeEqual(candidate, expected);
+  }
+
   private isRateLimited(key: string): boolean {
     const now = Date.now();
+    for (const [storedKey, storedTimestamps] of this.requestCounts) {
+      if (!storedTimestamps.some((timestamp) => now - timestamp < this.config.rateLimitWindowMs)) {
+        this.requestCounts.delete(storedKey);
+      }
+    }
+    if (!this.requestCounts.has(key) && this.requestCounts.size >= this.config.maxRateLimitKeys) {
+      const oldestKey = this.requestCounts.keys().next().value as string | undefined;
+      if (oldestKey) this.requestCounts.delete(oldestKey);
+    }
     const timestamps = this.requestCounts.get(key) || [];
     const validTimestamps = timestamps.filter((t) => now - t < this.config.rateLimitWindowMs);
     if (validTimestamps.length >= this.config.rateLimitLimit) {

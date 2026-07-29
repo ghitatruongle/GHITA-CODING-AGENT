@@ -8,37 +8,39 @@ slug: /
 
 # GHITA CODING AGENT
 
-**Multi-provider desktop AI agent với skills, computer use, và memory layer** — built for developers who need full control.
+**Trợ lý lập trình AI đa nhà cung cấp với skills, computer use và bộ nhớ dài hạn**,
+dành cho lập trình viên cần toàn quyền kiểm soát môi trường làm việc.
 
 ## Tính năng chính
 
-- **30+ LLM providers** — OpenAI, Anthropic, Google, Groq, DeepSeek, Kimi, MiniMax, OpenRouter, v.v.
-- **Skills marketplace** — community-contributed automation scripts
-- **Computer use** — điều khiển desktop, browser, terminal qua natural language
-- **Memory layer** — long-term context, semantic search, knowledge graph
-- **Multi-platform** — Desktop (Tauri), Android, VS Code Extension
-- **Local-first** — mọi data ở local, chỉ gọi LLM khi cần
+- **30+ nhà cung cấp LLM** — OpenAI, Anthropic, Google, Groq, Ollama và nhiều dịch vụ khác.
+- **Skills marketplace** — cài đặt và quản lý kỹ năng tự động hóa.
+- **Computer use** — điều khiển desktop, trình duyệt và terminal qua ngôn ngữ tự nhiên.
+- **Memory layer** — ngữ cảnh dài hạn, tìm kiếm ngữ nghĩa và knowledge graph.
+- **Đa nền tảng** — Desktop Tauri, Android và VS Code Extension.
+- **Local-first** — dữ liệu được giữ cục bộ trừ khi tính năng yêu cầu gọi dịch vụ bên ngoài.
 
 ## Cài đặt nhanh
 
 ```bash
 git clone https://github.com/ghitatruongle/ghita-coding-agent
 cd ghita-coding-agent
-pnpm install
+pnpm install --frozen-lockfile
 pnpm dev:desktop
 ```
 
 ## Kiến trúc tổng quan
 
-```
+```text
 apps/        — desktop, mobile, vscode-extension
-packages/    — 15+ packages (shared, ai-engine, memory, ...)
-docs/        — bạn đang ở đây
-Plan/        — sprint plan, phase specs
+packages/    — thư viện và dịch vụ dùng chung
+docs/        — tài liệu công khai, được kiểm tra theo phiên bản
 ```
 
-Xem [Getting Started](./docs/getting-started) để bắt đầu, hoặc [Architecture](./docs/architecture) để hiểu hệ thống.
+Xem [Getting Started](./getting-started) để bắt đầu hoặc
+[Architecture](./architecture) để tìm hiểu hệ thống.
 
-## Version hiện tại
+## Phiên bản hiện tại
 
-**0.0.3** — Sprint 7 (UX & Automation). Xem [Changelog](./docs/changelog).
+**0.3.6-dev** — production hardening. Bản phát hành chỉ được gắn tag sau khi
+toàn bộ cổng kiểm định trong `docs/release-plan-v0.3.6.md` vượt qua.

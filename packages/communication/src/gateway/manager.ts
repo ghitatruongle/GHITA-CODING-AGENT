@@ -27,16 +27,23 @@ export class GatewayManager {
       );
     }
     if (enabled.includes('slack')) {
-      this.gateways.set('slack', new SlackGateway(config.slackToken));
+      this.gateways.set(
+        'slack',
+        new SlackGateway({
+          botToken: config.slackToken,
+          appToken: config.slackAppToken,
+          signingSecret: config.slackSigningSecret,
+        }),
+      );
     }
   }
 
   async initialize(): Promise<void> {
     for (const [type, gateway] of this.gateways.entries()) {
+      gateway.onMessage((msg: GatewayMessage) => this.handleIncomingMessage(msg));
       const success = await gateway.initialize();
       if (success) {
         console.info(`[Gateway Manager] Initialized gateway: ${type} (Mock: ${gateway.isMock})`);
-        gateway.onMessage((msg: GatewayMessage) => this.handleIncomingMessage(msg));
       } else {
         console.warn(`[Gateway Manager] Failed to initialize gateway: ${type}`);
       }

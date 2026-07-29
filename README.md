@@ -6,12 +6,12 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-0.2.5-purple.svg)
+![Version](https://img.shields.io/badge/version-0.3.6--dev-purple.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Node](https://img.shields.io/badge/node-%3E%3D20-green.svg)
 ![TypeScript](https://img.shields.io/badge/typescript-5.6-blue.svg)
 ![Tauri](https://img.shields.io/badge/tauri-2.x-orange.svg)
-![Tests](https://img.shields.io/badge/tests-1%2C550%2B%20passed-brightgreen.svg)
+[![CI](https://github.com/ghitatruongle/GHITA-CODING-AGENT/actions/workflows/ci.yml/badge.svg)](https://github.com/ghitatruongle/GHITA-CODING-AGENT/actions/workflows/ci.yml)
 ![Coverage](https://img.shields.io/badge/coverage-v8%2Fc8-informational.svg)
 ![Build](https://img.shields.io/badge/build-turborepo-blueviolet.svg)
 [![Docs](https://img.shields.io/badge/docs-api-blueviolet.svg)](https://ghitatruongle.github.io/GHITA-CODING-AGENT/)
