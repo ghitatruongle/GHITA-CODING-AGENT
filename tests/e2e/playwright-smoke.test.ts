@@ -14,9 +14,9 @@ const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:1420';
 test.describe('Desktop App E2E Smoke Tests', () => {
   test('splash page loads and renders', async ({ page }) => {
     // Test the splash page (used during Tauri startup)
-    const splashPath = process.cwd() + '/apps/desktop/public/splash.html';
+    const splashPath = `${process.cwd()}/apps/desktop/public/splash.html`;
     await page.goto(`file://${splashPath}`);
-    
+
     // Verify splash renders
     await expect(page).toHaveTitle(/GHITA CODING AGENT/i);
   });
@@ -25,16 +25,16 @@ test.describe('Desktop App E2E Smoke Tests', () => {
     // Capture console errors
     const errors: string[] = [];
     page.on('pageerror', (err) => errors.push(err.message));
-    
+
     await page.goto(BASE_URL, { timeout: 15000 });
-    
+
     // Should not have any unhandled exceptions
     expect(errors).toHaveLength(0);
   });
 
   test('root renders #root element', async ({ page }) => {
     await page.goto(BASE_URL, { timeout: 15000 });
-    
+
     // Verify the root div exists
     const root = await page.locator('#root');
     await expect(root).toBeVisible();
@@ -42,34 +42,27 @@ test.describe('Desktop App E2E Smoke Tests', () => {
 
   test('global styles are applied', async ({ page }) => {
     await page.goto(BASE_URL, { timeout: 15000 });
-    
+
     // Verify background color from index.html
     const html = await page.locator('html');
-    const bgColor = await html.evaluate((el) => 
-      window.getComputedStyle(el).backgroundColor
-    );
-    
+    const bgColor = await html.evaluate((el) => window.getComputedStyle(el).backgroundColor);
+
     // Should not be transparent (index.html sets #0a0a1a)
     expect(bgColor).not.toBe('rgba(0, 0, 0, 0)');
     expect(bgColor).not.toBe('transparent');
   });
 
-  test('fonts load correctly', async ({ page }) => {
+  test('font stylesheet is configured', async ({ page }) => {
     await page.goto(BASE_URL, { timeout: 15000 });
-    
-    // Verify Inter font is available (loaded from Google Fonts in index.html)
-    const hasInter = await page.evaluate(() => {
-      return document.fonts.check('16px Inter');
-    });
-    
-    // Fonts may not be fully loaded yet, but the link should exist
-    const fontLink = await page.locator('link[href*="fonts.googleapis.com"]');
+
+    // External font delivery can be unavailable in CI, but the stylesheet must be wired.
+    const fontLink = page.locator('link[rel="stylesheet"][href*="fonts.googleapis.com"]');
     await expect(fontLink).toHaveCount(1);
   });
 
   test('no mixed content warnings', async ({ page }) => {
     await page.goto(BASE_URL, { timeout: 15000 });
-    
+
     // All resources should use HTTPS or be local
     const links = await page.locator('link[href]').all();
     for (const link of links) {
@@ -85,7 +78,7 @@ test.describe('Desktop App E2E Smoke Tests', () => {
     const start = Date.now();
     await page.goto(BASE_URL, { timeout: 15000 });
     const loadTime = Date.now() - start;
-    
+
     expect(loadTime).toBeLessThan(3000);
   });
 });

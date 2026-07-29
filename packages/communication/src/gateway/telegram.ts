@@ -8,7 +8,9 @@ export class TelegramGateway implements CommunicationGateway {
   readonly type: GatewayType = 'telegram';
   public isMock = true;
   private messageHandler?: (message: GatewayMessage) => void | Promise<void>;
-  private pollingInterval?: NodeJS.Timeout;
+  private pollingAbort?: AbortController;
+  private pollingPromise?: Promise<void>;
+  private nextUpdateOffset = 0;
 
   constructor(private readonly token?: string) {
     if (token && token.trim() !== '' && !token.includes('MOCK_')) {
@@ -23,11 +25,10 @@ export class TelegramGateway implements CommunicationGateway {
     }
 
     try {
-      // In production, we'd setup the real Telegram Bot client (e.g., node-telegram-bot-api)
-      // Since dependencies might not have node-telegram-bot-api, we'll do a simple HTTP polling mock fallback
-      // or mock client that validates the token format.
       if (!this.token) return false;
-      return true;
+      const response = await fetch(`https://api.telegram.org/bot${this.token}/getMe`);
+      const result = (await response.json()) as { ok?: boolean };
+      return response.ok && result.ok === true;
     } catch (error) {
       console.error('[Telegram Gateway] Initialization failed:', error);
       return false;
@@ -46,7 +47,8 @@ export class TelegramGateway implements CommunicationGateway {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chat_id: channelId, text }),
       });
-      return response.ok;
+      const result = (await response.json()) as { ok?: boolean };
+      return response.ok && result.ok === true;
     } catch (error) {
       console.error('[Telegram Gateway] Failed to send message:', error);
       return false;
@@ -55,13 +57,17 @@ export class TelegramGateway implements CommunicationGateway {
 
   onMessage(handler: (message: GatewayMessage) => void | Promise<void>): void {
     this.messageHandler = handler;
+    if (!this.isMock && !this.pollingPromise) {
+      this.pollingAbort = new AbortController();
+      this.pollingPromise = this.pollUpdates(this.pollingAbort.signal);
+    }
   }
 
   async stop(): Promise<void> {
-    if (this.pollingInterval) {
-      clearInterval(this.pollingInterval);
-      this.pollingInterval = undefined;
-    }
+    this.pollingAbort?.abort();
+    await this.pollingPromise;
+    this.pollingAbort = undefined;
+    this.pollingPromise = undefined;
   }
 
   /**
@@ -84,6 +90,59 @@ export class TelegramGateway implements CommunicationGateway {
         timestamp: Date.now(),
       };
       this.messageHandler(msg);
+    }
+  }
+
+  private async pollUpdates(signal: AbortSignal): Promise<void> {
+    while (!signal.aborted && this.token) {
+      try {
+        const query = new URLSearchParams({
+          timeout: '20',
+          offset: String(this.nextUpdateOffset),
+          allowed_updates: JSON.stringify(['message']),
+        });
+        const response = await fetch(
+          `https://api.telegram.org/bot${this.token}/getUpdates?${query.toString()}`,
+          { signal },
+        );
+        const payload = (await response.json()) as {
+          ok?: boolean;
+          result?: Array<{
+            update_id: number;
+            message?: {
+              message_id: number;
+              date: number;
+              text?: string;
+              chat: { id: number | string };
+              from?: { id: number | string; username?: string; first_name?: string };
+            };
+          }>;
+        };
+
+        if (!response.ok || payload.ok !== true) {
+          throw new Error(`Telegram polling failed with status ${response.status}`);
+        }
+
+        for (const update of payload.result ?? []) {
+          if (update.update_id < this.nextUpdateOffset) continue;
+          this.nextUpdateOffset = Math.max(this.nextUpdateOffset, update.update_id + 1);
+          const message = update.message;
+          if (!message?.text || !this.messageHandler) continue;
+          await this.messageHandler({
+            id: `tg_${message.message_id}`,
+            gatewayType: 'telegram',
+            channelId: String(message.chat.id),
+            userId: String(message.from?.id ?? message.chat.id),
+            username: message.from?.username ?? message.from?.first_name ?? 'telegram_user',
+            text: message.text,
+            timestamp: message.date * 1000,
+          });
+        }
+      } catch (error) {
+        if (signal.aborted) return;
+        console.error('[Telegram Gateway] Polling failed:', error);
+        await new Promise((resolvePromise) => setTimeout(resolvePromise, 1000));
+      }
     }
   }
 }

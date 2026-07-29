@@ -1,7 +1,7 @@
 # @ghita/ai-engine
 
-![Version](https://img.shields.io/badge/version-0.1.5-blue)
-![Coverage](https://img.shields.io/badge/coverage-66%_core_surface-yellow)
+![Version](https://img.shields.io/badge/version-0.3.6-blue)
+![Coverage](https://img.shields.io/badge/coverage-66%25_core_surface-yellow)
 ![Tier](https://img.shields.io/badge/tier-T1_core-orange)
 
 Multi-provider AI gateway: key rotation, fallback/circuit breaker, routing, anti-slop filtering, streaming, and cost tracking.

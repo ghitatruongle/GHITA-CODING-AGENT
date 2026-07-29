@@ -15,18 +15,10 @@ FROM node:20-slim AS deps
 
 WORKDIR /app
 
-# Copy only package manifests for better layer caching
+# Copy root manifests and all workspace packages
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY packages/ai-engine/package.json ./packages/ai-engine/
-COPY packages/agents/package.json ./packages/agents/
-COPY packages/communication/package.json ./packages/communication/
-COPY packages/memory/package.json ./packages/memory/
-COPY packages/security/package.json ./packages/security/
-COPY packages/shared/package.json ./packages/shared/
-COPY packages/skills/package.json ./packages/skills/
-COPY apps/desktop/package.json ./apps/desktop/
-COPY apps/mobile/package.json ./apps/mobile/
-COPY apps/vscode-extension/package.json ./apps/vscode-extension/
+COPY packages/ ./packages/
+COPY apps/ ./apps/
 COPY docs/package.json ./docs/
 
 RUN corepack enable pnpm && pnpm install --frozen-lockfile --prod
@@ -38,7 +30,7 @@ WORKDIR /app
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.base.json ./
 COPY packages/ ./packages/
-COPY apps/desktop/src-tauri/sidecar/ ./apps/desktop/src-tauri/sidecar/
+COPY apps/ ./apps/
 
 RUN corepack enable pnpm && \
     pnpm install --frozen-lockfile && \
@@ -55,8 +47,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends dumb-init && \
 
 # Copy production node_modules
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/packages/*/node_modules ./packages/ai-engine/node_modules/
-COPY --from=deps /app/packages/*/node_modules ./packages/shared/node_modules/
+COPY --from=deps /app/packages ./packages
 
 # Copy built packages and sidecar
 COPY --from=build /app/packages/*/dist ./packages/

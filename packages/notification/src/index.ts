@@ -26,4 +26,4 @@ export type { BatchConfig, BatchFlushListener } from './batch.js';
 export { NotificationTemplate } from './template.js';
 export type { TemplateContext, TemplateOptions } from './template.js';
 
-export const NOTIFICATION_VERSION = '0.0.4';
+export const NOTIFICATION_VERSION = '0.3.7';

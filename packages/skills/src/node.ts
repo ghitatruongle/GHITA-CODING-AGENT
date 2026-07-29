@@ -7,6 +7,7 @@ import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { dirname, extname, isAbsolute, relative, resolve } from 'node:path';
 import { platform } from 'node:process';
 import { createDefaultSkillRegistry, type SkillRuntimeAdapters } from './index.js';
+import { PolicyEnforcer } from './governance/policy-enforcer.js';
 
 export interface NodeSkillAdapterOptions {
   defaultCwd?: string;
@@ -44,11 +45,6 @@ function escapeShellArg(value: string): string {
   return `"${escaped}"`;
 }
 
-function trimOutput(value: string, maxBytes: number): string {
-  if (Buffer.byteLength(value, 'utf8') <= maxBytes) return value;
-  return `${value.slice(0, maxBytes)}\n[output truncated at ${maxBytes} bytes]`;
-}
-
 function runProcess(
   command: string,
   options: {
@@ -59,6 +55,16 @@ function runProcess(
   },
 ): Promise<{ exitCode: number; stdout: string; stderr: string; duration: number }> {
   const startedAt = Date.now();
+  const policy = PolicyEnforcer.evaluateCommand(command);
+
+  if (!policy.allowed) {
+    return Promise.resolve({
+      exitCode: 126,
+      stdout: '',
+      stderr: `Command blocked by security policy: ${policy.reason ?? 'unsafe command'}`,
+      duration: Date.now() - startedAt,
+    });
+  }
 
   return new Promise((resolveProcess) => {
     const child = spawn(command, {
@@ -70,15 +76,48 @@ function runProcess(
 
     let stdout = '';
     let stderr = '';
+    let stdoutBytes = 0;
+    let stderrBytes = 0;
+    let stdoutTruncated = false;
+    let stderrTruncated = false;
     let settled = false;
+
+    const appendBounded = (
+      current: string,
+      chunk: Buffer,
+      usedBytes: number,
+      truncated: boolean,
+    ): { value: string; usedBytes: number; truncated: boolean } => {
+      if (truncated) return { value: current, usedBytes, truncated };
+      const remaining = options.maxOutputBytes - usedBytes;
+      if (remaining <= 0) {
+        return {
+          value: `${current}\n[output truncated at ${options.maxOutputBytes} bytes]`,
+          usedBytes,
+          truncated: true,
+        };
+      }
+
+      const bytes = chunk.subarray(0, remaining);
+      const next = current + bytes.toString('utf8');
+      const nextUsedBytes = usedBytes + bytes.byteLength;
+      if (chunk.byteLength > remaining) {
+        return {
+          value: `${next}\n[output truncated at ${options.maxOutputBytes} bytes]`,
+          usedBytes: nextUsedBytes,
+          truncated: true,
+        };
+      }
+      return { value: next, usedBytes: nextUsedBytes, truncated: false };
+    };
 
     const finish = (exitCode: number): void => {
       if (settled) return;
       settled = true;
       resolveProcess({
         exitCode,
-        stdout: trimOutput(stdout, options.maxOutputBytes),
-        stderr: trimOutput(stderr, options.maxOutputBytes),
+        stdout,
+        stderr,
         duration: Date.now() - startedAt,
       });
     };
@@ -100,11 +139,17 @@ function runProcess(
     );
 
     child.stdout?.on('data', (chunk: Buffer) => {
-      stdout += chunk.toString('utf8');
+      const appended = appendBounded(stdout, chunk, stdoutBytes, stdoutTruncated);
+      stdout = appended.value;
+      stdoutBytes = appended.usedBytes;
+      stdoutTruncated = appended.truncated;
     });
 
     child.stderr?.on('data', (chunk: Buffer) => {
-      stderr += chunk.toString('utf8');
+      const appended = appendBounded(stderr, chunk, stderrBytes, stderrTruncated);
+      stderr = appended.value;
+      stderrBytes = appended.usedBytes;
+      stderrTruncated = appended.truncated;
     });
 
     child.on('error', (error) => {

@@ -19,8 +19,21 @@ const config: Config = {
   organizationName: 'ghitatruongle',
   projectName: 'ghita-coding-agent',
 
-  onBrokenLinks: 'warn',
-  onBrokenMarkdownLinks: 'warn',
+  onBrokenLinks: 'throw',
+  markdown: {
+    hooks: {
+      onBrokenMarkdownLinks: 'warn',
+    },
+  },
+
+  future: {
+    faster: {
+      swcJsLoader: true,
+      swcJsMinimizer: true,
+      lightningCssMinimizer: true,
+      mdxCrossCompilerCache: true,
+    },
+  },
 
   i18n: {
     defaultLocale: 'vi',
@@ -82,9 +95,9 @@ const config: Config = {
         {
           title: 'Docs',
           items: [
-            { label: 'Getting Started', to: '/docs/getting-started' },
-            { label: 'Architecture', to: '/docs/architecture' },
-            { label: 'Tutorials', to: '/docs/tutorials' },
+            { label: 'Getting Started', to: '/getting-started' },
+            { label: 'Architecture', to: '/architecture' },
+            { label: 'Tutorials', to: '/tutorials/first-agent' },
           ],
         },
         {
@@ -101,8 +114,8 @@ const config: Config = {
           title: 'More',
           items: [
             { label: 'Blog', to: '/blog' },
-            { label: 'Contributing', to: '/docs/contributing' },
-            { label: 'Changelog', to: '/docs/changelog' },
+            { label: 'Contributing', to: '/contributing' },
+            { label: 'Changelog', to: '/changelog' },
           ],
         },
       ],

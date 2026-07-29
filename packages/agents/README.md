@@ -1,7 +1,7 @@
 # @ghita/agents
 
-![Version](https://img.shields.io/badge/version-0.1.5-blue)
-![Coverage](https://img.shields.io/badge/coverage-69%_core_surface-yellow)
+![Version](https://img.shields.io/badge/version-0.3.6-blue)
+![Coverage](https://img.shields.io/badge/coverage-69%25_core_surface-yellow)
 ![Tier](https://img.shields.io/badge/tier-T0_critical-red)
 
 Orchestration layer: ReAct agents, workflows, middleware pipeline, sub-agent channels, debate engine, and Agent Protocol.

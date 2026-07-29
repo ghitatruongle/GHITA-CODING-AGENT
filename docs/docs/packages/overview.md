@@ -104,7 +104,7 @@ Plugin marketplace, publishing pipeline.
 
 ### `@ghita/security`
 
-Security audit & prevention. ([Xem chi tiết →](./security))
+Security audit & prevention. ([Xem chi tiết →](./packages-security))
 
 - Input sanitizer (XSS, SQLi, command injection, path traversal)
 - XSS prevention với whitelist
@@ -113,7 +113,7 @@ Security audit & prevention. ([Xem chi tiết →](./security))
 
 ### `@ghita/monitoring`
 
-Error monitoring (Sentry-compatible), performance tracing, alerts. ([Xem chi tiết →](./monitoring))
+Error monitoring (Sentry-compatible), performance tracing, alerts. ([Xem chi tiết →](./packages-monitoring))
 
 - HTTP client gửi envelope format
 - Performance transactions + spans
@@ -122,7 +122,7 @@ Error monitoring (Sentry-compatible), performance tracing, alerts. ([Xem chi ti�
 
 ### `@ghita/quotas`
 
-Rate limiting & quota management. ([Xem chi tiết →](./quotas))
+Rate limiting & quota management. ([Xem chi tiết →](./packages-quotas))
 
 - Token bucket, sliding window, fixed window
 - Per-user (free/pro/team/enterprise) tiers

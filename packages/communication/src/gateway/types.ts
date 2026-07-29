@@ -19,6 +19,7 @@ export interface GatewayConfig {
   discordWebhookUrl?: string;
   discordToken?: string;
   slackToken?: string;
+  slackAppToken?: string;
   slackSigningSecret?: string;
   enabledGateways?: GatewayType[];
 }

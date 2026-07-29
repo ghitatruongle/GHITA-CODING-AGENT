@@ -8,17 +8,73 @@ on:
 permissions:
   contents: write
 
+env:
+  NODE_VERSION: 22
+  PNPM_VERSION: 11.5.2
+
 jobs:
-  create-release:
+  release-gate:
     runs-on: ubuntu-latest
-    outputs:
-      release_id: ${{ steps.create_release.outputs.id }}
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
 
-      - name: Create Release
-        id: create_release
-        uses: softprops/action-gh-release@v2
+      - run: pnpm install --frozen-lockfile
+      - name: Verify tag matches canonical version
+        run: test "${GITHUB_REF_NAME}" = "v$(node -p "require('./package.json').version")"
+      - run: pnpm integrity
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - name: Generate fresh T0/T1 coverage
+        run: |
+          pnpm --filter @ghita/security test:coverage
+          pnpm --filter @ghita/agents test:coverage
+          pnpm --filter @ghita/communication test:coverage
+          pnpm --filter @ghita/ai-engine test:coverage
+          pnpm --filter @ghita/memory test:coverage
+          pnpm --filter @ghita/skills test:coverage
+      - name: Enforce T0/T1 coverage floors
+        run: node scripts/check-coverage-tiers.mjs --tiers=T0,T1 --require-summaries
+      - run: pnpm audit:policy
+      - run: pnpm licenses:check
+      - run: pnpm knip --no-progress
+      - run: cargo check --locked
+        working-directory: apps/desktop/src-tauri
+      - run: pnpm build:packages
+      - run: pnpm --filter @ghita/desktop build
+      - run: pnpm build:docs
+      - run: pnpm --filter @ghita/docs build
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Start built desktop web server
+        run: |
+          pnpm --filter @ghita/desktop preview --host 0.0.0.0 --port 1420 > /tmp/ghita-vite.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://localhost:1420/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/ghita-vite.log
+          exit 1
+      - name: Run blocking browser smoke tests
+        run: pnpm exec playwright test tests/e2e/playwright-smoke.test.ts
+        env:
+          E2E_BASE_URL: http://localhost:1420
+
+  create-release:
+    needs: release-gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: softprops/action-gh-release@v2
         with:
           draft: true
           generate_release_notes: true
@@ -26,180 +82,198 @@ jobs:
   build-windows:
     needs: create-release
     runs-on: windows-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
-
       - uses: pnpm/action-setup@v4
         with:
-          version: 11.5.2
-
+          version: ${{ env.PNPM_VERSION }}
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
+      - uses: dtolnay/rust-toolchain@stable
       - run: pnpm install --frozen-lockfile
-
-      - name: Build packages
-        run: pnpm build:packages
-
-      - name: Build Desktop (Tauri)
+      - run: pnpm build:packages
+      - name: Build signed desktop artifacts
         working-directory: apps/desktop
         run: pnpm tauri build
-
-      - name: Upload to Release
-        uses: softprops/action-gh-release@v2
-        if: always()
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      - name: Create Windows updater record
+        run: >
+          node scripts/updater-manifest.mjs record
+          --platform windows-x86_64
+          --assets-dir apps/desktop/src-tauri/target/release/bundle
+          --suffix .nsis.zip
+          --output updater-records/windows-x86_64.json
+      - uses: actions/upload-artifact@v4
         with:
+          name: updater-record-windows-x86_64
+          path: updater-records/windows-x86_64.json
+      - uses: softprops/action-gh-release@v2
+        with:
+          fail_on_unmatched_files: true
           files: |
             apps/desktop/src-tauri/target/release/bundle/msi/*.msi
             apps/desktop/src-tauri/target/release/bundle/nsis/*.exe
+            apps/desktop/src-tauri/target/release/bundle/nsis/*.nsis.zip
+            apps/desktop/src-tauri/target/release/bundle/nsis/*.nsis.zip.sig
 
   build-linux:
     needs: create-release
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
-
       - uses: pnpm/action-setup@v4
         with:
-          version: 11.5.2
-
+          version: ${{ env.PNPM_VERSION }}
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install system deps
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
-
       - run: pnpm install --frozen-lockfile
-
-      - name: Build packages
-        run: pnpm build:packages
-
-      - name: Build Desktop (Tauri)
+      - run: pnpm build:packages
+      - name: Build signed desktop artifacts
         working-directory: apps/desktop
         run: pnpm tauri build
-
-      - name: Upload to Release
-        uses: softprops/action-gh-release@v2
-        if: always()
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      - name: Create Linux updater record
+        run: >
+          node scripts/updater-manifest.mjs record
+          --platform linux-x86_64
+          --assets-dir apps/desktop/src-tauri/target/release/bundle
+          --suffix .AppImage.tar.gz
+          --output updater-records/linux-x86_64.json
+      - uses: actions/upload-artifact@v4
         with:
+          name: updater-record-linux-x86_64
+          path: updater-records/linux-x86_64.json
+      - uses: softprops/action-gh-release@v2
+        with:
+          fail_on_unmatched_files: true
           files: |
             apps/desktop/src-tauri/target/release/bundle/deb/*.deb
             apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage
-
-  build-android:
-    needs: create-release
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 11.5.2
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-
-      - run: pnpm install --frozen-lockfile
-
-      - name: Build shared package
-        run: pnpm --filter @ghita/shared build
-
-      - name: Build Android APK
-        working-directory: apps/mobile/android
-        run: ./gradlew assembleRelease
-
-      - name: Upload to Release
-        uses: softprops/action-gh-release@v2
-        if: always()
-        with:
-          files: apps/mobile/android/app/build/outputs/apk/release/*.apk
+            apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage.tar.gz
+            apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage.tar.gz.sig
 
   build-macos:
     needs: create-release
     runs-on: macos-latest
-    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-apple-darwin
+            platform: darwin-x86_64
+          - target: aarch64-apple-darwin
+            platform: darwin-aarch64
     steps:
       - uses: actions/checkout@v4
-
       - uses: pnpm/action-setup@v4
         with:
-          version: 11.5.2
-
+          version: ${{ env.PNPM_VERSION }}
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - run: pnpm install --frozen-lockfile
-
-      - name: Build packages
-        run: pnpm build:packages
-
-      - name: Build Desktop (Tauri)
-        working-directory: apps/desktop
-        run: pnpm tauri build
-
-      - name: Upload to Release
-        uses: softprops/action-gh-release@v2
-        if: always()
+      - uses: dtolnay/rust-toolchain@stable
         with:
+          targets: ${{ matrix.target }}
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:packages
+      - name: Build signed desktop artifacts
+        working-directory: apps/desktop
+        run: pnpm tauri build --target ${{ matrix.target }}
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      - name: Create macOS updater record
+        run: >
+          node scripts/updater-manifest.mjs record
+          --platform ${{ matrix.platform }}
+          --assets-dir apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle
+          --suffix .app.tar.gz
+          --output updater-records/${{ matrix.platform }}.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: updater-record-${{ matrix.platform }}
+          path: updater-records/${{ matrix.platform }}.json
+      - uses: softprops/action-gh-release@v2
+        with:
+          fail_on_unmatched_files: true
           files: |
-            apps/desktop/src-tauri/target/release/bundle/macos/*.app
-            apps/desktop/src-tauri/target/release/bundle/dmg/*.dmg
+            apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+            apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.app.tar.gz
+            apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.app.tar.gz.sig
+
+  build-android:
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @ghita/shared build
+      - name: Decode release keystore
+        run: |
+          test -n "${ANDROID_KEYSTORE_BASE64}"
+          test -n "${ANDROID_KEYSTORE_PASSWORD}"
+          test -n "${ANDROID_KEY_ALIAS}"
+          test -n "${ANDROID_KEY_PASSWORD}"
+          printf '%s' "${ANDROID_KEYSTORE_BASE64}" | base64 --decode > "${RUNNER_TEMP}/ghita-release.keystore"
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      - name: Build signed Android APK
+        run: pnpm --filter @ghita/mobile build:release
+        env:
+          GHITA_RELEASE_KEYSTORE_PATH: ${{ runner.temp }}/ghita-release.keystore
+          GHITA_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          GHITA_RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          GHITA_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      - uses: softprops/action-gh-release@v2
+        with:
+          fail_on_unmatched_files: true
+          files: apps/mobile/android/app/build/outputs/apk/release/*.apk
 
   build-ios:
     needs: create-release
     runs-on: macos-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
-
       - uses: pnpm/action-setup@v4
         with:
-          version: 11.5.2
-
+          version: ${{ env.PNPM_VERSION }}
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
-
-      - uses: dtolnay/rust-toolchain@stable
-
       - run: pnpm install --frozen-lockfile
-
-      - name: Build shared package
-        run: pnpm --filter @ghita/shared build
-
-      - name: Install CocoaPods
+      - run: pnpm --filter @ghita/shared build
+      - run: pod install
         working-directory: apps/mobile/ios
-        run: pod install
-
-      - name: Build iOS Release
+      - name: Build unsigned iOS CI artifact
         working-directory: apps/mobile/ios
         run: |
           xcodebuild -workspace GhitaMobile.xcworkspace \
@@ -208,63 +282,42 @@ jobs:
             -sdk iphoneos \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO
-
-      - name: Upload iOS build
-        uses: actions/upload-artifact@v4
-        if: always()
+      - uses: actions/upload-artifact@v4
         with:
           name: ios-release-build
           path: |
             apps/mobile/ios/build/Build/Products/*/*.app
             apps/mobile/ios/build/Build/Products/*/*.app.dSYM
+          if-no-files-found: error
           retention-days: 30
 
   generate-updater-json:
-    needs: [build-windows, build-linux, build-macos]
+    needs: [build-windows, build-linux, build-macos, build-android, build-ios]
     runs-on: ubuntu-latest
-    if: always()
     steps:
       - uses: actions/checkout@v4
-
-      - name: Generate updater JSON
-        run: |
-          VERSION="${GITHUB_REF#refs/tags/v}"
-          cat > latest.json << EOF
-          {
-            "version": "$VERSION",
-            "notes": "See release notes at https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}",
-            "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-            "platforms": {
-              "windows-x86_64": {
-                "signature": "",
-                "url": "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/GHITA-CODING-AGENT_${VERSION}_x64-setup.exe"
-              },
-              "linux-x86_64": {
-                "signature": "",
-                "url": "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/ghita-coding-agent_${VERSION}_amd64.deb"
-              },
-              "darwin-x86_64": {
-                "signature": "",
-                "url": "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/GHITA-CODING-AGENT_${VERSION}_x64.dmg"
-              },
-              "darwin-aarch64": {
-                "signature": "",
-                "url": "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/GHITA-CODING-AGENT_${VERSION}_aarch64.dmg"
-              }
-            }
-          }
-          EOF
-
-      - name: Upload updater JSON
-        uses: softprops/action-gh-release@v2
+      - uses: actions/download-artifact@v4
         with:
+          pattern: updater-record-*
+          path: updater-records
+          merge-multiple: true
+      - name: Generate verified updater manifest
+        run: >
+          node scripts/updater-manifest.mjs manifest
+          --records-dir updater-records
+          --output latest.json
+          --version "${GITHUB_REF_NAME#v}"
+          --repository "${GITHUB_REPOSITORY}"
+          --tag "${GITHUB_REF_NAME}"
+      - uses: softprops/action-gh-release@v2
+        with:
+          fail_on_unmatched_files: true
           files: latest.json
 
   publish-release:
-    needs: [generate-updater-json]
+    needs: generate-updater-json
     runs-on: ubuntu-latest
     steps:
-      - name: Publish Release
-        uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v2
         with:
           draft: false

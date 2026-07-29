@@ -38,6 +38,20 @@ describe('Node skill adapters', () => {
     expect(result.success).toBe(false);
     expect(result.error).toContain('outside the workspace');
   });
+
+  it('blocks destructive shell commands even after skill approval', async () => {
+    const root = await createTempWorkspace();
+    const registry = createNodeSkillRegistry({ defaultCwd: root });
+    registry.setEnabled('terminal.run', true);
+
+    const result = await registry.run('terminal.run', {
+      approved: true,
+      input: { command: 'rm -rf /' },
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('blocked by security policy');
+  });
 });
 
 describe('Built-in terminal skill commands', () => {

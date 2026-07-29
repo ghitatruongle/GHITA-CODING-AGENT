@@ -61,8 +61,8 @@ android {
         applicationId "com.ghitamobile"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 4
-        versionName "0.0.4"
+        versionCode 3007
+        versionName "0.3.7"
     }
     signingConfigs {
         debug {
@@ -83,8 +83,11 @@ android {
                 storePassword releaseKeystorePassword
                 keyAlias releaseKeyAlias
                 keyPassword releaseKeyPassword
+            } else if (isReleaseTaskRequested && System.getenv("CI")?.toBoolean()) {
+                throw new GradleException("Release signing secrets are required in CI")
             } else if (isReleaseTaskRequested) {
-                // Fallback to debug keystore for local testing and compilation checks
+                // Local-only fallback: proves the release pipeline compiles without exposing
+                // production signing material. CI is forbidden from taking this branch.
                 storeFile file('debug.keystore')
                 storePassword 'android'
                 keyAlias 'androiddebugkey'
