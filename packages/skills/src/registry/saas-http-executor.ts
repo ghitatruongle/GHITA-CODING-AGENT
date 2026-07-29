@@ -16,7 +16,12 @@ export type FetchLike = (
     body?: string;
     signal?: AbortSignal;
   },
-) => Promise<{ ok: boolean; status: number; text: () => Promise<string>; json: () => Promise<unknown> }>;
+) => Promise<{
+  ok: boolean;
+  status: number;
+  text: () => Promise<string>;
+  json: () => Promise<unknown>;
+}>;
 
 export interface RealExecResult {
   /** True when a real HTTP handler ran (regardless of success). */
@@ -29,7 +34,10 @@ function str(params: Record<string, unknown>, key: string): string | undefined {
   return typeof v === 'string' && v.length > 0 ? v : undefined;
 }
 
-async function readJson(res: { json: () => Promise<unknown>; text: () => Promise<string> }): Promise<unknown> {
+async function readJson(res: {
+  json: () => Promise<unknown>;
+  text: () => Promise<string>;
+}): Promise<unknown> {
   try {
     return await res.json();
   } catch {
@@ -61,10 +69,18 @@ export async function executeRealSaaSAction(
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json; charset=utf-8',
       },
-      body: JSON.stringify({ channel: str(params, 'channel') ?? '#general', text: str(params, 'text') ?? '' }),
+      body: JSON.stringify({
+        channel: str(params, 'channel') ?? '#general',
+        text: str(params, 'text') ?? '',
+      }),
       signal: timeout(),
     });
-    const body = (await readJson(res)) as { ok?: boolean; ts?: string; channel?: string; error?: string };
+    const body = (await readJson(res)) as {
+      ok?: boolean;
+      ts?: string;
+      channel?: string;
+      error?: string;
+    };
     return {
       handled: true,
       data: {
@@ -98,7 +114,10 @@ export async function executeRealSaaSAction(
         body: str(params, 'body') ?? '',
       });
       const body = (await readJson(res)) as { number?: number; state?: string; html_url?: string };
-      return { handled: true, data: { issue_number: body.number, state: body.state, url: body.html_url } };
+      return {
+        handled: true,
+        data: { issue_number: body.number, state: body.state, url: body.html_url },
+      };
     }
     if (a === 'add_comment' && owner && repo) {
       const issue = str(params, 'issue_number') ?? str(params, 'number');
@@ -121,7 +140,10 @@ export async function executeRealSaaSAction(
         body: JSON.stringify({ content: str(params, 'content') ?? str(params, 'text') ?? '' }),
         signal: timeout(),
       });
-      return { handled: true, data: { status: res.ok ? 'sent' : 'failed', http_status: res.status } };
+      return {
+        handled: true,
+        data: { status: res.ok ? 'sent' : 'failed', http_status: res.status },
+      };
     }
   }
 
@@ -135,10 +157,20 @@ export async function executeRealSaaSAction(
       const res = await fetcher(url, {
         method: str(params, 'method') ?? 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-        body: typeof params['body'] === 'string' ? (params['body'] as string) : JSON.stringify(params['body'] ?? {}),
+        body:
+          typeof params['body'] === 'string'
+            ? (params['body'] as string)
+            : JSON.stringify(params['body'] ?? {}),
         signal: timeout(),
       });
-      return { handled: true, data: { status: res.ok ? 'ok' : 'failed', http_status: res.status, body: await readJson(res) } };
+      return {
+        handled: true,
+        data: {
+          status: res.ok ? 'ok' : 'failed',
+          http_status: res.status,
+          body: await readJson(res),
+        },
+      };
     }
   }
 

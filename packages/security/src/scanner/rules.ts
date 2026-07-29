@@ -23,7 +23,8 @@ export const DEFAULT_SCANNER_RULES: ScannerRule[] = [
     confidence: 'high',
     category: 'secrets',
     cwe: ['CWE-798'],
-    remediation: 'Move the key to an environment variable or the OS keychain; rotate the exposed key immediately.',
+    remediation:
+      'Move the key to an environment variable or the OS keychain; rotate the exposed key immediately.',
     negativePattern: /(?:example|placeholder|your[-_]?key|xxx|\.test\.|fixture)/i,
   },
   {
@@ -65,7 +66,8 @@ export const DEFAULT_SCANNER_RULES: ScannerRule[] = [
     category: 'secrets',
     cwe: ['CWE-259'],
     remediation: 'Load secrets from environment variables or a secret manager.',
-    negativePattern: /(?:process\.env|import\.meta\.env|例|placeholder|example|changeme-in-env|\.test\.|spec|fixture|\*{3,})/i,
+    negativePattern:
+      /(?:process\.env|import\.meta\.env|例|placeholder|example|changeme-in-env|\.test\.|spec|fixture|\*{3,})/i,
   },
 
   // ── Injection ──────────────────────────────────────────────────────────
@@ -106,7 +108,8 @@ export const DEFAULT_SCANNER_RULES: ScannerRule[] = [
   {
     id: 'GHITA-SEC-013',
     title: 'SQL query built via string concatenation',
-    pattern: /\b(?:SELECT|INSERT|UPDATE|DELETE)\b[^'"`]*['"`]\s*\+\s*|\$\{[^}]+\}[^'"`]*\b(?:FROM|WHERE|VALUES)\b/i,
+    pattern:
+      /\b(?:SELECT|INSERT|UPDATE|DELETE)\b[^'"`]*['"`]\s*\+\s*|\$\{[^}]+\}[^'"`]*\b(?:FROM|WHERE|VALUES)\b/i,
     severity: 'high',
     confidence: 'low',
     category: 'sql-injection',
@@ -143,7 +146,8 @@ export const DEFAULT_SCANNER_RULES: ScannerRule[] = [
   {
     id: 'GHITA-SEC-030',
     title: 'Insecure http:// endpoint in fetch/axios call',
-    pattern: /\b(?:fetch|axios(?:\.\w+)?)\s*\(\s*['"`]http:\/\/(?!localhost|127\.0\.0\.1|0\.0\.0\.0|192\.168\.|10\.|172\.16\.)/,
+    pattern:
+      /\b(?:fetch|axios(?:\.\w+)?)\s*\(\s*['"`]http:\/\/(?!localhost|127\.0\.0\.1|0\.0\.0\.0|192\.168\.|10\.|172\.16\.)/,
     severity: 'medium',
     confidence: 'high',
     category: 'auth',
@@ -159,7 +163,8 @@ export const DEFAULT_SCANNER_RULES: ScannerRule[] = [
     confidence: 'medium',
     category: 'auth',
     cwe: ['CWE-327'],
-    remediation: 'Use sha256 or stronger for anything security-sensitive (cache keys are acceptable).',
+    remediation:
+      'Use sha256 or stronger for anything security-sensitive (cache keys are acceptable).',
     fileExtensions: CODE_EXTENSIONS,
   },
   {
@@ -177,12 +182,14 @@ export const DEFAULT_SCANNER_RULES: ScannerRule[] = [
   {
     id: 'GHITA-SEC-040',
     title: 'Path built directly from user input without normalization',
-    pattern: /(?:readFile|writeFile|createReadStream|createWriteStream|unlink|rm)(?:Sync)?\s*\(\s*(?:req\.|params\.|query\.|body\.)/,
+    pattern:
+      /(?:readFile|writeFile|createReadStream|createWriteStream|unlink|rm)(?:Sync)?\s*\(\s*(?:req\.|params\.|query\.|body\.)/,
     severity: 'high',
     confidence: 'medium',
     category: 'path-traversal',
     cwe: ['CWE-22'],
-    remediation: 'Resolve against a fixed root and verify the result stays within it before file access.',
+    remediation:
+      'Resolve against a fixed root and verify the result stays within it before file access.',
     fileExtensions: CODE_EXTENSIONS,
   },
 ];

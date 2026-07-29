@@ -168,7 +168,9 @@ export function getRepoMap(
 
 /** Render a repo map as a compact text block for LLM context. */
 export function renderRepoMap(map: RepoMap): string {
-  const lines = [`# Repo map (${map.entries.length}/${map.totalSymbols} symbols, ~${map.usedTokens} tokens)`];
+  const lines = [
+    `# Repo map (${map.entries.length}/${map.totalSymbols} symbols, ~${map.usedTokens} tokens)`,
+  ];
   for (const e of map.entries) {
     lines.push(`\n## ${e.qualifiedName} — ${e.kind} (${e.filePath}:${e.startLine})`);
     if (e.excerpt) lines.push(e.excerpt);

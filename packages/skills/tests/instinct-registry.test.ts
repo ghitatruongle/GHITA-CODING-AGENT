@@ -55,9 +55,7 @@ describe('InstinctRegistry', () => {
   });
 
   it('does not fire disabled instincts', () => {
-    const reg = new InstinctRegistry([
-      { ...BUILTIN_INSTINCTS[0]!, enabled: false },
-    ]);
+    const reg = new InstinctRegistry([{ ...BUILTIN_INSTINCTS[0]!, enabled: false }]);
     expect(reg.evaluate({ activeFile: 'a.ts', taskType: 'refactor' })).toHaveLength(0);
   });
 

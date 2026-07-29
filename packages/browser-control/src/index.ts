@@ -207,9 +207,4 @@ export * from './dom-extractor.js';
 
 // v0.4.9 A6: AI page API — act/extract/observe
 export { AIPageController } from './stagehand.js';
-export type {
-  SchemaLike,
-  ObserveResult,
-  ActResult,
-  ExtractResult,
-} from './stagehand.js';
+export type { SchemaLike, ObserveResult, ActResult, ExtractResult } from './stagehand.js';

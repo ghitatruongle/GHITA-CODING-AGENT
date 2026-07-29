@@ -130,9 +130,7 @@ export class InstinctRegistry {
    * conflicting lower-priority instincts removed.
    */
   evaluate(context: InstinctContext): FiredInstinct[] {
-    const ext = context.activeFile
-      ? context.activeFile.split('.').pop()?.toLowerCase()
-      : undefined;
+    const ext = context.activeFile ? context.activeFile.split('.').pop()?.toLowerCase() : undefined;
     const errorText = (context.errorText ?? '').toLowerCase();
     const promptLower = (context.prompt ?? '').toLowerCase();
 

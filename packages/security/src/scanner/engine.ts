@@ -36,10 +36,27 @@ const DEFAULT_EXCLUDED_DIRS = new Set([
 
 /** Chỉ quét file text có đuôi nằm trong danh sách này. */
 const SCANNABLE_EXTENSIONS = new Set([
-  '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs',
-  '.rs', '.kt', '.java', '.py', '.go',
-  '.json', '.yaml', '.yml', '.toml', '.xml',
-  '.env', '.sh', '.ps1', '.gradle', '.properties',
+  '.ts',
+  '.tsx',
+  '.js',
+  '.jsx',
+  '.mjs',
+  '.cjs',
+  '.rs',
+  '.kt',
+  '.java',
+  '.py',
+  '.go',
+  '.json',
+  '.yaml',
+  '.yml',
+  '.toml',
+  '.xml',
+  '.env',
+  '.sh',
+  '.ps1',
+  '.gradle',
+  '.properties',
 ]);
 
 const MAX_EVIDENCE_LENGTH = 200;
@@ -103,7 +120,11 @@ export class SecurityScanner {
     const startedAt = Date.now();
     const scanId = randomUUID();
     const root = await this.normalizeRepository(repository, options.signal);
-    const includePaths = await this.normalizeTargetPaths(root, options.target ?? 'repository', options.signal);
+    const includePaths = await this.normalizeTargetPaths(
+      root,
+      options.target ?? 'repository',
+      options.signal,
+    );
 
     const files: string[] = [];
     let filesSkipped = 0;
@@ -323,8 +344,7 @@ function countBySeverity(findings: ScanFinding[]): Record<FindingSeverityLevel, 
 
 /** Điểm 0–100, cùng trọng số với AuditRunner (critical trừ nặng nhất). */
 function computeScore(counts: Record<FindingSeverityLevel, number>): number {
-  const penalty =
-    counts.critical * 25 + counts.high * 10 + counts.medium * 4 + counts.low;
+  const penalty = counts.critical * 25 + counts.high * 10 + counts.medium * 4 + counts.low;
   return Math.max(0, 100 - penalty);
 }
 

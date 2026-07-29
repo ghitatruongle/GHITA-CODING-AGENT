@@ -37,7 +37,9 @@ describe('computeMessageWindow', () => {
 describe('useMessageWindow', () => {
   it('returns the tail slice and reveals older on demand', () => {
     const items = Array.from({ length: 500 }, (_, i) => i);
-    const { result } = renderHook(() => useMessageWindow(items, { maxRendered: 100, pageSize: 100 }));
+    const { result } = renderHook(() =>
+      useMessageWindow(items, { maxRendered: 100, pageSize: 100 }),
+    );
 
     expect(result.current.visible).toHaveLength(100);
     expect(result.current.visible[0]).toBe(400);

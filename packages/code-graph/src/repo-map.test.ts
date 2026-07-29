@@ -3,12 +3,7 @@
 // ==============================================================================
 
 import { describe, it, expect } from 'vitest';
-import {
-  computePageRank,
-  getRepoMap,
-  renderRepoMap,
-  estimateTokens,
-} from './repo-map.js';
+import { computePageRank, getRepoMap, renderRepoMap, estimateTokens } from './repo-map.js';
 import type { CodeNode, CodeEdge } from './types.js';
 
 function node(id: string, over: Partial<CodeNode> = {}): CodeNode {
@@ -74,9 +69,7 @@ describe('getRepoMap', () => {
   });
 
   it('respects the token budget', () => {
-    const nodes = Array.from({ length: 50 }, (_, i) =>
-      node(`n${i}`, { excerpt: 'x'.repeat(400) }),
-    );
+    const nodes = Array.from({ length: 50 }, (_, i) => node(`n${i}`, { excerpt: 'x'.repeat(400) }));
     const edges: CodeEdge[] = [];
     const map = getRepoMap(nodes, edges, 200);
     // Each excerpt ~100 tokens; budget 200 → only a couple fit.
@@ -92,10 +85,7 @@ describe('getRepoMap', () => {
   });
 
   it('breaks exported/documented ties deterministically', () => {
-    const nodes = [
-      node('z', { exported: false }),
-      node('a', { exported: true }),
-    ];
+    const nodes = [node('z', { exported: false }), node('a', { exported: true })];
     const map = getRepoMap(nodes, [], 10_000);
     // equal rank → exported 'a' should come before 'z'
     expect(map.entries[0]!.id).toBe('a');

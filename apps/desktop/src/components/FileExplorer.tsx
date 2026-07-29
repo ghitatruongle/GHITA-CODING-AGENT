@@ -38,7 +38,7 @@ async function loadDirectory(dirPath: string): Promise<FileEntry[]> {
       const fullPath =
         dirPath.endsWith('/') || dirPath.endsWith('\\')
           ? dirPath + entry.name
-          : `${dirPath  }/${  entry.name}`;
+          : `${dirPath}/${entry.name}`;
 
       result.push({
         name: entry.name,
@@ -70,9 +70,7 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
   const [tree, setTree] = useState<Map<string, FileEntry[]>>(new Map());
   const [loading, setLoading] = useState(false);
   const [loadingPaths, setLoadingPaths] = useState<Set<string>>(new Set());
-  const [rootDir, setRootDir] = useState(
-    () => rootPath || storeCwd || '',
-  );
+  const [rootDir, setRootDir] = useState(() => rootPath || storeCwd || '');
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -205,7 +203,7 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
     async (dirPath: string) => {
       const name = prompt(t('fileExplorer.newFilePrompt'));
       if (!name) return;
-      const filePath = `${dirPath  }/${  name}`;
+      const filePath = `${dirPath}/${name}`;
       try {
         await writeTextFile(filePath, '');
         await reloadParent(dirPath);
@@ -222,7 +220,7 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
     async (dirPath: string) => {
       const name = prompt(t('fileExplorer.newFolderPrompt'));
       if (!name) return;
-      const folderPath = `${dirPath  }/${  name}`;
+      const folderPath = `${dirPath}/${name}`;
       try {
         await mkdir(folderPath, { recursive: true });
         await reloadParent(dirPath);

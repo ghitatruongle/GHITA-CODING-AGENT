@@ -139,13 +139,11 @@ export function CodeView() {
       if (!cache) return;
       cache.content = value;
       const isModified = value !== cache.originalContent;
-      
-      const file = openFiles.find(f => f.path === activePath);
+
+      const file = openFiles.find((f) => f.path === activePath);
       if (file && file.modified !== isModified) {
         setOpenFiles(
-          openFiles.map((f) =>
-            f.path === activePath ? { ...f, modified: isModified } : f,
-          ),
+          openFiles.map((f) => (f.path === activePath ? { ...f, modified: isModified } : f)),
         );
       }
     },
@@ -496,12 +494,22 @@ export function CodeView() {
           >
             <span style={{ fontWeight: 600 }}>🤖 {t('codeView.aiProposedEdit')}</span>
             {activeProposal.description && (
-              <span style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span
+                style={{
+                  color: 'var(--text-muted)',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
                 {activeProposal.description}
               </span>
             )}
             {(() => {
-              const stat = lineDiffStat(activeProposal.originalContent, activeProposal.proposedContent);
+              const stat = lineDiffStat(
+                activeProposal.originalContent,
+                activeProposal.proposedContent,
+              );
               return (
                 <span style={{ fontSize: '11px', fontFamily: 'monospace' }}>
                   <span style={{ color: 'var(--success)' }}>+{stat.added}</span>{' '}
@@ -595,7 +603,8 @@ export function CodeView() {
                     {t('app.brand') || 'GHITA CODING AGENT'}
                   </h3>
                   <p className="text-xs text-text-secondary max-w-xs leading-relaxed">
-                    {t('codeView.openFileHint') || 'Open a file from the explorer sidebar to begin coding.'}
+                    {t('codeView.openFileHint') ||
+                      'Open a file from the explorer sidebar to begin coding.'}
                   </p>
                 </div>
 
@@ -605,7 +614,9 @@ export function CodeView() {
                     onClick={handleOpenFolder}
                     className="flex items-center justify-between w-full px-4 py-2.5 text-xs font-semibold rounded-lg bg-bg-surface hover:bg-bg-hover border border-border-subtle hover:border-border-default text-text-primary transition-all active:scale-[0.98]"
                   >
-                    <span className="flex items-center gap-2">📁 {t('fileExplorer.openFolder')}</span>
+                    <span className="flex items-center gap-2">
+                      📁 {t('fileExplorer.openFolder')}
+                    </span>
                     <span className="text-[10px] text-text-muted font-normal">Ctrl+O</span>
                   </button>
                   <button

@@ -3,11 +3,7 @@
 // ==============================================================================
 
 import { describe, it, expect, vi } from 'vitest';
-import {
-  verifyCoordinate,
-  withActionRetry,
-  annotateAction,
-} from '../src/operators/grounding.js';
+import { verifyCoordinate, withActionRetry, annotateAction } from '../src/operators/grounding.js';
 
 describe('verifyCoordinate (locate → verify)', () => {
   it('rejects non-finite coordinates', () => {

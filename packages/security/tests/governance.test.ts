@@ -71,7 +71,9 @@ describe('PolicyEngine', () => {
         },
       ],
     });
-    expect(engine.evaluate({ tool: 'fs.write', action: 'write', resource: '/etc/passwd' }).decision).toBe('deny');
+    expect(
+      engine.evaluate({ tool: 'fs.write', action: 'write', resource: '/etc/passwd' }).decision,
+    ).toBe('deny');
     // resource required by pattern but missing → rule does not match → default deny
     const noResource = engine.evaluate({ tool: 'fs.write', action: 'write' });
     expect(noResource.matchedRule).toBeNull();
@@ -97,7 +99,8 @@ describe('PolicyEngine', () => {
       engine.evaluate({ tool: 'terminal.exec', action: 'execute', resource: 'rm -rf /' }).decision,
     ).toBe('deny');
     expect(
-      engine.evaluate({ tool: 'terminal.exec', action: 'execute', resource: 'git status' }).decision,
+      engine.evaluate({ tool: 'terminal.exec', action: 'execute', resource: 'git status' })
+        .decision,
     ).toBe('allow');
     expect(
       engine.evaluate({ tool: 'fs.write', action: 'write', resource: '/etc/hosts' }).decision,

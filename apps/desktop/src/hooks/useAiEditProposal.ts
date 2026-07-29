@@ -64,9 +64,7 @@ export function useAiEditProposal({
       removeProposal(activeProposal.id);
       toast.success(t('codeView.editApplied', { name: activeProposal.fileName }));
     } catch (e) {
-      toast.error(
-        t('codeView.saveFailed', { error: e instanceof Error ? e.message : String(e) }),
-      );
+      toast.error(t('codeView.saveFailed', { error: e instanceof Error ? e.message : String(e) }));
     }
   }, [activeProposal, openFiles, setOpenFiles, removeProposal, t]);
 

@@ -41,10 +41,7 @@ export function decayStrength(
  * Reinforce a (possibly decayed) strength value. Uses diminishing returns so
  * strength asymptotically approaches MAX_STRENGTH rather than overshooting.
  */
-export function reinforceStrength(
-  current: number,
-  options: ReinforcementOptions = {},
-): number {
+export function reinforceStrength(current: number, options: ReinforcementOptions = {}): number {
   const gain = options.gain ?? DEFAULT_REINFORCE_GAIN;
   // Diminishing returns: the closer to MAX, the smaller the increment.
   const headroom = MAX_STRENGTH - clamp(current);
@@ -75,9 +72,7 @@ export function reinforceMetadata(
 ): Record<string, unknown> {
   const stored = typeof metadata['_strength'] === 'number' ? (metadata['_strength'] as number) : 0;
   const lastReinforced =
-    typeof metadata['_lastReinforced'] === 'number'
-      ? (metadata['_lastReinforced'] as number)
-      : now;
+    typeof metadata['_lastReinforced'] === 'number' ? (metadata['_lastReinforced'] as number) : now;
   const decayed = effectiveStrength(stored, lastReinforced, now, options);
   const reinforced = reinforceStrength(decayed, options);
   return { ...metadata, _strength: reinforced, _lastReinforced: now };
