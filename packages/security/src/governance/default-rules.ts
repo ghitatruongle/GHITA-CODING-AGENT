@@ -20,8 +20,7 @@ export const DEFAULT_POLICY_RULES: PolicyRule[] = [
     effect: 'deny',
     tool: 'terminal.*',
     action: 'execute',
-    resourcePattern:
-      /\b(?:rm\s+-rf\s+\/|mkfs|dd\s+if=|:\(\)\s*\{|format\s+[a-z]:|del\s+\/[sfq])/i,
+    resourcePattern: /\b(?:rm\s+-rf\s+\/|mkfs|dd\s+if=|:\(\)\s*\{|format\s+[a-z]:|del\s+\/[sfq])/i,
     priority: 100,
     reason: 'Destructive shell command blocked by governance policy.',
   },

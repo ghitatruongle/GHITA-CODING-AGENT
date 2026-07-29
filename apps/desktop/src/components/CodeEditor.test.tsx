@@ -33,9 +33,7 @@ describe('CodeEditor', () => {
   });
 
   it('switches to a diff editor when originalValue is provided (AI proposal review)', () => {
-    render(
-      <CodeEditor value="const a = 2;" originalValue="const a = 1;" language="typescript" />,
-    );
+    render(<CodeEditor value="const a = 2;" originalValue="const a = 1;" language="typescript" />);
     const diff = screen.getByTestId('monaco-diff');
     expect(diff).toBeInTheDocument();
     expect(diff.getAttribute('data-original')).toBe('const a = 1;');

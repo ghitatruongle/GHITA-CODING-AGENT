@@ -28,9 +28,7 @@ function agentWithGuard(guard: PolicyGuard, executeSpy?: () => void): ReActAgent
     if (turn === 1) {
       return new AIMessage('need tool', {
         metadata: {
-          toolCalls: [
-            { id: 'tc1', name: 'terminal.exec', arguments: { command: 'rm -rf /' } },
-          ],
+          toolCalls: [{ id: 'tc1', name: 'terminal.exec', arguments: { command: 'rm -rf /' } }],
         },
       });
     }

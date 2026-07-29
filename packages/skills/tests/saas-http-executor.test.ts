@@ -21,7 +21,10 @@ describe('executeRealSaaSAction', () => {
     );
     expect(out.handled).toBe(true);
     expect(out.data).toMatchObject({ channel: 'C1', message_id: '167.89', status: 'sent' });
-    const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, { headers: Record<string, string>; body: string }];
+    const [url, init] = fetchImpl.mock.calls[0] as unknown as [
+      string,
+      { headers: Record<string, string>; body: string },
+    ];
     expect(url).toBe('https://slack.com/api/chat.postMessage');
     expect(init.headers.Authorization).toBe('Bearer xoxb-token');
     expect(JSON.parse(init.body)).toMatchObject({ channel: 'C1', text: 'hi' });

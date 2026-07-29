@@ -61,7 +61,10 @@ describe('SecurityScanner.scanContent', () => {
   });
 
   it('detects disabled TLS verification', () => {
-    const findings = scanner.scanContent('client.ts', 'const agent = { rejectUnauthorized: false };');
+    const findings = scanner.scanContent(
+      'client.ts',
+      'const agent = { rejectUnauthorized: false };',
+    );
     expect(findings.some((f) => f.ruleId === 'GHITA-SEC-032')).toBe(true);
   });
 
@@ -119,12 +122,14 @@ describe('SecurityScanner.scan (filesystem)', () => {
 
   it('supports scoped path targets', async () => {
     mkdirSync(join(dir, 'src'), { recursive: true });
-    writeFileSync(join(dir, 'src', 'a.ts'), "eval(x);\n");
-    writeFileSync(join(dir, 'other.ts'), "eval(y);\n");
+    writeFileSync(join(dir, 'src', 'a.ts'), 'eval(x);\n');
+    writeFileSync(join(dir, 'other.ts'), 'eval(y);\n');
     const scanner = new SecurityScanner();
     const report = await scanner.scan(dir, { target: ['src'] });
     expect(report.coverage.mode).toBe('scoped_path');
-    expect(report.findings.findings.every((f) => f.locations[0]!.path.startsWith('src/'))).toBe(true);
+    expect(report.findings.findings.every((f) => f.locations[0]!.path.startsWith('src/'))).toBe(
+      true,
+    );
   });
 
   it('rejects path targets outside the repository', async () => {

@@ -96,7 +96,11 @@ export class SkillPackImporter {
         continue;
       }
       if (seen.has(entry.id)) {
-        skipped.push({ id: entry.id, reason: 'duplicate-id', detail: 'Duplicate skill id in pack.' });
+        skipped.push({
+          id: entry.id,
+          reason: 'duplicate-id',
+          detail: 'Duplicate skill id in pack.',
+        });
         continue;
       }
       try {

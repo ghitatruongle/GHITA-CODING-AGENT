@@ -11,17 +11,17 @@ app. See `CHANGELOG.md` `[0.4.9]` for the full itemized list.
 
 ## Release gates
 
-| Gate                     | Command                                             | Status |
-| ------------------------ | --------------------------------------------------- | ------ |
-| Version integrity        | `node scripts/sync-version.mjs --check`             | ✅     |
-| Smell budget (as-any)    | `node scripts/count-smells.mjs --max-as-any=130`    | ✅     |
-| Typecheck                | `pnpm typecheck`                                    | ✅     |
-| Lint (new modules)       | `npx eslint <new files>`                            | ✅     |
-| Unit tests (touched pkgs)| `pnpm test` (security/agents/skills/ai-engine/…)    | ✅     |
-| Coverage tiers (T0/T1)   | `node scripts/check-coverage-tiers.mjs --tiers=T0,T1`| ⬜     |
-| Playwright e2e smoke     | CI `e2e-smoke` job                                  | ⬜     |
-| Desktop build (Tauri)    | `pnpm build:desktop` (needs Rust + `sha2` fetch)     | ⬜     |
-| Android build (APK)      | `pnpm build:android` (needs device/SDK)             | ⬜     |
+| Gate                      | Command                                               | Status |
+| ------------------------- | ----------------------------------------------------- | ------ |
+| Version integrity         | `node scripts/sync-version.mjs --check`               | ✅     |
+| Smell budget (as-any)     | `node scripts/count-smells.mjs --max-as-any=130`      | ✅     |
+| Typecheck                 | `pnpm typecheck`                                      | ✅     |
+| Lint (new modules)        | `npx eslint <new files>`                              | ✅     |
+| Unit tests (touched pkgs) | `pnpm test` (security/agents/skills/ai-engine/…)      | ✅     |
+| Coverage tiers (T0/T1)    | `node scripts/check-coverage-tiers.mjs --tiers=T0,T1` | ⬜     |
+| Playwright e2e smoke      | CI `e2e-smoke` job                                    | ⬜     |
+| Desktop build (Tauri)     | `pnpm build:desktop` (needs Rust + `sha2` fetch)      | ⬜     |
+| Android build (APK)       | `pnpm build:android` (needs device/SDK)               | ⬜     |
 
 ## Follow-ups requiring a native build (not in this change set)
 

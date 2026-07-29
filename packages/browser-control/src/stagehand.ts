@@ -19,9 +19,7 @@ import {
 
 /** A zod-compatible schema (structural — avoids a hard zod dependency). */
 export interface SchemaLike<T> {
-  safeParse: (data: unknown) =>
-    | { success: true; data: T }
-    | { success: false; error: unknown };
+  safeParse: (data: unknown) => { success: true; data: T } | { success: false; error: unknown };
 }
 
 /** One observed actionable element with a suggested action. */
@@ -158,7 +156,10 @@ export class AIPageController {
     const suggestedAction: 'click' | 'fill' =
       candidate.tag === 'input' || candidate.tag === 'textarea' ? 'fill' : 'click';
     const label =
-      candidate.text || candidate.attrs['aria-label'] || candidate.attrs.placeholder || candidate.tag;
+      candidate.text ||
+      candidate.attrs['aria-label'] ||
+      candidate.attrs.placeholder ||
+      candidate.tag;
     return { selector: candidate.selector, description: label, suggestedAction, candidate };
   }
 }

@@ -112,8 +112,24 @@ describe('WorkLoopEvaluator', () => {
 describe('applyRepairProgress', () => {
   it('updates only the targeted finding', () => {
     const findings: WorkLoopFinding[] = [
-      { id: 'F1', primaryCheck: 'scope-boundary', severity: 'low', problem: 'p', impact: 'i', repair: 'r', validationRoute: 'v' },
-      { id: 'F2', primaryCheck: 'relevant-check', severity: 'low', problem: 'p', impact: 'i', repair: 'r', validationRoute: 'v' },
+      {
+        id: 'F1',
+        primaryCheck: 'scope-boundary',
+        severity: 'low',
+        problem: 'p',
+        impact: 'i',
+        repair: 'r',
+        validationRoute: 'v',
+      },
+      {
+        id: 'F2',
+        primaryCheck: 'relevant-check',
+        severity: 'low',
+        problem: 'p',
+        impact: 'i',
+        repair: 'r',
+        validationRoute: 'v',
+      },
     ];
     const updated = applyRepairProgress(findings, 'F1', 'verified');
     expect(updated.find((f) => f.id === 'F1')!.repairProgress).toBe('verified');
@@ -124,10 +140,7 @@ describe('applyRepairProgress', () => {
 describe('renderSessionReport', () => {
   it('renders dimensions, findings and session-limited note', () => {
     const review = new WorkLoopEvaluator().evaluate(
-      episode(
-        [{ checkId: 'goal-understanding', state: 'Wired', summary: 'ok' }],
-        false,
-      ),
+      episode([{ checkId: 'goal-understanding', state: 'Wired', summary: 'ok' }], false),
       [
         {
           id: 'F1',

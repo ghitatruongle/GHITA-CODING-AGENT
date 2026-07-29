@@ -11,7 +11,9 @@ import { BrowserController } from './index.js';
 import { AIPageController, type SchemaLike } from './stagehand.js';
 
 /** Fake page exposing $$eval like Playwright, returning fixed elements. */
-function fakePage(elements: Array<{ tag: string; text: string; id?: string; attrs?: Record<string, string> }>) {
+function fakePage(
+  elements: Array<{ tag: string; text: string; id?: string; attrs?: Record<string, string> }>,
+) {
   return {
     $$eval: async (_sel: string, _fn: (els: Element[]) => unknown) =>
       elements.map((e, idx) => ({
@@ -66,7 +68,9 @@ describe('AIPageController.act', () => {
   it('fills an input when the intent implies typing', async () => {
     const fill = vi.fn(async () => {});
     const controller = new BrowserController({ fill });
-    const page = fakePage([{ tag: 'input', text: '', id: 'email', attrs: { placeholder: 'Email' } }]);
+    const page = fakePage([
+      { tag: 'input', text: '', id: 'email', attrs: { placeholder: 'Email' } },
+    ]);
     const sh = new AIPageController(controller, page);
 
     const result = await sh.act('type "hello@x.com" into email', undefined);

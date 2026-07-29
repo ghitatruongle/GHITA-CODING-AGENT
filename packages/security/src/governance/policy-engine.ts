@@ -5,12 +5,7 @@
 // zero-trust principles (nothing runs unless explicitly permitted).
 // ==============================================================================
 
-import type {
-  PolicyDecision,
-  PolicyRequest,
-  PolicyResult,
-  PolicyRule,
-} from './types.js';
+import type { PolicyDecision, PolicyRequest, PolicyResult, PolicyRule } from './types.js';
 
 export interface PolicyEngineOptions {
   /** Quyết định khi không rule nào khớp. Mặc định 'deny' (zero-trust). */

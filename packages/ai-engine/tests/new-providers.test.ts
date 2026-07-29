@@ -57,15 +57,16 @@ describe('AzureOpenAIProvider', () => {
   });
 
   it('calls the deployment-scoped URL with the api-key header', async () => {
-    const fetchMock = vi.fn(async () =>
-      new Response(
-        JSON.stringify({
-          choices: [{ message: { content: 'hi' }, finish_reason: 'stop' }],
-          usage: { prompt_tokens: 3, completion_tokens: 1, total_tokens: 4 },
-          model: 'gpt-4o',
-        }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } },
-      ),
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            choices: [{ message: { content: 'hi' }, finish_reason: 'stop' }],
+            usage: { prompt_tokens: 3, completion_tokens: 1, total_tokens: 4 },
+            model: 'gpt-4o',
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ),
     );
     vi.stubGlobal('fetch', fetchMock);
 

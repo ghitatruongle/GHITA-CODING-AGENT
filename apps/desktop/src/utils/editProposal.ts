@@ -26,9 +26,7 @@ export interface EditProposal {
 }
 
 /** Result of trying to build a proposal from a targeted replacement. */
-export type ProposalResult =
-  | { ok: true; proposedContent: string }
-  | { ok: false; error: string };
+export type ProposalResult = { ok: true; proposedContent: string } | { ok: false; error: string };
 
 /**
  * Apply a single unique contiguous replacement to `original`, mirroring the
@@ -87,7 +85,8 @@ function lcsLength(a: string[], b: string[]): number {
   let curr = new Array<number>(m + 1).fill(0);
   for (let i = 1; i <= n; i++) {
     for (let j = 1; j <= m; j++) {
-      curr[j] = a[i - 1] === b[j - 1] ? (prev[j - 1] ?? 0) + 1 : Math.max(prev[j] ?? 0, curr[j - 1] ?? 0);
+      curr[j] =
+        a[i - 1] === b[j - 1] ? (prev[j - 1] ?? 0) + 1 : Math.max(prev[j] ?? 0, curr[j - 1] ?? 0);
     }
     [prev, curr] = [curr, prev];
     curr.fill(0);
