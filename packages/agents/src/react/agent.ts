@@ -16,7 +16,32 @@ import type {
   ReActAgentRunResult,
   ReActAgentCallbacks,
   StructuredOutputSchema,
+  ToolPolicyRequest,
 } from './types.js';
+
+/**
+ * v0.4.9 A2: Derive a coarse policy action from a tool name + input so the
+ * policy guard can reason about intent (execute/write/delete/read).
+ */
+function derivePolicyAction(tool: string, input: Record<string, unknown>): string {
+  const explicit = typeof input.action === 'string' ? input.action : undefined;
+  if (explicit) return explicit;
+  const lower = tool.toLowerCase();
+  if (/(exec|run|shell|terminal|command)/.test(lower)) return 'execute';
+  if (/(delete|remove|unlink|rm)/.test(lower)) return 'delete';
+  if (/(write|create|save|update|put|post)/.test(lower)) return 'write';
+  if (/(deploy|publish|release)/.test(lower)) return 'deploy';
+  return 'read';
+}
+
+/** Extract a best-effort resource string from tool input for policy matching. */
+function derivePolicyResource(input: Record<string, unknown>): string | undefined {
+  for (const key of ['resource', 'path', 'file', 'url', 'command', 'cmd', 'target']) {
+    const value = input[key];
+    if (typeof value === 'string' && value.length > 0) return value;
+  }
+  return undefined;
+}
 
 function generateId(): string {
   return `react_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -177,6 +202,26 @@ export class ReActAgent {
           steps.push({ action, observation: obs });
           messages.push(new ToolMessage(obs, action.toolCallId, action.tool));
           continue;
+        }
+
+        // v0.4.9 A2: Deny-default policy guard runs before any tool executes.
+        if (this.config.policyGuard) {
+          const request: ToolPolicyRequest = {
+            tool: action.tool,
+            action: derivePolicyAction(action.tool, action.input),
+            resource: derivePolicyResource(action.input),
+            agentId,
+            input: action.input,
+          };
+          const verdict = await this.config.policyGuard(request);
+          if (verdict.decision === 'deny') {
+            const obs = `Policy denied tool "${action.tool}": ${verdict.reason ?? 'blocked by governance policy.'}`;
+            steps.push({ action, observation: obs });
+            messages.push(new ToolMessage(obs, action.toolCallId, action.tool));
+            callbacks?.onStepEnd?.(i, obs);
+            callbacks?.onToolResult?.(action.tool, obs);
+            continue;
+          }
         }
 
         // Pre-tool middleware

@@ -35,7 +35,7 @@ export const ja: TranslationKeys = {
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v0.1.0',
+    version: 'v0.4.9',
     deviceReconnected: 'デバイスに再接続しました: {{name}}',
     devicePaired: 'デバイスのペアリングに成功しました: {{name}}',
     commandReceived: 'デバイスからコマンドを受信しました: {{action}}',
@@ -122,6 +122,11 @@ export const ja: TranslationKeys = {
     binaryNotSupported:
       'バイナリファイル「{{name}}」はテキストエディターではサポートされていません。',
     readFailed: 'ファイルの読み取りに失敗しました: {{error}}',
+    aiProposedEdit: 'AIが編集を提案しました',
+    accept: '承認',
+    reject: '拒否',
+    editApplied: '{{name}} に編集を適用しました',
+    editRejected: '{{name}} の編集を拒否しました',
   },
   devices: {
     title: '接続されたデバイス',
@@ -379,6 +384,9 @@ export const ja: TranslationKeys = {
     newFolderPrompt: '新しいフォルダー名を入力:',
     deleteConfirm: '「{{name}}」を完全に削除しますか？',
     delete: '削除',
+    rename: '名前の変更',
+    renamePrompt: '新しい名前を入力:',
+    renameInvalid: '無効な名前: 空、またはパス区切り文字を含めることはできません。',
   },
   apiManager: {
     title: 'APIキー設定',

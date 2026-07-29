@@ -33,7 +33,8 @@ import type {
 } from './types.js';
 import type { ScreenCapture, ScreenSize } from '../index.js';
 import { ActionParser } from '../actionParser.js';
-import { buildScreenshotBundle, mockScreenshot } from './utils.js';
+import { buildScreenshotBundle } from './utils.js';
+import { withActionRetry } from './grounding.js';
 
 export const DEFAULT_MAX_ITERATIONS = 25;
 export const DEFAULT_ITERATION_TIMEOUT_MS = 60_000;
@@ -68,6 +69,11 @@ export interface ReActOptions {
   signal?: AbortSignal;
   /** Called once per step BEFORE action execution (for UI streaming). */
   onStep?: (step: ReActStep) => void;
+  /**
+   * v0.4.9 A7: number of attempts per action before giving up (>=1).
+   * A transient operator failure (e.g. stale element) is retried. Default 2.
+   */
+  maxActionRetries?: number;
 }
 
 export interface ParsedAction {
@@ -209,6 +215,7 @@ export async function runReActLoop(options: ReActOptions): Promise<ReActRunResul
     loopTimeoutMs = DEFAULT_LOOP_TIMEOUT_MS,
     signal,
     onStep,
+    maxActionRetries = 2,
   } = options;
 
   const startedAt = Date.now();
@@ -266,8 +273,21 @@ export async function runReActLoop(options: ReActOptions): Promise<ReActRunResul
       screenshot = bundle.capture;
       size = bundle.size;
     } catch (e) {
-      screenshot = await mockScreenshot();
-      size = screenshot.size;
+      // v0.4.9 A7: do NOT silently fall back to a mock screenshot in the
+      // production loop — a failed capture is a real error. The `mock`
+      // operator (types.ts) is the only supported path for CI/headless.
+      stopReason = 'error';
+      const errStep: ReActStep = {
+        iteration: i,
+        thought: 'screenshot capture failed',
+        action: { type: 'error', inputs: {} },
+        success: false,
+        error: e instanceof Error ? e.message : String(e),
+        durationMs: 0,
+      };
+      steps.push(errStep);
+      onStep?.(errStep);
+      return;
     }
 
     let prediction: { rawPrediction: string; thought: string };
@@ -329,15 +349,19 @@ export async function runReActLoop(options: ReActOptions): Promise<ReActRunResul
     const iterStart = Date.now();
     let success = true;
     let error: string | undefined;
-    try {
-      await withTimeout(
-        dispatchAction(operator, first, size),
-        iterationTimeoutMs,
-        `action ${first.type} (iteration ${i})`,
-      );
-    } catch (e) {
+    // v0.4.9 A7: retry the action on transient operator failure before giving up.
+    const outcome = await withActionRetry(
+      () =>
+        withTimeout(
+          dispatchAction(operator, first, size),
+          iterationTimeoutMs,
+          `action ${first.type} (iteration ${i})`,
+        ),
+      { retries: Math.max(1, maxActionRetries) },
+    );
+    if (!outcome.success) {
       success = false;
-      error = (e as Error).message;
+      error = outcome.error instanceof Error ? outcome.error.message : String(outcome.error);
       stopReason = 'unsupported';
     }
     const step: ReActStep = {

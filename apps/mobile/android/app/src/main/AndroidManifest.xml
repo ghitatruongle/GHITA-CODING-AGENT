@@ -6,6 +6,16 @@
     <!-- Notification permission (Android 13+ / API 33+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- v0.4.9 C1: Foreground service to keep the remote-control socket alive
+         while the app is backgrounded. CONNECTED_DEVICE type matches the
+         desktop-pairing use case (Android 14+ requires a typed FGS). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+
+    <!-- v0.4.9 C2: Camera for QR-code pairing (scan the code shown on desktop). -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
+
     <!-- Bluetooth permissions (Classic + BLE discovery) -->
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />

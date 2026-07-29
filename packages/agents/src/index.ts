@@ -79,6 +79,9 @@ export type {
   ReActAgentRunResult,
   ReActAgentCallbacks,
   StructuredOutputSchema,
+  PolicyGuard,
+  ToolPolicyRequest,
+  ToolPolicyDecision,
 } from './react/types.js';
 
 /** Pipeline executing interceptors sequentially before and after agent model actions. */
@@ -173,7 +176,7 @@ export type {
 
 // --- Original exports below ---
 
-export const AGENTS_VERSION = '0.3.7';
+export const AGENTS_VERSION = '0.4.9';
 
 export type AgentStatus = 'idle' | 'working' | 'completed' | 'error';
 
@@ -582,3 +585,21 @@ export {
   type CrewMember,
   type CrewTaskSpec,
 } from './crew/crewai-orchestrator.js';
+
+// v0.4.9 A3: Agent Work Loop harness (evidence-bounded evaluation)
+export {
+  WorkLoopEvaluator,
+  checkToDimension,
+  applyRepairProgress,
+  renderSessionReport,
+} from './harness/index.js';
+export type {
+  WorkLoopDimension,
+  WorkLoopCheckId,
+  EvidenceState,
+  CheckResult,
+  WorkLoopFinding,
+  TaskEpisode,
+  DimensionScore,
+  WorkLoopReview,
+} from './harness/index.js';

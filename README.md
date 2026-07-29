@@ -6,7 +6,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-0.3.6--dev-purple.svg)
+![Version](https://img.shields.io/badge/version-0.4.9-purple.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Node](https://img.shields.io/badge/node-%3E%3D20-green.svg)
 ![TypeScript](https://img.shields.io/badge/typescript-5.6-blue.svg)
@@ -223,6 +223,7 @@ pnpm dev:android
 | Update 0.0.3 beta1 | 02/06/2026    | Real Terminal PTY (node-pty sidecar), Playwright-Stealth multi-tab browser, Agentic Observe & Act layer, Sandbox guardrails, VS Code extension WebSocket sync, Monaco linter diagnostics & diff view, Mobile touch remote control, Embedded Tauri webview, E2E integration & CI benchmark                                    |
 | Update 0.0.3       | 07-08/06/2026 | Native AI agent runtime, skills & memory graph, tool-calling engine, performance layer. Critical security hardening (shell injection, Tauri permissions). Production-ready debug→test→publish CI pipeline.                                                                                                                   |
 | Update 0.0.4       | 18/06/2026    | Push notification system (toast + queue + sound), multi-channel communication plugin architecture (WebSocket/mDNS/Bluetooth), marketplace double-entry bookkeeping revenue, i18n key validation, mobile screen decomposition. Security & stability: tax calculation fix, Bluetooth error handling, health check latency fix. |
+| Update 0.4.9       | 30/07/2026    | Major update: local security scanner + agent governance (OWASP Agentic Top 10), agent work-loop evaluation harness, context-triggered skill instincts, PageRank repo-map, memory decay/reinforcement; 5 new dedicated AI providers (xAI, OpenRouter, Together, Perplexity, Azure OpenAI) — now 15 providers; browser act/extract/observe; two-step GUI grounding. Windows optimization: Cargo release profile, Monaco/xterm chunk splitting, SHA-256 node-runtime verification, NSIS current-user. Android: infinite reconnect backoff, targetSdk 35, foreground-service + camera permissions, QR pairing codec. |
 
 ---
 
@@ -435,6 +436,7 @@ pnpm dev:android
 | Cập nhật 0.0.3 beta1 | 02/06/2026    | Terminal PTY thật (node-pty sidecar), Trình duyệt Playwright-Stealth đa thẻ, Lớp Agentic Observe & Act, Bảo vệ sandbox, VS Code extension đồng bộ WebSocket, Monaco chẩn đoán linter & diff view, Mobile điều khiển cảm ứng từ xa, Tauri webview nhúng, Tích hợp E2E & CI benchmark       |
 | Cập nhật 0.0.3       | 07-08/06/2026 | Runtime AI agent gốc, đồ thị kỹ năng & bộ nhớ, công cụ gọi tool, lớp hiệu năng. Tăng cường bảo mật quan trọng (shell injection, quyền Tauri). Pipeline CI debug→test→publish sẵn sàng production.                                                                                         |
 | Cập nhật 0.0.4       | 18/06/2026    | Hệ thống thông báo đẩy (toast + hàng đợi + âm thanh), kiến trúc plugin giao tiếp đa kênh (WebSocket/mDNS/Bluetooth), doanh thu marketplace sổ kế toán kép, xác thực khóa i18n, phân tách màn hình mobile. Bảo mật & ổn định: sửa tính thuế, xử lý lỗi Bluetooth, sửa độ trễ health check. |
+| Cập nhật 0.4.9       | 30/07/2026    | Bản cập nhật lớn: trình quét bảo mật local + quản trị agent (OWASP Agentic Top 10), harness đánh giá work-loop, skill instincts theo ngữ cảnh, repo-map PageRank, memory decay/reinforcement; 5 provider AI dedicated mới (xAI, OpenRouter, Together, Perplexity, Azure OpenAI) → 15 providers; browser act/extract/observe; GUI grounding 2 bước. Tối ưu Windows: Cargo release profile, tách chunk Monaco/xterm, verify SHA-256 node runtime, NSIS currentUser. Android: reconnect vô hạn có backoff, targetSdk 35, quyền foreground-service + camera, QR pairing codec. |
 
 ---
 

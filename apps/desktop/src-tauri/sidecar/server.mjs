@@ -1888,13 +1888,17 @@ function ipcEmit(event, data = {}) {
 }
 
 // --- Auto-refresh pairing code ---
-setInterval(() => {
+const pairingRefreshInterval = setInterval(() => {
   if (Date.now() >= codeExpiresAt) {
     regenerateCode();
     log(`Pairing code refreshed: ${currentCode}`);
     sendStatus();
   }
 }, 10_000);
+// M6 FIX (v0.4.9 B2): unref so this timer never keeps the event loop alive.
+if (typeof pairingRefreshInterval.unref === 'function') {
+  pairingRefreshInterval.unref();
+}
 
 let grpcServerInstance = null;
 

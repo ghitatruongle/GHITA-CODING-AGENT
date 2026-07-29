@@ -26,3 +26,15 @@ export {
   type ReActModelRequest,
   type ReActOptions,
 } from './reactLoop.js';
+
+// v0.4.9 A7: GUI grounding + retry
+export {
+  verifyCoordinate,
+  withActionRetry,
+  annotateAction,
+  type Point,
+  type GroundingResult,
+  type RetryOptions,
+  type RetryOutcome,
+  type StepAnnotation,
+} from './grounding.js';

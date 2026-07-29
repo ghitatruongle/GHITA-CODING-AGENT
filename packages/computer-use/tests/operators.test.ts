@@ -12,9 +12,8 @@ import {
   runReActLoop,
   type Operator,
   type ReActStep,
-  type ScreenCapture,
-  type ScreenSize,
 } from '../src/operators/index.js';
+import type { ScreenCapture, ScreenSize } from '../src/index.js';
 
 const fakePng = Buffer.from([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
@@ -249,7 +248,9 @@ describe('runReActLoop', () => {
     expect(result.steps[0]?.error).toMatch(/click failed/);
   });
 
-  it('falls back to a mock screenshot when capture fails', async () => {
+  it('reports an error when screenshot capture fails (no silent mock fallback)', async () => {
+    // v0.4.9 A7: the production loop no longer swaps in a mock screenshot when
+    // capture fails — a failed capture is surfaced as a real error step.
     const op = new MockOperator();
     op.failOn.add('screenshot');
     const result = await runReActLoop({
@@ -257,8 +258,9 @@ describe('runReActLoop', () => {
       operator: op,
       model: async () => ({ rawPrediction: 'Action: finished', thought: 'ok' }),
     });
-    expect(result.stopReason).toBe('completed');
-    expect(result.steps[0]?.observation?.capture.mimeType).toBe('image/png');
+    expect(result.stopReason).toBe('error');
+    expect(result.steps[0]?.success).toBe(false);
+    expect(result.steps[0]?.thought).toMatch(/screenshot capture failed/);
   });
 
   it('honours the abort signal', async () => {

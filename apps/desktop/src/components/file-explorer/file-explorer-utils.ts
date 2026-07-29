@@ -77,3 +77,19 @@ export function fileIcon(name: string): string {
 export function normalizePath(p: string): string {
   return p.replace(/\\/g, '/');
 }
+
+/**
+ * Compute the new absolute path when renaming an entry, preserving the parent
+ * directory and the original path separator style. The new name is basename
+ * only — any path separators in it are rejected (returns null) to avoid moving
+ * the file out of its folder.
+ */
+export function renamePath(oldPath: string, newName: string): string | null {
+  const trimmed = newName.trim();
+  if (trimmed.length === 0 || /[/\\]/.test(trimmed)) return null;
+  const sep = oldPath.includes('\\') && !oldPath.includes('/') ? '\\' : '/';
+  const idx = Math.max(oldPath.lastIndexOf('/'), oldPath.lastIndexOf('\\'));
+  if (idx === -1) return trimmed;
+  const parent = oldPath.slice(0, idx);
+  return `${parent}${sep}${trimmed}`;
+}

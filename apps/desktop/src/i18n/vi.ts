@@ -35,7 +35,7 @@ export const vi: TranslationKeys = {
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v0.1.0',
+    version: 'v0.4.9',
     deviceReconnected: 'Khôi phục kết nối với thiết bị: {{name}}',
     devicePaired: 'Đã ghép đôi thành công thiết bị: {{name}}',
     commandReceived: 'Đã nhận lệnh từ thiết bị: {{action}}',
@@ -123,6 +123,11 @@ export const vi: TranslationKeys = {
     binaryNotSupported:
       'Không hỗ trợ xem tệp tin nhị phân "{{name}}" trực tiếp trên trình soạn thảo.',
     readFailed: 'Đọc tệp tin thất bại: {{error}}',
+    aiProposedEdit: 'AI đề xuất chỉnh sửa',
+    accept: 'Chấp nhận',
+    reject: 'Từ chối',
+    editApplied: 'Đã áp dụng chỉnh sửa vào {{name}}',
+    editRejected: 'Đã từ chối chỉnh sửa {{name}}',
   },
   devices: {
     title: 'Thiết bị kết nối',
@@ -388,6 +393,9 @@ export const vi: TranslationKeys = {
     newFolderPrompt: 'Nhập tên thư mục mới:',
     deleteConfirm: 'Bạn có chắc chắn muốn xóa vĩnh viễn "{{name}}"?',
     delete: 'Xóa bỏ',
+    rename: 'Đổi tên',
+    renamePrompt: 'Nhập tên mới:',
+    renameInvalid: 'Tên không hợp lệ: không được để trống hoặc chứa dấu phân cách đường dẫn.',
   },
   apiManager: {
     title: 'Cấu hình và Quản lý API Keys',

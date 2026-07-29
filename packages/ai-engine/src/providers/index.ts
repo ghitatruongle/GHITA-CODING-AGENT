@@ -12,6 +12,13 @@ export { CustomProvider } from './custom.js';
 export { GroqProvider } from './groq.js';
 export { MistralProvider } from './mistral.js';
 
+// --- v0.4.9 A5: Dedicated providers (xAI, OpenRouter, Together, Perplexity, Azure) ---
+export { XAIProvider } from './xai.js';
+export { OpenRouterProvider } from './openrouter.js';
+export { TogetherProvider } from './together.js';
+export { PerplexityProvider } from './perplexity.js';
+export { AzureOpenAIProvider } from './azure-openai.js';
+
 // --- Phase 6: defineVendor + new providers ---
 export { defineVendor, type VendorSpec } from './base-extended.js';
 export { KimiProvider } from './kimi.js';

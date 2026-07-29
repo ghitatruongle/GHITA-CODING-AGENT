@@ -37,6 +37,17 @@ export {
   type MCPToolCallResponse,
 } from './mcp-server.js';
 
+// --- v0.4.9 A8: Repo-map ranking (PageRank) ---
+export {
+  computePageRank,
+  getRepoMap,
+  renderRepoMap,
+  estimateTokens,
+  type RepoMap,
+  type RepoMapEntry,
+  type PageRankOptions,
+} from './repo-map.js';
+
 // --- Main orchestrator ---
 import path from 'node:path';
 import { parseFile, parseFiles, discoverFiles } from './ast-parser.js';
@@ -44,6 +55,7 @@ import { KnowledgeGraph } from './knowledge-graph.js';
 import { SearchEngine } from './search.js';
 import { SQLiteGraphStore } from './store.js';
 import type { CodeNode, SearchQuery, SearchResult, ParseOptions, GraphStore } from './types.js';
+import { getRepoMap as buildRepoMap, type RepoMap, type PageRankOptions } from './repo-map.js';
 
 /**
  * Main entry point for the Code Knowledge Graph system.
@@ -260,6 +272,14 @@ export class CodeKnowledgeGraph {
    */
   getAllEdges() {
     return this.graph.getAllEdges();
+  }
+
+  /**
+   * v0.4.9 A8: Build a repo map — the most important symbols
+   * (ranked by PageRank over the reference graph) that fit `budgetTokens`.
+   */
+  getRepoMap(budgetTokens = 4000, options?: PageRankOptions): RepoMap {
+    return buildRepoMap(this.graph.getAllNodes(), this.graph.getAllEdges(), budgetTokens, options);
   }
 
   /**

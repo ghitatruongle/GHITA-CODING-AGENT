@@ -283,7 +283,7 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): React.JSX.E
         </View>
 
         {/* Version */}
-        <Text style={styles.version}>GHITA Agent Remote v0.1.0</Text>
+        <Text style={styles.version}>GHITA Agent Remote v0.3.7</Text>
       </ScrollView>
     </SafeAreaView>
   );

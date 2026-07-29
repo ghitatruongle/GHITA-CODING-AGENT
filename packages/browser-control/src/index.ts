@@ -5,7 +5,7 @@
 import type { SkillDefinition } from '@ghita/skills';
 import type { BrowserAction, BrowserResult } from '@ghita/shared';
 
-export const BROWSER_CONTROL_VERSION = '0.3.7';
+export const BROWSER_CONTROL_VERSION = '0.4.9';
 
 export type BrowserSessionStatus = 'idle' | 'launching' | 'ready' | 'closed' | 'error';
 
@@ -204,3 +204,12 @@ export function createBrowserControlSkills(
 }
 
 export * from './dom-extractor.js';
+
+// v0.4.9 A6: AI page API — act/extract/observe
+export { AIPageController } from './stagehand.js';
+export type {
+  SchemaLike,
+  ObserveResult,
+  ActResult,
+  ExtractResult,
+} from './stagehand.js';

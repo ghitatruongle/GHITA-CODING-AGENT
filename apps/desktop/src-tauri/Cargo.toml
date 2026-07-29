@@ -1,6 +1,6 @@
 [package]
 name = "ghita-coding-agent"
-version = "0.3.7"
+version = "0.4.9"
 description = "GHITA CODING AGENT Desktop"
 authors = ["ghitatruongle"]
 edition = "2021"
@@ -45,3 +45,18 @@ dashmap = "6"
 rand = "0.8"
 percent-encoding = "2.3"
 chrono = { version = "0.4", features = ["serde"] }
+# v0.4.8 B2 (M8): verify integrity of the bundled node runtime before spawn.
+sha2 = "0.10"
+
+# v0.4.8 B1: Optimized release profile for Windows/desktop binaries.
+# Smaller, faster binary at the cost of longer compile time.
+# BUILD NOTE: on this machine, compile with `RUST_MIN_STACK=134217728` and
+# `CARGO_BUILD_JOBS=1` to avoid rustc STATUS_STACK_BUFFER_OVERRUN crashes
+# (stack overflow on heavy crates + antivirus parallel-write races).
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = true
+panic = "abort"
+incremental = false

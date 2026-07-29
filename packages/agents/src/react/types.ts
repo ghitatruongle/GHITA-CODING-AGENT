@@ -23,6 +23,28 @@ export type AgentStep = {
   observation: string;
 };
 
+/**
+ * v0.4.9 A2: Policy guard hook — evaluated before every tool execution.
+ * Structurally compatible with @ghita/security PolicyEngine.evaluate(), but
+ * declared locally so this package stays decoupled from the security package.
+ */
+export interface ToolPolicyRequest {
+  tool: string;
+  action: string;
+  resource?: string;
+  agentId?: string;
+  input?: Record<string, unknown>;
+}
+
+export interface ToolPolicyDecision {
+  decision: 'allow' | 'deny';
+  reason?: string;
+}
+
+export type PolicyGuard = (
+  request: ToolPolicyRequest,
+) => ToolPolicyDecision | Promise<ToolPolicyDecision>;
+
 export interface ReActAgentConfig {
   /** Agent name */
   name: string;
@@ -46,6 +68,12 @@ export interface ReActAgentConfig {
   outputSchema?: StructuredOutputSchema;
   /** Stop condition */
   stopCondition?: (steps: AgentStep[]) => boolean;
+  /**
+   * v0.4.9 A2: Optional deny-default policy guard. When provided, every
+   * tool-call is evaluated before execution; a 'deny' decision blocks the
+   * tool and feeds the reason back to the model as the observation.
+   */
+  policyGuard?: PolicyGuard;
 }
 
 export interface ReActTool {

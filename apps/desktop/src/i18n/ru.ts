@@ -35,7 +35,7 @@ export const ru: TranslationKeys = {
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v0.1.0',
+    version: 'v0.4.9',
     deviceReconnected: 'Повторное подключение к устройству: {{name}}',
     devicePaired: 'Устройство успешно сопряжено: {{name}}',
     commandReceived: 'Команда получена от устройства: {{action}}',
@@ -123,6 +123,11 @@ export const ru: TranslationKeys = {
     binaryNotSupported:
       'Бинарный файл "{{name}}" не поддерживается напрямую в текстовом редакторе.',
     readFailed: 'Не удалось прочитать файл: {{error}}',
+    aiProposedEdit: 'ИИ предложил изменение',
+    accept: 'Принять',
+    reject: 'Отклонить',
+    editApplied: 'Изменение применено к {{name}}',
+    editRejected: 'Изменение отклонено для {{name}}',
   },
   devices: {
     title: 'Подключенные устройства',
@@ -386,6 +391,9 @@ export const ru: TranslationKeys = {
     newFolderPrompt: 'Введите имя новой папки:',
     deleteConfirm: 'Вы уверены, что хотите навсегда удалить "{{name}}"?',
     delete: 'Удалить',
+    rename: 'Переименовать',
+    renamePrompt: 'Введите новое имя:',
+    renameInvalid: 'Недопустимое имя: не должно быть пустым или содержать разделители пути.',
   },
   apiManager: {
     title: 'Настройка ключей API',

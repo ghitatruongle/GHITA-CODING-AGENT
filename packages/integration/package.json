@@ -1,6 +1,6 @@
 {
   "name": "@ghita/integration",
-  "version": "0.3.7",
+  "version": "0.4.9",
   "private": true,
   "sideEffects": false,
   "description": "Cross-package integration facade for GHITA CODING AGENT",
