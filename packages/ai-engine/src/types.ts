@@ -107,6 +107,8 @@ export interface ProviderConfig {
   providerType?: AIProviderType;
   /** Override display name for custom-compatible providers */
   providerName?: string;
+  /** v0.4.9 A5: Azure OpenAI API version (e.g. '2024-06-01'). */
+  apiVersion?: string;
 }
 
 // --- MCP Config ---

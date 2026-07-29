@@ -1,6 +1,6 @@
 {
   "name": "@ghita/migration",
-  "version": "0.3.7",
+  "version": "0.4.9",
   "private": true,
   "sideEffects": false,
   "description": "Data migration framework for GHITA CODING AGENT",

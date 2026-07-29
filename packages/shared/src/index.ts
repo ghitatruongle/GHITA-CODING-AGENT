@@ -10,3 +10,4 @@ export * from './plugins/types.js';
 export * from './events/types.js';
 export * from './events/stream.js';
 export * from './react-ui.js';
+export * from './connection.js';

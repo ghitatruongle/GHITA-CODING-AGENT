@@ -35,7 +35,7 @@ export const zh: TranslationKeys = {
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v0.1.0',
+    version: 'v0.4.9',
     deviceReconnected: '已重新连接设备: {{name}}',
     devicePaired: '成功配对设备: {{name}}',
     commandReceived: '从设备收到命令: {{action}}',
@@ -120,6 +120,11 @@ export const zh: TranslationKeys = {
     unsavedChangesConfirm: '文件 "{{name}}" 有未保存的更改。确定要关闭并放弃这些更改吗？',
     binaryNotSupported: '编辑器不支持直接打开二进制文件 "{{name}}”。',
     readFailed: '读取文件失败: {{error}}',
+    aiProposedEdit: 'AI 提议了一处修改',
+    accept: '接受',
+    reject: '拒绝',
+    editApplied: '已将修改应用到 {{name}}',
+    editRejected: '已拒绝对 {{name}} 的修改',
   },
   devices: {
     title: '关联设备',
@@ -373,6 +378,9 @@ export const zh: TranslationKeys = {
     newFolderPrompt: '请输入新建文件夹名:',
     deleteConfirm: '您确定要永久删除 "{{name}}" 吗？',
     delete: '删除',
+    rename: '重命名',
+    renamePrompt: '输入新名称:',
+    renameInvalid: '名称无效：不能为空或包含路径分隔符。',
   },
   apiManager: {
     title: 'API 密钥配置与管理',

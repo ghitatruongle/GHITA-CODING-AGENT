@@ -112,6 +112,8 @@ export interface RollbackRecord {
 export interface UpdateCheckOptions {
   /** Include pre-release versions */
   includePrerelease?: boolean;
+  /** Include stable major-version upgrades (e.g. 1.x → 2.0). Off by default. */
+  includeMajor?: boolean;
   /** Channel (stable, beta, nightly) */
   channel?: 'stable' | 'beta' | 'nightly';
   /** Request timeout in ms */

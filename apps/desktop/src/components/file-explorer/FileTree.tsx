@@ -24,6 +24,7 @@ interface FileTreeProps {
   onOpenFolder: () => void;
   onNewFile: (dirPath: string) => void;
   onNewFolder: (dirPath: string) => void;
+  onRename: (path: string) => void;
   onDelete: (path: string) => void;
   t: (key: string) => string;
 }
@@ -40,6 +41,7 @@ export function FileTree({
   onOpenFolder,
   onNewFile,
   onNewFolder,
+  onRename,
   onDelete,
   t,
 }: FileTreeProps) {
@@ -111,6 +113,11 @@ export function FileTree({
               <div className="h-px bg-[var(--border-subtle)] my-1" />
             </>
           )}
+          <ContextMenuItem
+            icon="✏️"
+            label={t('fileExplorer.rename')}
+            onClick={() => onRename(contextMenu.path)}
+          />
           <ContextMenuItem
             icon="🗑️"
             label={t('fileExplorer.delete')}

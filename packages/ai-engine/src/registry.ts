@@ -12,6 +12,12 @@ import { OllamaProvider } from './providers/ollama.js';
 import { CustomProvider } from './providers/custom.js';
 import { GroqProvider } from './providers/groq.js';
 import { MistralProvider } from './providers/mistral.js';
+// v0.4.9 A5: dedicated OpenAI-compatible + Azure providers
+import { XAIProvider } from './providers/xai.js';
+import { OpenRouterProvider } from './providers/openrouter.js';
+import { TogetherProvider } from './providers/together.js';
+import { PerplexityProvider } from './providers/perplexity.js';
+import { AzureOpenAIProvider } from './providers/azure-openai.js';
 
 export class ProviderRegistry {
   private providers = new Map<AIProviderType, AIProvider>();
@@ -89,21 +95,28 @@ export class ProviderRegistry {
       // Phase 1: Dedicated Mistral provider (La Plateforme API)
       case 'mistral':
         return new MistralProvider(config);
+      // v0.4.9 A5: Dedicated providers (proper models + capabilities)
+      case 'xai':
+        return new XAIProvider(config);
+      case 'openrouter':
+        return new OpenRouterProvider(config);
+      case 'together':
+        return new TogetherProvider(config);
+      case 'perplexity':
+        return new PerplexityProvider(config);
+      case 'azure-openai':
+        return new AzureOpenAIProvider(config);
       // OpenAI-compatible providers (reuse CustomProvider)
       // Phase 1.2 providers use the same path.
       case 'opengateway':
       case 'mimo':
-      case 'openrouter':
       case 'deepseek':
       case 'hicap':
       case 'github-models':
       case 'cerebras':
-      case 'together':
       case 'fireworks':
       case 'cohere':
-      case 'xai':
       case 'replicate':
-      case 'perplexity':
       case 'voyage':
       case 'ai21':
       case 'sambanova':

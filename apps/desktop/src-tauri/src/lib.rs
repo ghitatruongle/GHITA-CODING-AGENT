@@ -66,6 +66,51 @@ fn greet(name: &str) -> String {
     format!("Hello, {}! Welcome to GHITA CODING AGENT.", name)
 }
 
+/// Result of a bundled-node integrity check (audit fix M8).
+enum NodeIntegrity {
+    /// `node.sha256` present and matched the binary.
+    Ok,
+    /// No `node.sha256` manifest shipped — nothing to verify against.
+    NoManifest,
+    /// Manifest present but the digest did NOT match.
+    Mismatch,
+}
+
+/// Verify a bundled `node` binary against a sibling `node.sha256` manifest.
+///
+/// The manifest is a text file whose first whitespace-delimited token is the
+/// lowercase hex SHA-256 of the binary (the common `sha256sum` format). When no
+/// manifest is present we return `NoManifest` so packagers that do not ship one
+/// keep working; a present-but-wrong digest returns `Mismatch`.
+fn verify_bundled_node(node_path: &std::path::Path) -> NodeIntegrity {
+    use sha2::{Digest, Sha256};
+    let manifest_path = node_path.with_file_name("node.sha256");
+    let expected = match fs::read_to_string(&manifest_path) {
+        Ok(text) => text,
+        Err(_) => return NodeIntegrity::NoManifest,
+    };
+    let expected_hex = expected.split_whitespace().next().unwrap_or("").to_lowercase();
+    if expected_hex.len() != 64 {
+        return NodeIntegrity::NoManifest;
+    }
+    let bytes = match fs::read(node_path) {
+        Ok(b) => b,
+        Err(_) => return NodeIntegrity::Mismatch,
+    };
+    let mut hasher = Sha256::new();
+    hasher.update(&bytes);
+    let actual_hex = hasher
+        .finalize()
+        .iter()
+        .map(|b| format!("{:02x}", b))
+        .collect::<String>();
+    if actual_hex == expected_hex {
+        NodeIntegrity::Ok
+    } else {
+        NodeIntegrity::Mismatch
+    }
+}
+
 #[tauri::command]
 async fn check_update(app: tauri::AppHandle) -> Result<String, String> {
     let updater = app.updater().map_err(|e| e.to_string())?;
@@ -188,6 +233,25 @@ async fn start_server(
             .parent()
             .map(|dir| dir.join(format!("node{}", std::env::consts::EXE_SUFFIX)))
             .filter(|path| path.exists());
+
+        // SECURITY (audit fix M8): before executing a bundled `node` runtime,
+        // verify its SHA-256 against an expected digest shipped as
+        // `node.sha256` next to it. If the manifest exists and does NOT match,
+        // refuse the bundled binary and fall back to the system `node` on PATH
+        // (which the OS trusts) rather than running a possibly-tampered file.
+        let bundled_node = match bundled_node {
+            Some(path) => match verify_bundled_node(&path) {
+                NodeIntegrity::Ok | NodeIntegrity::NoManifest => Some(path),
+                NodeIntegrity::Mismatch => {
+                    eprintln!(
+                        "[GHITA] Bundled node integrity check FAILED for {} \u{2014} falling back to system node",
+                        path.display()
+                    );
+                    None
+                }
+            },
+            None => None,
+        };
         let node_command = bundled_node
             .as_ref()
             .map(|path| path.as_os_str())
@@ -705,7 +769,7 @@ pub fn run() {
             // Show main window and close splash when frontend emits 'ready' event.
             // Tauri Window operations are thread-safe (use IPC channels internally),
             // so std::thread::spawn is safe for the delayed transition.
-            let shown = Arc::new(std::sync::atomic::AtomicBool::new(true));
+            let shown = Arc::new(std::sync::atomic::AtomicBool::new(false));
             {
                 let main_handle = main.clone();
                 let splash_handle = splash.clone();

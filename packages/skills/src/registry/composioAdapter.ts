@@ -16,6 +16,7 @@ import {
   type WebhookHandler,
 } from './saas-apps-registry.js';
 import { simulateAction } from './simulator.js';
+import { executeRealSaaSAction } from './saas-http-executor.js';
 
 // Re-export types for backward compatibility
 export type {
@@ -36,8 +37,17 @@ export class ComposioSkillAdapter {
   private readonly apiLogs: SaaSAPILog[] = [];
   private readonly rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
   private readonly webhookHandlers = new Map<string, WebhookHandler[]>();
+  /**
+   * v0.4.9: when true, actions with a real HTTP handler + an access token are
+   * executed as genuine network calls. Default false so unit tests and offline
+   * usage stay deterministic (they fall back to the flagged simulator).
+   */
+  private readonly realExecution: boolean;
 
-  private constructor(options: { apiKey?: string; credentials?: SaaSConnection[] } = {}) {
+  private constructor(
+    options: { apiKey?: string; credentials?: SaaSConnection[]; realExecution?: boolean } = {},
+  ) {
+    this.realExecution = options.realExecution ?? false;
     if (options.credentials) {
       for (const conn of options.credentials) {
         this.setCredential(conn);
@@ -46,7 +56,7 @@ export class ComposioSkillAdapter {
   }
 
   public static async create(
-    options: { apiKey?: string; credentials?: SaaSConnection[] } = {},
+    options: { apiKey?: string; credentials?: SaaSConnection[]; realExecution?: boolean } = {},
   ): Promise<ComposioSkillAdapter> {
     const instance = new ComposioSkillAdapter(options);
     try {
@@ -235,7 +245,24 @@ export class ComposioSkillAdapter {
           connectedAccount: conn.accessToken,
         });
       } else {
-        data = await simulateAction(appId, action, params);
+        // v0.4.9: attempt a REAL HTTP call first when real execution is enabled
+        // and we hold an access token. Fall back to the simulator otherwise,
+        // tagging plain-object results so callers never mistake a simulated
+        // response for a live one. `simulate_failure` always forces the
+        // simulator (it is an explicit testing hook).
+        const real =
+          this.realExecution && conn.accessToken && !params['simulate_failure']
+            ? await executeRealSaaSAction(appId, action, params, conn.accessToken)
+            : { handled: false as const };
+        if (real.handled) {
+          data = real.data;
+        } else {
+          const simulated = await simulateAction(appId, action, params);
+          data =
+            simulated !== null && typeof simulated === 'object' && !Array.isArray(simulated)
+              ? { ...(simulated as Record<string, unknown>), _simulated: true }
+              : simulated;
+        }
       }
 
       this.consecutiveFailures.set(appId, 0);

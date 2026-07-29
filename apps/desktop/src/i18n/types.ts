@@ -141,6 +141,11 @@ export interface TranslationKeys {
     unsavedChangesConfirm: string;
     binaryNotSupported: string;
     readFailed: string;
+    aiProposedEdit: string;
+    accept: string;
+    reject: string;
+    editApplied: string;
+    editRejected: string;
   };
   devices: {
     title: string;
@@ -385,6 +390,9 @@ export interface TranslationKeys {
     newFolderPrompt: string;
     deleteConfirm: string;
     delete: string;
+    rename: string;
+    renamePrompt: string;
+    renameInvalid: string;
   };
   apiManager: {
     title: string;

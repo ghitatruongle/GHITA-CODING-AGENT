@@ -4,7 +4,7 @@
 // ==============================================================================
 
 import { useState, useEffect, useCallback } from 'react';
-import { readDir, readTextFile, mkdir, writeTextFile, remove } from '@tauri-apps/plugin-fs';
+import { readDir, readTextFile, mkdir, writeTextFile, remove, rename } from '@tauri-apps/plugin-fs';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useTranslation } from '../i18n';
 import { useAppStore } from '../stores/appStore';
@@ -17,6 +17,7 @@ import {
   detectLanguage,
   isBinaryFile,
   normalizePath,
+  renamePath,
   SKIP_DIRS,
   SKIP_FILES,
 } from './file-explorer/file-explorer-utils';
@@ -254,6 +255,36 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
     [reloadParent, t],
   );
 
+  const handleRename = useCallback(
+    async (path: string) => {
+      const currentName = path.split(/[/\\]/).pop() || '';
+      const newName = prompt(t('fileExplorer.renamePrompt'), currentName);
+      if (!newName || newName.trim() === currentName) {
+        setContextMenu(null);
+        return;
+      }
+      const newPath = renamePath(path, newName);
+      if (!newPath) {
+        toast.error(t('fileExplorer.renameInvalid'));
+        setContextMenu(null);
+        return;
+      }
+      try {
+        await rename(path, newPath);
+        const parts = path.split(/[/\\]/);
+        parts.pop();
+        const sep = path.includes('\\') && !path.includes('/') ? '\\' : '/';
+        const parentDir = parts.join(sep) || (sep === '\\' ? 'C:\\' : '/');
+        await reloadParent(parentDir);
+      } catch (e) {
+        console.error('[FileExplorer] Failed to rename:', e);
+        toast.error(e instanceof Error ? e.message : String(e));
+      }
+      setContextMenu(null);
+    },
+    [reloadParent, t],
+  );
+
   // Close context menu on outside click
   useEffect(() => {
     if (!contextMenu) return;
@@ -285,6 +316,7 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
         onOpenFolder={handleSelectFolder}
         onNewFile={handleNewFile}
         onNewFolder={handleNewFolder}
+        onRename={handleRename}
         onDelete={handleDelete}
         t={t}
       />

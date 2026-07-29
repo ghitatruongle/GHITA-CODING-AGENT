@@ -70,4 +70,4 @@ export type {
   WsMuxStats,
 } from './ws/index.js';
 
-export const COMMUNICATION_VERSION = '0.3.7';
+export const COMMUNICATION_VERSION = '0.4.9';

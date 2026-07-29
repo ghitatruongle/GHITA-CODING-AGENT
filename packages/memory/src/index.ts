@@ -45,7 +45,7 @@ export type {
   GuardrailConfig,
 } from './guardrail/types.js';
 
-export const MEMORY_VERSION = '0.3.7';
+export const MEMORY_VERSION = '0.4.9';
 
 export interface RememberInput {
   type: MemoryEntry['type'];
@@ -179,6 +179,17 @@ export class AgentMemory {
 
 export { TieredMemoryStore } from './tieredStore.js';
 export type { TieredMemoryStoreConfig } from './tieredStore.js';
+
+// v0.4.9 A9: Memory decay & reinforcement
+export {
+  decayStrength,
+  reinforceStrength,
+  effectiveStrength,
+  reinforceMetadata,
+  DEFAULT_HALF_LIFE_MS,
+  DEFAULT_REINFORCE_GAIN,
+} from './reinforcement.js';
+export type { ReinforcementOptions } from './reinforcement.js';
 
 export { CrossSessionSearch } from './search.js';
 export type {

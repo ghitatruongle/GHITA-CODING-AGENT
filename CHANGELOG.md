@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.4.9] - 2026-07-30
+
+### Theme: Agent capability expansion + Windows/Android hardening
+
+#### Added
+
+- **Security scanner** (`@ghita/security`): local rule-based, fully-offline code scanner emitting findings/coverage documents with a 0–100 score.
+- **Agent governance** (`@ghita/security`): deny-default `PolicyEngine` + OWASP Agentic AI Top 10 heuristic checks; wired into the ReAct agent as a pre-tool-call guard.
+- **Agent Work Loop harness** (`@ghita/agents`): five-dimension / fifteen-check evaluator with evidence-bounded scoring + `scripts/blast-radius.mjs` and `scripts/mapping-gate.mjs`.
+- **Instinct registry** (`@ghita/skills`): context-triggered skill auto-suggestion with priority + conflict resolution.
+- **5 new dedicated AI providers**: xAI (Grok), OpenRouter, Together AI, Perplexity, Azure OpenAI — now **15 dedicated providers** total.
+- **Browser act/extract/observe** (`@ghita/browser-control`): high-level AI page API with selector self-heal and zod-compatible schema extraction.
+- **GUI grounding** (`@ghita/computer-use`): two-step locate→verify with retry policy; removed the mock-screenshot fallback from the production loop.
+- **Repo-map ranking** (`@ghita/code-graph`): PageRank symbol ranking within a token budget.
+- **Memory decay/reinforcement** (`@ghita/memory`): access-based strength with `reinforce(id)` + time decay.
+- **Skill pack importer** (`@ghita/skills`): license-checked bulk SKILL.md import + curated "Community Essentials" pack.
+
+#### Changed — Windows optimization
+
+- Added an optimized Cargo `[profile.release]` (LTO, strip, `codegen-units=1`, `panic=abort`).
+- Split Monaco and xterm into their own Vite vendor chunks for faster WebView cold start.
+- Verify the SHA-256 of the bundled `node` runtime before spawn (audit M8); fall back to system `node` on mismatch.
+- NSIS installer set to current-user with English/Vietnamese; added `scripts/bench-startup.mjs`.
+
+#### Changed — Android
+
+- Socket reconnect is now unbounded with exponential backoff + jitter (shared `computeBackoffDelay`).
+- Bumped `targetSdk` to 35; declared `FOREGROUND_SERVICE(_CONNECTED_DEVICE)` and `CAMERA` permissions.
+- Added shared adaptive-streaming quality selection and a QR pairing payload codec.
+
+#### Notes
+
+- Native Tauri plugin wiring (single-instance, tray, notification, deep-link) and Android device UI (QR camera screen, foreground-service module, biometric prompt, tablet layout) are staged behind a native build and tracked for a follow-up.
+
+---
+
 ## [0.3.6] - Unreleased
 
 ### Theme: Production hardening

@@ -11,6 +11,8 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useTranslation } from '../i18n';
 import { useAppStore, fileContentCache } from '../stores/appStore';
+import { useAiEditProposal } from '../hooks/useAiEditProposal';
+import { lineDiffStat } from '../utils/editProposal';
 
 const CodeEditor = lazy(() =>
   import('../components/CodeEditor').then((m) => ({ default: m.CodeEditor })),
@@ -35,6 +37,15 @@ export function CodeView() {
 
   // Active file
   const activeFile = openFiles.find((f) => f.path === activePath);
+
+  // AI edit proposals (diff review → accept/reject) — logic lives in the hook.
+  const { activeProposal, acceptProposal, rejectProposal } = useAiEditProposal({
+    activePath,
+    openFiles,
+    setOpenFiles,
+    setActivePath,
+    t: tRef.current,
+  });
 
   // Open folder directly
   const handleOpenFolder = useCallback(async () => {
@@ -469,6 +480,69 @@ export function CodeView() {
           </div>
         )}
 
+        {/* AI edit proposal review bar */}
+        {activeProposal && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '6px 12px',
+              fontSize: '12px',
+              background: 'rgba(59, 130, 246, 0.12)',
+              borderBottom: '1px solid var(--accent-primary)',
+              color: 'var(--text-primary)',
+            }}
+          >
+            <span style={{ fontWeight: 600 }}>🤖 {t('codeView.aiProposedEdit')}</span>
+            {activeProposal.description && (
+              <span style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {activeProposal.description}
+              </span>
+            )}
+            {(() => {
+              const stat = lineDiffStat(activeProposal.originalContent, activeProposal.proposedContent);
+              return (
+                <span style={{ fontSize: '11px', fontFamily: 'monospace' }}>
+                  <span style={{ color: 'var(--success)' }}>+{stat.added}</span>{' '}
+                  <span style={{ color: 'var(--error)' }}>-{stat.removed}</span>
+                </span>
+              );
+            })()}
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+              <button
+                onClick={rejectProposal}
+                style={{
+                  fontSize: '11px',
+                  padding: '3px 12px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--border-default)',
+                  background: 'transparent',
+                  color: 'var(--text-primary)',
+                  cursor: 'pointer',
+                }}
+              >
+                {t('codeView.reject')}
+              </button>
+              <button
+                onClick={acceptProposal}
+                style={{
+                  fontSize: '11px',
+                  padding: '3px 12px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: 'none',
+                  background: 'var(--accent-primary)',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                {t('codeView.accept')}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Editor content */}
         <div style={{ flex: 1, minHeight: 0 }}>
           {activeFile ? (
@@ -488,7 +562,13 @@ export function CodeView() {
               }
             >
               <CodeEditor
-                value={fileContentCache.get(activeFile.path)?.content || ''}
+                value={
+                  activeProposal
+                    ? activeProposal.proposedContent
+                    : fileContentCache.get(activeFile.path)?.content || ''
+                }
+                originalValue={activeProposal ? activeProposal.originalContent : undefined}
+                readOnly={Boolean(activeProposal)}
                 language={activeFile.language}
                 onChange={handleContentChange}
                 onSave={handleSave}

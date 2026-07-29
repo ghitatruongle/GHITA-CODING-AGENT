@@ -55,6 +55,8 @@ export interface LLMCallMetrics {
   cost?: number;
   cached?: boolean;
   error?: string;
+  /** Epoch ms when the call was recorded (used for time-range filtering). */
+  recordedAt?: number;
 }
 
 export interface ObservabilityConfig {
@@ -251,8 +253,13 @@ export class ObservabilityManager {
     const fullMetrics: LLMCallMetrics = {
       traceId: metrics.traceId ?? `trace_${randomBytes(8).toString('hex')}`,
       spanId: metrics.spanId ?? `span_${randomBytes(8).toString('hex')}`,
+      recordedAt: metrics.recordedAt ?? Date.now(),
       ...metrics,
     };
+    // Guarantee a timestamp even when the caller passed recordedAt: undefined.
+    if (typeof fullMetrics.recordedAt !== 'number') {
+      fullMetrics.recordedAt = Date.now();
+    }
 
     this.metrics.push(fullMetrics);
 
@@ -276,7 +283,12 @@ export class ObservabilityManager {
     let filtered = [...this.metrics];
 
     if (options?.startTime) {
-      filtered = filtered.filter((m) => m.latencyMs > 0); // placeholder
+      const start = options.startTime.getTime();
+      filtered = filtered.filter((m) => (m.recordedAt ?? 0) >= start);
+    }
+    if (options?.endTime) {
+      const end = options.endTime.getTime();
+      filtered = filtered.filter((m) => (m.recordedAt ?? 0) <= end);
     }
     if (options?.model) {
       filtered = filtered.filter((m) => m.model === options.model);

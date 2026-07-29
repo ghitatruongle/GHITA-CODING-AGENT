@@ -35,7 +35,7 @@ export const ko: TranslationKeys = {
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v0.1.0',
+    version: 'v0.4.9',
     deviceReconnected: '기기에 다시 연결됨: {{name}}',
     devicePaired: '기기 페어링 성공: {{name}}',
     commandReceived: '기기로부터 명령 수신: {{action}}',
@@ -121,6 +121,11 @@ export const ko: TranslationKeys = {
       '"{{name}}" 파일에 저장되지 않은 변경사항이 있습니다. 닫고 변경사항을 삭제하시겠습니까?',
     binaryNotSupported: '텍스트 에디터에서 바이너리 파일 "{{name}}"을 직접 열 수 없습니다.',
     readFailed: '파일 읽기 실패: {{error}}',
+    aiProposedEdit: 'AI가 편집을 제안했습니다',
+    accept: '수락',
+    reject: '거부',
+    editApplied: '{{name}}에 편집 적용됨',
+    editRejected: '{{name}}의 편집 거부됨',
   },
   devices: {
     title: '연결된 기기',
@@ -379,6 +384,9 @@ export const ko: TranslationKeys = {
     newFolderPrompt: '새 폴더 이름 입력:',
     deleteConfirm: '"{{name}}"을(를) 영구적으로 삭제하시겠습니까?',
     delete: '삭제',
+    rename: '이름 바꾸기',
+    renamePrompt: '새 이름 입력:',
+    renameInvalid: '잘못된 이름: 비어 있거나 경로 구분자를 포함할 수 없습니다.',
   },
   apiManager: {
     title: 'API 키 구성',

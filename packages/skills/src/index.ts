@@ -332,6 +332,19 @@ export type {
   SkillRating,
 } from './marketplace/types.js';
 
+// --- v0.4.9 A10: Skill pack importer + Community Essentials pack ---
+export {
+  SkillPackImporter,
+  COMMUNITY_ESSENTIALS,
+  MIT_COMPATIBLE_LICENSES,
+} from './marketplace/skill-pack-importer.js';
+export type {
+  RawSkillEntry,
+  RawSkillPack,
+  SkippedSkill,
+  SkillPackImportResult,
+} from './marketplace/skill-pack-importer.js';
+
 // --- Phase 13: Tool Auto-Repair Gate ---
 export {
   ToolRepairGate,
@@ -408,3 +421,12 @@ export {
   type EventTrigger,
   type SystemEventType,
 } from './openclaw/trigger-engine.js';
+
+// --- Instinct Registry (v0.4.9 A4) ---
+export { InstinctRegistry, BUILTIN_INSTINCTS } from './instincts/index.js';
+export type {
+  Instinct,
+  InstinctTriggers,
+  InstinctContext,
+  FiredInstinct,
+} from './instincts/index.js';

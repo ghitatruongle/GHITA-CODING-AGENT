@@ -4,6 +4,11 @@
 
 import type { MemoryEntry, MemorySearchResult } from '@ghita/shared';
 import { RustMemoryAddon } from './semantic/rustAddon.js';
+import {
+  reinforceMetadata,
+  effectiveStrength,
+  type ReinforcementOptions,
+} from './reinforcement.js';
 
 export interface TieredMemoryStoreConfig {
   dbPath?: string;
@@ -269,6 +274,38 @@ export class TieredMemoryStore {
 
     this.promoteToTier1(entryCopy);
     return entryCopy;
+  }
+
+  /**
+   * v0.4.9 A9: Reinforce a memory (AgentMemory-style). Decays the current
+   * strength to now, then boosts it with diminishing returns, and records the
+   * reinforcement time. Returns the new effective strength, or undefined when
+   * the memory is not present in working memory.
+   */
+  reinforce(id: string, options?: ReinforcementOptions): number | undefined {
+    const entry = this.workingMemory.get(id);
+    if (!entry) return undefined;
+    const now = Date.now();
+    const metadata = reinforceMetadata(entry.metadata ?? {}, now, options);
+    this.workingMemory.set(id, { ...entry, metadata });
+    return metadata['_strength'] as number;
+  }
+
+  /**
+   * v0.4.9 A9: Read a memory's current strength decayed to now (0 when the
+   * memory has never been reinforced or is not in working memory).
+   */
+  getStrength(id: string, options?: ReinforcementOptions): number {
+    const entry = this.workingMemory.get(id);
+    if (!entry) return 0;
+    const metadata = entry.metadata ?? {};
+    const stored =
+      typeof metadata['_strength'] === 'number' ? (metadata['_strength'] as number) : 0;
+    const lastReinforced =
+      typeof metadata['_lastReinforced'] === 'number'
+        ? (metadata['_lastReinforced'] as number)
+        : entry.timestamp;
+    return effectiveStrength(stored, lastReinforced, Date.now(), options);
   }
 
   /**

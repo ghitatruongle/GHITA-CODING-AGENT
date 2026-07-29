@@ -1,6 +1,6 @@
 {
   "name": "@ghita/vscode-extension",
-  "version": "0.3.7",
+  "version": "0.4.9",
   "private": true,
   "description": "VS Code Sidecar Extension for GHITA CODING AGENT",
   "publisher": "ghita",

@@ -155,6 +155,11 @@ export default defineConfig({
           // Markdown rendering is heavy (react-markdown + rehype-sanitize + remark-gfm);
           // split it out so chat UI loads fast.
           'markdown-vendor': ['react-markdown', 'rehype-sanitize', 'remark-gfm'],
+          // v0.4.9 B1: Monaco editor and xterm are large, independently-loaded
+          // vendors. Splitting them keeps the initial app shell small so the
+          // Tauri WebView paints fast on Windows cold start.
+          'monaco-vendor': ['@monaco-editor/react'],
+          'xterm-vendor': ['@xterm/xterm', '@xterm/addon-fit'],
         },
       },
     },

@@ -35,7 +35,7 @@ export const en: TranslationKeys = {
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v0.1.0',
+    version: 'v0.4.9',
     deviceReconnected: 'Reconnected to device: {{name}}',
     devicePaired: 'Successfully paired device: {{name}}',
     commandReceived: 'Command received from device: {{action}}',
@@ -121,6 +121,11 @@ export const en: TranslationKeys = {
       'File "{{name}}" has unsaved changes. Are you sure you want to close and discard these changes?',
     binaryNotSupported: 'Binary file "{{name}}" is not supported directly in the text editor.',
     readFailed: 'Failed to read file: {{error}}',
+    aiProposedEdit: 'AI proposed an edit',
+    accept: 'Accept',
+    reject: 'Reject',
+    editApplied: 'Edit applied to {{name}}',
+    editRejected: 'Edit rejected for {{name}}',
   },
   devices: {
     title: 'Connected Devices',
@@ -382,6 +387,9 @@ export const en: TranslationKeys = {
     newFolderPrompt: 'Enter new folder name:',
     deleteConfirm: 'Are you sure you want to permanently delete "{{name}}"?',
     delete: 'Delete',
+    rename: 'Rename',
+    renamePrompt: 'Enter new name:',
+    renameInvalid: 'Invalid name: must not be empty or contain path separators.',
   },
   apiManager: {
     title: 'API Keys Configuration',

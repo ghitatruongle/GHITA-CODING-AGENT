@@ -171,6 +171,23 @@ updateTextVersion('snap/snapcraft.yaml', [
     label: 'snap version',
   },
 ]);
+updateTextVersion('apps/desktop/public/splash.html', [
+  {
+    pattern: /<div class="version">v([^<]+)<\/div>/,
+    replacement: TARGET,
+    label: 'splash html version',
+  },
+]);
+
+for (const lang of ['en', 'vi', 'zh', 'ja', 'ko', 'ru']) {
+  updateTextVersion(`apps/desktop/src/i18n/${lang}.ts`, [
+    {
+      pattern: /version:\s*'v([^']+)'/,
+      replacement: TARGET,
+      label: `${lang} i18n version`,
+    },
+  ]);
+}
 
 const versionConstantFiles = [];
 const packagesRoot = join(root, 'packages');

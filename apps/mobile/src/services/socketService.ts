@@ -113,9 +113,13 @@ export class SocketService {
     this.socket = io(serverAddress, {
       transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionAttempts: this.maxReconnectAttempts,
+      // v0.4.9 C1: reconnect indefinitely with exponential backoff + jitter so
+      // a transient network drop (walking out of Wi-Fi range) recovers on its
+      // own instead of giving up after a fixed number of tries.
+      reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 30000,
+      randomizationFactor: 0.5,
       timeout: 10000,
       forceNew: true,
       // C5: Send auth token in handshake (not in event payloads)

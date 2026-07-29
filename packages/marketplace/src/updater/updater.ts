@@ -12,6 +12,12 @@ import type {
   UpdateStatus,
 } from './types.js';
 
+/** Minimal fetch signature so the updater can be tested without a network. */
+export type FetchLike = (
+  url: string,
+  init?: { headers?: Record<string, string>; signal?: AbortSignal },
+) => Promise<{ ok: boolean; status: number; json: () => Promise<unknown> }>;
+
 /**
  * Auto-updater for marketplace plugins.
  * Checks for new versions, downloads patches, applies updates, and notifies listeners.
@@ -20,10 +26,17 @@ export class PluginUpdater {
   private jobs = new Map<string, UpdateJob>();
   private listeners = new Set<UpdateListener>();
   private cache = new Map<string, UpdateCheckResult>();
+  /** When each cache entry was stored (for TTL) — NOT the manifest releasedAt. */
+  private cacheTimestamps = new Map<string, number>();
   private readonly cacheTtlMs: number;
+  /** Base URL of the plugin registry. When unset, no update is ever reported. */
+  private readonly registryUrl?: string;
+  private readonly fetchImpl?: FetchLike;
 
-  constructor(opts: { cacheTtlMs?: number } = {}) {
+  constructor(opts: { cacheTtlMs?: number; registryUrl?: string; fetchImpl?: FetchLike } = {}) {
     this.cacheTtlMs = opts.cacheTtlMs ?? 5 * 60_000;
+    this.registryUrl = opts.registryUrl?.replace(/\/+$/, '');
+    this.fetchImpl = opts.fetchImpl;
   }
 
   /**
@@ -35,8 +48,9 @@ export class PluginUpdater {
   }
 
   /**
-   * Check whether an update is available for a plugin.
-   * Stub implementation; in production this would call a registry HTTP endpoint.
+   * Check whether an update is available for a plugin by querying the plugin
+   * registry over HTTP. When no registry is configured (or the request fails)
+   * the method reports "no update" rather than fabricating one.
    */
   async checkForUpdate(
     pluginId: string,
@@ -44,29 +58,74 @@ export class PluginUpdater {
     options: UpdateCheckOptions = {},
   ): Promise<UpdateCheckResult> {
     const cached = this.cache.get(pluginId);
-    if (cached && Date.now() - cached.releasedAt < this.cacheTtlMs) {
+    const cachedAt = this.cacheTimestamps.get(pluginId) ?? 0;
+    if (cached && Date.now() - cachedAt < this.cacheTtlMs) {
       return cached;
     }
 
-    // Simulated latest version (increment patch)
-    const latest = this.bumpVersion(currentVersion, 'patch');
+    const noUpdate: UpdateCheckResult = {
+      pluginId,
+      currentVersion,
+      latestVersion: currentVersion,
+      updateAvailable: false,
+      isMajor: false,
+      changelog: '',
+      releasedAt: Date.now(),
+      size: 0,
+    };
+
+    const fetchImpl = this.fetchImpl ?? (globalThis.fetch as FetchLike | undefined);
+    if (!this.registryUrl || !fetchImpl) {
+      // No registry wired — do not invent an update.
+      this.setCache(pluginId, noUpdate);
+      return noUpdate;
+    }
+
+    let manifest: {
+      version?: string;
+      changelog?: string;
+      size?: number;
+      releasedAt?: number;
+      prerelease?: boolean;
+    };
+    try {
+      const url = `${this.registryUrl}/plugins/${encodeURIComponent(pluginId)}/latest`;
+      const res = await fetchImpl(url, {
+        headers: { Accept: 'application/json' },
+        signal: AbortSignal.timeout?.(8000),
+      });
+      if (!res.ok) {
+        this.setCache(pluginId, noUpdate);
+        return noUpdate;
+      }
+      manifest = (await res.json()) as typeof manifest;
+    } catch {
+      // Network/parse failure — report no update instead of guessing.
+      this.setCache(pluginId, noUpdate);
+      return noUpdate;
+    }
+
+    const latest = typeof manifest.version === 'string' ? manifest.version : currentVersion;
+    const isNewer = this.compareVersions(latest, currentVersion) > 0;
+    const isMajor = this.getMajor(latest) > this.getMajor(currentVersion);
+
+    // Skip prereleases unless opted in; skip stable major bumps unless opted in.
+    const skip =
+      (manifest.prerelease === true && !options.includePrerelease) ||
+      (isMajor && !options.includeMajor);
 
     const result: UpdateCheckResult = {
       pluginId,
       currentVersion,
       latestVersion: latest,
-      updateAvailable: latest !== currentVersion,
-      isMajor: this.getMajor(latest) !== this.getMajor(currentVersion),
-      changelog: `Changes in ${latest}\n- Bug fixes\n- Performance improvements`,
-      releasedAt: Date.now(),
-      size: 1024 * 50,
+      updateAvailable: isNewer && !skip,
+      isMajor,
+      changelog: manifest.changelog ?? '',
+      releasedAt: typeof manifest.releasedAt === 'number' ? manifest.releasedAt : Date.now(),
+      size: typeof manifest.size === 'number' ? manifest.size : 0,
     };
 
-    if (!options.includePrerelease && result.isMajor) {
-      // skip major unless explicitly requested
-    }
-
-    this.cache.set(pluginId, result);
+    this.setCache(pluginId, result);
 
     if (result.updateAvailable) {
       this.notify({
@@ -197,11 +256,20 @@ export class PluginUpdater {
     }
   }
 
-  private bumpVersion(v: string, kind: 'major' | 'minor' | 'patch'): string {
-    const [M = 0, m = 0, p = 0] = v.split('.').map((n) => parseInt(n, 10) || 0);
-    if (kind === 'major') return `${M + 1}.0.0`;
-    if (kind === 'minor') return `${M}.${m + 1}.0`;
-    return `${M}.${m}.${p + 1}`;
+  /** Store a cache entry together with the wall-clock time it was cached. */
+  private setCache(pluginId: string, result: UpdateCheckResult): void {
+    this.cache.set(pluginId, result);
+    this.cacheTimestamps.set(pluginId, Date.now());
+  }
+
+  private compareVersions(a: string, b: string): number {
+    const pa = a.split('.').map((n) => parseInt(n, 10) || 0);
+    const pb = b.split('.').map((n) => parseInt(n, 10) || 0);
+    for (let i = 0; i < 3; i++) {
+      const diff = (pa[i] ?? 0) - (pb[i] ?? 0);
+      if (diff !== 0) return diff > 0 ? 1 : -1;
+    }
+    return 0;
   }
 
   private getMajor(v: string): number {
