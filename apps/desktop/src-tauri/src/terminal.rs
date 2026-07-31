@@ -133,7 +133,7 @@ impl TerminalManager {
 // ---------------------------------------------------------------------------
 
 /// Resolve shell binary name from a friendly shell type string.
-fn resolve_shell(shell_type: &str) -> String {
+pub(crate) fn resolve_shell(shell_type: &str) -> String {
     match shell_type {
         "powershell" | "pwsh" => "powershell.exe".to_string(),
         "cmd" => "cmd.exe".to_string(),
@@ -175,7 +175,11 @@ fn default_cwd(cwd: Option<String>) -> String {
     }
     std::env::var("USERPROFILE")
         .or_else(|_| std::env::var("HOME"))
-        .unwrap_or_else(|_| std::env::current_dir().map(|p| p.display().to_string()).unwrap_or_default())
+        .unwrap_or_else(|_| {
+            std::env::current_dir()
+                .map(|p| p.display().to_string())
+                .unwrap_or_default()
+        })
 }
 
 /// Filter out xterm.js focus events that are not real user input.
@@ -248,8 +252,7 @@ pub fn terminal_create(
     // (fixes the deadlock where kill_session() blocked on child.wait()
     // while the reader thread was waiting for the session lock to emit
     // the exit event).
-    let child_arc: Arc<Mutex<Box<dyn portable_pty::Child + Send>>> =
-        Arc::new(Mutex::new(child));
+    let child_arc: Arc<Mutex<Box<dyn portable_pty::Child + Send>>> = Arc::new(Mutex::new(child));
 
     // Increment generation counter so any lingering old reader thread for this
     // id detects that it is stale and stops emitting events.
@@ -259,15 +262,18 @@ pub fn terminal_create(
         *generation
     };
 
-    state.sessions.insert(id.clone(), Mutex::new(PtySession {
-        id: id.clone(),
-        shell: shell.clone(),
-        cwd: work_dir.clone(),
-        master,
-        child: child_arc.clone(),
-        writer,
-        generation: current_gen,
-    }));
+    state.sessions.insert(
+        id.clone(),
+        Mutex::new(PtySession {
+            id: id.clone(),
+            shell: shell.clone(),
+            cwd: work_dir.clone(),
+            master,
+            child: child_arc.clone(),
+            writer,
+            generation: current_gen,
+        }),
+    );
 
     // Clone Arc for the reader thread
     let generations = state.generations.clone();
@@ -323,23 +329,30 @@ pub fn terminal_create(
             // output. We now accumulate the raw bytes and only convert to
             // UTF-8 once at flush time, so partial sequences are stitched
             // together correctly.
-            let flush_buf = |buf: &mut Vec<u8>, app: &tauri::AppHandle, id: &str, is_current: bool| {
-                if buf.is_empty() || !is_current {
-                    buf.clear();
-                    return;
-                }
-                let raw = std::mem::take(buf);
-                // `from_utf8_lossy` on the full buffer still tolerates
-                // genuinely malformed bytes (replacement chars), but for
-                // the common case where the buffered bytes form a complete
-                // UTF-8 string we want zero overhead — try the strict
-                // conversion first.
-                let data = match std::str::from_utf8(&raw) {
-                    Ok(s) => s.to_string(),
-                    Err(_) => String::from_utf8_lossy(&raw).into_owned(),
+            let flush_buf =
+                |buf: &mut Vec<u8>, app: &tauri::AppHandle, id: &str, is_current: bool| {
+                    if buf.is_empty() || !is_current {
+                        buf.clear();
+                        return;
+                    }
+                    let raw = std::mem::take(buf);
+                    // `from_utf8_lossy` on the full buffer still tolerates
+                    // genuinely malformed bytes (replacement chars), but for
+                    // the common case where the buffered bytes form a complete
+                    // UTF-8 string we want zero overhead — try the strict
+                    // conversion first.
+                    let data = match std::str::from_utf8(&raw) {
+                        Ok(s) => s.to_string(),
+                        Err(_) => String::from_utf8_lossy(&raw).into_owned(),
+                    };
+                    let _ = app.emit(
+                        "terminal-data",
+                        TerminalDataPayload {
+                            id: id.to_string(),
+                            data,
+                        },
+                    );
                 };
-                let _ = app.emit("terminal-data", TerminalDataPayload { id: id.to_string(), data });
-            };
 
             loop {
                 match reader.read(&mut buf) {
@@ -434,9 +447,7 @@ pub fn terminal_write(
         s.writer
             .write_all(data.as_bytes())
             .map_err(|e| format!("Write failed: {e}"))?;
-        s.writer
-            .flush()
-            .map_err(|e| format!("Flush failed: {e}"))?;
+        s.writer.flush().map_err(|e| format!("Flush failed: {e}"))?;
         Ok(())
     } else {
         Err(format!("Terminal session '{id}' not found"))
@@ -468,18 +479,13 @@ pub fn terminal_resize(
 }
 
 #[tauri::command]
-pub fn terminal_kill(
-    id: String,
-    state: tauri::State<'_, TerminalManager>,
-) -> Result<(), String> {
+pub fn terminal_kill(id: String, state: tauri::State<'_, TerminalManager>) -> Result<(), String> {
     state.kill_session(&id);
     Ok(())
 }
 
 #[tauri::command]
-pub fn terminal_list(
-    state: tauri::State<'_, TerminalManager>,
-) -> Vec<TerminalSessionInfo> {
+pub fn terminal_list(state: tauri::State<'_, TerminalManager>) -> Vec<TerminalSessionInfo> {
     state
         .sessions
         .iter()
@@ -563,13 +569,19 @@ mod tests {
 
     #[test]
     fn test_default_cwd_with_value() {
-        assert_eq!(default_cwd(Some("C:\\Users\\Test".into())), "C:\\Users\\Test");
+        assert_eq!(
+            default_cwd(Some("C:\\Users\\Test".into())),
+            "C:\\Users\\Test"
+        );
     }
 
     #[test]
     fn test_default_cwd_empty_falls_back() {
         let result = default_cwd(Some("".into()));
-        assert!(!result.is_empty(), "should fallback to env var or current_dir");
+        assert!(
+            !result.is_empty(),
+            "should fallback to env var or current_dir"
+        );
     }
 
     #[test]
@@ -610,7 +622,8 @@ mod tests {
             id: "term_abc".into(),
             exit_code: Some(0),
         };
-        let json = serde_json::to_string(&payload).expect("failed to serialize TerminalExitPayload");
+        let json =
+            serde_json::to_string(&payload).expect("failed to serialize TerminalExitPayload");
         assert!(json.contains("exitCode"));
         assert!(json.contains("term_abc"));
     }
@@ -621,7 +634,8 @@ mod tests {
             id: "term_1".into(),
             data: "hello\r\n".into(),
         };
-        let json = serde_json::to_string(&payload).expect("failed to serialize TerminalDataPayload");
+        let json =
+            serde_json::to_string(&payload).expect("failed to serialize TerminalDataPayload");
         assert!(json.contains("term_1"));
         assert!(json.contains("hello"));
     }
@@ -631,7 +645,12 @@ mod tests {
     fn test_pty_spawn_and_kill() {
         let pty_system = portable_pty::native_pty_system();
         let pair = pty_system
-            .openpty(PtySize { cols: 80, rows: 24, pixel_width: 0, pixel_height: 0 })
+            .openpty(PtySize {
+                cols: 80,
+                rows: 24,
+                pixel_width: 0,
+                pixel_height: 0,
+            })
             .expect("openpty");
 
         let shell = if cfg!(target_os = "windows") {

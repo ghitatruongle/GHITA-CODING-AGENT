@@ -57,11 +57,27 @@ export interface AIProvider {
 }
 
 // --- Chat Types ---
-export type ChatRole = 'user' | 'assistant' | 'system';
+export type ChatRole = 'user' | 'assistant' | 'system' | 'tool';
+
+export interface ChatToolCall {
+  id?: string;
+  name: string;
+  arguments: Record<string, unknown>;
+}
+
+export interface ChatToolDefinition {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
+}
 
 export interface ChatMessage {
   role: ChatRole;
   content: string;
+  /** Required for a `tool` role message. */
+  toolCallId?: string;
+  /** Provider-native calls produced by an assistant message. */
+  toolCalls?: ChatToolCall[];
 }
 
 export interface ChatOptions {
@@ -72,6 +88,8 @@ export interface ChatOptions {
   stop?: string[];
   signal?: AbortSignal;
   agentRole?: 'Explore' | 'Plan' | 'UI' | 'default';
+  tools?: ChatToolDefinition[];
+  toolChoice?: 'auto' | 'none' | 'required';
 }
 
 export interface ChatResponse {
@@ -80,6 +98,8 @@ export interface ChatResponse {
   provider: AIProviderType;
   usage: TokenUsage;
   finishReason: 'stop' | 'length' | 'error' | 'aborted';
+  /** Provider-native function calls, normalized by the runtime before agent execution. */
+  toolCalls?: ChatToolCall[];
 }
 
 export interface TokenUsage {

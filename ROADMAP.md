@@ -1,23 +1,26 @@
 # 🗺️ GHITA CODING AGENT — Public Roadmap
 
-> **Current version:** v0.3.6-dev
-> **Last updated:** 2026-07-28
+> **Current version:** v0.6.0-dev
+> **Last updated:** 2026-07-30
 
 ---
 
-## In progress — v0.3.6 Production Hardening
+## In progress — v0.6.0 Durable Agent Runtime
 
-This release is intentionally focused on trust rather than feature count:
+This release turns the existing capability modules into one governed, resumable
+coding-agent runtime:
 
-- One canonical version across JavaScript, Rust, Android, iOS and packaging manifests.
-- Blocking CI for integrity, tests, documentation, security and release artifacts.
-- Reproducible desktop and mobile builds from frozen lockfiles.
-- Authenticated and bounded AI gateway endpoints.
-- Real Discord, Slack and Telegram gateway lifecycles.
-- Dependency and command-execution hardening.
+- Native provider tool calls are normalized into a common ReAct loop.
+- Every real tool call is checked by deny-default governance at the execution boundary.
+- Agent runs are journaled atomically and can resume from a checkpoint with replay confirmation.
+- Code graph, repository map, browser skills, and workspace memory are available as governed tools.
+- Desktop and mobile pairing use separate authentication paths with hashed device credentials.
+- API keys live in the operating-system credential vault instead of plaintext configuration.
+- Rust formatting/tests and desktop packaging are blocking release gates.
 
 The release remains `-dev` until every gate in
-[`docs/release-plan-v0.3.6.md`](docs/release-plan-v0.3.6.md) passes on a clean clone.
+[`docs/release-plan-v0.6.0.md`](docs/release-plan-v0.6.0.md) passes on a clean clone
+and the cross-platform artifacts are produced by CI.
 
 ---
 

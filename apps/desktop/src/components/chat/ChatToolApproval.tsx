@@ -4,26 +4,36 @@
 // ==============================================================================
 
 import React from 'react';
-import type { ToolApprovalRequest, FileApprovalRequest } from './useChatSocket';
+import type {
+  ToolApprovalRequest,
+  FileApprovalRequest,
+  ResumeApprovalRequest,
+} from './useChatSocket';
 
 interface ChatToolApprovalProps {
   t: (key: string, params?: Record<string, string | number>) => string;
   approvalRequest: ToolApprovalRequest | null;
   fileApprovalRequest: FileApprovalRequest | null;
+  resumeApprovalRequest: ResumeApprovalRequest | null;
   onApproveTool: () => void;
   onRejectTool: () => void;
   onApproveFileWrite: () => void;
   onRejectFileWrite: () => void;
+  onConfirmResume: () => void;
+  onRejectResume: () => void;
 }
 
 export function ChatToolApproval({
   t,
   approvalRequest,
   fileApprovalRequest,
+  resumeApprovalRequest,
   onApproveTool,
   onRejectTool,
   onApproveFileWrite,
   onRejectFileWrite,
+  onConfirmResume,
+  onRejectResume,
 }: ChatToolApprovalProps) {
   const overlayStyle: React.CSSProperties = {
     position: 'absolute',
@@ -47,6 +57,10 @@ export function ChatToolApproval({
       {approvalRequest && (
         <div style={overlayStyle}>
           <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="tool-approval-title"
+            aria-describedby="tool-approval-description"
             style={{
               width: '100%',
               maxWidth: '300px',
@@ -63,13 +77,22 @@ export function ChatToolApproval({
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '20px' }}>⚠️</span>
               <span
-                style={{ fontWeight: 700, fontSize: '13px', color: '#f43f5e', letterSpacing: '1px' }}
+                id="tool-approval-title"
+                style={{
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  color: '#f43f5e',
+                  letterSpacing: '1px',
+                }}
               >
                 {t('chat.approveTool')}
               </span>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div
+              id="tool-approval-description"
+              style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}
+            >
               <span style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>
                 {t('chat.toolName')}
               </span>
@@ -126,6 +149,7 @@ export function ChatToolApproval({
 
             <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
               <button
+                type="button"
                 onClick={onRejectTool}
                 style={{
                   flex: 1,
@@ -143,6 +167,7 @@ export function ChatToolApproval({
                 {t('chat.reject')}
               </button>
               <button
+                type="button"
                 onClick={onApproveTool}
                 style={{
                   flex: 1,
@@ -169,6 +194,10 @@ export function ChatToolApproval({
       {fileApprovalRequest && (
         <div style={overlayStyle}>
           <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="file-approval-title"
+            aria-describedby="file-approval-description"
             style={{
               width: '100%',
               maxWidth: '300px',
@@ -187,13 +216,22 @@ export function ChatToolApproval({
                 {fileApprovalRequest.operation === 'write' ? '📝' : '✏️'}
               </span>
               <span
-                style={{ fontWeight: 700, fontSize: '13px', color: '#3b82f6', letterSpacing: '1px' }}
+                id="file-approval-title"
+                style={{
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  color: '#3b82f6',
+                  letterSpacing: '1px',
+                }}
               >
                 {fileApprovalRequest.operation === 'write' ? 'TẠO FILE MỚI' : 'SỬA FILE'}
               </span>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div
+              id="file-approval-description"
+              style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}
+            >
               <span style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>
                 File
               </span>
@@ -211,6 +249,7 @@ export function ChatToolApproval({
 
             <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
               <button
+                type="button"
                 onClick={onRejectFileWrite}
                 style={{
                   flex: 1,
@@ -228,6 +267,7 @@ export function ChatToolApproval({
                 {t('chat.reject')}
               </button>
               <button
+                type="button"
                 onClick={onApproveFileWrite}
                 style={{
                   flex: 1,
@@ -244,6 +284,87 @@ export function ChatToolApproval({
                 }}
               >
                 {t('chat.approve')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {resumeApprovalRequest && (
+        <div style={overlayStyle}>
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="resume-agent-title"
+            aria-describedby="resume-agent-description"
+            style={{
+              width: '100%',
+              maxWidth: '340px',
+              background: 'rgba(30, 41, 59, 0.95)',
+              border: '1px solid rgba(245, 158, 11, 0.4)',
+              boxShadow: '0 8px 32px rgba(245, 158, 11, 0.2)',
+              borderRadius: '16px',
+              padding: '20px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+            }}
+          >
+            <div id="resume-agent-title" style={{ color: '#fbbf24', fontWeight: 700 }}>
+              Khôi phục tác vụ agent?
+            </div>
+            <div
+              id="resume-agent-description"
+              style={{ color: '#cbd5e1', fontSize: '12px', lineHeight: 1.6 }}
+            >
+              Tác vụ <code>{resumeApprovalRequest.runId}</code> dừng khi còn thao tác chờ. Chỉ tiếp
+              tục nếu bạn chấp nhận các tool có thể được chạy lại.
+            </div>
+            <div
+              style={{
+                background: 'rgba(15, 23, 42, 0.65)',
+                borderRadius: '8px',
+                padding: '10px',
+                fontSize: '12px',
+                color: '#f8fafc',
+                fontFamily: 'var(--font-mono)',
+              }}
+            >
+              {resumeApprovalRequest.pendingTools.length > 0
+                ? resumeApprovalRequest.pendingTools.join(', ')
+                : 'Không xác định'}
+            </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={onRejectResume}
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  background: 'rgba(15, 23, 42, 0.5)',
+                  color: '#cbd5e1',
+                  cursor: 'pointer',
+                }}
+              >
+                Giữ trạng thái dừng
+              </button>
+              <button
+                type="button"
+                onClick={onConfirmResume}
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                  color: '#fff',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Xác nhận chạy lại
               </button>
             </div>
           </div>

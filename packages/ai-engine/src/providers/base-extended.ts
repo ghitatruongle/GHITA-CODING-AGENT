@@ -7,6 +7,12 @@
 import type { AIProviderType, AIStreamChunk } from '@ghita/shared';
 import type { ProviderConfig, ChatMessage, ChatOptions, ChatResponse } from '../types.js';
 import type { ProviderCapabilities, LLMProvider } from './types.js';
+import {
+  extractOpenAIToolCalls,
+  OpenAIStreamToolAccumulator,
+  openAIToolFields,
+  toOpenAIChatMessages,
+} from './openai-tool-calling.js';
 
 // Import BaseProvider qua dynamic để tránh circular
 type BaseProviderClass = abstract new (config: ProviderConfig) => LLMProvider;
@@ -65,7 +71,8 @@ export function defineVendor(
         ? spec.transformRequest(messages, options)
         : {
             model,
-            messages: messages.map((m) => ({ role: m.role, content: m.content })),
+            messages: toOpenAIChatMessages(messages),
+            ...openAIToolFields(options),
             max_tokens: (
               this as unknown as { getMaxTokens: (o?: ChatOptions) => number }
             ).getMaxTokens(options),
@@ -131,7 +138,8 @@ export function defineVendor(
       const body = {
         ...baseBody,
         model,
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
+        messages: toOpenAIChatMessages(messages),
+        ...openAIToolFields(options),
         max_tokens: (this as unknown as { getMaxTokens: (o?: ChatOptions) => number }).getMaxTokens(
           options,
         ),
@@ -174,11 +182,18 @@ export function defineVendor(
       if (!reader) throw new Error('No response body');
       const decoder = new TextDecoder();
       let buffer = '';
+      const toolAccumulator = new OpenAIStreamToolAccumulator();
       try {
         while (true) {
           const { done, value } = await reader.read();
           if (done) {
-            yield { content: '', done: true, provider: spec.type, model };
+            yield {
+              content: '',
+              done: true,
+              provider: spec.type,
+              model,
+              toolCalls: toolAccumulator.complete(),
+            };
             return;
           }
           buffer += decoder.decode(value, { stream: true });
@@ -189,14 +204,27 @@ export function defineVendor(
             if (!trimmed || !trimmed.startsWith('data: ')) continue;
             const data = trimmed.slice(6);
             if (data === '[DONE]') {
-              yield { content: '', done: true, provider: spec.type, model };
+              yield {
+                content: '',
+                done: true,
+                provider: spec.type,
+                model,
+                toolCalls: toolAccumulator.complete(),
+              };
               return;
             }
             try {
               const parsed = JSON.parse(data) as {
-                choices: Array<{ delta: { content?: string } }>;
+                choices: Array<{
+                  delta: {
+                    content?: string;
+                    tool_calls?: Parameters<OpenAIStreamToolAccumulator['append']>[0];
+                  };
+                }>;
               };
-              const content = parsed.choices[0]?.delta?.content;
+              const delta = parsed.choices[0]?.delta;
+              toolAccumulator.append(delta?.tool_calls);
+              const content = delta?.content;
               if (content) yield { content, done: false, provider: spec.type, model };
             } catch {
               /* skip */
@@ -221,7 +249,16 @@ export function defineVendor(
 
     private defaultTransformResponse(data: unknown, model: string): ChatResponse {
       const d = data as {
-        choices: Array<{ message: { content: string }; finish_reason: string }>;
+        choices: Array<{
+          message: {
+            content: string | null;
+            tool_calls?: Array<{
+              id?: string;
+              function?: { name?: string; arguments?: string };
+            }>;
+          };
+          finish_reason: string;
+        }>;
         usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
         model?: string;
       };
@@ -229,6 +266,7 @@ export function defineVendor(
         content: d.choices[0]?.message?.content ?? '',
         model: d.model ?? model,
         provider: spec.type,
+        toolCalls: extractOpenAIToolCalls(d.choices[0]?.message?.tool_calls),
         usage: {
           promptTokens: d.usage?.prompt_tokens ?? 0,
           completionTokens: d.usage?.completion_tokens ?? 0,

@@ -1,14 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const executeMock = vi.fn();
+const invokeMock = vi.fn();
 const scanCommandMock = vi.fn();
 
-vi.mock('@tauri-apps/plugin-shell', () => ({
-  Command: {
-    create: vi.fn(() => ({
-      execute: executeMock,
-    })),
-  },
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: invokeMock,
 }));
 
 vi.mock('@ghita/ai-engine', () => ({
@@ -19,7 +15,7 @@ vi.mock('@ghita/ai-engine', () => ({
 
 describe('shell security', () => {
   beforeEach(() => {
-    executeMock.mockReset();
+    invokeMock.mockReset();
     scanCommandMock.mockReset();
   });
 
@@ -32,15 +28,16 @@ describe('shell security', () => {
 
     expect(result.success).toBe(false);
     expect(result.stderr).toContain('rm -rf');
-    expect(executeMock).not.toHaveBeenCalled();
+    expect(invokeMock).not.toHaveBeenCalled();
   });
 
   it('executes safe commands normally', async () => {
     scanCommandMock.mockReturnValue({ safe: true });
-    executeMock.mockResolvedValue({
+    invokeMock.mockResolvedValue({
       stdout: 'ok',
       stderr: '',
       code: 0,
+      success: true,
     });
 
     const { executeShellCommand } = await import('./shell');
@@ -48,6 +45,23 @@ describe('shell security', () => {
 
     expect(result.success).toBe(true);
     expect(result.stdout).toBe('ok');
-    expect(executeMock).toHaveBeenCalledTimes(1);
+    expect(invokeMock).toHaveBeenCalledWith('execute_approved_command', {
+      command: 'echo ok',
+      shell: 'cmd',
+      cwd: undefined,
+      timeoutMs: 120_000,
+    });
+  });
+
+  it('forwards a caller-provided native timeout', async () => {
+    invokeMock.mockResolvedValue({ stdout: '', stderr: '', code: 0, success: true });
+
+    const { executeShellCommand } = await import('./shell');
+    await executeShellCommand('pnpm test', 'cmd', 'D:\\workspace', 30_000);
+
+    expect(invokeMock).toHaveBeenCalledWith(
+      'execute_approved_command',
+      expect.objectContaining({ timeoutMs: 30_000 }),
+    );
   });
 });

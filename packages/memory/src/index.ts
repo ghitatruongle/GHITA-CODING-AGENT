@@ -45,7 +45,7 @@ export type {
   GuardrailConfig,
 } from './guardrail/types.js';
 
-export const MEMORY_VERSION = '0.4.9';
+export const MEMORY_VERSION = '0.6.0';
 
 export interface RememberInput {
   type: MemoryEntry['type'];
@@ -170,6 +170,10 @@ export class AgentMemory {
 
   toJSON(): MemoryEntry[] {
     return this.list();
+  }
+
+  close(): void {
+    this.tieredStore.close();
   }
 
   static fromJSON(entries: MemoryEntry[]): AgentMemory {

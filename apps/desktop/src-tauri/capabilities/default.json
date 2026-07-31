@@ -5,37 +5,6 @@
   "windows": ["main", "splash"],
   "permissions": [
     "core:default",
-    {
-      "identifier": "shell:allow-execute",
-      "allow": [
-        {
-          "name": "cmd",
-          "cmd": "cmd",
-          "args": true
-        },
-        {
-          "name": "powershell",
-          "cmd": "powershell",
-          "args": true
-        },
-        {
-          "name": "bash",
-          "cmd": "bash",
-          "args": true
-        },
-        {
-          "name": "sh",
-          "cmd": "sh",
-          "args": true
-        },
-        {
-          "name": "zsh",
-          "cmd": "zsh",
-          "args": true
-        }
-      ]
-    },
-    "shell:allow-open",
     "updater:default",
     "dialog:allow-open",
     "fs:allow-read-file",
@@ -52,7 +21,9 @@
       "allow": [
         { "path": "$APPDATA/ghita/**" },
         { "path": "$DOCUMENT/ghita-workspace/**" },
-        { "path": "**" }
+        { "path": "$DOCUMENT/**" },
+        { "path": "$DESKTOP/**" },
+        { "path": "$DOWNLOAD/**" }
       ]
     }
   ]

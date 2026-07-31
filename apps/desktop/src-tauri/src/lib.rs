@@ -1,13 +1,16 @@
-use tauri::{Emitter, Listener, Manager};
-use tauri_plugin_updater::UpdaterExt;
 use std::fs;
 use std::path::PathBuf;
+use std::process::Stdio;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::time::Duration;
+use tauri::{Emitter, Listener, Manager};
+use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+use tauri_plugin_updater::UpdaterExt;
 use tokio::sync::RwLock;
 
 mod proxy;
-use proxy::{ProxyState, start_proxy_server, stop_proxy_server, get_proxy_port};
+use proxy::{get_proxy_port, start_proxy_server, stop_proxy_server, ProxyState};
 
 mod computer_use;
 use computer_use::ComputerUseState;
@@ -29,9 +32,131 @@ struct SecurityState {
     session_token: String,
 }
 
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ApprovedCommandResult {
+    stdout: String,
+    stderr: String,
+    code: Option<i32>,
+    success: bool,
+}
+
+pub fn command_is_blocked(command: &str) -> bool {
+    let normalized = command.to_ascii_lowercase();
+    let compact = normalized.split_whitespace().collect::<Vec<_>>().join(" ");
+    compact.contains("rm -rf /")
+        || compact.contains("rm -rf ~")
+        || compact.contains("format c:")
+        || compact.contains("format.com c:")
+        || compact.contains("mkfs.")
+        || compact.contains("dd if=")
+        || compact.contains(":(){ :|:& };:")
+        || compact.contains("shutdown ")
+        || compact.contains("reboot")
+        || compact.contains("remove-item c:\\ -recurse")
+        || compact.contains("remove-item -recurse c:\\")
+}
+
+pub fn clamp_command_timeout(timeout_ms: Option<u64>) -> u64 {
+    timeout_ms.unwrap_or(120_000).clamp(1_000, 300_000)
+}
+
+#[tauri::command]
+async fn execute_approved_command(
+    app: tauri::AppHandle,
+    command: String,
+    shell: String,
+    cwd: Option<String>,
+    timeout_ms: Option<u64>,
+) -> Result<ApprovedCommandResult, String> {
+    if command.trim().is_empty() || command.len() > 16_384 {
+        return Err("Command is empty or exceeds the 16 KiB safety limit.".to_string());
+    }
+    if command_is_blocked(&command) {
+        return Err("Command blocked by the native security policy.".to_string());
+    }
+
+    // Renderer state is not a trust boundary. Always obtain approval from a
+    // native dialog instead of accepting a caller-controlled boolean over IPC.
+    let command_preview = if command.chars().count() > 2_000 {
+        format!("{}…", command.chars().take(2_000).collect::<String>())
+    } else {
+        command.clone()
+    };
+    let approved = app
+        .dialog()
+        .message(format!(
+            "Allow GHITA to execute this command?\n\n{command_preview}"
+        ))
+        .title("Approve terminal command")
+        .kind(MessageDialogKind::Warning)
+        .buttons(MessageDialogButtons::OkCancel)
+        .blocking_show();
+    if !approved {
+        return Err("Explicit user approval is required.".to_string());
+    }
+
+    let (program, args): (&str, Vec<&str>) = if cfg!(target_os = "windows") {
+        match shell.as_str() {
+            "powershell" | "bash" | "sh" => (
+                "powershell.exe",
+                vec![
+                    "-NoProfile",
+                    "-NonInteractive",
+                    "-Command",
+                    command.as_str(),
+                ],
+            ),
+            "cmd" => ("cmd.exe", vec!["/d", "/s", "/c", command.as_str()]),
+            _ => return Err("Unsupported shell.".to_string()),
+        }
+    } else {
+        match shell.as_str() {
+            "bash" => ("bash", vec!["-c", command.as_str()]),
+            "sh" | "cmd" | "powershell" => ("sh", vec!["-c", command.as_str()]),
+            _ => return Err("Unsupported shell.".to_string()),
+        }
+    };
+
+    let mut process = tokio::process::Command::new(program);
+    process
+        .args(args)
+        .kill_on_drop(true)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    if let Some(cwd) = cwd {
+        let directory = std::path::PathBuf::from(cwd);
+        if !directory.is_dir() {
+            return Err("Working directory does not exist or is not a directory.".to_string());
+        }
+        process.current_dir(directory);
+    }
+
+    let timeout_ms = clamp_command_timeout(timeout_ms);
+    let output = tokio::time::timeout(Duration::from_millis(timeout_ms), process.output())
+        .await
+        .map_err(|_| format!("Approved command timed out after {timeout_ms} ms."))?
+        .map_err(|e| format!("Failed to execute approved command: {e}"))?;
+
+    Ok(ApprovedCommandResult {
+        stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
+        stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
+        code: output.status.code(),
+        success: output.status.success(),
+    })
+}
+
 #[tauri::command]
 fn get_session_token(state: tauri::State<'_, SecurityState>) -> String {
     state.session_token.clone()
+}
+
+pub fn generate_session_token() -> String {
+    use rand::Rng;
+    let mut rng = rand::thread_rng();
+    let r1: u64 = rng.gen();
+    let r2: u64 = rng.gen();
+    format!("{:016x}{:016x}", r1, r2)
 }
 
 /// Pick the first free TCP port in the range [preferred, preferred + 32).
@@ -44,7 +169,7 @@ fn get_session_token(state: tauri::State<'_, SecurityState>) -> String {
 /// ports starting at the configured base and pick the first one
 /// `bind()` succeeds on. If none are free we return an error rather
 /// than crashing.
-fn find_free_port(preferred: u16) -> std::io::Result<u16> {
+pub fn find_free_port(preferred: u16) -> std::io::Result<u16> {
     for offset in 0u16..32 {
         let candidate = preferred.saturating_add(offset);
         if std::net::TcpListener::bind(("127.0.0.1", candidate)).is_ok() {
@@ -89,7 +214,11 @@ fn verify_bundled_node(node_path: &std::path::Path) -> NodeIntegrity {
         Ok(text) => text,
         Err(_) => return NodeIntegrity::NoManifest,
     };
-    let expected_hex = expected.split_whitespace().next().unwrap_or("").to_lowercase();
+    let expected_hex = expected
+        .split_whitespace()
+        .next()
+        .unwrap_or("")
+        .to_lowercase();
     if expected_hex.len() != 64 {
         return NodeIntegrity::NoManifest;
     }
@@ -261,7 +390,7 @@ async fn start_server(
         let lan_enabled = fs::read_to_string(&lan_config_path).unwrap_or_default().trim() == "true";
 
         let child = std::process::Command::new(node_command)
-            .arg(&server_script)
+            .arg(server_script)
             .env("GHITA_PORT", port.to_string())
             .env("GHITA_DATA_DIR", &data_dir)
             .env("GHITA_LAN_ENABLED", if lan_enabled { "1" } else { "0" })
@@ -297,19 +426,16 @@ async fn start_server(
         std::thread::spawn(move || {
             use std::io::{BufRead, BufReader};
             let reader = BufReader::new(stdout);
-            for line in reader.lines() {
-                if let Ok(line_str) = line {
-                    if line_str.starts_with("__GHITA_IPC__:") {
-                        let payload = &line_str["__GHITA_IPC__:".len()..];
-                        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(payload) {
-                            let _ = app_handle.emit("sidecar-event", parsed);
-                        } else {
-                            eprintln!("[sidecar] malformed IPC payload: {}", payload);
-                        }
+            for line_str in reader.lines().map_while(Result::ok) {
+                if let Some(payload) = line_str.strip_prefix("__GHITA_IPC__:") {
+                    if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(payload) {
+                        let _ = app_handle.emit("sidecar-event", parsed);
                     } else {
-                        // Print ordinary log to console
-                        println!("{}", line_str);
+                        eprintln!("[sidecar] malformed IPC payload: {}", payload);
                     }
+                } else {
+                    // Print ordinary log to console
+                    println!("{}", line_str);
                 }
             }
         });
@@ -356,7 +482,9 @@ fn get_local_ips() -> Vec<String> {
 }
 
 #[tauri::command]
-async fn get_server_status(state: tauri::State<'_, Mutex<ServerState>>) -> Result<serde_json::Value, String> {
+async fn get_server_status(
+    state: tauri::State<'_, Mutex<ServerState>>,
+) -> Result<serde_json::Value, String> {
     let (running, port, client) = {
         let mut s = state.lock().map_err(|e| e.to_string())?;
         // Check if the process has exited
@@ -462,7 +590,7 @@ fn run_grill_session(docs_path: String) -> Result<GrillSession, String> {
                 let p = entry.path();
                 if p.is_dir() {
                     count_md(&p, count);
-                } else if p.extension().map_or(false, |e| e == "md" || e == "mdx") {
+                } else if p.extension().is_some_and(|e| e == "md" || e == "mdx") {
                     *count += 1;
                 }
             }
@@ -479,7 +607,7 @@ fn run_grill_session(docs_path: String) -> Result<GrillSession, String> {
     Ok(GrillSession {
         id: session_id,
         timestamp: chrono::Utc::now().to_rfc3339(),
-        docs_path: docs_path,
+        docs_path,
         docs_scanned,
         questions: Vec::new(),
         contradictions: Vec::new(),
@@ -498,26 +626,58 @@ fn api_config_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     app_storage_path(app, "api-config.json")
 }
 
+fn api_config_keyring_entry() -> Result<keyring::Entry, String> {
+    keyring::Entry::new("com.ghita.coding-agent", "api-config")
+        .map_err(|e| format!("Failed to open the operating-system credential vault: {e}"))
+}
+
 fn chat_sessions_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     app_storage_path(app, "chat-sessions.json")
 }
 
 #[tauri::command]
 fn load_api_config(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
-    let path = api_config_path(&app)?;
-    if !path.exists() {
-        return Ok(serde_json::json!({}));
+    let entry = api_config_keyring_entry()?;
+    match entry.get_password() {
+        Ok(content) => return serde_json::from_str(&content).map_err(|e| e.to_string()),
+        Err(keyring::Error::NoEntry) => {}
+        Err(e) => {
+            return Err(format!(
+                "Failed to read API keys from the credential vault: {e}"
+            ))
+        }
     }
 
-    let content = fs::read_to_string(path).map_err(|e| e.to_string())?;
-    serde_json::from_str(&content).map_err(|e| e.to_string())
+    // One-time migration from versions <=0.4.9. The legacy plaintext file is
+    // removed only after the credential vault confirms the write.
+    let legacy_path = api_config_path(&app)?;
+    if !legacy_path.exists() {
+        return Ok(serde_json::json!({}));
+    }
+    let content = fs::read_to_string(&legacy_path).map_err(|e| e.to_string())?;
+    let parsed = serde_json::from_str::<serde_json::Value>(&content).map_err(|e| e.to_string())?;
+    entry
+        .set_password(&content)
+        .map_err(|e| format!("Failed to migrate API keys to the credential vault: {e}"))?;
+    fs::remove_file(&legacy_path)
+        .map_err(|e| format!("API keys migrated, but the legacy file could not be removed: {e}"))?;
+    Ok(parsed)
 }
 
 #[tauri::command]
 fn save_api_config(app: tauri::AppHandle, config: serde_json::Value) -> Result<(), String> {
-    let path = api_config_path(&app)?;
-    let content = serde_json::to_string_pretty(&config).map_err(|e| e.to_string())?;
-    fs::write(path, content).map_err(|e| e.to_string())
+    let content = serde_json::to_string(&config).map_err(|e| e.to_string())?;
+    api_config_keyring_entry()?
+        .set_password(&content)
+        .map_err(|e| format!("Failed to store API keys in the credential vault: {e}"))?;
+
+    let legacy_path = api_config_path(&app)?;
+    if legacy_path.exists() {
+        fs::remove_file(legacy_path).map_err(|e| {
+            format!("API keys saved, but the legacy file could not be removed: {e}")
+        })?;
+    }
+    Ok(())
 }
 
 #[tauri::command]
@@ -575,14 +735,14 @@ async fn start_proxy(
     }
 
     start_proxy_server(port, target_url, state.inner().clone()).await?;
-    let actual_port = get_proxy_port(state.inner()).await.ok_or("Proxy started but port unknown")?;
+    let actual_port = get_proxy_port(state.inner())
+        .await
+        .ok_or("Proxy started but port unknown")?;
     Ok(actual_port)
 }
 
 #[tauri::command]
-async fn stop_proxy(
-    state: tauri::State<'_, Arc<RwLock<ProxyState>>>,
-) -> Result<(), String> {
+async fn stop_proxy(state: tauri::State<'_, Arc<RwLock<ProxyState>>>) -> Result<(), String> {
     stop_proxy_server(state.inner().clone()).await
 }
 
@@ -599,6 +759,10 @@ async fn get_proxy_status(
 
 #[tauri::command]
 fn get_proxy_url(port: u16, path: String) -> Result<String, String> {
+    build_proxy_url(port, &path)
+}
+
+pub fn build_proxy_url(port: u16, path: &str) -> Result<String, String> {
     // Sanitize path to prevent URL injection.
     // The previous implementation only checked for `@`, `://`, and `\\`,
     // which let percent-encoded sequences (e.g. `..%2F..%2Fetc%2Fpasswd`)
@@ -607,7 +771,9 @@ fn get_proxy_url(port: u16, path: String) -> Result<String, String> {
     //   2. It does not contain `..` (parent-directory escape)
     //   3. It does not contain `@` (userinfo injection) or `\\` (Windows UNC)
     let trimmed = path.trim_start_matches('/');
-    let decoded = percent_encoding::percent_decode_str(trimmed).decode_utf8_lossy().into_owned();
+    let decoded = percent_encoding::percent_decode_str(trimmed)
+        .decode_utf8_lossy()
+        .into_owned();
     if decoded.contains("://")
         || decoded.contains('@')
         || decoded.contains('\\')
@@ -618,6 +784,10 @@ fn get_proxy_url(port: u16, path: String) -> Result<String, String> {
     // Preserve the originally-provided form (still safe) so the URL works
     // with whatever casing/encoding the caller used.
     Ok(format!("http://127.0.0.1:{}/{}", port, trimmed))
+}
+
+pub fn resolve_shell_for_platform(shell_type: &str) -> String {
+    terminal::resolve_shell(shell_type)
 }
 
 // Sandbox commands — not yet implemented (Docker integration planned for v2.0)
@@ -675,16 +845,9 @@ fn cleanup_before_exit(app_handle: &tauri::AppHandle) {
 }
 
 pub fn run() {
-    let session_token = {
-        use rand::Rng;
-        let mut rng = rand::thread_rng();
-        let r1: u64 = rng.gen();
-        let r2: u64 = rng.gen();
-        format!("{:016x}{:016x}", r1, r2)
-    };
+    let session_token = generate_session_token();
 
     let app = tauri::Builder::default()
-        .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -707,6 +870,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             greet,
             get_session_token,
+            execute_approved_command,
             check_update,
             start_server,
             stop_server,
@@ -858,10 +1022,10 @@ pub fn run() {
                     app_handle.exit(0);
                 }
             }
-            tauri::RunEvent::Exit => {
-                if !cleaned_up.swap(true, std::sync::atomic::Ordering::SeqCst) {
-                    cleanup_before_exit(app_handle);
-                }
+            tauri::RunEvent::Exit
+                if !cleaned_up.swap(true, std::sync::atomic::Ordering::SeqCst) =>
+            {
+                cleanup_before_exit(app_handle);
             }
             _ => {}
         }

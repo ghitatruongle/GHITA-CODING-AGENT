@@ -67,7 +67,12 @@ export type {
 export { BaseMessage } from './messages/message.js';
 
 /** ReAct (Reasoning + Acting) Agent runtime orchestrating tool iteration execution. */
-export { ReActAgent, createReActAgent } from './react/agent.js';
+export {
+  ReActAgent,
+  ReActIterationLimitError,
+  ReActResumeConfirmationRequiredError,
+  createReActAgent,
+} from './react/agent.js';
 /** Options configuring ReAct runs, tool schemas, and callback hooks. */
 export type {
   ReActAgentConfig,
@@ -78,6 +83,9 @@ export type {
   CreateReActAgentInput,
   ReActAgentRunResult,
   ReActAgentCallbacks,
+  ReActCheckpoint,
+  ReActCheckpointStatus,
+  ReActCheckpointWriter,
   StructuredOutputSchema,
   PolicyGuard,
   ToolPolicyRequest,
@@ -176,7 +184,7 @@ export type {
 
 // --- Original exports below ---
 
-export const AGENTS_VERSION = '0.4.9';
+export const AGENTS_VERSION = '0.6.0';
 
 export type AgentStatus = 'idle' | 'working' | 'completed' | 'error';
 

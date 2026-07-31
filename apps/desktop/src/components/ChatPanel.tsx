@@ -51,6 +51,8 @@ export function ChatPanel() {
     setAgentEvents,
     approvalRequest,
     fileApprovalRequest,
+    resumeApprovalRequest,
+    agentRuns,
     ralphProgress,
     isSending,
     setIsSending,
@@ -60,6 +62,10 @@ export function ChatPanel() {
     handleRejectTool,
     handleApproveFileWrite,
     handleRejectFileWrite,
+    handleConfirmResume,
+    handleRejectResume,
+    refreshAgentRuns,
+    handleResumeRun,
   } = useChatSocket({ setMessages, tRef, reconnectTrigger });
 
   // Model selector
@@ -119,6 +125,11 @@ export function ChatPanel() {
     setReconnectTrigger((prev) => prev + 1);
   };
 
+  const onResumeAgentRun = (runId: string) => {
+    setCurrentView('chat');
+    handleResumeRun(runId);
+  };
+
   return (
     <div
       style={{
@@ -159,6 +170,9 @@ export function ChatPanel() {
           handleSelectSession={handleSelectSession}
           handleCreateSession={handleCreateSession}
           handleDeleteSession={handleDeleteSession}
+          agentRuns={agentRuns}
+          onRefreshAgentRuns={refreshAgentRuns}
+          onResumeAgentRun={onResumeAgentRun}
         />
       ) : (
         /* Chat View */
@@ -218,10 +232,13 @@ export function ChatPanel() {
         t={t}
         approvalRequest={approvalRequest}
         fileApprovalRequest={fileApprovalRequest}
+        resumeApprovalRequest={resumeApprovalRequest}
         onApproveTool={handleApproveTool}
         onRejectTool={handleRejectTool}
         onApproveFileWrite={handleApproveFileWrite}
         onRejectFileWrite={handleRejectFileWrite}
+        onConfirmResume={handleConfirmResume}
+        onRejectResume={handleRejectResume}
       />
     </div>
   );

@@ -7,7 +7,8 @@ import type { Socket } from 'socket.io-client';
 import { io } from 'socket.io-client';
 import { SOCKET_EVENTS } from '@ghita/shared';
 import type { ConnectionState, ChatMessage } from '../types';
-import { clearAuthToken, getAuthToken, saveAuthToken } from './storageService';
+import { clearAuthToken, getAuthToken, getDeviceId, saveAuthToken } from './storageService';
+import { assertSafeServerAddress } from './serverAddress';
 
 // --- Event callback types ---
 export interface SocketCallbacks {
@@ -18,6 +19,11 @@ export interface SocketCallbacks {
   onPairConfirm?: (deviceName: string) => void;
   onStatusUpdate?: (status: Record<string, unknown>) => void;
   onApprovalRequest?: (data: { id: string; command: string }) => void;
+  onResumeApprovalRequest?: (data: {
+    runId: string;
+    pendingTools: string[];
+    message: string;
+  }) => void;
   onCostTelemetry?: (data: {
     inputTokens: number;
     outputTokens: number;
@@ -80,11 +86,20 @@ export class SocketService {
   }
 
   async connect(serverAddress: string): Promise<void> {
-    // Prefetch auth token and wait to avoid race conditions during pair/reconnect
+    assertSafeServerAddress(serverAddress);
+    // Dispose only the old transport. Do not call disconnect() here because it
+    // deliberately clears the credentials that this reconnect is about to use.
+    if (this.socket) {
+      this.socket.removeAllListeners();
+      this.socket.disconnect();
+      this.socket = null;
+    }
+
+    // Load the secure token and the stable installation ID before the handshake.
     try {
-      this.authToken = await getAuthToken();
+      [this.authToken, this.deviceId] = await Promise.all([getAuthToken(), getDeviceId()]);
     } catch (err) {
-      console.warn('[SocketService] Failed to load auth token:', err);
+      console.warn('[SocketService] Failed to load pairing credentials:', err);
     }
 
     // Save last URL for auto-reconnect
@@ -102,11 +117,6 @@ export class SocketService {
       this.lastLocalAddress = serverAddress;
     }
 
-    // Cleanup existing connection
-    if (this.socket) {
-      this.disconnect();
-    }
-
     this.setConnectionState('connecting');
     this.reconnectAttempts = 0;
 
@@ -122,8 +132,11 @@ export class SocketService {
       randomizationFactor: 0.5,
       timeout: 10000,
       forceNew: true,
-      // C5: Send auth token in handshake (not in event payloads)
-      auth: this.authToken ? { token: this.authToken } : undefined,
+      // Authentication is completed in the Socket.IO handshake. Unpaired
+      // clients receive only an isolated pairing channel.
+      auth: this.authToken
+        ? { token: this.authToken, deviceId: this.deviceId }
+        : { pairing: true, deviceId: this.deviceId },
     });
 
     this.registerEventHandlers();
@@ -165,7 +178,11 @@ export class SocketService {
     if (this.connectionType === 'cloud') {
       this.socket.emit('pair_mobile', { pairingCode: code });
     } else {
-      this.socket.emit(SOCKET_EVENTS.PAIR, { code, deviceId, timestamp: Date.now() });
+      this.socket.emit(SOCKET_EVENTS.PAIR, {
+        code,
+        deviceId: deviceId ?? this.deviceId,
+        timestamp: Date.now(),
+      });
     }
   }
 
@@ -256,6 +273,14 @@ export class SocketService {
   sendRejectCommand(id: string): void {
     if (!this.socket || !this.isConnected) return;
     this.socket.emit(SOCKET_EVENTS.REJECT_COMMAND, { id });
+  }
+
+  resumeAgentRun(runId: string): void {
+    if (!this.socket || !this.isConnected) return;
+    this.socket.emit('agent_run', {
+      resumeRunId: runId,
+      resumeConfirmed: true,
+    });
   }
 
   /**
@@ -430,24 +455,26 @@ export class SocketService {
     // Connection
     this.socket.on(SOCKET_EVENTS.CONNECT, () => {
       this.reconnectAttempts = 0;
-      const authToken = this.authToken;
       if (this.connectionType === 'cloud') {
         if (this.lastPairingCode) {
           this.setConnectionState('pairing');
           this.socket?.emit('pair_mobile', {
             pairingCode: this.lastPairingCode,
             deviceId: this.deviceId,
-            authToken: authToken,
           });
         } else {
           this.setConnectionState('disconnected');
         }
       } else {
-        if (this.deviceId) {
+        if (this.authToken && this.deviceId) {
+          // The server authenticated this device during the handshake and will
+          // emit PAIR_CONFIRM without requiring the secret in an event payload.
+          this.setConnectionState('pairing');
+        } else if (this.lastPairingCode) {
           this.setConnectionState('pairing');
           this.socket?.emit(SOCKET_EVENTS.PAIR, {
+            code: this.lastPairingCode,
             deviceId: this.deviceId,
-            authToken,
             timestamp: Date.now(),
           });
         } else {
@@ -495,6 +522,12 @@ export class SocketService {
         if (data.authToken) {
           this.authToken = data.authToken;
           void saveAuthToken(data.authToken);
+        }
+        if (this.socket) {
+          this.socket.auth = {
+            token: this.authToken,
+            deviceId: this.deviceId,
+          };
         }
         this.setConnectionState('connected');
         this.onPairingSuccess();
@@ -574,6 +607,17 @@ export class SocketService {
       this.callbacks.onError?.(data.message ?? 'Chat request failed');
     });
 
+    this.socket.on(
+      'agent_resume_confirmation_required',
+      (data: { runId: string; pendingTools?: string[]; message?: string }) => {
+        this.callbacks.onResumeApprovalRequest?.({
+          runId: data.runId,
+          pendingTools: data.pendingTools ?? [],
+          message: data.message ?? 'Pending tools may be executed again.',
+        });
+      },
+    );
+
     // Chat response
     this.socket.on(SOCKET_EVENTS.CHAT, (data: { text?: string; timestamp?: number }) => {
       if (data.text) {
@@ -621,9 +665,11 @@ export class SocketService {
     // Error from server
     this.socket.on(SOCKET_EVENTS.ERROR, (data: { message?: string }) => {
       if (data.message === 'Session expired. Please re-pair.') {
-        this.deviceId = null;
         this.authToken = null;
         void clearAuthToken();
+        if (this.socket) {
+          this.socket.auth = { pairing: true, deviceId: this.deviceId };
+        }
         this.setConnectionState('disconnected');
       }
       this.callbacks.onError?.(data.message ?? 'Unknown error from server');

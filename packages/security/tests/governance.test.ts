@@ -106,6 +106,48 @@ describe('PolicyEngine', () => {
       engine.evaluate({ tool: 'fs.write', action: 'write', resource: '/etc/hosts' }).decision,
     ).toBe('deny');
   });
+
+  it('default rules cover the tool names used by the production ReAct runtime', () => {
+    const engine = new PolicyEngine({ rules: DEFAULT_POLICY_RULES });
+    const allowed = [
+      { tool: 'list_dir', action: 'read', resource: 'src' },
+      { tool: 'read_file', action: 'read', resource: 'src/index.ts' },
+      { tool: 'grep_search', action: 'read', resource: 'TODO' },
+      { tool: 'write_file', action: 'write', resource: 'src/new.ts' },
+      { tool: 'replace_file_content', action: 'write', resource: 'src/index.ts' },
+      { tool: 'run_command', action: 'execute', resource: 'pnpm test' },
+      { tool: 'web_search', action: 'read', resource: 'TypeScript docs' },
+      { tool: 'web_fetch', action: 'read', resource: 'https://example.com' },
+      { tool: 'index_codebase', action: 'read', resource: 'workspace' },
+      { tool: 'search_code_symbols', action: 'read', resource: 'ReActAgent' },
+      { tool: 'get_symbol_context', action: 'read', resource: 'symbol-id' },
+      { tool: 'get_repo_map', action: 'read', resource: 'workspace' },
+      { tool: 'memory_search', action: 'read', resource: 'preferences' },
+      { tool: 'memory_remember', action: 'write', resource: 'preference' },
+      { tool: 'memory_forget', action: 'delete', resource: 'mem_123' },
+      { tool: 'browser_open', action: 'execute', resource: 'browser session' },
+      { tool: 'browser_fill', action: 'execute', resource: '#email' },
+    ];
+
+    for (const request of allowed) {
+      expect(engine.evaluate(request).decision, `${request.tool} should be allowed`).toBe('allow');
+    }
+
+    expect(
+      engine.evaluate({
+        tool: 'run_command',
+        action: 'execute',
+        resource: 'Remove-Item C:\\ -Recurse',
+      }).decision,
+    ).toBe('deny');
+    expect(
+      engine.evaluate({
+        tool: 'write_file',
+        action: 'write',
+        resource: 'C:\\Windows\\System32\\drivers\\etc\\hosts',
+      }).decision,
+    ).toBe('deny');
+  });
 });
 
 describe('checkOwaspAgentic', () => {

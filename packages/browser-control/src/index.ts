@@ -5,7 +5,7 @@
 import type { SkillDefinition } from '@ghita/skills';
 import type { BrowserAction, BrowserResult } from '@ghita/shared';
 
-export const BROWSER_CONTROL_VERSION = '0.4.9';
+export const BROWSER_CONTROL_VERSION = '0.6.0';
 
 export type BrowserSessionStatus = 'idle' | 'launching' | 'ready' | 'closed' | 'error';
 
@@ -147,6 +147,17 @@ export function createBrowserControlSkills(
       run: async () => toSkillResult(await controller.launch({ headless: false })),
     },
     {
+      id: 'browser.close',
+      name: 'Close Browser',
+      description: 'Close the controlled browser session and release its resources.',
+      category: 'browser',
+      enabled: false,
+      version: BROWSER_CONTROL_VERSION,
+      scopes: ['browser'],
+      status: 'disabled',
+      run: async () => toSkillResult(await controller.close()),
+    },
+    {
       id: 'browser.navigate',
       name: 'Navigate Browser',
       description: 'Navigate the controlled browser to a URL.',
@@ -165,6 +176,24 @@ export function createBrowserControlSkills(
       },
     },
     {
+      id: 'browser.click',
+      name: 'Click Browser Element',
+      description: 'Click an element in the controlled page using a CSS selector.',
+      category: 'browser',
+      enabled: false,
+      version: BROWSER_CONTROL_VERSION,
+      scopes: ['browser'],
+      status: 'disabled',
+      parameters: {
+        selector: { type: 'string', description: 'CSS selector to click', required: true },
+      },
+      run: async ({ input }) => {
+        const selector = readString(input, 'selector');
+        if (!selector) return { success: false, error: 'Missing required input: selector' };
+        return toSkillResult(await controller.click(selector));
+      },
+    },
+    {
       id: 'browser.extract',
       name: 'Extract Page Text',
       description: 'Extract text from the page or a selector.',
@@ -178,6 +207,17 @@ export function createBrowserControlSkills(
       },
       run: async ({ input }) =>
         toSkillResult(await controller.extract(readString(input, 'selector'))),
+    },
+    {
+      id: 'browser.screenshot',
+      name: 'Capture Browser Screenshot',
+      description: 'Capture a screenshot of the controlled page.',
+      category: 'browser',
+      enabled: false,
+      version: BROWSER_CONTROL_VERSION,
+      scopes: ['browser'],
+      status: 'disabled',
+      run: async () => toSkillResult(await controller.screenshot()),
     },
     {
       id: 'browser.fill',

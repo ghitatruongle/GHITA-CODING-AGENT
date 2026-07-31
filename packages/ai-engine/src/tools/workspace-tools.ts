@@ -145,15 +145,40 @@ export function ensureInSandbox(filePath: string, sandboxRoot?: string): string 
     throw new Error('No active workspace directory set. Please select a workspace folder first.');
   }
   const resolvedRoot = path.resolve(root);
+  if (!fs.existsSync(resolvedRoot) || !fs.statSync(resolvedRoot).isDirectory()) {
+    throw new Error(`Workspace sandbox does not exist or is not a directory: "${resolvedRoot}".`);
+  }
+  const canonicalRoot = fs.realpathSync.native(resolvedRoot);
   // If absolute path, resolve directly; if relative, resolve relative to resolvedRoot
   const resolvedPath = path.isAbsolute(filePath)
     ? path.resolve(filePath)
     : path.resolve(resolvedRoot, filePath);
 
   const relative = path.relative(resolvedRoot, resolvedPath);
-  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+  if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
     throw new Error(
       `Security Exception: Access denied. Path "${resolvedPath}" lies outside the active workspace sandbox "${resolvedRoot}".`,
+    );
+  }
+
+  // Lexical containment is insufficient when a workspace entry is a symlink or
+  // junction pointing outside the workspace. Resolve the target itself when it
+  // exists, otherwise resolve its nearest existing ancestor before any write.
+  let existingAncestor = resolvedPath;
+  while (!fs.existsSync(existingAncestor)) {
+    const parent = path.dirname(existingAncestor);
+    if (parent === existingAncestor) break;
+    existingAncestor = parent;
+  }
+  const canonicalAncestor = fs.realpathSync.native(existingAncestor);
+  const canonicalRelative = path.relative(canonicalRoot, canonicalAncestor);
+  if (
+    canonicalRelative === '..' ||
+    canonicalRelative.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(canonicalRelative)
+  ) {
+    throw new Error(
+      `Security Exception: Access denied. Path "${resolvedPath}" escapes the workspace through a symbolic link or junction.`,
     );
   }
   return resolvedPath;
@@ -389,8 +414,14 @@ export async function grepSearch(args: { query: string }): Promise<string> {
  */
 export async function runCommand(args: { command: string; timeoutMs?: number }): Promise<string> {
   const sandbox = ensureInSandbox('.');
-  const command = args.command;
-  const timeout = args.timeoutMs ?? 30000; // default 30s timeout
+  const command = args.command?.trim();
+  if (!command || command.length > 16_384 || command.includes('\0')) {
+    throw new Error('Command must contain between 1 and 16,384 non-NUL characters.');
+  }
+  const requestedTimeout = Number(args.timeoutMs ?? 30_000);
+  const timeout = Number.isFinite(requestedTimeout)
+    ? Math.max(1_000, Math.min(300_000, Math.trunc(requestedTimeout)))
+    : 30_000;
 
   // Security checks on commands
   const blockedTokens = ['rm -rf /', 'mkfs', 'dd if', 'shutdown', 'reboot', 'killall', 'format '];
@@ -413,13 +444,12 @@ export async function runCommand(args: { command: string; timeoutMs?: number }):
     }
   }
 
-  // Tokenize the command line so quoted arguments are preserved.
-  // Examples: `echo "hello world"` -> ['echo', 'hello world']
-  //           `git log --pretty=format:'%H %s'` -> ['git', 'log', '--pretty=format:&#37;H %s']
-  const parts = tokenizeShellCommand(command);
-  if (parts.length === 0) throw new Error('Empty command');
-  const spawnCmd = parts[0] as string;
-  const spawnArgs = parts.slice(1);
+  // This tool intentionally supports terminal syntax such as pipes, redirects,
+  // && and ||. Execute the complete string in one audited shell invocation;
+  // tokenizing and spawning only the first executable silently skipped the
+  // remainder of compound commands.
+  const spawnCmd = process.platform === 'win32' ? process.env['ComSpec'] || 'cmd.exe' : '/bin/sh';
+  const spawnArgs = process.platform === 'win32' ? ['/d', '/s', '/c', command] : ['-c', command];
 
   return new Promise((resolve) => {
     const child = spawn(spawnCmd, spawnArgs, {

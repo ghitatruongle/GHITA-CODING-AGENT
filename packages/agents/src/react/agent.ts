@@ -15,6 +15,8 @@ import type {
   CreateReActAgentInput,
   ReActAgentRunResult,
   ReActAgentCallbacks,
+  ReActCheckpoint,
+  ReActCheckpointStatus,
   StructuredOutputSchema,
   ToolPolicyRequest,
 } from './types.js';
@@ -27,16 +29,30 @@ function derivePolicyAction(tool: string, input: Record<string, unknown>): strin
   const explicit = typeof input.action === 'string' ? input.action : undefined;
   if (explicit) return explicit;
   const lower = tool.toLowerCase();
-  if (/(exec|run|shell|terminal|command)/.test(lower)) return 'execute';
+  if (/(exec|run|shell|terminal|command|click|fill|type|navigate|open|close)/.test(lower)) {
+    return 'execute';
+  }
   if (/(delete|remove|unlink|rm)/.test(lower)) return 'delete';
-  if (/(write|create|save|update|put|post)/.test(lower)) return 'write';
+  if (/(forget)/.test(lower)) return 'delete';
+  if (/(write|create|save|update|put|post|remember)/.test(lower)) return 'write';
   if (/(deploy|publish|release)/.test(lower)) return 'deploy';
   return 'read';
 }
 
 /** Extract a best-effort resource string from tool input for policy matching. */
 function derivePolicyResource(input: Record<string, unknown>): string | undefined {
-  for (const key of ['resource', 'path', 'file', 'url', 'command', 'cmd', 'target']) {
+  for (const key of [
+    'resource',
+    'filePath',
+    'path',
+    'file',
+    'url',
+    'command',
+    'cmd',
+    'target',
+    'cwd',
+    'workdir',
+  ]) {
     const value = input[key];
     if (typeof value === 'string' && value.length > 0) return value;
   }
@@ -45,6 +61,50 @@ function derivePolicyResource(input: Record<string, unknown>): string | undefine
 
 function generateId(): string {
   return `react_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function cloneAction(action: AgentAction): AgentAction {
+  return {
+    tool: action.tool,
+    toolCallId: action.toolCallId,
+    input: { ...action.input },
+  };
+}
+
+export class ReActResumeConfirmationRequiredError extends Error {
+  readonly code = 'REACT_RESUME_CONFIRMATION_REQUIRED';
+  readonly runId: string;
+  readonly pendingActions: AgentAction[];
+
+  constructor(runId: string, pendingActions: AgentAction[]) {
+    super(
+      `Run "${runId}" stopped with ${pendingActions.length} pending tool action(s). ` +
+        'Explicit confirmation is required before they can be executed again.',
+    );
+    this.name = 'ReActResumeConfirmationRequiredError';
+    this.runId = runId;
+    this.pendingActions = pendingActions.map(cloneAction);
+  }
+}
+
+class ReActRunAbortedError extends Error {
+  readonly code = 'REACT_RUN_ABORTED';
+
+  constructor() {
+    super('ReAct run was interrupted.');
+    this.name = 'ReActRunAbortedError';
+  }
+}
+
+export class ReActIterationLimitError extends Error {
+  readonly code = 'REACT_ITERATION_LIMIT';
+  readonly runId: string;
+
+  constructor(runId: string, maxIterations: number) {
+    super(`Run "${runId}" reached its ${maxIterations}-iteration limit before a final answer.`);
+    this.name = 'ReActIterationLimitError';
+    this.runId = runId;
+  }
 }
 
 /**
@@ -78,6 +138,10 @@ export class ReActAgent {
 
   /** Run the ReAct loop */
   async run(userMessage: string, callbacks?: ReActAgentCallbacks): Promise<ReActAgentRunResult> {
+    if (this.config.checkpoint || this.config.resumeFrom || this.config.runId) {
+      return this.runDurable(userMessage, callbacks);
+    }
+
     const startTime = Date.now();
     const maxIterations = this.config.maxIterations ?? 10;
     const steps: AgentStep[] = [];
@@ -264,6 +328,333 @@ export class ReActAgent {
     return this.buildResult(output, steps, messages, maxIterations, startTime);
   }
 
+  /**
+   * Run with durable checkpoints. The existing non-checkpointed path remains
+   * lightweight for callers that do not request persistence.
+   */
+  private async runDurable(
+    userMessage: string,
+    callbacks?: ReActAgentCallbacks,
+  ): Promise<ReActAgentRunResult> {
+    const startTime = Date.now();
+    const resume = this.validateResumeCheckpoint(userMessage);
+    const maxIterations = this.config.maxIterations ?? resume?.maxIterations ?? 10;
+    const runId = resume?.runId ?? this.config.runId ?? generateId();
+    const agentId = resume?.agentId ?? generateId();
+    const steps: AgentStep[] =
+      resume?.steps.map((step) => ({
+        action: cloneAction(step.action),
+        observation: step.observation,
+      })) ?? [];
+    const messages: BaseMessage[] = resume?.messages.map(messageFromData) ?? [];
+    let nextIteration = resume?.nextIteration ?? 0;
+    let pendingActions = resume?.pendingActions.map(cloneAction) ?? [];
+    let output: string | undefined = resume?.output;
+
+    if (!resume) {
+      if (this.config.systemPrompt) {
+        messages.push(new SystemMessage(this.config.systemPrompt));
+      }
+      messages.push(new HumanMessage(userMessage));
+    }
+
+    const createContext = (iteration: number): MiddlewareContext => ({
+      agent: {
+        id: agentId,
+        name: this.name,
+        role: 'executor',
+        description: 'ReAct agent',
+        skills: [...this.tools.keys()],
+        model: this.config.model,
+        status: 'working',
+        createdAt: startTime,
+        updatedAt: Date.now(),
+      },
+      messages,
+      model: this.config.model,
+      provider: this.config.provider,
+      temperature: this.config.temperature,
+      maxTokens: this.config.maxTokens,
+      metadata: { iteration, runId },
+    });
+
+    const persist = async (status: ReActCheckpointStatus, error?: string): Promise<void> => {
+      if (!this.config.checkpoint) return;
+      await this.config.checkpoint({
+        version: 1,
+        runId,
+        agentId,
+        agentName: this.name,
+        userMessage,
+        status,
+        maxIterations,
+        nextIteration,
+        messages: messages.map((message) => message.toData()),
+        steps: steps.map((step) => ({
+          action: cloneAction(step.action),
+          observation: step.observation,
+        })),
+        pendingActions: pendingActions.map(cloneAction),
+        ...(output !== undefined ? { output } : {}),
+        ...(error !== undefined ? { error } : {}),
+        updatedAt: Date.now(),
+      });
+    };
+
+    const buildResult = (iterations: number): ReActAgentRunResult => {
+      const finalOutput = output ?? '';
+      const finish: AgentFinish = {
+        returnValues: { output: finalOutput },
+        output: finalOutput,
+        messages,
+      };
+      return {
+        runId,
+        output: finalOutput,
+        steps,
+        messages,
+        finish,
+        iterations,
+        duration: Date.now() - startTime,
+      };
+    };
+
+    const throwIfAborted = (): void => {
+      if (this.config.signal?.aborted) {
+        throw new ReActRunAbortedError();
+      }
+    };
+
+    const recordObservation = async (
+      iteration: number,
+      action: AgentAction,
+      observation: string,
+    ): Promise<void> => {
+      steps.push({ action, observation });
+      messages.push(new ToolMessage(observation, action.toolCallId, action.tool));
+      pendingActions = pendingActions.slice(1);
+      await persist('running');
+      callbacks?.onStepEnd?.(iteration, observation);
+      callbacks?.onToolResult?.(action.tool, observation);
+    };
+
+    const executePendingActions = async (
+      iteration: number,
+      ctx: MiddlewareContext,
+    ): Promise<void> => {
+      while (pendingActions.length > 0) {
+        throwIfAborted();
+        const action = pendingActions[0];
+        if (!action) break;
+
+        // Crash boundary: the pending action remains in the journal until its
+        // observation has been stored. A resumed run therefore cannot repeat
+        // a possibly completed side effect without explicit confirmation.
+        await persist('running');
+        callbacks?.onStepStart?.(iteration, action);
+        callbacks?.onToolCall?.(action.tool, action.input);
+
+        const tool = this.tools.get(action.tool);
+        if (!tool) {
+          await recordObservation(iteration, action, `Error: Tool "${action.tool}" not found.`);
+          continue;
+        }
+
+        if (this.config.policyGuard) {
+          const request: ToolPolicyRequest = {
+            tool: action.tool,
+            action: derivePolicyAction(action.tool, action.input),
+            resource: derivePolicyResource(action.input),
+            agentId,
+            input: action.input,
+          };
+          const verdict = await this.config.policyGuard(request);
+          if (verdict.decision === 'deny') {
+            await recordObservation(
+              iteration,
+              action,
+              `Policy denied tool "${action.tool}": ${
+                verdict.reason ?? 'blocked by governance policy.'
+              }`,
+            );
+            continue;
+          }
+        }
+
+        const toolCheck = await this.pipeline.runPreTool(action.tool, action.input, ctx);
+        if (!toolCheck.proceed) {
+          await recordObservation(
+            iteration,
+            action,
+            toolCheck.reason || `Tool "${action.tool}" blocked by middleware.`,
+          );
+          continue;
+        }
+
+        let observation: string;
+        try {
+          observation = await tool.execute(toolCheck.args);
+        } catch (err) {
+          observation = `Error executing tool "${action.tool}": ${
+            err instanceof Error ? err.message : String(err)
+          }`;
+        }
+        observation = await this.pipeline.runPostTool(action.tool, observation, ctx);
+        await recordObservation(iteration, action, observation);
+      }
+    };
+
+    try {
+      if (resume?.status === 'completed') {
+        return buildResult(resume.nextIteration);
+      }
+
+      if (pendingActions.length > 0) {
+        if (!this.config.resumePendingTools) {
+          throw new ReActResumeConfirmationRequiredError(runId, pendingActions);
+        }
+        const resumedIteration = Math.max(0, nextIteration - 1);
+        await executePendingActions(resumedIteration, createContext(resumedIteration));
+      }
+
+      await persist('running');
+
+      for (let iteration = nextIteration; iteration < maxIterations; iteration++) {
+        throwIfAborted();
+        const middlewareCtx = createContext(iteration);
+        const { context: ctx, shortCircuit } = await this.pipeline.runPreModel(middlewareCtx);
+
+        if (shortCircuit) {
+          messages.push(shortCircuit);
+          nextIteration = iteration + 1;
+          output = shortCircuit.getText();
+          await persist('completed');
+          callbacks?.onFinish?.(buildResult(nextIteration).finish);
+          return buildResult(nextIteration);
+        }
+
+        let response: BaseMessage;
+        try {
+          response = await this.llmCall(ctx.messages, {
+            name: this.name,
+            metadata: ctx.metadata,
+          });
+          throwIfAborted();
+        } catch (err) {
+          const error = err instanceof Error ? err : new Error(String(err));
+          const { retry } = await this.pipeline.runOnError(error, ctx);
+          if (retry && iteration < maxIterations - 1) {
+            nextIteration = iteration + 1;
+            await persist('running');
+            continue;
+          }
+          throw error;
+        }
+
+        const { result: postResult, retry } = await this.pipeline.runPostModel(ctx, {
+          response,
+          shouldContinue: false,
+        });
+        if (retry && iteration < maxIterations - 1) {
+          nextIteration = iteration + 1;
+          await persist('running');
+          continue;
+        }
+        response = postResult.response;
+        messages.push(response);
+
+        const toolCalls = this.parseToolCalls
+          ? this.parseToolCalls(response)
+          : this.defaultParseToolCalls(response);
+
+        if (toolCalls.length > 0) {
+          const existing = response.metadata?.toolCalls;
+          if (!Array.isArray(existing) || existing.length === 0) {
+            const data = response.toData();
+            data.metadata = { ...(data.metadata ?? {}), toolCalls };
+            messages[messages.length - 1] = messageFromData({
+              ...data,
+              ...(data.role === 'assistant' ? { toolCalls } : {}),
+            } as never);
+          }
+        }
+
+        nextIteration = iteration + 1;
+        if (toolCalls.length === 0) {
+          output = response.getText();
+          await this.pipeline.runOnComplete(ctx, response);
+          await persist('completed');
+          callbacks?.onFinish?.(buildResult(nextIteration).finish);
+          return buildResult(nextIteration);
+        }
+
+        pendingActions = toolCalls.map(cloneAction);
+        await persist('running');
+        await executePendingActions(iteration, ctx);
+
+        if (this.config.stopCondition?.(steps)) {
+          output = messages[messages.length - 1]?.getText() ?? '';
+          await persist('completed');
+          callbacks?.onFinish?.(buildResult(nextIteration).finish);
+          return buildResult(nextIteration);
+        }
+      }
+
+      output = 'Agent reached the maximum iteration limit before producing a final answer.';
+      nextIteration = maxIterations;
+      const iterationError = new ReActIterationLimitError(runId, maxIterations);
+      await persist('exhausted', iterationError.message);
+      throw iterationError;
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      const status: ReActCheckpointStatus =
+        error instanceof ReActIterationLimitError
+          ? 'exhausted'
+          : error instanceof ReActResumeConfirmationRequiredError ||
+              error instanceof ReActRunAbortedError
+            ? 'interrupted'
+            : 'failed';
+      try {
+        await persist(status, error.message);
+      } catch {
+        // Keep the original runtime error when persistence also fails.
+      }
+      callbacks?.onError?.(error);
+      throw error;
+    }
+  }
+
+  private validateResumeCheckpoint(userMessage: string): ReActCheckpoint | undefined {
+    const checkpoint = this.config.resumeFrom;
+    if (!checkpoint) return undefined;
+    if (checkpoint.version !== 1) {
+      throw new Error(`Unsupported ReAct checkpoint version: ${String(checkpoint.version)}`);
+    }
+    if (checkpoint.agentName !== this.name) {
+      throw new Error(
+        `Checkpoint agent mismatch: expected "${this.name}", got "${checkpoint.agentName}".`,
+      );
+    }
+    if (checkpoint.userMessage !== userMessage) {
+      throw new Error('Checkpoint task does not match the requested task.');
+    }
+    if (this.config.runId && this.config.runId !== checkpoint.runId) {
+      throw new Error('Checkpoint run ID does not match the configured run ID.');
+    }
+    if (
+      !Number.isInteger(checkpoint.nextIteration) ||
+      checkpoint.nextIteration < 0 ||
+      !Number.isInteger(checkpoint.maxIterations) ||
+      checkpoint.maxIterations < 1 ||
+      !Array.isArray(checkpoint.messages) ||
+      !Array.isArray(checkpoint.steps) ||
+      !Array.isArray(checkpoint.pendingActions)
+    ) {
+      throw new Error('Malformed ReAct checkpoint.');
+    }
+    return checkpoint;
+  }
+
   /** Parse structured output from final response */
   parseStructuredOutput<T>(
     result: ReActAgentRunResult,
@@ -296,11 +687,18 @@ export class ReActAgent {
   // ---- Private Helpers ----
 
   private defaultParseToolCalls(message: BaseMessage): AgentAction[] {
-    // If the message has structured tool_calls in metadata, use those
-    const meta = message.metadata;
-    if (meta?.toolCalls && Array.isArray(meta.toolCalls)) {
+    // Providers may expose native tool calls directly on AIMessage, while
+    // older adapters store them in metadata. Accept both representations.
+    const directCalls = (message as BaseMessage & { toolCalls?: unknown }).toolCalls;
+    const metadataCalls = message.metadata?.toolCalls;
+    const toolCalls = Array.isArray(directCalls)
+      ? directCalls
+      : Array.isArray(metadataCalls)
+        ? metadataCalls
+        : undefined;
+    if (toolCalls) {
       return (
-        meta.toolCalls as Array<{ id: string; name: string; arguments: Record<string, unknown> }>
+        toolCalls as Array<{ id: string; name: string; arguments: Record<string, unknown> }>
       ).map((tc) => ({
         tool: tc.name,
         toolCallId: tc.id,

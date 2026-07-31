@@ -37,10 +37,17 @@ describe('computePageRank', () => {
     // a, b, c all call hub → hub should rank highest.
     const edges = [edge('a', 'hub'), edge('b', 'hub'), edge('c', 'hub')];
     const ranks = computePageRank(nodes, edges);
-    const hub = ranks.get('hub')!;
-    expect(hub).toBeGreaterThan(ranks.get('a')!);
-    expect(hub).toBeGreaterThan(ranks.get('b')!);
-    expect(hub).toBeGreaterThan(ranks.get('c')!);
+    const hub = ranks.get('hub');
+    const a = ranks.get('a');
+    const b = ranks.get('b');
+    const c = ranks.get('c');
+    expect(hub).toBeDefined();
+    expect(a).toBeDefined();
+    expect(b).toBeDefined();
+    expect(c).toBeDefined();
+    expect(hub ?? 0).toBeGreaterThan(a ?? 0);
+    expect(hub ?? 0).toBeGreaterThan(b ?? 0);
+    expect(hub ?? 0).toBeGreaterThan(c ?? 0);
   });
 
   it('scores sum to approximately 1', () => {
@@ -55,7 +62,7 @@ describe('computePageRank', () => {
     const nodes = [node('a'), node('b')];
     const edges = [edge('a', 'ghost'), edge('a', 'a'), edge('a', 'b')];
     const ranks = computePageRank(nodes, edges);
-    expect(ranks.get('b')!).toBeGreaterThan(0);
+    expect(ranks.get('b') ?? 0).toBeGreaterThan(0);
   });
 });
 
@@ -64,7 +71,7 @@ describe('getRepoMap', () => {
     const nodes = [node('a'), node('b'), node('hub', { exported: true })];
     const edges = [edge('a', 'hub'), edge('b', 'hub')];
     const map = getRepoMap(nodes, edges, 10_000);
-    expect(map.entries[0]!.id).toBe('hub');
+    expect(map.entries.at(0)?.id).toBe('hub');
     expect(map.totalSymbols).toBe(3);
   });
 
@@ -88,7 +95,7 @@ describe('getRepoMap', () => {
     const nodes = [node('z', { exported: false }), node('a', { exported: true })];
     const map = getRepoMap(nodes, [], 10_000);
     // equal rank → exported 'a' should come before 'z'
-    expect(map.entries[0]!.id).toBe('a');
+    expect(map.entries.at(0)?.id).toBe('a');
   });
 });
 

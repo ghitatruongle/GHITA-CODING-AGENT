@@ -35,9 +35,9 @@ describe('AIPageController.observe', () => {
     const sh = new AIPageController(new BrowserController(), page);
     const results = await sh.observe();
     expect(results).toHaveLength(2);
-    expect(results[0]!.suggestedAction).toBe('click');
-    expect(results[1]!.suggestedAction).toBe('fill');
-    expect(results[1]!.description).toBe('Email');
+    expect(results.at(0)?.suggestedAction).toBe('click');
+    expect(results.at(1)?.suggestedAction).toBe('fill');
+    expect(results.at(1)?.description).toBe('Email');
   });
 
   it('returns the best match with an instruction (keyword fallback)', async () => {
@@ -48,7 +48,7 @@ describe('AIPageController.observe', () => {
     const sh = new AIPageController(new BrowserController(), page);
     const results = await sh.observe('login');
     expect(results).toHaveLength(1);
-    expect(results[0]!.selector).toBe('button#login');
+    expect(results.at(0)?.selector).toBe('button#login');
   });
 });
 

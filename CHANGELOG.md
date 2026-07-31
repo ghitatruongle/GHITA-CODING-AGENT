@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.6.0] - 2026-07-30
+
+### Theme: Durable, governed coding-agent runtime
+
+#### Added
+
+- **Durable ReAct execution**: stable run IDs, atomic checkpoints before and after tool calls, cancellation, explicit confirmation before replaying pending tools, and resume support after interruption.
+- **Desktop run journal**: bounded, permission-restricted, redacted run history with list, inspect, prune, and checkpoint-resume flows.
+- **Workspace memory journal**: per-workspace durable memory with credential screening, metadata redaction, explicit remember/forget tools, and bounded relevant-memory prompt injection.
+- **Live code intelligence tools**: codebase indexing, symbol search, symbol context, and token-bounded PageRank repository maps, with cache invalidation after workspace mutations.
+- **Runtime browser skills**: enabled browser/computer-use skills are exposed to the agent as governed tools; mutating actions remain subject to approval policy.
+- **Mobile resume control**: mobile clients can inspect interrupted runs and explicitly confirm or reject replay of pending actions.
+- **Native tool-call support for OpenAI-compatible, Anthropic, and Gemini providers**, including provider-neutral tool-call messages, provider-native result turns, and structured call extraction.
+
+#### Security
+
+- Replaced plaintext API-key persistence with the operating-system credential vault and one-time migration from legacy configuration.
+- Isolated desktop session authentication from mobile pairing, hashed device tokens at rest, added one-time pairing credentials and pairing rate limits.
+- Enforced deny-by-default policy decisions at the actual sidecar tool boundary.
+- Removed broad Tauri shell permissions and routed approved commands through a native gate with destructive-command checks and a bounded 1-second to 5-minute timeout.
+- Hardened workspace path resolution against symlink and junction escapes.
+- Added SSRF protection for proxy destinations while retaining explicit loopback support for local preview.
+
+#### Quality and accessibility
+
+- Restored the native Rust suite to a compiling, passing state and added integration coverage for command, proxy, session-token, and timeout boundaries.
+- Added focused regression suites for runtime authentication, run journals, memory journals, tool calling, policy governance, checkpoint resume, and workspace sandboxing.
+- Added semantic alert dialogs and keyboard-operable chat history controls.
+- Added blocking `rustfmt` and native test jobs to CI and release workflows; desktop packaging failures are no longer ignored.
+
+---
+
 ## [0.4.9] - 2026-07-30
 
 ### Theme: Agent capability expansion + Windows/Android hardening

@@ -174,6 +174,22 @@ export function useRemoteControl(
           console.warn('[useRemoteControl] vibration failed:', e);
         }
       },
+      onResumeApprovalRequest: (data) => {
+        Alert.alert(
+          'Khôi phục tác vụ agent?',
+          `Các tool có thể được chạy lại: ${
+            data.pendingTools.length > 0 ? data.pendingTools.join(', ') : 'không xác định'
+          }`,
+          [
+            { text: 'Giữ trạng thái dừng', style: 'cancel' },
+            {
+              text: 'Xác nhận chạy lại',
+              style: 'destructive',
+              onPress: () => socketService.resumeAgentRun(data.runId),
+            },
+          ],
+        );
+      },
       onCostTelemetry: (data) => {
         setCostTelemetry(data);
         const diffCost = Math.max(0, data.costUsd - lastSessionCostRef.current);

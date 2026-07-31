@@ -258,6 +258,24 @@ describe('createBrowserControlSkills', () => {
     expect(extract?.parameters?.selector).toBeDefined();
   });
 
+  it('should expose close, click, and screenshot lifecycle skills', async () => {
+    const adapter = {
+      close: vi.fn().mockResolvedValue(undefined),
+      click: vi.fn().mockResolvedValue(undefined),
+      screenshot: vi.fn().mockResolvedValue({ mimeType: 'image/png', data: 'base64' }),
+    };
+    const skills = createBrowserControlSkills(new BrowserController(adapter));
+
+    const close = skills.find((skill) => skill.id === 'browser.close');
+    const click = skills.find((skill) => skill.id === 'browser.click');
+    const screenshot = skills.find((skill) => skill.id === 'browser.screenshot');
+
+    expect((await close?.run({ input: {} }))?.success).toBe(true);
+    expect((await click?.run({ input: { selector: '#submit' } }))?.success).toBe(true);
+    expect((await screenshot?.run({ input: {} }))?.success).toBe(true);
+    expect(adapter.click).toHaveBeenCalledWith('#submit');
+  });
+
   it('should run browser.navigate skill via controller', async () => {
     const adapter = { navigate: vi.fn().mockResolvedValue(undefined) };
     const ctrl = new BrowserController(adapter);

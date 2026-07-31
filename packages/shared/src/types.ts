@@ -86,6 +86,12 @@ export interface AIStreamChunk {
   provider?: AIProviderType;
   model?: string;
   usage?: { promptTokens: number; completionTokens: number; totalTokens: number };
+  /** Provider-native function calls, emitted once their streamed arguments are complete. */
+  toolCalls?: Array<{
+    id?: string;
+    name: string;
+    arguments: Record<string, unknown>;
+  }>;
 }
 
 // --- Skill ---
