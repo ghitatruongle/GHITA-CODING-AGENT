@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.6.2] - 2026-07-31
+
+### Fixed
+- Terminal no longer blank/missing on app launch — eager-loaded instead of lazy, removed `xtermReady` rendering gate.
+- CSP updated: `worker-src 'self' blob: data:` and `script-src 'self' 'unsafe-inline' 'unsafe-eval'` so xterm.js workers load without requiring the sidecar to be restarted.
+- Sidecar auto-restart guard resets after an update event, so API calls reconnect without a full app restart.
+
+### Changed
+- Version bumped to 0.6.2.
+
 ## [0.6.0] - 2026-07-30
 
 ### Theme: Durable, governed coding-agent runtime

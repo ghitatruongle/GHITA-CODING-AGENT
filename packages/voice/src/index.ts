@@ -34,4 +34,4 @@ export {
 export { AudioRingBuffer } from './audio-buffer.js';
 export { TranscriptMerger, type PartialSegment } from './transcript-merger.js';
 
-export const VOICE_VERSION = '0.6.0';
+export const VOICE_VERSION = '0.6.2';
