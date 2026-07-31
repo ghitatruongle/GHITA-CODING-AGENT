@@ -1,6 +1,6 @@
 [package]
 name = "ghita-coding-agent"
-version = "0.4.9"
+version = "0.6.0"
 description = "GHITA CODING AGENT Desktop"
 authors = ["ghitatruongle"]
 edition = "2021"
@@ -15,7 +15,6 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 # Sidecar port model: uses a dynamic or fixed port allocated in sidecar configuration or environment variables.
 tauri = { version = "2", features = [] }
-tauri-plugin-shell = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }
@@ -24,7 +23,7 @@ tauri-plugin-updater = "2.10.1"
 reqwest = { version = "0.12", features = ["json"] }
 local-ip-address = "0.6"
 hyper = { version = "1", features = ["server", "http1", "http2"] }
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "net"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "net", "process"] }
 http = "1"
 hyper-util = { version = "0.1", features = ["tokio", "http1", "http2", "server"] }
 http-body-util = "0.1"
@@ -47,6 +46,15 @@ percent-encoding = "2.3"
 chrono = { version = "0.4", features = ["serde"] }
 # v0.4.8 B2 (M8): verify integrity of the bundled node runtime before spawn.
 sha2 = "0.10"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+keyring = { version = "3.6.3", default-features = false, features = ["windows-native"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+keyring = { version = "3.6.3", default-features = false, features = ["apple-native"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+keyring = { version = "3.6.3", default-features = false, features = ["sync-secret-service", "crypto-rust"] }
 
 # v0.4.8 B1: Optimized release profile for Windows/desktop binaries.
 # Smaller, faster binary at the cost of longer compile time.

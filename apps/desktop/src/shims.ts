@@ -53,6 +53,9 @@ export const statSync = () => ({
   size: 0,
   mtimeMs: 0,
 });
+const browserRealpathSync = (path: string) => path;
+browserRealpathSync.native = browserRealpathSync;
+export const realpathSync = browserRealpathSync;
 export const exists = () => false;
 export const readFile = () => {};
 export const writeFile = () => {};
@@ -78,6 +81,7 @@ export const promises = {
 };
 
 // path exports
+export const sep = '/';
 export const dirname = (p: string) => {
   const hasWinSep = p.includes('\\');
   const sep = hasWinSep ? '\\' : '/';
@@ -237,6 +241,7 @@ const defaultMock = {
   mkdirSync,
   readdirSync,
   statSync,
+  realpathSync,
   exists,
   readFile,
   writeFile,
@@ -248,6 +253,7 @@ const defaultMock = {
   watch,
   promises,
   dirname,
+  sep,
   resolve,
   join,
   extname,

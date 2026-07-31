@@ -16,6 +16,7 @@ import { createBuiltInTools, type BuiltInTool } from '../src/tools/index.js';
 type GhitaGlobals = {
   ghitaWorkspaceRoot?: string;
   agentPermissionMode?: string;
+  approveCommandHandler?: (command: string) => Promise<boolean>;
   approveFileWriteHandler?: (action: string, path: string) => Promise<boolean>;
 };
 const g = globalThis as unknown as GhitaGlobals;
@@ -35,6 +36,7 @@ describe('AI file editing tools (real filesystem)', () => {
     g.ghitaWorkspaceRoot = root;
     g.agentPermissionMode = 'yolo'; // non-custom → no approval prompt
     delete g.approveFileWriteHandler;
+    delete g.approveCommandHandler;
     tools = createBuiltInTools();
   });
 
@@ -42,6 +44,7 @@ describe('AI file editing tools (real filesystem)', () => {
     delete g.ghitaWorkspaceRoot;
     delete g.agentPermissionMode;
     delete g.approveFileWriteHandler;
+    delete g.approveCommandHandler;
     rmSync(root, { recursive: true, force: true });
   });
 
@@ -119,5 +122,15 @@ describe('AI file editing tools (real filesystem)', () => {
     g.approveFileWriteHandler = async () => true; // user approves
     await tool(tools, 'write_file').execute({ filePath: 'ok.ts', content: 'data' });
     expect(existsSync(join(root, 'ok.ts'))).toBe(true);
+  });
+
+  it('executes every segment of an approved compound command', async () => {
+    g.agentPermissionMode = 'custom';
+    g.approveCommandHandler = async () => true;
+    const out = await tool(tools, 'run_command').execute({
+      command: 'echo first && echo second',
+    });
+    expect(out).toContain('first');
+    expect(out).toContain('second');
   });
 });

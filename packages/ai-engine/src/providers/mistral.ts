@@ -16,6 +16,12 @@ import type {
 } from '../types.js';
 import { BaseProvider } from './base.js';
 import type { ProviderCapabilities } from './types.js';
+import {
+  extractOpenAIToolCalls,
+  OpenAIStreamToolAccumulator,
+  openAIToolFields,
+  toOpenAIChatMessages,
+} from './openai-tool-calling.js';
 
 const MISTRAL_MODELS = [
   'mistral-large-latest',
@@ -68,7 +74,8 @@ export class MistralProvider extends BaseProvider {
       headers: this.buildHeaders(apiKey),
       body: JSON.stringify({
         model,
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
+        messages: toOpenAIChatMessages(messages),
+        ...openAIToolFields(options),
         max_tokens: this.getMaxTokens(options),
         temperature: this.getTemperature(options),
         top_p: options?.topP,
@@ -86,7 +93,16 @@ export class MistralProvider extends BaseProvider {
     this.reportKeySuccess(apiKey);
 
     const data = (await response.json()) as {
-      choices: Array<{ message: { content: string }; finish_reason: string }>;
+      choices: Array<{
+        message: {
+          content: string | null;
+          tool_calls?: Array<{
+            id?: string;
+            function?: { name?: string; arguments?: string };
+          }>;
+        };
+        finish_reason: string;
+      }>;
       usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
       model: string;
     };
@@ -95,6 +111,7 @@ export class MistralProvider extends BaseProvider {
       content: data.choices[0]?.message?.content ?? '',
       model: data.model,
       provider: 'mistral',
+      toolCalls: extractOpenAIToolCalls(data.choices[0]?.message?.tool_calls),
       usage: {
         promptTokens: data.usage?.prompt_tokens ?? 0,
         completionTokens: data.usage?.completion_tokens ?? 0,
@@ -113,7 +130,8 @@ export class MistralProvider extends BaseProvider {
       headers: this.buildHeaders(apiKey),
       body: JSON.stringify({
         model,
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
+        messages: toOpenAIChatMessages(messages),
+        ...openAIToolFields(options),
         max_tokens: this.getMaxTokens(options),
         temperature: this.getTemperature(options),
         stream: true,
@@ -134,12 +152,19 @@ export class MistralProvider extends BaseProvider {
 
     const decoder = new TextDecoder();
     let buffer = '';
+    const toolAccumulator = new OpenAIStreamToolAccumulator();
 
     try {
       while (true) {
         const { done, value } = await reader.read();
         if (done) {
-          yield { content: '', done: true, provider: 'mistral', model };
+          yield {
+            content: '',
+            done: true,
+            provider: 'mistral',
+            model,
+            toolCalls: toolAccumulator.complete(),
+          };
           return;
         }
 
@@ -152,16 +177,30 @@ export class MistralProvider extends BaseProvider {
           if (!trimmed || !trimmed.startsWith('data: ')) continue;
           const data = trimmed.slice(6);
           if (data === '[DONE]') {
-            yield { content: '', done: true, provider: 'mistral', model };
+            yield {
+              content: '',
+              done: true,
+              provider: 'mistral',
+              model,
+              toolCalls: toolAccumulator.complete(),
+            };
             return;
           }
 
           try {
             const parsed = JSON.parse(data) as {
-              choices: Array<{ delta: { content?: string }; finish_reason?: string }>;
+              choices: Array<{
+                delta: {
+                  content?: string;
+                  tool_calls?: Parameters<OpenAIStreamToolAccumulator['append']>[0];
+                };
+                finish_reason?: string;
+              }>;
               usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
             };
-            const content = parsed.choices[0]?.delta?.content;
+            const delta = parsed.choices[0]?.delta;
+            toolAccumulator.append(delta?.tool_calls);
+            const content = delta?.content;
             if (content) {
               yield { content, done: false, provider: 'mistral', model };
             }

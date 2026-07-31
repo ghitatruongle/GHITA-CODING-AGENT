@@ -10,12 +10,11 @@ use std::time::Duration;
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
 
-type BodyClient = reqwest::Client;
-
 /// Maximum response body size accepted from upstream (50 MB).
 /// Prevents OOM when proxying a server that returns huge payloads.
 const MAX_RESPONSE_BODY_SIZE: usize = 50 * 1024 * 1024;
 
+#[derive(Default)]
 pub struct ProxyState {
     pub is_running: bool,
     pub port: u16,
@@ -25,15 +24,77 @@ pub struct ProxyState {
     pub shutdown_tx: Option<tokio::sync::watch::Sender<bool>>,
 }
 
-impl Default for ProxyState {
-    fn default() -> Self {
-        Self {
-            is_running: false,
-            port: 0,
-            target_url: String::new(),
-            shutdown_tx: None,
+fn is_prohibited_ip(ip: IpAddr, allow_loopback: bool) -> bool {
+    match ip {
+        IpAddr::V4(v4) => {
+            let octets = v4.octets();
+            (!allow_loopback && v4.is_loopback())
+                || v4.is_broadcast()
+                || v4.is_unspecified()
+                || v4.is_private()
+                || v4.is_link_local()
+                || v4.is_multicast()
+                || (octets[0] == 100 && (64..=127).contains(&octets[1]))
+                || (octets[0] == 192 && octets[1] == 0 && octets[2] == 0)
+                || (octets[0] == 192 && octets[1] == 0 && octets[2] == 2)
+                || (octets[0] == 198 && (octets[1] == 18 || octets[1] == 19))
+                || (octets[0] == 198 && octets[1] == 51 && octets[2] == 100)
+                || (octets[0] == 203 && octets[1] == 0 && octets[2] == 113)
+                || octets[0] >= 240
+        }
+        IpAddr::V6(v6) => {
+            if let Some(v4) = v6.to_ipv4_mapped() {
+                return is_prohibited_ip(IpAddr::V4(v4), allow_loopback);
+            }
+            (!allow_loopback && v6.is_loopback())
+                || v6.is_unspecified()
+                || v6.is_unique_local()
+                || v6.is_unicast_link_local()
+                || v6.is_multicast()
         }
     }
+}
+
+async fn create_validated_client(url: &reqwest::Url) -> Result<reqwest::Client, String> {
+    let host = url
+        .host_str()
+        .ok_or_else(|| "Proxy target must include a hostname".to_string())?;
+    let host_lower = host.to_ascii_lowercase();
+    if matches!(
+        host_lower.as_str(),
+        "169.254.169.254" | "metadata.google.internal" | "metadata.azure.internal"
+    ) {
+        return Err("Proxy target is a cloud metadata endpoint".to_string());
+    }
+
+    let port = url
+        .port_or_known_default()
+        .ok_or_else(|| "Proxy target uses an unsupported port".to_string())?;
+    let explicit_loopback =
+        host_lower == "localhost" || host.parse::<IpAddr>().is_ok_and(|ip| ip.is_loopback());
+    let resolved = tokio::net::lookup_host((host, port))
+        .await
+        .map_err(|e| format!("Proxy target DNS resolution failed: {e}"))?
+        .map(|address| address.ip())
+        .collect::<Vec<_>>();
+    if resolved.is_empty() {
+        return Err("Proxy target did not resolve to an address".to_string());
+    }
+    if resolved
+        .iter()
+        .copied()
+        .any(|ip| is_prohibited_ip(ip, explicit_loopback))
+    {
+        return Err("Proxy target resolves to a blocked IP range".to_string());
+    }
+
+    let mut builder = reqwest::Client::builder().redirect(reqwest::redirect::Policy::none());
+    if host.parse::<IpAddr>().is_err() {
+        builder = builder.resolve(host, SocketAddr::new(resolved[0], port));
+    }
+    builder
+        .build()
+        .map_err(|e| format!("Failed to build validated proxy client: {e}"))
 }
 
 fn strip_frame_headers(response: Response<Full<Bytes>>) -> Response<Full<Bytes>> {
@@ -56,7 +117,6 @@ fn strip_frame_headers(response: Response<Full<Bytes>>) -> Response<Full<Bytes>>
 
 async fn handle_proxy_request(
     req: Request<Incoming>,
-    body_client: &Arc<BodyClient>,
     target_base: &str,
 ) -> Result<Response<Full<Bytes>>, Infallible> {
     let uri = req.uri();
@@ -91,52 +151,30 @@ async fn handle_proxy_request(
         return Ok(strip_frame_headers(resp));
     }
 
-    // Extract host and check against blocked ranges.
-    // Use proper IP parsing to avoid bypasses via IPv6 hex notation,
-    // abbreviated forms, or IPv4-mapped variants.
-    if let Some(host) = full_url.split('/').nth(2).and_then(|h| h.split(':').next().or(Some(h)).map(|s| s.split('?').next().unwrap_or(s))) {
-        let host_lower = host.to_lowercase();
-
-        // 1) Hostname checks (non-IP)
-        if host_lower == "localhost"
-            || host_lower == "169.254.169.254" // AWS/GCP/Azure metadata
-        {
-            let mut resp = Response::new(Full::new(Bytes::from_static(
-                b"Proxy target is in a blocked IP range (SSRF protection)",
-            )));
+    let parsed_url = match reqwest::Url::parse(&full_url) {
+        Ok(url) => url,
+        Err(_) => {
+            let mut resp =
+                Response::new(Full::new(Bytes::from_static(b"Invalid proxy target URL")));
+            *resp.status_mut() = StatusCode::BAD_REQUEST;
+            return Ok(strip_frame_headers(resp));
+        }
+    };
+    if !parsed_url.username().is_empty() || parsed_url.password().is_some() {
+        let mut resp = Response::new(Full::new(Bytes::from_static(
+            b"Proxy target credentials are not permitted",
+        )));
+        *resp.status_mut() = StatusCode::FORBIDDEN;
+        return Ok(strip_frame_headers(resp));
+    }
+    let body_client = match create_validated_client(&parsed_url).await {
+        Ok(client) => client,
+        Err(message) => {
+            let mut resp = Response::new(Full::new(Bytes::from(message)));
             *resp.status_mut() = StatusCode::FORBIDDEN;
             return Ok(strip_frame_headers(resp));
         }
-
-        // 2) Try parsing as IP address (handles all IPv4/IPv6 notations)
-        //    Strip brackets for IPv6 like [::1] or [::ffff:127.0.0.1]
-        let stripped = host_lower.trim_start_matches('[').trim_end_matches(']');
-        if let Ok(ip) = stripped.parse::<IpAddr>() {
-            let blocked = match ip {
-                IpAddr::V4(v4) => {
-                    v4.is_loopback()           // 127.0.0.0/8
-                        || v4.is_broadcast()   // 255.255.255.255
-                        || v4.is_unspecified() // 0.0.0.0
-                        || v4.is_private()     // 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16
-                        || v4.is_link_local()  // 169.254.0.0/16
-                }
-                IpAddr::V6(v6) => {
-                    v6.is_loopback()    // ::1
-                        || v6.is_unspecified()  // ::
-                        || v6.to_ipv4_mapped().map_or(false, |v4| {
-                            v4.is_loopback() || v4.is_private() || v4.is_link_local()
-                        })
-                }
-            };
-            if blocked {
-                let mut resp = Response::new(Full::new(Bytes::from_static(
-                    b"Proxy target is in a blocked IP range (SSRF protection)",
-                )));
-                *resp.status_mut() = StatusCode::FORBIDDEN;
-                return Ok(strip_frame_headers(resp));
-            }
-        }
-    }
+    };
 
     let method = req.method().clone();
     let headers = req.headers().clone();
@@ -185,7 +223,8 @@ async fn handle_proxy_request(
             // (gzip compression of our own response is deferred — see TODO below.)
             if let Some(headers_mut) = res_builder.headers_mut() {
                 for (key, value) in resp.headers().iter() {
-                    if key == http::header::CONTENT_ENCODING || key == http::header::CONTENT_LENGTH {
+                    if key == http::header::CONTENT_ENCODING || key == http::header::CONTENT_LENGTH
+                    {
                         continue;
                     }
                     headers_mut.insert(key.clone(), value.clone());
@@ -221,7 +260,9 @@ async fn handle_proxy_request(
             let response = match res_builder.body(Full::new(body_bytes)) {
                 Ok(r) => r,
                 Err(e) => {
-                    let mut response = Response::new(Full::new(Bytes::from(format!("Failed to build proxy response: {e}"))));
+                    let mut response = Response::new(Full::new(Bytes::from(format!(
+                        "Failed to build proxy response: {e}"
+                    ))));
                     *response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
                     response
                 }
@@ -232,7 +273,8 @@ async fn handle_proxy_request(
         Err(e) => {
             let is_timeout = e.is_timeout();
             eprintln!("[proxy] Upstream error: {:?}", e);
-            let mut response = Response::new(Full::new(Bytes::from("Upstream service unavailable")));
+            let mut response =
+                Response::new(Full::new(Bytes::from("Upstream service unavailable")));
             *response.status_mut() = if is_timeout {
                 StatusCode::GATEWAY_TIMEOUT
             } else {
@@ -266,18 +308,6 @@ pub async fn start_proxy_server(
         s.port = local_port;
         s.target_url = target_url;
     }
-
-    // Build reqwest client
-    let body_client: BodyClient = match reqwest::Client::builder()
-        // TLS validation enabled — do NOT use danger_accept_invalid_certs
-        .build()
-    {
-        Ok(c) => c,
-        Err(e) => return Err(format!("Failed to build reqwest client: {e}")),
-    };
-    // Wrap in Arc so per-connection tasks share the same connection pool
-    // instead of cloning the entire client (expensive).
-    let body_client = Arc::new(body_client);
 
     let (shutdown_tx, mut shutdown_rx) = tokio::sync::watch::channel(false);
 
@@ -314,19 +344,17 @@ pub async fn start_proxy_server(
             };
 
             let io = TokioIo::new(stream);
-            let body_client = body_client.clone();
             let state_clone2 = state_clone.clone();
 
             tokio::spawn(async move {
                 let service = hyper::service::service_fn(move |req: Request<Incoming>| {
-                    let body_client = body_client.clone();
                     let state = state_clone2.clone();
                     async move {
                         let target = {
                             let s = state.read().await;
                             s.target_url.trim_end_matches('/').to_string()
                         };
-                        handle_proxy_request(req, &body_client, &target).await
+                        handle_proxy_request(req, &target).await
                     }
                 });
 
@@ -376,6 +404,47 @@ mod tests {
     use hyper::service::service_fn;
     use hyper_util::server::conn::auto::Builder as ServerBuilder;
     use std::convert::Infallible;
+
+    #[test]
+    fn rejects_private_and_reserved_upstream_addresses() {
+        for address in [
+            "10.0.0.1",
+            "100.64.0.1",
+            "169.254.169.254",
+            "172.16.0.1",
+            "192.168.0.1",
+            "224.0.0.1",
+            "fc00::1",
+            "fe80::1",
+        ] {
+            let ip = address.parse().unwrap();
+            assert!(
+                is_prohibited_ip(ip, false),
+                "{address} must not be a permitted upstream address"
+            );
+        }
+    }
+
+    #[test]
+    fn loopback_is_allowed_only_when_explicitly_requested() {
+        let ipv4 = "127.0.0.1".parse().unwrap();
+        let ipv6 = "::1".parse().unwrap();
+        assert!(is_prohibited_ip(ipv4, false));
+        assert!(is_prohibited_ip(ipv6, false));
+        assert!(!is_prohibited_ip(ipv4, true));
+        assert!(!is_prohibited_ip(ipv6, true));
+    }
+
+    #[test]
+    fn permits_public_unicast_upstream_addresses() {
+        for address in ["1.1.1.1", "8.8.8.8", "2606:4700:4700::1111"] {
+            let ip = address.parse().unwrap();
+            assert!(
+                !is_prohibited_ip(ip, false),
+                "{address} must remain a permitted public upstream address"
+            );
+        }
+    }
 
     // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -428,7 +497,10 @@ mod tests {
     /// Poll until the proxy TCP listener is ready (max `max_retries` × 50 ms).
     async fn wait_for_proxy(port: u16, max_retries: u32) {
         for _ in 0..max_retries {
-            if tokio::net::TcpStream::connect(("127.0.0.1", port)).await.is_ok() {
+            if tokio::net::TcpStream::connect(("127.0.0.1", port))
+                .await
+                .is_ok()
+            {
                 return;
             }
             tokio::time::sleep(Duration::from_millis(50)).await;
@@ -447,9 +519,10 @@ mod tests {
         response
             .headers_mut()
             .insert("x-content-type-options", "nosniff".parse().unwrap());
-        response
-            .headers_mut()
-            .insert("content-security-policy", "default-src 'self'".parse().unwrap());
+        response.headers_mut().insert(
+            "content-security-policy",
+            "default-src 'self'".parse().unwrap(),
+        );
 
         let result = strip_frame_headers(response);
 
@@ -498,10 +571,7 @@ mod tests {
 
         // Bug #4: x-frame-options is now stripped (single-source CSP)
         assert!(!result.headers().contains_key("x-frame-options"));
-        assert_eq!(
-            result.headers().get("cache-control").unwrap(),
-            "no-cache"
-        );
+        assert_eq!(result.headers().get("cache-control").unwrap(), "no-cache");
     }
 
     #[test]
@@ -550,7 +620,9 @@ mod tests {
             .await
             .unwrap();
 
-        let port = get_proxy_port(&state).await.expect("proxy should be running");
+        let port = get_proxy_port(&state)
+            .await
+            .expect("proxy should be running");
         assert!(port > 0, "a real port should be assigned");
 
         stop_proxy_server(state.clone()).await.unwrap();
@@ -604,7 +676,9 @@ mod tests {
         start_proxy_server(0, "http://127.0.0.1:1".into(), state.clone())
             .await
             .unwrap();
-        let port2 = get_proxy_port(&state).await.expect("proxy should be running after restart");
+        let port2 = get_proxy_port(&state)
+            .await
+            .expect("proxy should be running after restart");
         assert!(port2 > 0, "restarted proxy must bind a port");
 
         stop_proxy_server(state.clone()).await.unwrap();
@@ -618,7 +692,9 @@ mod tests {
         let echo_url = format!("http://127.0.0.1:{echo_port}");
 
         let state = Arc::new(RwLock::new(ProxyState::default()));
-        start_proxy_server(0, echo_url, state.clone()).await.unwrap();
+        start_proxy_server(0, echo_url, state.clone())
+            .await
+            .unwrap();
         let proxy_port = get_proxy_port(&state).await.unwrap();
         wait_for_proxy(proxy_port, 10).await;
 
@@ -644,7 +720,9 @@ mod tests {
         let echo_url = format!("http://127.0.0.1:{echo_port}");
 
         let state = Arc::new(RwLock::new(ProxyState::default()));
-        start_proxy_server(0, echo_url, state.clone()).await.unwrap();
+        start_proxy_server(0, echo_url, state.clone())
+            .await
+            .unwrap();
         let proxy_port = get_proxy_port(&state).await.unwrap();
         wait_for_proxy(proxy_port, 10).await;
 
@@ -676,7 +754,9 @@ mod tests {
         let echo_url = format!("http://127.0.0.1:{echo_port}");
 
         let state = Arc::new(RwLock::new(ProxyState::default()));
-        start_proxy_server(0, echo_url, state.clone()).await.unwrap();
+        start_proxy_server(0, echo_url, state.clone())
+            .await
+            .unwrap();
         let proxy_port = get_proxy_port(&state).await.unwrap();
         wait_for_proxy(proxy_port, 10).await;
 
@@ -707,7 +787,9 @@ mod tests {
         let echo_url = format!("http://127.0.0.1:{echo_port}");
 
         let state = Arc::new(RwLock::new(ProxyState::default()));
-        start_proxy_server(0, echo_url, state.clone()).await.unwrap();
+        start_proxy_server(0, echo_url, state.clone())
+            .await
+            .unwrap();
         let proxy_port = get_proxy_port(&state).await.unwrap();
         wait_for_proxy(proxy_port, 10).await;
 
@@ -738,7 +820,9 @@ mod tests {
         let echo_url = format!("http://127.0.0.1:{echo_port}");
 
         let state = Arc::new(RwLock::new(ProxyState::default()));
-        start_proxy_server(0, echo_url, state.clone()).await.unwrap();
+        start_proxy_server(0, echo_url, state.clone())
+            .await
+            .unwrap();
         let proxy_port = get_proxy_port(&state).await.unwrap();
         wait_for_proxy(proxy_port, 10).await;
 
@@ -768,7 +852,9 @@ mod tests {
         let echo_url = format!("http://127.0.0.1:{echo_port}");
 
         let state = Arc::new(RwLock::new(ProxyState::default()));
-        start_proxy_server(0, echo_url, state.clone()).await.unwrap();
+        start_proxy_server(0, echo_url, state.clone())
+            .await
+            .unwrap();
         let proxy_port = get_proxy_port(&state).await.unwrap();
         wait_for_proxy(proxy_port, 10).await;
 
@@ -793,7 +879,9 @@ mod tests {
         let echo_url = format!("http://127.0.0.1:{echo_port}");
 
         let state = Arc::new(RwLock::new(ProxyState::default()));
-        start_proxy_server(0, echo_url, state.clone()).await.unwrap();
+        start_proxy_server(0, echo_url, state.clone())
+            .await
+            .unwrap();
         let proxy_port = get_proxy_port(&state).await.unwrap();
         wait_for_proxy(proxy_port, 10).await;
 
@@ -819,7 +907,9 @@ mod tests {
         let echo_url = format!("http://127.0.0.1:{echo_port}");
 
         let state = Arc::new(RwLock::new(ProxyState::default()));
-        start_proxy_server(0, echo_url, state.clone()).await.unwrap();
+        start_proxy_server(0, echo_url, state.clone())
+            .await
+            .unwrap();
         let proxy_port = get_proxy_port(&state).await.unwrap();
         wait_for_proxy(proxy_port, 10).await;
 

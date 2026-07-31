@@ -1,15 +1,12 @@
 // ==============================================================================
 // GHITA CODING AGENT — Shell Execution Utility
-// Shared utility for executing commands via @tauri-apps/plugin-shell
+// Shared utility for executing commands through the native audited command gate.
 //
-// TODO(Phase 5): capabilities/default.json currently allows shell:allow-execute
-// with args:true for cmd + powershell. Tighten by replacing the generic shell
-// capability with a pinned sidecar binary, or whitelist command validators at
-// the Tauri capability level. Until then, MALICIOUS_PATTERNS below is the
-// primary runtime defense layer.
+// The former plugin-shell `args: true` capability was removed in v0.6.0.
+// Commands now pass both this client-side preview and a native Rust gate.
 // ==============================================================================
 
-import { Command } from '@tauri-apps/plugin-shell';
+import { invoke } from '@tauri-apps/api/core';
 
 export type ShellType = 'cmd' | 'powershell' | 'bash' | 'sh';
 
@@ -25,13 +22,6 @@ export interface ShellResult {
   code: number | null;
   success: boolean;
 }
-
-const SHELL_CONFIGS: Record<ShellType, { cmdName: string; args: string[] }> = {
-  cmd: { cmdName: 'cmd', args: ['/c'] },
-  powershell: { cmdName: 'powershell', args: ['-NoProfile', '-Command'] },
-  bash: { cmdName: 'bash', args: ['-c'] },
-  sh: { cmdName: 'sh', args: ['-c'] },
-};
 
 const MALICIOUS_PATTERNS: Array<{
   regex: RegExp;
@@ -140,12 +130,13 @@ export function assessShellCommand(command: string): SecurityScanResult {
 }
 
 /**
- * Execute a shell command via @tauri-apps/plugin-shell
+ * Execute a shell command through the native Rust command gate.
  */
 export async function executeShellCommand(
   command: string,
   shell: ShellType = 'cmd',
   cwd?: string,
+  timeoutMs = 120_000,
 ): Promise<ShellResult> {
   const assessment = assessShellCommand(command);
   if (
@@ -160,19 +151,13 @@ export async function executeShellCommand(
     };
   }
 
-  const cfg = SHELL_CONFIGS[shell];
   try {
-    const result = await Command.create(
-      cfg.cmdName,
-      [...cfg.args, command],
-      cwd ? { cwd } : undefined,
-    ).execute();
-    return {
-      stdout: result.stdout || '',
-      stderr: result.stderr || '',
-      code: result.code,
-      success: result.code === 0,
-    };
+    return await invoke<ShellResult>('execute_approved_command', {
+      command,
+      shell,
+      cwd,
+      timeoutMs,
+    });
   } catch (e) {
     return {
       stdout: '',

@@ -108,7 +108,6 @@ export default defineConfig({
       '@tauri-apps/api/core',
       '@tauri-apps/api/event',
       '@tauri-apps/api/window',
-      '@tauri-apps/plugin-shell',
       '@tauri-apps/plugin-fs',
       '@tauri-apps/plugin-dialog',
       'socket.io-client',
@@ -146,7 +145,6 @@ export default defineConfig({
           'react-vendor': ['react', 'react-dom', 'react-dom/client'],
           'tauri-vendor': [
             '@tauri-apps/api/window',
-            '@tauri-apps/plugin-shell',
             '@tauri-apps/plugin-fs',
             '@tauri-apps/plugin-dialog',
           ],

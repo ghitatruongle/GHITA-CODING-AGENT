@@ -28,4 +28,4 @@ export type {
   MonitoringStats,
 } from './types.js';
 
-export const MONITORING_VERSION = '0.4.9';
+export const MONITORING_VERSION = '0.6.0';

@@ -15,6 +15,7 @@ import { getLastServer, saveLastServer, getDeviceId } from '../../services/stora
 import type { ConnectionState } from '../../types';
 import type { PairingScreenProps } from '../../navigation/types';
 import { useTranslation } from '../../i18n/context';
+import { assertSafeServerAddress } from '../../services/serverAddress';
 
 const PAIRING_CODE_LENGTH = 6;
 
@@ -120,7 +121,9 @@ export function usePairingSocket(
           if (!ENABLE_CLOUD_DISCOVERY) throw new Error(t('pairing.pairErrCloudDisabled'));
           if (!CLOUD_DISCOVERY_API_KEY) throw new Error(t('pairing.pairErrApiKeyMissing'));
           try {
-            const res = await fetch(`${CLOUD_DISCOVERY_API_URL}/${CLOUD_DISCOVERY_API_KEY}/${code}`);
+            const res = await fetch(
+              `${CLOUD_DISCOVERY_API_URL}/${CLOUD_DISCOVERY_API_KEY}/${code}`,
+            );
             const dataText = await res.text();
             const cleanedData = dataText.replace(/^"|"$/g, '').trim();
             if (!cleanedData) throw new Error(t('pairing.pairErrNoComputer'));
@@ -154,6 +157,7 @@ export function usePairingSocket(
 
         const pingPromises = addressesToTry.map(async (url) => {
           try {
+            assertSafeServerAddress(url);
             const res = await fetch(`${url}/health`, { signal: controller.signal });
             if (res.status === 200) {
               const data = await res.json();

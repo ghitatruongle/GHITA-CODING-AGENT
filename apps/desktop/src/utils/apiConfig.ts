@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { getCurrentSocket } from './sharedSocket';
 
 export const API_CONFIG_STORAGE_KEY = 'ghita_api_keys';
 
@@ -20,43 +21,26 @@ export async function loadApiConfig(): Promise<ApiConfigSnapshot> {
     const config = await invoke<ApiConfigSnapshot>('load_api_config');
     if (config && Object.keys(config).length > 0) return config;
 
+    // One-time migration from the WebView store used by versions <=0.4.9.
     const legacy = readLegacyLocalStorage();
     if (Object.keys(legacy).length > 0) {
       await saveApiConfig(legacy);
       localStorage.removeItem(API_CONFIG_STORAGE_KEY);
     }
     return legacy;
-  } catch {
-    return readLegacyLocalStorage();
+  } catch (error) {
+    const legacy = readLegacyLocalStorage();
+    if (Object.keys(legacy).length > 0) return legacy;
+    throw error;
   }
 }
 
 export async function saveApiConfig(config: ApiConfigSnapshot): Promise<void> {
-  // Persist to localStorage first so we have a recoverable copy even if the
-  // backend invoke fails partway through. Only clear the local copy once the
-  // backend has acknowledged the write.
-  const serialized = JSON.stringify(config);
-  try {
-    localStorage.setItem(API_CONFIG_STORAGE_KEY, serialized);
-  } catch {
-    // localStorage may be full or disabled (private mode). Continue anyway
-    // and rely on the backend as the source of truth.
-  }
-
-  try {
-    await invoke('save_api_config', { config });
-    // Backend confirmed — drop the local mirror.
-    localStorage.removeItem(API_CONFIG_STORAGE_KEY);
-  } catch {
-    // Backend write failed. Keep the local copy so the next loadApiConfig
-    // call can recover via the legacy fallback path.
-    try {
-      localStorage.setItem(API_CONFIG_STORAGE_KEY, serialized);
-    } catch {
-      // Nothing more we can do; the in-memory `config` argument is still
-      // valid for the current call site.
-    }
-  }
+  // API keys must never be mirrored into WebView localStorage. The Rust
+  // backend persists this payload in the operating-system credential vault.
+  await invoke('save_api_config', { config });
+  localStorage.removeItem(API_CONFIG_STORAGE_KEY);
+  getCurrentSocket()?.emit('sync_api_config', { config });
 }
 
 export function normalizeApiKeys(entry: Record<string, unknown> | null | undefined): string[] {

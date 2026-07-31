@@ -1,6 +1,6 @@
 {
   "name": "@ghita/agents",
-  "version": "0.4.9",
+  "version": "0.6.0",
   "private": true,
   "sideEffects": false,
   "description": "Agent manager & groups cho GHITA CODING AGENT",

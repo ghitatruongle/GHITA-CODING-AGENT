@@ -12,13 +12,24 @@ import type {
   EmbeddingManyResponse,
 } from '../types.js';
 import { BaseProvider } from './base.js';
+import {
+  extractGoogleToolCalls,
+  googleSystemInstruction,
+  googleToolFields,
+  toGoogleContents,
+} from './google-tool-calling.js';
 
-const GOOGLE_MODELS = ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-2.0-flash-exp', 'gemini-pro'];
+const GOOGLE_MODELS = [
+  'gemini-3.6-flash',
+  'gemini-3.5-flash',
+  'gemini-3.1-flash-lite',
+  'gemini-3.1-pro-preview',
+];
 
 export class GoogleProvider extends BaseProvider {
   readonly type = 'google' as const;
   readonly name = 'Google';
-  readonly defaultModel = 'gemini-1.5-pro';
+  readonly defaultModel = 'gemini-3.5-flash';
   readonly models = GOOGLE_MODELS;
 
   constructor(config: ProviderConfig) {
@@ -33,7 +44,8 @@ export class GoogleProvider extends BaseProvider {
     const apiKey = this.getApiKey();
     const model = this.getModel(options);
 
-    const contents = this.convertMessages(messages);
+    const contents = toGoogleContents(messages);
+    const systemInstruction = googleSystemInstruction(messages);
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
@@ -42,6 +54,8 @@ export class GoogleProvider extends BaseProvider {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents,
+          ...(systemInstruction ? { systemInstruction } : {}),
+          ...googleToolFields(options),
           generationConfig: {
             maxOutputTokens: this.getMaxTokens(options),
             temperature: this.getTemperature(options),
@@ -63,7 +77,16 @@ export class GoogleProvider extends BaseProvider {
 
     const data = (await response.json()) as {
       candidates: Array<{
-        content: { parts: Array<{ text: string }> };
+        content: {
+          parts: Array<{
+            text?: string;
+            functionCall?: {
+              id?: string;
+              name: string;
+              args: Record<string, unknown>;
+            };
+          }>;
+        };
         finishReason: string;
       }>;
       usageMetadata: {
@@ -73,7 +96,9 @@ export class GoogleProvider extends BaseProvider {
       };
     };
 
-    const content = data.candidates[0]?.content?.parts?.map((p) => p.text).join('') ?? '';
+    const parts = data.candidates[0]?.content?.parts ?? [];
+    const content = parts.map((part) => part.text ?? '').join('');
+    const toolCalls = extractGoogleToolCalls(parts);
 
     return {
       content,
@@ -85,6 +110,7 @@ export class GoogleProvider extends BaseProvider {
         totalTokens: data.usageMetadata?.totalTokenCount ?? 0,
       },
       finishReason: this.mapFinishReason(data.candidates[0]?.finishReason),
+      ...(toolCalls.length ? { toolCalls } : {}),
     };
   }
 
@@ -92,18 +118,23 @@ export class GoogleProvider extends BaseProvider {
     const apiKey = this.getApiKey();
     const model = this.getModel(options);
 
-    const contents = this.convertMessages(messages);
+    const contents = toGoogleContents(messages);
+    const systemInstruction = googleSystemInstruction(messages);
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents,
+          ...(systemInstruction ? { systemInstruction } : {}),
+          ...googleToolFields(options),
           generationConfig: {
             maxOutputTokens: this.getMaxTokens(options),
             temperature: this.getTemperature(options),
+            topP: options?.topP,
+            stopSequences: options?.stop,
           },
         }),
         signal: options?.signal,
@@ -128,6 +159,10 @@ export class GoogleProvider extends BaseProvider {
 
     const decoder = new TextDecoder();
     let buffer = '';
+    const streamedCalls = new Map<
+      string,
+      { id?: string; name: string; arguments: Record<string, unknown> }
+    >();
 
     try {
       while (true) {
@@ -135,25 +170,36 @@ export class GoogleProvider extends BaseProvider {
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
-
-        // Google streams JSON array chunks
-        const jsonMatch = buffer.match(/\{"candidates":\[.*?\]\}/);
-        if (jsonMatch) {
-          const matchIndex = jsonMatch.index ?? 0;
-          buffer = buffer.slice(matchIndex + jsonMatch[0].length);
+        const lines = buffer.split(/\r?\n/);
+        buffer = lines.pop() ?? '';
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith('data:')) continue;
+          const payload = trimmed.slice('data:'.length).trim();
+          if (!payload || payload === '[DONE]') continue;
           try {
-            const parsed = JSON.parse(jsonMatch[0]) as {
-              candidates: Array<{
-                content: { parts: Array<{ text: string }> };
-                finishReason?: string;
+            const parsed = JSON.parse(payload) as {
+              candidates?: Array<{
+                content?: {
+                  parts?: Array<{
+                    text?: string;
+                    functionCall?: {
+                      id?: string;
+                      name: string;
+                      args: Record<string, unknown>;
+                    };
+                  }>;
+                };
               }>;
             };
-            const text = parsed.candidates[0]?.content?.parts?.map((p) => p.text).join('');
-            if (text) {
-              yield { content: text, done: false, provider: 'google', model };
+            const parts = parsed.candidates?.[0]?.content?.parts ?? [];
+            const text = parts.map((part) => part.text ?? '').join('');
+            if (text) yield { content: text, done: false, provider: 'google', model };
+            for (const call of extractGoogleToolCalls(parts)) {
+              streamedCalls.set(call.id ?? `${call.name}:${streamedCalls.size}`, call);
             }
           } catch {
-            // Expected: skip malformed JSON chunks in SSE stream
+            // Ignore a malformed event without discarding subsequent SSE frames.
           }
         }
       }
@@ -161,18 +207,13 @@ export class GoogleProvider extends BaseProvider {
       reader.releaseLock();
     }
 
-    yield { content: '', done: true, provider: 'google', model };
-  }
-
-  private convertMessages(
-    messages: ChatMessage[],
-  ): Array<{ role: string; parts: Array<{ text: string }> }> {
-    return messages
-      .filter((m) => m.role !== 'system')
-      .map((m) => ({
-        role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: m.content }],
-      }));
+    yield {
+      content: '',
+      done: true,
+      provider: 'google',
+      model,
+      toolCalls: [...streamedCalls.values()],
+    };
   }
 
   private mapFinishReason(reason: string | undefined): 'stop' | 'length' | 'error' | 'aborted' {
@@ -188,7 +229,7 @@ export class GoogleProvider extends BaseProvider {
 
   async embed(text: string, options?: { model?: string }): Promise<EmbeddingResponse> {
     const apiKey = this.getApiKey();
-    const model = options?.model ?? 'text-embedding-004';
+    const model = options?.model ?? 'gemini-embedding-2';
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:embedContent?key=${apiKey}`,

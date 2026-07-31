@@ -17,9 +17,7 @@
 // ==============================================================================
 
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
-use enigo::{
-    Button, Coordinate, Direction, Enigo, Key, Keyboard, Mouse, Settings,
-};
+use enigo::{Button, Coordinate, Direction, Enigo, Key, Keyboard, Mouse, Settings};
 use image::imageops::FilterType;
 use screenshots::Screen;
 use serde::{Deserialize, Serialize};
@@ -61,11 +59,12 @@ impl ComputerUseState {
     pub fn new() -> Self {
         let enigo = Enigo::new(&Settings::default()).unwrap_or_else(|e| {
             eprintln!("[GHITA] Failed to initialize enigo input controller: {e}");
-            eprintln!("[GHITA] Computer use features (mouse/keyboard control) will be unavailable.");
+            eprintln!(
+                "[GHITA] Computer use features (mouse/keyboard control) will be unavailable."
+            );
             // Return a dummy enigo - will fail on actual input operations
-            Enigo::new(&Settings::default()).unwrap_or_else(|_| {
-                panic!("Cannot create even dummy enigo controller")
-            })
+            Enigo::new(&Settings::default())
+                .unwrap_or_else(|_| panic!("Cannot create even dummy enigo controller"))
         });
         Self {
             enigo: Mutex::new(enigo),
@@ -131,24 +130,12 @@ fn capture_screen_impl(
             (q * 100.0).clamp(1.0, 100.0) as u8,
         );
         let rgb = image::DynamicImage::ImageRgba8(dyn_img).to_rgb8();
-        image::ImageEncoder::write_image(
-            enc,
-            rgb.as_raw(),
-            fw,
-            fh,
-            image::ColorType::Rgb8,
-        )
-        .map_err(|e| format!("JPEG encode: {e}"))?;
+        image::ImageEncoder::write_image(enc, rgb.as_raw(), fw, fh, image::ColorType::Rgb8)
+            .map_err(|e| format!("JPEG encode: {e}"))?;
     } else {
         let enc = image::codecs::png::PngEncoder::new(&mut cursor);
-        image::ImageEncoder::write_image(
-            enc,
-            dyn_img.as_raw(),
-            fw,
-            fh,
-            image::ColorType::Rgba8,
-        )
-        .map_err(|e| format!("PNG encode: {e}"))?;
+        image::ImageEncoder::write_image(enc, dyn_img.as_raw(), fw, fh, image::ColorType::Rgba8)
+            .map_err(|e| format!("PNG encode: {e}"))?;
     }
 
     let mime = if output_jpeg {
@@ -328,9 +315,7 @@ pub fn computer_type_text(
     state: tauri::State<'_, ComputerUseState>,
 ) -> Result<(), String> {
     let mut enigo = state.enigo.lock().map_err(|e| e.to_string())?;
-    enigo
-        .text(&text)
-        .map_err(|e| format!("type_text: {e}"))
+    enigo.text(&text).map_err(|e| format!("type_text: {e}"))
 }
 
 /// Press and release a single key by its canonical name.

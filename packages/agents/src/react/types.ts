@@ -3,6 +3,7 @@
 // ==============================================================================
 
 import type { BaseMessage } from '../messages/message.js';
+import type { MessageData } from '../messages/types.js';
 import type { AgentMiddleware } from '../middleware/types.js';
 import type { RunnableConfig } from '../pipeline/types.js';
 
@@ -22,6 +23,39 @@ export type AgentStep = {
   action: AgentAction;
   observation: string;
 };
+
+export type ReActCheckpointStatus =
+  | 'running'
+  | 'completed'
+  | 'failed'
+  | 'interrupted'
+  | 'exhausted';
+
+/**
+ * Durable, provider-neutral snapshot of a ReAct run.
+ *
+ * `pendingActions` is persisted before a tool starts. A caller must explicitly
+ * opt in before resuming such a checkpoint because the tool may have completed
+ * its side effect before the process stopped.
+ */
+export interface ReActCheckpoint {
+  version: 1;
+  runId: string;
+  agentId: string;
+  agentName: string;
+  userMessage: string;
+  status: ReActCheckpointStatus;
+  maxIterations: number;
+  nextIteration: number;
+  messages: MessageData[];
+  steps: AgentStep[];
+  pendingActions: AgentAction[];
+  output?: string;
+  error?: string;
+  updatedAt: number;
+}
+
+export type ReActCheckpointWriter = (checkpoint: ReActCheckpoint) => void | Promise<void>;
 
 /**
  * v0.4.9 A2: Policy guard hook — evaluated before every tool execution.
@@ -74,6 +108,19 @@ export interface ReActAgentConfig {
    * tool and feeds the reason back to the model as the observation.
    */
   policyGuard?: PolicyGuard;
+  /** Stable ID used by durable run journals. Generated when omitted. */
+  runId?: string;
+  /** Resume a previously persisted run snapshot. */
+  resumeFrom?: ReActCheckpoint;
+  /** Called at every safe point and before/after each tool execution. */
+  checkpoint?: ReActCheckpointWriter;
+  /**
+   * Explicit acknowledgement that pending tools may be executed again.
+   * Required when `resumeFrom.pendingActions` is non-empty.
+   */
+  resumePendingTools?: boolean;
+  /** Optional cooperative cancellation signal. */
+  signal?: AbortSignal;
 }
 
 export interface ReActTool {
@@ -114,6 +161,8 @@ export interface CreateReActAgentInput {
 }
 
 export interface ReActAgentRunResult {
+  /** Present for durable/checkpointed runs. */
+  runId?: string;
   output: string;
   steps: AgentStep[];
   messages: BaseMessage[];

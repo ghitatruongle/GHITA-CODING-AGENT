@@ -10,6 +10,7 @@ import { getSharedSocket } from '../../utils/sharedSocket';
 import { generateUUID, type AgentEvent } from '@ghita/shared';
 import { useAppStore } from '../../stores/appStore';
 import type { ChatMessage } from '../../hooks/useChatSessions';
+import { loadApiConfig } from '../../utils/apiConfig';
 
 export interface ToolApprovalRequest {
   toolCallId: string;
@@ -23,6 +24,25 @@ export interface FileApprovalRequest {
   id: string;
   operation: string;
   filePath: string;
+}
+
+export interface ResumeApprovalRequest {
+  runId: string;
+  pendingTools: string[];
+  message: string;
+}
+
+export interface AgentRunSummary {
+  runId: string;
+  status: 'running' | 'completed' | 'failed' | 'interrupted' | 'exhausted';
+  task: string;
+  agentName?: string;
+  nextIteration: number;
+  stepsCount: number;
+  pendingActionsCount: number;
+  outputPreview: string;
+  error: string;
+  updatedAt: number;
 }
 
 export interface RalphProgress {
@@ -45,6 +65,10 @@ export function useChatSocket({ setMessages, tRef, reconnectTrigger }: UseChatSo
   const [agentEvents, setAgentEvents] = useState<AgentEvent[]>([]);
   const [approvalRequest, setApprovalRequest] = useState<ToolApprovalRequest | null>(null);
   const [fileApprovalRequest, setFileApprovalRequest] = useState<FileApprovalRequest | null>(null);
+  const [resumeApprovalRequest, setResumeApprovalRequest] = useState<ResumeApprovalRequest | null>(
+    null,
+  );
+  const [agentRuns, setAgentRuns] = useState<AgentRunSummary[]>([]);
   const [ralphProgress, setRalphProgress] = useState<RalphProgress | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [activeFlow, setActiveFlow] = useState<'ralph' | 'agent' | null>(null);
@@ -52,6 +76,16 @@ export function useChatSocket({ setMessages, tRef, reconnectTrigger }: UseChatSo
   const terminalCwd = useAppStore((s) => s.terminalCwd);
 
   const socketRef = useRef<Socket | null>(null);
+
+  const syncApiConfig = useCallback((socket: Socket) => {
+    void loadApiConfig()
+      .then((config) => {
+        if (socket.connected) socket.emit('sync_api_config', { config });
+      })
+      .catch((error) => {
+        console.warn('[ChatPanel] Secure API configuration could not be loaded:', error);
+      });
+  }, []);
 
   // Streaming buffer: accumulate tokens and flush every 50ms
   const streamBufferRef = useRef('');
@@ -113,12 +147,16 @@ export function useChatSocket({ setMessages, tRef, reconnectTrigger }: UseChatSo
           if (active) setConnectionStatus('connected');
           const cwd = useAppStore.getState().terminalCwd;
           socket.emit('set_workspace', { path: cwd || null });
+          syncApiConfig(socket);
+          socket.emit('list_agent_runs', { limit: 30 });
         }
 
         socket.on('connect', () => {
           if (active) setConnectionStatus('connected');
           const cwd = useAppStore.getState().terminalCwd;
           socket.emit('set_workspace', { path: cwd || null });
+          syncApiConfig(socket);
+          socket.emit('list_agent_runs', { limit: 30 });
         });
 
         socket.on('disconnect', () => {
@@ -128,6 +166,7 @@ export function useChatSocket({ setMessages, tRef, reconnectTrigger }: UseChatSo
             setActiveFlow(null);
             setApprovalRequest(null);
             setFileApprovalRequest(null);
+            setResumeApprovalRequest(null);
             setRalphProgress(null);
             stopStreamFlush();
             setMessages((prev) => prev.filter((msg) => msg.id !== 'streaming-message'));
@@ -142,6 +181,7 @@ export function useChatSocket({ setMessages, tRef, reconnectTrigger }: UseChatSo
             setActiveFlow(null);
             setApprovalRequest(null);
             setFileApprovalRequest(null);
+            setResumeApprovalRequest(null);
             setRalphProgress(null);
           }
         });
@@ -151,7 +191,7 @@ export function useChatSocket({ setMessages, tRef, reconnectTrigger }: UseChatSo
           if (!active) return;
           setIsSending(true);
 
-          if (data.senderId !== 'desktop') {
+          if (data.senderId !== 'desktop' && data.senderId !== 'system') {
             setMessages((prev) => [
               ...prev,
               {
@@ -293,6 +333,24 @@ export function useChatSocket({ setMessages, tRef, reconnectTrigger }: UseChatSo
           },
         );
 
+        socket.on('agent_resume_confirmation_required', (data: ResumeApprovalRequest) => {
+          if (active) {
+            setResumeApprovalRequest(data);
+            setIsSending(false);
+            setActiveFlow(null);
+          }
+        });
+
+        socket.on('agent_runs', (data: { runs?: AgentRunSummary[] }) => {
+          if (active && Array.isArray(data.runs)) {
+            setAgentRuns(data.runs);
+          }
+        });
+
+        socket.on('agent_run_done', () => {
+          socket.emit('list_agent_runs', { limit: 30 });
+        });
+
         // Phase 3: Listen to live agent runtime events
         socket.on('agent_event', (event: AgentEvent) => {
           if (active) {
@@ -378,13 +436,16 @@ export function useChatSocket({ setMessages, tRef, reconnectTrigger }: UseChatSo
         sock.off('action_required');
         sock.off('require_approval');
         sock.off('require_file_approval');
+        sock.off('agent_resume_confirmation_required');
+        sock.off('agent_runs');
+        sock.off('agent_run_done');
         sock.off('agent_event');
         sock.off('ralph_loop_progress');
         sock.off('ralph_loop_done');
         sock.off('computer_use_step');
       }
     };
-  }, [reconnectTrigger, stopStreamFlush]);
+  }, [reconnectTrigger, stopStreamFlush, syncApiConfig]);
 
   const handleReconnect = async () => {
     if (connectionStatus === 'connected') return;
@@ -433,6 +494,32 @@ export function useChatSocket({ setMessages, tRef, reconnectTrigger }: UseChatSo
     setFileApprovalRequest(null);
   };
 
+  const handleConfirmResume = () => {
+    if (!resumeApprovalRequest || !socketRef.current) return;
+    socketRef.current.emit('agent_run', {
+      resumeRunId: resumeApprovalRequest.runId,
+      resumeConfirmed: true,
+    });
+    setResumeApprovalRequest(null);
+    setIsSending(true);
+    setActiveFlow('agent');
+  };
+
+  const handleRejectResume = () => {
+    setResumeApprovalRequest(null);
+  };
+
+  const refreshAgentRuns = () => {
+    socketRef.current?.emit('list_agent_runs', { limit: 30 });
+  };
+
+  const handleResumeRun = (runId: string) => {
+    if (!socketRef.current) return;
+    socketRef.current.emit('agent_run', { resumeRunId: runId });
+    setIsSending(true);
+    setActiveFlow('agent');
+  };
+
   return {
     socketRef,
     connectionStatus,
@@ -441,6 +528,8 @@ export function useChatSocket({ setMessages, tRef, reconnectTrigger }: UseChatSo
     setAgentEvents,
     approvalRequest,
     fileApprovalRequest,
+    resumeApprovalRequest,
+    agentRuns,
     ralphProgress,
     isSending,
     setIsSending,
@@ -451,5 +540,9 @@ export function useChatSocket({ setMessages, tRef, reconnectTrigger }: UseChatSo
     handleRejectTool,
     handleApproveFileWrite,
     handleRejectFileWrite,
+    handleConfirmResume,
+    handleRejectResume,
+    refreshAgentRuns,
+    handleResumeRun,
   };
 }
