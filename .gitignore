@@ -77,6 +77,8 @@ apps/desktop/src-tauri/target/
 apps/desktop/src-tauri/sidecar/server.bundle.mjs
 apps/desktop/src-tauri/sidecar/node.exe
 apps/desktop/src-tauri/sidecar/meta.json
+# Tauri CLI regenerates these ACL/schema files on every build — not source
+apps/desktop/src-tauri/gen/schemas/
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 5. MOBILE CLIENTS (ANDROID & IOS)

@@ -11,7 +11,8 @@ const MainLayout = lazy(() =>
   import('./layouts/MainLayout').then((m) => ({ default: m.MainLayout })),
 );
 import { Toast } from './components/Toast';
-import { useAppStore } from './stores/appStore';
+import { CommandPalette } from './components/CommandPalette';
+import { useAppStore, type TabId } from './stores/appStore';
 import { I18nProvider, useTranslation } from './i18n';
 import toast from 'react-hot-toast';
 import { invoke } from '@tauri-apps/api/core';
@@ -147,7 +148,9 @@ function AppContent() {
         /* not in Tauri or event not emitted */
       }
     })();
-    return () => { if (unlisten) unlisten(); };
+    return () => {
+      if (unlisten) unlisten();
+    };
   }, []);
 
   useEffect(() => {
@@ -262,6 +265,81 @@ function AppContent() {
   }, []);
 
   const terminalCwd = useAppStore((s) => s.terminalCwd);
+  const shortcutsEnabled = useAppStore((s) => s.shortcutsEnabled);
+  const setCommandPaletteOpen = useAppStore((s) => s.setCommandPaletteOpen);
+  const toggleTerminal = useAppStore((s) => s.toggleTerminal);
+  const toggleChat = useAppStore((s) => s.toggleChat);
+  const toggleSidebar = useAppStore((s) => s.toggleSidebar);
+  const setActiveTab = useAppStore((s) => s.setActiveTab);
+
+  // v0.7.0 — Global keyboard shortcuts (when shortcutsEnabled is true)
+  useEffect(() => {
+    if (!shortcutsEnabled) return;
+
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept when user is typing in an input/textarea
+      const tag = (e.target as HTMLElement).tagName.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+
+      // Ctrl+P / Cmd+P — Command Palette
+      if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+        e.preventDefault();
+        setCommandPaletteOpen((prev) => !prev);
+        return;
+      }
+
+      // Ctrl+B — Toggle sidebar / toggle terminal focus
+      if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+        e.preventDefault();
+        toggleSidebar();
+        return;
+      }
+
+      // Ctrl+Shift+C — Toggle chat panel
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'C') {
+        e.preventDefault();
+        toggleChat();
+        return;
+      }
+
+      // Ctrl+` — Toggle terminal
+      if ((e.ctrlKey || e.metaKey) && e.key === '`') {
+        e.preventDefault();
+        toggleTerminal();
+        return;
+      }
+
+      // Ctrl+1..=9 — Switch to corresponding tab (skip 'welcome')
+      if ((e.ctrlKey || e.metaKey) && e.key >= '1' && e.key <= '9') {
+        e.preventDefault();
+        const tabIndex = parseInt(e.key, 10) - 1;
+        const tabOrder: Array<string> = [
+          'code',
+          'api',
+          'skills',
+          'agents',
+          'devices',
+          'dashboard',
+          'monitoring',
+          'quota',
+          'settings',
+        ];
+        if (tabIndex < tabOrder.length) {
+          setActiveTab(tabOrder[tabIndex] as TabId);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown, { capture: true });
+  }, [
+    shortcutsEnabled,
+    setCommandPaletteOpen,
+    toggleTerminal,
+    toggleChat,
+    toggleSidebar,
+    setActiveTab,
+  ]);
 
   // Sync workspace path to sidecar when it changes
   useEffect(() => {
@@ -287,6 +365,7 @@ function AppContent() {
   return (
     <>
       <ReadyNotifier />
+      <CommandPalette />
       <Suspense
         fallback={
           <div

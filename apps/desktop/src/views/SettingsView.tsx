@@ -84,6 +84,22 @@ function Select({
 }
 
 export function SettingsView() {
+  // v0.7.0 — Editor & Terminal preferences
+  const editorFontSize = useAppStore((s) => s.editorFontSize);
+  const setEditorFontSize = useAppStore((s) => s.setEditorFontSize);
+  const editorWordWrap = useAppStore((s) => s.editorWordWrap);
+  const setEditorWordWrap = useAppStore((s) => s.setEditorWordWrap);
+  const editorMinimap = useAppStore((s) => s.editorMinimap);
+  const setEditorMinimap = useAppStore((s) => s.setEditorMinimap);
+  const editorLineNumbers = useAppStore((s) => s.editorLineNumbers);
+  const setEditorLineNumbers = useAppStore((s) => s.setEditorLineNumbers);
+  const editorTabSize = useAppStore((s) => s.editorTabSize);
+  const setEditorTabSize = useAppStore((s) => s.setEditorTabSize);
+  const terminalFontSize = useAppStore((s) => s.terminalFontSize);
+  const setTerminalFontSize = useAppStore((s) => s.setTerminalFontSize);
+  const terminalFontFamily = useAppStore((s) => s.terminalFontFamily);
+  const setTerminalFontFamily = useAppStore((s) => s.setTerminalFontFamily);
+
   const theme = useAppStore((s) => s.theme);
   const language = useAppStore((s) => s.language);
   const logLevel = useAppStore((s) => s.logLevel);
@@ -345,6 +361,115 @@ export function SettingsView() {
             + {t('common.add')}
           </Button>
         </div>
+      </Section>
+
+      {/* v0.7.0 — Editor Preferences */}
+      <Section title={`✏️ ${t('editor.editorConfig')}`}>
+        <SettingRow label={t('editor.fontSize')}>
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              min={10}
+              max={32}
+              value={editorFontSize}
+              onChange={(e) => setEditorFontSize(Number(e.target.value))}
+              className="w-16 text-center"
+            />
+            <span className="text-[10px] text-text-muted">px</span>
+          </div>
+        </SettingRow>
+        <SettingRow label={t('editor.wordWrap')}>
+          <select
+            value={editorWordWrap ? 'on' : 'off'}
+            onChange={(e) => setEditorWordWrap(e.target.value === 'on')}
+            className="text-sm bg-bg-surface border border-border-default rounded-md px-2 py-1 text-text-primary outline-none"
+          >
+            <option value="on">{t('editor.wordWrapToggle')}</option>
+            <option value="off">{t('editor.wordWrapToggle')}</option>
+          </select>
+        </SettingRow>
+        <SettingRow label={t('editor.minimap')}>
+          <select
+            value={editorMinimap ? 'on' : 'off'}
+            onChange={(e) => setEditorMinimap(e.target.value === 'on')}
+            className="text-sm bg-bg-surface border border-border-default rounded-md px-2 py-1 text-text-primary outline-none"
+          >
+            <option value="on">{t('editor.minimapToggle')}</option>
+            <option value="off">{t('editor.minimapToggle')}</option>
+          </select>
+        </SettingRow>
+        <SettingRow label={t('editor.lineNumbers')}>
+          <select
+            value={editorLineNumbers ? 'on' : 'off'}
+            onChange={(e) => setEditorLineNumbers(e.target.value === 'on')}
+            className="text-sm bg-bg-surface border border-border-default rounded-md px-2 py-1 text-text-primary outline-none"
+          >
+            <option value="on">{t('editor.lineNumbersToggle')}</option>
+            <option value="off">{t('editor.lineNumbersToggle')}</option>
+          </select>
+        </SettingRow>
+        <SettingRow label={t('editor.tabSize')}>
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              min={1}
+              max={8}
+              value={editorTabSize}
+              onChange={(e) => setEditorTabSize(Number(e.target.value))}
+              className="w-16 text-center"
+            />
+            <span className="text-[10px] text-text-muted">spaces</span>
+          </div>
+        </SettingRow>
+      </Section>
+
+      {/* v0.7.0 — Terminal Preferences */}
+      <Section title={`🖥️ ${t('terminal.title')}`}>
+        <SettingRow label={t('editor.fontSize')}>
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              min={10}
+              max={24}
+              value={terminalFontSize}
+              onChange={(e) => setTerminalFontSize(Number(e.target.value))}
+              className="w-16 text-center"
+            />
+            <span className="text-[10px] text-text-muted">px</span>
+          </div>
+        </SettingRow>
+        <SettingRow label="Font Family">
+          <Input
+            value={terminalFontFamily}
+            onChange={(e) => setTerminalFontFamily(e.target.value)}
+            className="flex-1"
+            placeholder="Font family"
+          />
+        </SettingRow>
+      </Section>
+
+      {/* v0.7.0 — Keyboard Shortcuts */}
+      <Section title={`⌨️ ${t('welcome.shortcuts')}`}>
+        <SettingRow label="Command Palette">
+          <kbd className="text-[10px] bg-bg-surface px-2 py-0.5 rounded border border-border-subtle text-text-muted">
+            Ctrl+P
+          </kbd>
+        </SettingRow>
+        <SettingRow label="Toggle Terminal">
+          <kbd className="text-[10px] bg-bg-surface px-2 py-0.5 rounded border border-border-subtle text-text-muted">
+            Ctrl+`
+          </kbd>
+        </SettingRow>
+        <SettingRow label="Toggle Chat">
+          <kbd className="text-[10px] bg-bg-surface px-2 py-0.5 rounded border border-border-subtle text-text-muted">
+            Ctrl+Shift+C
+          </kbd>
+        </SettingRow>
+        <SettingRow label="Keyboard Shortcuts">
+          <kbd className="text-[10px] bg-bg-surface px-2 py-0.5 rounded border border-border-subtle text-text-muted">
+            Ctrl+K
+          </kbd>
+        </SettingRow>
       </Section>
 
       <Section title={`ℹ ${t('settings.info')}`}>

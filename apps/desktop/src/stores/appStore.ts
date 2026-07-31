@@ -26,6 +26,8 @@ export type TabId =
   | 'workflow'
   | 'ecosystem';
 
+export type ViewId = TabId | 'welcome' | 'search';
+
 export type ThemeMode = 'dark' | 'light';
 
 interface AppState {
@@ -59,6 +61,40 @@ interface AppState {
   // Chat
   isChatOpen: boolean;
   toggleChat: () => void;
+
+  // v0.7.0 — Command Palette
+  commandPaletteOpen: boolean;
+  setCommandPaletteOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
+
+  // v0.7.0 — Welcome Splash
+  showWelcome: boolean;
+  setShowWelcome: (show: boolean) => void;
+
+  // v0.7.0 — Active Workspace
+  activeWorkspace: string | null;
+  setActiveWorkspace: (path: string | null) => void;
+  recentWorkspaces: string[];
+  addRecentWorkspace: (path: string) => void;
+
+  // v0.7.0 — Editor Preferences
+  editorFontSize: number;
+  setEditorFontSize: (size: number) => void;
+  editorWordWrap: boolean;
+  setEditorWordWrap: (wrap: boolean) => void;
+  editorMinimap: boolean;
+  setEditorMinimap: (show: boolean) => void;
+  editorLineNumbers: boolean;
+  setEditorLineNumbers: (show: boolean) => void;
+  editorTabSize: number;
+  setEditorTabSize: (size: number) => void;
+  terminalFontSize: number;
+  setTerminalFontSize: (size: number) => void;
+  terminalFontFamily: string;
+  setTerminalFontFamily: (family: string) => void;
+
+  // v0.7.0 — Keyboard Shortcuts
+  shortcutsEnabled: boolean;
+  toggleShortcutsEnabled: () => void;
 
   // Settings
   theme: ThemeMode;
@@ -159,6 +195,46 @@ export const useAppStore = create<AppState>()(
       isChatOpen: false,
       toggleChat: () => set((s) => ({ isChatOpen: !s.isChatOpen })),
 
+      // v0.7.0 — Command Palette
+      commandPaletteOpen: false,
+      setCommandPaletteOpen: (open) =>
+        set((s) => ({
+          commandPaletteOpen: typeof open === 'function' ? open(s.commandPaletteOpen) : open,
+        })),
+
+      // v0.7.0 — Welcome Splash
+      showWelcome: true,
+      setShowWelcome: (show) => set({ showWelcome: show }),
+
+      // v0.7.0 — Active Workspace
+      activeWorkspace: null as string | null,
+      setActiveWorkspace: (path) => set({ activeWorkspace: path }),
+      recentWorkspaces: [] as string[],
+      addRecentWorkspace: (path) =>
+        set((s) => ({
+          recentWorkspaces: [path, ...s.recentWorkspaces.filter((w) => w !== path)].slice(0, 10),
+        })),
+
+      // v0.7.0 — Editor Preferences
+      editorFontSize: 14,
+      setEditorFontSize: (size) => set({ editorFontSize: Math.max(10, Math.min(32, size)) }),
+      editorWordWrap: true,
+      setEditorWordWrap: (wrap) => set({ editorWordWrap: wrap }),
+      editorMinimap: true,
+      setEditorMinimap: (show) => set({ editorMinimap: show }),
+      editorLineNumbers: true,
+      setEditorLineNumbers: (show) => set({ editorLineNumbers: show }),
+      editorTabSize: 2,
+      setEditorTabSize: (size) => set({ editorTabSize: Math.max(1, Math.min(8, size)) }),
+      terminalFontSize: 13,
+      setTerminalFontSize: (size) => set({ terminalFontSize: Math.max(10, Math.min(24, size)) }),
+      terminalFontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
+      setTerminalFontFamily: (family) => set({ terminalFontFamily: family }),
+
+      // v0.7.0 — Keyboard Shortcuts
+      shortcutsEnabled: true,
+      toggleShortcutsEnabled: () => set((s) => ({ shortcutsEnabled: !s.shortcutsEnabled })),
+
       // Settings
       theme: 'dark' as ThemeMode,
       language: DEFAULT_LOCALE,
@@ -247,6 +323,18 @@ export const useAppStore = create<AppState>()(
         isTerminalOpen: state.isTerminalOpen,
         plugins: state.plugins,
         permissionMode: state.permissionMode,
+        // v0.7.0 — Persist editor/terminal preferences
+        editorFontSize: state.editorFontSize,
+        editorWordWrap: state.editorWordWrap,
+        editorMinimap: state.editorMinimap,
+        editorLineNumbers: state.editorLineNumbers,
+        editorTabSize: state.editorTabSize,
+        terminalFontSize: state.terminalFontSize,
+        terminalFontFamily: state.terminalFontFamily,
+        shortcutsEnabled: state.shortcutsEnabled,
+        activeWorkspace: state.activeWorkspace,
+        recentWorkspaces: state.recentWorkspaces,
+        showWelcome: state.showWelcome,
       }),
       merge: (persistedState: unknown, currentState: AppState) => {
         // Debug-fix: guard against localStorage corruption where the

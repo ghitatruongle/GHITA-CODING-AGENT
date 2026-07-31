@@ -6,8 +6,9 @@ import { useCallback, useRef, useEffect, Component, lazy, Suspense } from 'react
 import type { ErrorInfo, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Terminal as TerminalIcon, MessageSquare, Bot, Monitor } from 'lucide-react';
-import { useAppStore, type TabId } from '../stores/appStore';
+import { useAppStore } from '../stores/appStore';
 import { useTranslation } from '../i18n';
+import { ActivityBar } from '../components/ActivityBar';
 import { isWindows, isLinux } from '@ghita/shared';
 import { TabBar } from '../components/TabBar';
 import { NotificationTray } from '../components/NotificationTray';
@@ -54,6 +55,9 @@ const WorkflowView = lazy(() =>
 );
 const EcosystemView = lazy(() =>
   import('../views/EcosystemView').then((module) => ({ default: module.EcosystemView })),
+);
+const WelcomeView = lazy(() =>
+  import('../views/WelcomeView').then((module) => ({ default: module.WelcomeView })),
 );
 
 function LoadingPanel() {
@@ -157,11 +161,16 @@ class ViewErrorBoundary extends Component<
 
 function ActiveView() {
   const activeTab = useAppStore((s) => s.activeTab);
+  const activeWorkspace = useAppStore((s) => s.activeWorkspace);
+  const showWelcome = useAppStore((s) => s.showWelcome);
   const { t } = useTranslation();
+
+  // When no workspace is open and welcome screen is enabled, show WelcomeView
+  const effectiveTab: string = showWelcome && !activeWorkspace ? 'welcome' : activeTab;
 
   // Only render the active tab to eliminate background polling waste.
   // Hidden tabs are unmounted, stopping their intervals and socket connections.
-  const TABS: Record<TabId, ReactNode> = {
+  const TABS: Record<string, ReactNode> = {
     code: <CodeView />,
     api: <ApiView />,
     skills: <SkillsView />,
@@ -175,12 +184,13 @@ function ActiveView() {
     workflow: <WorkflowView />,
     ecosystem: <EcosystemView />,
     settings: <SettingsView />,
+    welcome: <WelcomeView />,
   };
 
   return (
     <Suspense fallback={<LoadingPanel />}>
       <div style={{ height: '100%', width: '100%' }}>
-        <ViewErrorBoundary t={t}>{TABS[activeTab]}</ViewErrorBoundary>
+        <ViewErrorBoundary t={t}>{TABS[effectiveTab]}</ViewErrorBoundary>
       </div>
     </Suspense>
   );
@@ -243,6 +253,8 @@ export function MainLayout() {
         transition={{ duration: 0.3, ease: 'easeOut' }}
         className="flex items-center justify-between px-4 h-10 bg-bg-tertiary border-b border-border-subtle shrink-0 shadow-sm z-10"
       >
+        {/* Left spacer for Activity Bar alignment */}
+        <div className="w-[48px] shrink-0" />
         <div className="flex items-center gap-2 min-w-0">
           <Bot size={18} className="text-accent-primary shrink-0" />
           <span
@@ -312,6 +324,9 @@ export function MainLayout() {
 
       {/* Main area */}
       <div className="flex flex-1 min-h-0 relative">
+        {/* Activity Bar (left) */}
+        <ActivityBar />
+
         {/* Content Area */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Active view */}

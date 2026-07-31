@@ -11,6 +11,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Editor, { DiffEditor, type OnMount, type DiffOnMount } from '@monaco-editor/react';
 import { useTranslation } from '../i18n';
+import { useAppStore } from '../stores/appStore';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -313,10 +314,17 @@ function CodeEditorInner({
     </div>
   );
 
+  // v0.7.0 — read editor preferences from the global store
+  const storeFontSize = useAppStore((s) => s.editorFontSize);
+  const storeWordWrap = useAppStore((s) => s.editorWordWrap);
+  const storeMinimap = useAppStore((s) => s.editorMinimap);
+  const storeLineNumbers = useAppStore((s) => s.editorLineNumbers);
+  const storeTabSize = useAppStore((s) => s.editorTabSize);
+
   const editorOptions = {
     readOnly,
-    minimap: { enabled: showMinimap },
-    fontSize: 14,
+    minimap: { enabled: showMinimap ?? storeMinimap },
+    fontSize: storeFontSize,
     fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
     fontLigatures: true,
     scrollBeyondLastLine: false,
@@ -327,6 +335,10 @@ function CodeEditorInner({
     smoothScrolling: true,
     cursorBlinking: 'smooth' as const,
     cursorSmoothCaretAnimation: 'on' as const,
+    wordWrap: (storeWordWrap ? 'on' : 'off') as 'on' | 'off',
+    lineNumbers: (storeLineNumbers ? 'on' : 'off') as 'on' | 'off',
+    tabSize: storeTabSize,
+    insertSpaces: true,
     lineHeight: 22,
     roundedSelection: true,
     renderLineHighlightOnlyWhenFocus: true,
