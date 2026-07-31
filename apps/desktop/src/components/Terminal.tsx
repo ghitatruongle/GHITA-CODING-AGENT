@@ -33,10 +33,7 @@ let xtermLoadDone = false;
 async function loadXterm() {
   if (xtermLoadDone) return;
   try {
-    const [mod, fit] = await Promise.all([
-      import('@xterm/xterm'),
-      import('@xterm/addon-fit'),
-    ]);
+    const [mod, fit] = await Promise.all([import('@xterm/xterm'), import('@xterm/addon-fit')]);
     TerminalImpl = mod.Terminal as unknown as typeof TerminalType;
     FitAddonImpl = fit.FitAddon as unknown as typeof FitAddonType;
   } catch {
@@ -97,7 +94,24 @@ function XtermPane({
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<InstanceType<NonNullable<typeof TerminalImpl>> | null>(null);
   const fitRef = useRef<InstanceType<NonNullable<typeof FitAddonImpl>> | null>(null);
+  // v0.7.0 — terminal preferences read through the hook (test-compatible)
+  const terminalFontSize = useAppStore((s) => s.terminalFontSize);
+  const terminalFontFamily = useAppStore((s) => s.terminalFontFamily);
   const [ptyConnected, setPtyConnected] = useState(false);
+
+  // Apply font preferences live (without recreating the terminal session)
+  useEffect(() => {
+    const term = termRef.current;
+    if (term && typeof term.options === 'object' && term.options) {
+      term.options.fontSize = terminalFontSize;
+      term.options.fontFamily = terminalFontFamily;
+      try {
+        fitRef.current?.fit();
+      } catch {
+        /* Ignore fit errors during font change */
+      }
+    }
+  }, [terminalFontSize, terminalFontFamily]);
 
   // Re-fit xterm when visibility becomes active
   useEffect(() => {
@@ -125,11 +139,11 @@ function XtermPane({
     let unlistenExit: (() => void) | null = null;
     const currentTabId = tabId;
 
-    const TerminalCtor = TerminalImpl as any;
+    const TerminalCtor = TerminalImpl as unknown as typeof TerminalType;
     const term = new TerminalCtor({
       cursorBlink: true,
-      fontSize: 13,
-      fontFamily: "'Cascadia Code', 'Fira Code', 'Consolas', monospace",
+      fontSize: terminalFontSize,
+      fontFamily: terminalFontFamily,
       theme: {
         background: '#0a0a1a',
         foreground: '#e0e0e0',
@@ -156,7 +170,7 @@ function XtermPane({
       scrollback: 5000,
     });
 
-    const FitAddonCtor = FitAddonImpl as any;
+    const FitAddonCtor = FitAddonImpl as unknown as typeof FitAddonType;
     const fit = new FitAddonCtor();
     term.loadAddon(fit);
     term.open(containerRef.current);

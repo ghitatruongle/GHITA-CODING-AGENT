@@ -5,14 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.7.0] - 2026-07-31
+
+### Theme: VS Code-inspired UX
+
+#### UI/UX
+
+- **Activity Bar** — left-side icon-based navigation with VS Code-style indicator accent, covering Code, Search, Source Control, Run & Debug, Extensions, and Settings.
+- **Command Palette** (`Ctrl+P`) — fuzzy-search quick-action palette with categorized navigation, toggle terminal/chat/sidebar commands, and keyboard-driven selection (↑↓ navigate, ↵ select, Esc close).
+- **Welcome Screen** — first-launch and no-workspace screen with Open Folder button, recent-workspace list, and keyboard-shortcut cheat sheet.
+- **Workspace persistence** — `activeWorkspace`, `recentWorkspaces` (top 10), and `showWelcome` flag persisted in local storage.
+- **Editor preferences** — font size, word wrap, minimap, line numbers, and tab size persisted via Zustand store and applied live in Monaco editor.
+- **Terminal preferences** — font size and font family persisted and applied to xterm.js instances.
+- **Settings overhaul** — new Editor Configuration section (font size, word wrap, minimap, line numbers, tab size), Terminal section (font size, font family), and Keyboard Shortcuts reference section.
+
+### Fixed
+
+- Activity bar aligns with VS Code pattern for persistent left导航.
+- Command palette integrates with existing `useAppStore` state for tab switching and panel toggles.
+
+### Changed
+
+- Version bumped to 0.7.0 across all manifests (`package.json`, `tauri.conf.json`, root `package.json`, `en.ts`).
+
 ## [0.6.2] - 2026-07-31
 
 ### Fixed
+
 - Terminal no longer blank/missing on app launch — eager-loaded instead of lazy, removed `xtermReady` rendering gate.
 - CSP updated: `worker-src 'self' blob: data:` and `script-src 'self' 'unsafe-inline' 'unsafe-eval'` so xterm.js workers load without requiring the sidecar to be restarted.
 - Sidecar auto-restart guard resets after an update event, so API calls reconnect without a full app restart.
 
 ### Changed
+
 - Version bumped to 0.6.2.
 
 ## [0.6.0] - 2026-07-30

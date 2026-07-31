@@ -451,6 +451,78 @@ export interface TranslationKeys {
   codeEditor: {
     loading: string;
   };
+  // v0.7.0 — Command Palette
+  commandPalette: {
+    title: string;
+    searchPlaceholder: string;
+    searchLabel: string;
+    resultsLabel: string;
+    noResults: string;
+    navCode: string;
+    navApi: string;
+    navSkills: string;
+    navAgents: string;
+    navDashboard: string;
+    navSettings: string;
+    terminalOpen: string;
+    terminalClose: string;
+    chatOpen: string;
+    chatClose: string;
+    sidebarToggle: string;
+    searchFiles: string;
+  };
+  // v0.7.0 — Activity Bar
+  activityBar: {
+    label: string;
+    code: string;
+    search: string;
+    sourceControl: string;
+    debug: string;
+    extensions: string;
+    settings: string;
+  };
+  // v0.7.0 — Editor
+  editor: {
+    find: string;
+    replace: string;
+    goToLine: string;
+    wordWrap: string;
+    wordWrapToggle: string;
+    minimap: string;
+    minimapToggle: string;
+    lineNumbers: string;
+    lineNumbersToggle: string;
+    fontSize: string;
+    tabSize: string;
+    indentUsingSpaces: string;
+    indentUsingTabs: string;
+    formatDocument: string;
+    copyLineUp: string;
+    copyLineDown: string;
+    deleteLine: string;
+    moveLineUp: string;
+    moveLineDown: string;
+    toggleComment: string;
+    blockComment: string;
+    lineComment: string;
+    editorConfig: string;
+  };
+  // v0.7.0 — Welcome
+  welcome: {
+    title: string;
+    subtitle: string;
+    openFolder: string;
+    recentWorkspaces: string;
+    noRecentWorkspaces: string;
+    tips: string;
+    shortcuts: string;
+    shortcutOpenFolder: string;
+    shortcutCommandPalette: string;
+    shortcutToggleTerminal: string;
+    shortcutToggleChat: string;
+    shortcutSaveFile: string;
+    learnMore: string;
+  };
   docsGriller: {
     title: string;
     scanDocs: string;
