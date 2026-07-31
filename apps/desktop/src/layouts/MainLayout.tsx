@@ -12,9 +12,7 @@ import { isWindows, isLinux } from '@ghita/shared';
 import { TabBar } from '../components/TabBar';
 import { NotificationTray } from '../components/NotificationTray';
 
-const Terminal = lazy(() =>
-  import('../components/Terminal').then((module) => ({ default: module.Terminal })),
-);
+import { Terminal } from '../components/Terminal';
 const ChatPanel = lazy(() =>
   import('../components/ChatPanel').then((module) => ({ default: module.ChatPanel })),
 );
@@ -348,9 +346,7 @@ export function MainLayout() {
                   className="h-1 bg-border-subtle hover:bg-accent-primary cursor-row-resize transition-colors shrink-0"
                 />
                 <div className="flex-1 overflow-hidden relative">
-                  <Suspense fallback={<LoadingPanel />}>
-                    <Terminal />
-                  </Suspense>
+                  <Terminal />
                 </div>
               </motion.div>
             )}

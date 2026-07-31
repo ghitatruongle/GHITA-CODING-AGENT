@@ -96,9 +96,15 @@ function AppContent() {
     const autoStartServer = async () => {
       // Skip outside Tauri to avoid console errors in browser-only dev
       if (!isTauri()) return;
-      // Guard against React StrictMode double-invocation
-      if (serverStartupInFlight) return;
-      serverStartupInFlight = true;
+      // Guard against React StrictMode double-invocation;
+      // reset the guard if the server is confirmed stopped so the
+      // app can re-trigger start_server after a sidecar update without
+      // requiring a full app restart (hot-update support).
+      {
+        const s = serverStartupInFlight;
+        serverStartupInFlight = false;
+        if (s) return; // already attempted in this strict-mode flush
+      }
 
       try {
         const result = await invoke<{ status?: string }>('get_server_status');
@@ -119,6 +125,29 @@ function AppContent() {
       }
     };
     autoStartServer();
+  }, []);
+
+  // Listen for server-stop events so the frontend can reconnect after
+  // an in-place update kills the sidecar. Clears the startup guard and
+  // triggers one reconnection attempt.
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    (async () => {
+      if (!isTauri()) return;
+      try {
+        const { listen } = await import('@tauri-apps/api/event');
+        unlisten = await listen<{ event: string }>('tauri://update-status', (e) => {
+          if (e.payload.event === 'sidecar-stopped' || e.payload.event === 'update-applied') {
+            serverStartupInFlight = false;
+            if (import.meta.env.DEV)
+              console.info('[AppContent] Sidecar stopped; startup guard reset for reconnect.');
+          }
+        });
+      } catch {
+        /* not in Tauri or event not emitted */
+      }
+    })();
+    return () => { if (unlisten) unlisten(); };
   }, []);
 
   useEffect(() => {

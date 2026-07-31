@@ -1,6 +1,6 @@
 {
   "name": "@ghita/docs",
-  "version": "0.6.0",
+  "version": "0.6.2",
   "private": true,
   "description": "GHITA CODING AGENT documentation site (Docusaurus)",
   "scripts": {

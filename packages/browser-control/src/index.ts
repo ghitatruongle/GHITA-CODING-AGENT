@@ -5,7 +5,7 @@
 import type { SkillDefinition } from '@ghita/skills';
 import type { BrowserAction, BrowserResult } from '@ghita/shared';
 
-export const BROWSER_CONTROL_VERSION = '0.6.0';
+export const BROWSER_CONTROL_VERSION = '0.6.2';
 
 export type BrowserSessionStatus = 'idle' | 'launching' | 'ready' | 'closed' | 'error';
 

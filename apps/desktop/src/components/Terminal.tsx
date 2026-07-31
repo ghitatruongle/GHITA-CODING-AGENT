@@ -22,25 +22,30 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import '@xterm/xterm/css/xterm.css';
 
-// Dynamic imports for xterm.js (browser-only)
+// ---------------------------------------------------------------------------
+// Eager xterm.js loader — resolves at module evaluation so `TerminalImpl`/
+// `FitAddonImpl` are available immediately on first render (no Suspense gate).
+// ---------------------------------------------------------------------------
 let TerminalImpl: typeof TerminalType | null = null;
 let FitAddonImpl: typeof FitAddonType | null = null;
-let xtermLoaded = false;
+let xtermLoadDone = false;
 
 async function loadXterm() {
-  if (xtermLoaded) return;
+  if (xtermLoadDone) return;
   try {
-    const [xtermMod, fitMod] = await Promise.all([
+    const [mod, fit] = await Promise.all([
       import('@xterm/xterm'),
       import('@xterm/addon-fit'),
     ]);
-    TerminalImpl = xtermMod.Terminal;
-    FitAddonImpl = fitMod.FitAddon;
-    xtermLoaded = true;
+    TerminalImpl = mod.Terminal as unknown as typeof TerminalType;
+    FitAddonImpl = fit.FitAddon as unknown as typeof FitAddonType;
   } catch {
-    xtermLoaded = true; // prevent re-attempts
+    // xterm.js unavailable — render a blank pane
+  } finally {
+    xtermLoadDone = true;
   }
 }
+void loadXterm();
 
 // ---------------------------------------------------------------------------
 // Types
@@ -90,8 +95,8 @@ function XtermPane({
   visible: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const termRef = useRef<InstanceType<typeof TerminalType> | null>(null);
-  const fitRef = useRef<InstanceType<typeof FitAddonType> | null>(null);
+  const termRef = useRef<InstanceType<NonNullable<typeof TerminalImpl>> | null>(null);
+  const fitRef = useRef<InstanceType<NonNullable<typeof FitAddonImpl>> | null>(null);
   const [ptyConnected, setPtyConnected] = useState(false);
 
   // Re-fit xterm when visibility becomes active
@@ -120,7 +125,8 @@ function XtermPane({
     let unlistenExit: (() => void) | null = null;
     const currentTabId = tabId;
 
-    const term = new TerminalImpl({
+    const TerminalCtor = TerminalImpl as any;
+    const term = new TerminalCtor({
       cursorBlink: true,
       fontSize: 13,
       fontFamily: "'Cascadia Code', 'Fira Code', 'Consolas', monospace",
@@ -150,7 +156,8 @@ function XtermPane({
       scrollback: 5000,
     });
 
-    const fit = new FitAddonImpl();
+    const FitAddonCtor = FitAddonImpl as any;
+    const fit = new FitAddonCtor();
     term.loadAddon(fit);
     term.open(containerRef.current);
     try {
@@ -284,15 +291,7 @@ function TerminalInner() {
     { id: generateTabId(), label: 'Terminal 1', shell: defaultShell },
   ]);
   const [activeTabId, setActiveTabId] = useState(tabs[0]?.id ?? '');
-  const [xtermReady, setXtermReady] = useState(false);
   const terminalCwd = useAppStore((s) => s.terminalCwd);
-
-  // Load xterm.js on mount
-  useEffect(() => {
-    loadXterm().then(() => {
-      setXtermReady(true);
-    });
-  }, []);
 
   const addTab = useCallback(() => {
     const newTab: TerminalTab = {
@@ -439,7 +438,7 @@ function TerminalInner() {
         )}
 
         {/* xterm.js indicator */}
-        {xtermReady && (
+        {TerminalImpl && (
           <span
             style={{
               marginLeft: '8px',
@@ -467,7 +466,7 @@ function TerminalInner() {
                 height: '100%',
               }}
             >
-              {xtermReady && TerminalImpl && (
+              {TerminalImpl && (
                 <XtermPane tabId={tab.id} shell={tab.shell} cwd={terminalCwd} visible={visible} />
               )}
             </div>
