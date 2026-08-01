@@ -1,8 +1,40 @@
 #![windows_subsystem = "windows"]
 
+use std::env;
 use std::panic;
 
+fn print_help() {
+    println!("GHITA CODING AGENT v0.7.1");
+    println!();
+    println!("Usage:");
+    println!("  ghita-coding-agent [OPTIONS]");
+    println!();
+    println!("Options:");
+    println!("  --headless, -h    Run in headless/background mode (no UI windows)");
+    println!("  --help            Show this help message");
+    println!();
+    println!("Environment variables:");
+    println!("  GHITA_HEADLESS=1  Same as --headless flag");
+    println!();
+    println!("Examples:");
+    println!("  ghita-coding-agent              # Normal GUI mode");
+    println!("  ghita-coding-agent --headless   # Background mode");
+    println!("  GHITA_HEADLESS=1 ghita-coding-agent  # Background mode via env");
+}
+
 fn main() {
+    // Parse CLI arguments for headless mode
+    let args: Vec<String> = env::args().collect();
+    
+    // Check for help flag first
+    if args.iter().any(|arg| arg == "--help") {
+        print_help();
+        return;
+    }
+    
+    let headless = args.iter().any(|arg| arg == "--headless" || arg == "-h")
+        || env::var("GHITA_HEADLESS").map(|v| v == "1" || v.to_lowercase() == "true").unwrap_or(false);
+
     // Set up panic hook for crash logging in release builds
     let default_hook = panic::take_hook();
     panic::set_hook(Box::new(move |info| {
@@ -33,5 +65,5 @@ fn main() {
         default_hook(info);
     }));
 
-    ghita_coding_agent_lib::run()
+    ghita_coding_agent_lib::run(headless)
 }
