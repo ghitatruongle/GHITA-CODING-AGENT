@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.7.1] - 2026-08-01
+
+### Added
+
+- **Headless/Background Mode** — Run GHITA CODING AGENT completely without UI windows (no splash, no main window, no terminal/console)
+  - CLI flag: `--headless` or `-h`
+  - Environment variable: `GHITA_HEADLESS=1` or `GHITA_HEADLESS=true`
+  - Sidecar server auto-starts in background (Socket.io + gRPC)
+  - All backend services available: proxy, PTY terminals, computer-use, mobile pairing
+  - Graceful shutdown on SIGTERM/Ctrl+C with cleanup of child processes
+  - `--help` flag shows usage information
+
+### Changed
+
+- Default window visibility set to `false` in `tauri.conf.json` (both main and splash windows)
+- Windows subsystem already set to `windows` (no console window on Windows)
+
 ## [0.7.0] - 2026-07-31
 
 ### Theme: VS Code-inspired UX

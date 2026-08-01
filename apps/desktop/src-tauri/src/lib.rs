@@ -844,7 +844,32 @@ fn cleanup_before_exit(app_handle: &tauri::AppHandle) {
     }
 }
 
-pub fn run() {
+/// Auto-start the sidecar server if not already running.
+/// Used in headless mode where there's no frontend to trigger it.
+async fn auto_start_server(app_handle: &tauri::AppHandle) -> Result<(), String> {
+    // Check if server needs to be started (without holding lock across await)
+    let should_start = {
+        if let Some(state) = app_handle.try_state::<Mutex<ServerState>>() {
+            let s = state.lock().map_err(|e| e.to_string())?;
+            s.child.is_none() && !s.starting
+        } else {
+            false
+        }
+    };
+    
+    if should_start {
+        // Get the state and security_state for the command
+        let state = app_handle.state::<Mutex<ServerState>>();
+        let security_state = app_handle.state::<SecurityState>();
+        let app_handle_clone = app_handle.clone();
+        
+        // Call the start_server command internally
+        start_server(app_handle_clone, state, security_state).await?;
+    }
+    Ok(())
+}
+
+pub fn run(headless: bool) {
     let session_token = generate_session_token();
 
     let app = tauri::Builder::default()
@@ -906,7 +931,22 @@ pub fn run() {
             // DocsGriller
             run_grill_session,
         ])
-        .setup(|app| {
+        .setup(move |app| {
+            // In headless mode: skip window management, auto-start server
+            if headless {
+                eprintln!("[GHITA] Running in headless mode — skipping window setup");
+                
+                // Auto-start sidecar server in background
+                let app_handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    if let Err(e) = auto_start_server(&app_handle).await {
+                        eprintln!("[GHITA] Failed to auto-start server in headless mode: {}", e);
+                    }
+                });
+                
+                return Ok(());
+            }
+
             // Get splash and main windows — gracefully handle if not found
             let splash = match app.get_webview_window("splash") {
                 Some(w) => w,
@@ -998,6 +1038,11 @@ pub fn run() {
                 event: tauri::WindowEvent::CloseRequested { api, .. },
                 ..
             } => {
+                // In headless mode, windows are hidden but may still exist.
+                // Don't exit on window close in headless mode.
+                if headless {
+                    return;
+                }
                 // Only trigger full shutdown when the *main* window is closed
                 if label == "main" {
                     // Prevent the default close so we can clean up first
