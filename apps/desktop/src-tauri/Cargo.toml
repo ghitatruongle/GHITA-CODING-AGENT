@@ -41,7 +41,7 @@ portable-pty = "0.8"
 dashmap = "6"
 
 # Security & Utils
-rand = "0.8"
+rand = "0.10"
 percent-encoding = "2.3"
 chrono = { version = "0.4", features = ["serde"] }
 # v0.4.8 B2 (M8): verify integrity of the bundled node runtime before spawn.
