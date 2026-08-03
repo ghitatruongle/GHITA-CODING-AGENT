@@ -4,7 +4,6 @@
 // ==============================================================================
 
 import { useState, useEffect, useCallback } from 'react';
-import { readDir, readTextFile, mkdir, writeTextFile, remove, rename } from '@tauri-apps/plugin-fs';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useTranslation } from '../i18n';
 import { useAppStore } from '../stores/appStore';
@@ -21,44 +20,40 @@ import {
   SKIP_DIRS,
   SKIP_FILES,
 } from './file-explorer/file-explorer-utils';
+import { fsReadDir, fsReadText, fsWriteText, fsMkdir, fsRemove, fsRename } from '../lib/native-fs';
 
 // Re-export for backward compatibility
 export { detectLanguage } from './file-explorer/file-explorer-utils';
 export type { FileEntry, FileExplorerProps } from './file-explorer/file-explorer-utils';
 
+/**
+ * Load a directory using the native fs commands. Throws on failure so callers
+ * can surface the error to the user (previously errors were silently swallowed
+ * and returned an empty tree, hiding the real reason a folder "couldn't open").
+ */
 async function loadDirectory(dirPath: string): Promise<FileEntry[]> {
-  try {
-    const entries = await readDir(dirPath);
-    const result: FileEntry[] = [];
+  const entries = await fsReadDir(dirPath);
+  const result: FileEntry[] = [];
 
-    for (const entry of entries) {
-      if (SKIP_DIRS.has(entry.name)) continue;
-      if (SKIP_FILES.has(entry.name)) continue;
+  for (const entry of entries) {
+    if (SKIP_DIRS.has(entry.name)) continue;
+    if (SKIP_FILES.has(entry.name)) continue;
 
-      const fullPath =
-        dirPath.endsWith('/') || dirPath.endsWith('\\')
-          ? dirPath + entry.name
-          : `${dirPath}/${entry.name}`;
-
-      result.push({
-        name: entry.name,
-        path: fullPath,
-        isDirectory: entry.isDirectory,
-        children: undefined,
-        expanded: false,
-      });
-    }
-
-    result.sort((a, b) => {
-      if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
-      return a.name.localeCompare(b.name);
+    result.push({
+      name: entry.name,
+      path: entry.path,
+      isDirectory: entry.isDirectory,
+      children: undefined,
+      expanded: false,
     });
-
-    return result;
-  } catch (e) {
-    console.error('[FileExplorer] Failed to read directory:', e);
-    return [];
   }
+
+  result.sort((a, b) => {
+    if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
+
+  return result;
 }
 
 export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
@@ -84,7 +79,15 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
     if (targetDir !== rootDir) {
       setRootDir(targetDir);
     }
-    loadRoot(targetDir);
+    if (!targetDir) {
+      // No workspace configured — show the empty state instead of firing a
+      // "Failed to read directory ''" toast on every launch.
+      setRootEntries([]);
+      setTree(new Map());
+      setLoading(false);
+      return;
+    }
+    void loadRoot(targetDir);
   }, [rootPath, storeCwd]);
 
   // Sync rootDir state to store Cwd
@@ -96,10 +99,23 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
 
   const loadRoot = async (dir: string) => {
     setLoading(true);
-    const entries = await loadDirectory(dir);
-    setRootEntries(entries);
-    setTree(new Map());
-    setLoading(false);
+    try {
+      const entries = await loadDirectory(dir);
+      setRootEntries(entries);
+      setTree(new Map());
+    } catch (e) {
+      console.error('[FileExplorer] Failed to load root directory:', e);
+      setRootEntries([]);
+      setTree(new Map());
+      toast.error(
+        t('fileExplorer.loadFailed', {
+          path: dir,
+          error: e instanceof Error ? e.message : String(e),
+        }),
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const toggleFolder = useCallback(
@@ -129,6 +145,14 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
           next.set(path, children);
           return next;
         });
+      } catch (e) {
+        console.error('[FileExplorer] Failed to expand folder:', e);
+        toast.error(
+          t('fileExplorer.loadFailed', {
+            path,
+            error: e instanceof Error ? e.message : String(e),
+          }),
+        );
       } finally {
         setLoadingPaths((prev) => {
           if (!prev.has(path)) return prev;
@@ -143,14 +167,20 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
 
   const handleFileClick = useCallback(
     async (entry: FileEntry) => {
+      // Quick extension-based reject for known binary formats.
       if (isBinaryFile(entry.name)) {
         toast.error(t('codeView.binaryNotSupported', { name: entry.name }));
         return;
       }
       try {
-        const content = await readTextFile(entry.path);
+        const { content, isBinary, encoding, isTruncated } = await fsReadText(entry.path);
+        // Content sniff fallback: NUL-byte files with unknown extensions.
+        if (isBinary) {
+          toast.error(t('codeView.binaryNotSupported', { name: entry.name }));
+          return;
+        }
         const lang = detectLanguage(entry.name);
-        onFileOpen(entry.path, entry.name, content, lang);
+        onFileOpen(entry.path, entry.name, content, lang, encoding, isTruncated);
       } catch (e) {
         console.error('[FileExplorer] Failed to read file:', e);
         toast.error(
@@ -205,15 +235,18 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
       if (!name) return;
       const filePath = `${dirPath}/${name}`;
       try {
-        await writeTextFile(filePath, '');
+        await fsWriteText(filePath, '', 'utf-8');
         await reloadParent(dirPath);
+        // Open the freshly-created file in the editor so the user can start
+        // typing immediately (previously it was created but never opened).
+        onFileOpen(filePath, name, '', detectLanguage(name), 'utf-8');
       } catch (e) {
         console.error('[FileExplorer] Failed to create file:', e);
         toast.error(e instanceof Error ? e.message : String(e));
       }
       setContextMenu(null);
     },
-    [reloadParent, t],
+    [reloadParent, t, onFileOpen],
   );
 
   const handleNewFolder = useCallback(
@@ -222,7 +255,7 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
       if (!name) return;
       const folderPath = `${dirPath}/${name}`;
       try {
-        await mkdir(folderPath, { recursive: true });
+        await fsMkdir(folderPath, true);
         await reloadParent(dirPath);
       } catch (e) {
         console.error('[FileExplorer] Failed to create folder:', e);
@@ -238,7 +271,7 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
       const fileName = path.split(/[/\\]/).pop() || '';
       if (!confirm(t('fileExplorer.deleteConfirm', { name: fileName }))) return;
       try {
-        await remove(path, { recursive: true });
+        await fsRemove(path, true);
         const parts = path.split(/[/\\]/);
         parts.pop();
         const sep = path.includes('\\') && !path.includes('/') ? '\\' : '/';
@@ -268,7 +301,7 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
         return;
       }
       try {
-        await rename(path, newPath);
+        await fsRename(path, newPath);
         const parts = path.split(/[/\\]/);
         parts.pop();
         const sep = path.includes('\\') && !path.includes('/') ? '\\' : '/';
@@ -282,6 +315,24 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
     },
     [reloadParent, t],
   );
+
+  // Ctrl+N → create & open a new file in the current folder (was advertised in
+  // the welcome hint but never actually wired up).
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Honor the "disable keyboard shortcuts" setting and don't hijack Ctrl+N
+      // while the user is typing in an input (e.g. the new-file name field).
+      if (!useAppStore.getState().shortcutsEnabled) return;
+      const tag = (e.target as HTMLElement)?.tagName.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        if (rootDir) void handleNewFile(rootDir);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [rootDir, handleNewFile]);
 
   // Close context menu on outside click
   useEffect(() => {

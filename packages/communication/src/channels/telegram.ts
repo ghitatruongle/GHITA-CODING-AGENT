@@ -211,8 +211,10 @@ export class TelegramAdapter implements ChannelAdapter {
    */
   private async sendHttpRequest(channelId: string, text: string): Promise<boolean> {
     if (!this.token || this.token.startsWith('MOCK_')) {
-      // Simulate mock outbound delivery for testing
-      return true;
+      // v0.8.0: never fake a delivery — a missing/MOCK token means the message
+      // was NOT sent.
+      console.warn('[TelegramAdapter] Cannot send message: missing or mock token.');
+      return false;
     }
 
     try {

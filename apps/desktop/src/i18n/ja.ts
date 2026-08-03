@@ -35,7 +35,7 @@ export const ja: TranslationKeys = {
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v0.6.2',
+    version: 'v0.8.0',
     deviceReconnected: 'デバイスに再接続しました: {{name}}',
     devicePaired: 'デバイスのペアリングに成功しました: {{name}}',
     commandReceived: 'デバイスからコマンドを受信しました: {{action}}',
@@ -97,6 +97,7 @@ export const ja: TranslationKeys = {
     themeDark: 'ダークモード',
     themeLight: 'ライトモード',
     logDebug: 'デバッグ',
+    resetDefaults: 'デフォルトにリセット',
     logInfo: '情報',
     logWarn: '警告',
     logError: 'エラー',
@@ -127,6 +128,12 @@ export const ja: TranslationKeys = {
     reject: '拒否',
     editApplied: '{{name}} に編集を適用しました',
     editRejected: '{{name}} の編集を拒否しました',
+    unsavedEditsProposalConfirm:
+      '「{{name}}」には未保存の手動編集があります。AI の提案を承認すると上書きされます。続行しますか？',
+    fileTruncated:
+      '「{{name}}」はエディターの制限を超えているため、読み取り専用で開きました（内容が切り詰められる場合があります）。データ損失を防ぐため保存は無効です。',
+    fileTooLargeToSave:
+      '「{{name}}」は大きすぎてエディターから保存できません（切り詰められたプレビューです）。ファイルエクスプローラーで開いてください。',
   },
   devices: {
     title: '接続されたデバイス',
@@ -290,10 +297,18 @@ export const ja: TranslationKeys = {
     avgLatency: '平均レイテンシー',
     routingState: 'ルーティング状態',
     running: '実行中',
+    starting: '起動中',
     stopped: '停止',
     compliant: '準拠',
     disabledLabel: '無効',
     demoMode: 'デモモード — データはシミュレーションです',
+    coreServer: 'コアサーバーステータス',
+    coreServerDesc:
+      'バックグラウンドサービスはポート {{port}} で待機しています。ステータスはネイティブプロセスが直接報告します（模擬データはありません）。',
+    coreServerError: 'サーバーステータスを読み取れません: {{error}}',
+    coreServerChecking: 'バックグラウンドサービスの状態を確認中…',
+    localNetwork: 'ローカルネットワークアドレス:',
+    serverVersion: 'サーバーバージョン: {{version}}',
   },
   chat: {
     welcomeMessage:
@@ -387,6 +402,7 @@ export const ja: TranslationKeys = {
     rename: '名前の変更',
     renamePrompt: '新しい名前を入力:',
     renameInvalid: '無効な名前: 空、またはパス区切り文字を含めることはできません。',
+    loadFailed: '"{{path}}" を開けませんでした: {{error}}',
   },
   apiManager: {
     title: 'APIキー設定',

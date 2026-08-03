@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-import crypto from 'node:crypto';
 import {
   OAuthHandoffManager,
   KeychainStore,
@@ -44,21 +43,18 @@ describe('Phase 25 OAuth Handoff + toolkitSlug Discovery', () => {
       expect(url.searchParams.get('scope')).toBe(scope);
     });
 
-    it('should handle callback correctly when PKCE matches', async () => {
+    it('should reject callback completion when PKCE matches but no real exchange exists', async () => {
+      // v0.8.0: the handoff manager validates the session but must NOT mint
+      // fake "mock_access_…" tokens. Handing back fabricated tokens would make
+      // an unconnected account look valid, so completion throws a clear error.
       const appId = 'slack';
       const redirectUri = 'http://localhost:3000/callback';
       const session = oauth.generateSession(appId, redirectUri);
 
-      const conn = await oauth.handleCallback(
-        session.state,
-        'test_auth_code',
-        session.codeVerifier,
-      );
-
-      expect(conn.appId).toBe('slack');
-      expect(conn.accessToken).toContain('mock_access_');
-      expect(conn.refreshToken).toContain('mock_refresh_');
-      expect(conn.expiresAt).toBeGreaterThan(Date.now());
+      await expect(
+        oauth.handleCallback(session.state, 'test_auth_code', session.codeVerifier),
+      ).rejects.toThrow(/no real token exchange/);
+      expect(oauth.sessionTimeoutMs).toBeGreaterThan(0);
     });
 
     it('should fail callback if state is not found', async () => {
@@ -95,9 +91,15 @@ describe('Phase 25 OAuth Handoff + toolkitSlug Discovery', () => {
 
     it('should prevent replay by deleting session on first call', async () => {
       const session = oauth.generateSession('slack', 'http://localhost/cb');
-      await oauth.handleCallback(session.state, 'code', session.codeVerifier);
+      // The callback validates the session, deletes it, then (v0.8.0) rejects
+      // because no real token exchange is configured. The important invariant is
+      // that the one-time session is consumed so the SAME state cannot be used
+      // twice.
+      await expect(
+        oauth.handleCallback(session.state, 'code', session.codeVerifier),
+      ).rejects.toThrow(/no real token exchange/);
 
-      // Second attempt with the same state should fail
+      // Second attempt with the same state should fail (session already deleted)
       await expect(
         oauth.handleCallback(session.state, 'code', session.codeVerifier),
       ).rejects.toThrow('OAuth session not found');

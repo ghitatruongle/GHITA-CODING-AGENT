@@ -6,7 +6,7 @@
 // handler se thay the bang implementation.
 // ==============================================================================
 
-import type { ToolDefinition, ToolSource, CatalogGroup } from './registry-types.js';
+import type { CatalogGroup } from './registry-types.js';
 import type { ToolRegistry } from './registry.js';
 
 // ----------------------------------------------------------------------------
@@ -1334,41 +1334,27 @@ export const TOOL_CATALOG: CatalogGroup[] = [
   },
 ];
 
-/** Handler mac dinh cho catalog tools: tra JSON status, khong throw */
-function makeCatalogHandler(app: string, name: string) {
-  return async (args: Record<string, unknown>) => {
-    return JSON.stringify(
-      {
-        status: 'requires_integration',
-        app,
-        tool: name,
-        args,
-        message: `Tool "${name}" cho app "${app}" can wire vao adapter tuong ung. See composioAdapter.ts de biet credential setup.`,
-      },
-      null,
-      2,
+/**
+ * Register the SaaS catalog into a tool registry.
+ *
+ * v0.8.0: This is intentionally a guarded no-op. The 150+ catalog entries are
+ * metadata stubs whose handlers would only return "requires_integration" — they
+ * must never appear in the agent's tool surface as callable tools. Registering
+ * them made the model attempt integrations that cannot actually execute.
+ *
+ * Real integrations must be registered individually once a concrete adapter AND
+ * real credentials are available (see packages/skills composioAdapter.ts). This
+ * function refuses to register dead stubs and always returns 0.
+ *
+ * @deprecated The catalog is metadata only; wire real adapters directly instead.
+ */
+export function loadComposioCatalog(_registry: ToolRegistry): number {
+  // Intentionally registers nothing. See comment above.
+  if (typeof console !== 'undefined') {
+    console.warn(
+      '[GHITA] loadComposioCatalog() is disabled in v0.8.0: the SaaS catalog contains no ' +
+        'real executables. Integrations are only registered with a live adapter + credentials.',
     );
-  };
-}
-
-/** Register toan bo TOOL_CATALOG vao registry (~150+ tools) */
-export function loadComposioCatalog(registry: ToolRegistry): number {
-  const defs: ToolDefinition[] = [];
-  for (const group of TOOL_CATALOG) {
-    for (const t of group.tools) {
-      defs.push({
-        name: t.name,
-        description: t.description,
-        parameters: t.parameters,
-        execute: makeCatalogHandler(group.app, t.name),
-        tags: [`saas:${group.app}`, group.category.toLowerCase().replace(/[^a-z0-9]/g, '-')],
-        source: `composio:${group.app}` as ToolSource,
-        version: t.version ?? '1.0.0',
-        rateLimit: t.rateLimit,
-        requiresApproval: t.requiresApproval,
-      });
-    }
   }
-  registry.registerMany(defs);
-  return defs.length;
+  return 0;
 }

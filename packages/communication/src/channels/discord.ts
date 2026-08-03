@@ -44,8 +44,10 @@ export class DiscordAdapter implements ChannelAdapter {
    */
   async sendMessage(channelId: string, text: string): Promise<boolean> {
     if (!this.token || this.token.startsWith('MOCK_')) {
-      // Simulate mock outbound delivery for testing
-      return true;
+      // v0.8.0: never fake a successful delivery — a missing/MOCK token means
+      // the message was NOT sent.
+      console.warn('[DiscordAdapter] Cannot send message: missing or mock token.');
+      return false;
     }
 
     try {
@@ -130,7 +132,9 @@ export class DiscordAdapter implements ChannelAdapter {
   private async connectGatewayWS(): Promise<void> {
     if (!this.isRunning) return;
     if (!this.token || this.token.startsWith('MOCK_')) {
-      return; // No-op in mock test cases
+      // Missing/mock token: report that the channel is not actually connected.
+      console.warn('[DiscordAdapter] Cannot connect gateway: missing or mock token.');
+      return;
     }
 
     try {

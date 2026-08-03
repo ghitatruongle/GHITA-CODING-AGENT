@@ -3,9 +3,10 @@
 // Hiển thị kết quả /grill-me: contradictions, Socratic questions, design decisions
 // =============================================================================
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from '../i18n';
+import { useAppStore } from '../stores/appStore';
 
 // =============================================================================
 // Types
@@ -84,19 +85,34 @@ export function DocsGrillerDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [docsPath, setDocsPath] = useState('docs/');
   const { t } = useTranslation();
+  const terminalCwd = useAppStore((s) => s.terminalCwd);
+
+  // P2-5 (deep review pass #2): resolve a relative docsPath against the
+  // workspace cwd so the Rust side never sees a path that resolves against
+  // an unrelated CWD. Absolute paths are passed unchanged.
+  const resolvedDocsPath = useMemo(() => {
+    if (!docsPath) return docsPath;
+    const isAbsolute = /^[a-zA-Z]:[\\/]/u.test(docsPath) || docsPath.startsWith('/');
+    if (isAbsolute) return docsPath;
+    if (!terminalCwd) return docsPath;
+    const sep = terminalCwd.includes('\\') && !terminalCwd.includes('/') ? '\\' : '/';
+    return terminalCwd.replace(/[\\/]+$/, '') + sep + docsPath.replace(/^[\\/]+/, '');
+  }, [docsPath, terminalCwd]);
 
   const runGrillSession = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const result = await invoke<GrillSession>('run_grill_session', { docsPath });
+      const result = await invoke<GrillSession>('run_grill_session', {
+        docsPath: resolvedDocsPath,
+      });
       setSession(result);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to run grill session');
     } finally {
       setLoading(false);
     }
-  }, [docsPath]);
+  }, [resolvedDocsPath]);
 
   return (
     <div

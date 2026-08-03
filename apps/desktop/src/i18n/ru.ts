@@ -35,7 +35,7 @@ export const ru: TranslationKeys = {
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v0.6.2',
+    version: 'v0.8.0',
     deviceReconnected: 'Повторное подключение к устройству: {{name}}',
     devicePaired: 'Устройство успешно сопряжено: {{name}}',
     commandReceived: 'Команда получена от устройства: {{action}}',
@@ -98,6 +98,7 @@ export const ru: TranslationKeys = {
     themeDark: 'Темная тема',
     themeLight: 'Светлая тема',
     logDebug: 'Отладка (Debug)',
+    resetDefaults: 'Сброс до настроек по умолчанию',
     logInfo: 'Инфо (Info)',
     logWarn: 'Предупреждение (Warning)',
     logError: 'Ошибка (Error)',
@@ -128,6 +129,12 @@ export const ru: TranslationKeys = {
     reject: 'Отклонить',
     editApplied: 'Изменение применено к {{name}}',
     editRejected: 'Изменение отклонено для {{name}}',
+    unsavedEditsProposalConfirm:
+      'В файле «{{name}}» есть несохранённые ручные правки. Принятие предложения ИИ перезапишет их. Продолжить?',
+    fileTruncated:
+      '«{{name}}» больше лимита редактора и открыт в режиме только для чтения (содержимое может быть усечено). Сохранение отключено во избежание потери данных.',
+    fileTooLargeToSave:
+      '«{{name}}» слишком велик для сохранения из редактора (открыт усечённый просмотр). Откройте файл в проводнике.',
   },
   devices: {
     title: 'Подключенные устройства',
@@ -293,10 +300,18 @@ export const ru: TranslationKeys = {
     avgLatency: 'СРЕДНЯЯ ЗАДЕРЖКА',
     routingState: 'СОСТОЯНИЕ МАРШРУТИЗАЦИИ',
     running: 'РАБОТАЕТ',
+    starting: 'ЗАПУСК',
     stopped: 'ОСТАНОВЛЕНО',
     compliant: 'СООТВЕТСТВУЕТ',
     disabledLabel: 'ОТКЛЮЧЕНО',
     demoMode: 'Демо-режим — Данные симулированы',
+    coreServer: 'СТАТУС ОСНОВНОГО СЕРВЕРА',
+    coreServerDesc:
+      'Фоновый сервис прослушивает порт {{port}}. Статус сообщается нативно — без симулированных данных.',
+    coreServerError: 'Не удалось получить статус сервера: {{error}}',
+    coreServerChecking: 'Проверка состояния фонового сервиса…',
+    localNetwork: 'ЛОКАЛЬНЫЕ СЕТЕВЫЕ АДРЕСА:',
+    serverVersion: 'Версия сервера: {{version}}',
   },
   chat: {
     welcomeMessage:
@@ -394,6 +409,7 @@ export const ru: TranslationKeys = {
     rename: 'Переименовать',
     renamePrompt: 'Введите новое имя:',
     renameInvalid: 'Недопустимое имя: не должно быть пустым или содержать разделители пути.',
+    loadFailed: 'Не удалось открыть «{{path}}»: {{error}}',
   },
   apiManager: {
     title: 'Настройка ключей API',

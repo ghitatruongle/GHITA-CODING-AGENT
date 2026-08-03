@@ -27,7 +27,7 @@ export class DynamicSkillGenerator {
       if (/^(port|path|profile|protocol|phrase|prompt)/i.test(p2) && p1 === '-p') {
         return match;
       }
-      return `${p1  }[REDACTED]`;
+      return `${p1}[REDACTED]`;
     });
     sanitized = sanitized.replace(/(--password\s+)([a-zA-Z0-9_.-]+)/gi, '$1[REDACTED]');
 
@@ -167,9 +167,9 @@ export function createSkillsSyncCommand(hub: SkillHub): SlashCommand {
     usage: '/skills-sync',
     execute: async () => {
       try {
-        const { exec } = await import('node:child_process');
+        const { execFile } = await import('node:child_process');
         const { promisify } = await import('node:util');
-        const execAsync = promisify(exec);
+        const execFileAsync = promisify(execFile);
 
         const skills = hub.loadSkills().filter((s) => s.id.startsWith('auto.'));
         if (skills.length === 0) {
@@ -179,19 +179,23 @@ export function createSkillsSyncCommand(hub: SkillHub): SlashCommand {
         // Lấy hubPath từ hub
         const hubPath = (hub as unknown as { hubPath: string }).hubPath;
 
-        // Thực thi các lệnh git đồng bộ
-        await execAsync(`git add "${hubPath}/*.json"`);
-        const { stdout } = await execAsync('git status --porcelain');
+        // P1-7 (deep review pass #2): use execFile with array args so the
+        // hubPath is never interpreted as a shell string. The previous
+        // `git add "${hubPath}/*.json"` was shell-injectable if hubPath
+        // contained a quote or `; rm -rf /`.
+        const runGit = (args: string[]) => execFileAsync('git', args, { windowsHide: true });
+        await runGit(['add', `${hubPath}/*.json`]);
+        const { stdout } = await runGit(['status', '--porcelain']);
 
         if (!stdout.trim()) {
           return '[SKILLS-SYNC] Toàn bộ các skill động cục bộ đã được đồng bộ hóa từ trước.';
         }
 
-        await execAsync('git commit -m "sync: push dynamically generated skills"');
+        await runGit(['commit', '-m', 'sync: push dynamically generated skills']);
 
         // Thử git push, nếu lỗi (như chưa set remote) thì bắt exception
         try {
-          await execAsync('git push');
+          await runGit(['push']);
           return `[SKILLS-SYNC] Đã đồng bộ thành công ${skills.length} skills động lên Git repository chung.`;
         } catch {
           return `[SKILLS-SYNC] Đã commit ${skills.length} skills động vào Local Git repository.\n(Lưu ý: Không thể push lên remote, vui lòng cấu hình "git remote add origin" trước).`;

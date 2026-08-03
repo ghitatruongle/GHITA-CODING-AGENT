@@ -35,7 +35,7 @@ export const vi: TranslationKeys = {
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v0.6.2',
+    version: 'v0.8.0',
     deviceReconnected: 'Khôi phục kết nối với thiết bị: {{name}}',
     devicePaired: 'Đã ghép đôi thành công thiết bị: {{name}}',
     commandReceived: 'Đã nhận lệnh từ thiết bị: {{action}}',
@@ -98,6 +98,7 @@ export const vi: TranslationKeys = {
     themeDark: 'Chế độ tối',
     themeLight: 'Chế độ sáng',
     logDebug: 'Gỡ lỗi (Debug)',
+    resetDefaults: 'Đặt lại mặc định',
     logInfo: 'Thông tin (Info)',
     logWarn: 'Cảnh báo (Warn)',
     logError: 'Lỗi nghiêm trọng (Error)',
@@ -128,6 +129,12 @@ export const vi: TranslationKeys = {
     reject: 'Từ chối',
     editApplied: 'Đã áp dụng chỉnh sửa vào {{name}}',
     editRejected: 'Đã từ chối chỉnh sửa {{name}}',
+    unsavedEditsProposalConfirm:
+      'File "{{name}}" có chỉnh sửa tay chưa lưu. Chấp nhận đề xuất AI sẽ ghi đè chúng. Tiếp tục?',
+    fileTruncated:
+      '"{{name}}" lớn hơn giới hạn trình biên tập và được mở ở chế độ chỉ đọc (nội dung có thể bị cắt). Save bị vô hiệu để tránh mất dữ liệu.',
+    fileTooLargeToSave:
+      '"{{name}}" quá lớn để lưu từ editor (đang mở preview bị cắt). Hãy dùng file explorer để xem file này.',
   },
   devices: {
     title: 'Thiết bị kết nối',
@@ -293,10 +300,18 @@ export const vi: TranslationKeys = {
     avgLatency: 'ĐỘ TRỄ TRUNG BÌNH',
     routingState: 'TRẠNG THÁI ĐỊNH TUYẾN',
     running: 'ĐANG CHẠY',
+    starting: 'ĐANG KHỞI ĐỘNG',
     stopped: 'ĐÃ DỪNG',
     compliant: 'HỢP CHUẨN',
     disabledLabel: 'ĐÃ TẮT',
     demoMode: 'Chế độ Demo — Dữ liệu mô phỏng',
+    coreServer: 'TRẠNG THÁI MÁY CHỦ LÕI',
+    coreServerDesc:
+      'Dịch vụ nền đang lắng nghe trên cổng {{port}}. Trạng thái được báo cáo trực tiếp từ tiến trình — không có dữ liệu mô phỏng.',
+    coreServerError: 'Không đọc được trạng thái máy chủ: {{error}}',
+    coreServerChecking: 'Đang kiểm tra trạng thái dịch vụ nền…',
+    localNetwork: 'ĐỊA CHỈ MẠNG CỤC BỘ:',
+    serverVersion: 'Phiên bản máy chủ: {{version}}',
   },
   chat: {
     welcomeMessage:
@@ -396,6 +411,7 @@ export const vi: TranslationKeys = {
     rename: 'Đổi tên',
     renamePrompt: 'Nhập tên mới:',
     renameInvalid: 'Tên không hợp lệ: không được để trống hoặc chứa dấu phân cách đường dẫn.',
+    loadFailed: 'Không mở được "{{path}}": {{error}}',
   },
   apiManager: {
     title: 'Cấu hình và Quản lý API Keys',

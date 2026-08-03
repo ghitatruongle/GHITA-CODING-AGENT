@@ -256,6 +256,15 @@ export class RustMemoryAddon {
     } catch {
       this.isFallbackDb = true;
       this.mockDbLogs = [];
+      // v0.8.0: make the fallback visible. better-sqlite3 is unavailable in
+      // this environment, so memory is kept in-process only and WILL be lost on
+      // restart. Callers must not mistake this for durable storage.
+      if (typeof console !== 'undefined') {
+        console.warn(
+          '[GHITA memory] better-sqlite3 unavailable — using in-memory fallback. ' +
+            'Chat history will NOT persist across restarts.',
+        );
+      }
     }
   }
 

@@ -32,7 +32,11 @@ export class SlackGateway implements CommunicationGateway {
   }
 
   async initialize(): Promise<boolean> {
-    if (this.isMock) return true;
+    if (this.isMock) {
+      // v0.8.0: a mock gateway cannot actually initialize; report truthfully.
+      console.warn('[Slack Gateway] Mock mode — no real token. Not initialized.');
+      return false;
+    }
     if (!this.config.botToken) return false;
 
     try {
@@ -54,7 +58,9 @@ export class SlackGateway implements CommunicationGateway {
 
   async sendMessage(channelId: string, text: string): Promise<boolean> {
     if (this.isMock) {
-      return true;
+      // v0.8.0: never fake delivery — a MOCK token means nothing was sent.
+      console.warn('[Slack Gateway] Cannot send in mock mode (no real token).');
+      return false;
     }
 
     try {
@@ -198,15 +204,26 @@ export class SlackGateway implements CommunicationGateway {
       return;
     }
 
+    // P1-5 (deep review pass #2): only ack the envelope AFTER we have
+    // successfully consumed the event. The previous code acked every envelope
+    // unconditionally, which trains Slack to retry indefinitely when the
+    // handler is dropped or the event is malformed — multiplying load on
+    // our sidecar.
+    if (envelope.type === 'events_api' && envelope.payload?.event) {
+      const consumed = await this.dispatchEvent(envelope.payload.event);
+      if (consumed && envelope.envelope_id && this.socket?.readyState === WebSocket.OPEN) {
+        this.socket.send(JSON.stringify({ envelope_id: envelope.envelope_id }));
+      }
+      return;
+    }
+    // Non-events_api envelopes (e.g. `disconnect`, `ping`) are ack-only —
+    // ack them so Slack doesn't retry.
     if (envelope.envelope_id && this.socket?.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify({ envelope_id: envelope.envelope_id }));
     }
-    if (envelope.type === 'events_api' && envelope.payload?.event) {
-      await this.dispatchEvent(envelope.payload.event);
-    }
   }
 
-  private async dispatchEvent(event: SlackMessageEvent): Promise<void> {
+  private async dispatchEvent(event: SlackMessageEvent): Promise<boolean> {
     if (
       event.type !== 'message' ||
       event.subtype ||
@@ -216,10 +233,10 @@ export class SlackGateway implements CommunicationGateway {
       !event.text ||
       !this.messageHandler
     ) {
-      return;
+      return false;
     }
     const messageId = event.client_msg_id ?? `sl_${event.ts ?? Date.now()}`;
-    if (!this.rememberMessage(messageId)) return;
+    if (!this.rememberMessage(messageId)) return false;
 
     await this.messageHandler({
       id: messageId,
@@ -230,6 +247,7 @@ export class SlackGateway implements CommunicationGateway {
       text: event.text,
       timestamp: event.ts ? Math.floor(Number(event.ts) * 1000) : Date.now(),
     });
+    return true;
   }
 
   private rememberMessage(messageId: string): boolean {

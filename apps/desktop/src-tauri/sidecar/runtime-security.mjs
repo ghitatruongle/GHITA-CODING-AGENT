@@ -78,17 +78,16 @@ export function classifySocketAuth({
   const loopback = isLoopbackSocketAddress(remoteAddress);
   const suppliedToken = auth?.token;
 
-  if (
-    loopback
-    && typeof sessionToken === 'string'
-    && sessionToken.length > 0
-    && secureStringEqual(suppliedToken, sessionToken)
-  ) {
-    return { allowed: true, type: 'desktop' };
-  }
-
-  if (loopback && !sessionToken) {
-    return { allowed: true, type: 'desktop' };
+  // P1-8 (deep review pass #2): previously a loopback peer could authenticate
+  // as the desktop client WITHOUT a token when SESSION_TOKEN happened to be
+  // unset. That was unsafe on multi-user desktops (X11, RDP, sandbox escapes).
+  // The Tauri host always passes a non-empty SESSION_TOKEN via env, so the
+  // sidecar should refuse to advertise as "desktop" unless the token actually
+  // matches. The pairing/device paths below remain unchanged.
+  if (loopback && typeof sessionToken === 'string' && sessionToken.length > 0) {
+    if (secureStringEqual(suppliedToken, sessionToken)) {
+      return { allowed: true, type: 'desktop' };
+    }
   }
 
   const deviceId = typeof auth?.deviceId === 'string' ? auth.deviceId : '';

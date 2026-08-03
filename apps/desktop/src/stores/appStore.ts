@@ -9,7 +9,26 @@ import { DEFAULT_LOCALE, isLocaleCode, type LocaleCode } from '../i18n/types';
 
 // Cache file contents outside of React state to prevent massive re-renders
 // and out-of-memory errors on large files.
-export const fileContentCache = new Map<string, { content: string; originalContent: string }>();
+export interface FileCacheEntry {
+  content: string;
+  originalContent: string;
+  /** Encoding detected at read time (utf-8 | utf-8-bom | utf-16le | utf-16be | latin-1). */
+  encoding?: string;
+  /**
+   * Whether the entry has been hydrated from disk. Tabs rehydrated from
+   * localStorage after a restart start with empty content and must be loaded
+   * from disk (see CodeView) — this flag prevents that reload racing with the
+   * user switching tabs.
+   */
+  hydrated?: boolean;
+  /**
+   * True when the file exceeded the read cap and `content` is truncated.
+   * Saving truncated content would destroy the file's tail — code that persists
+   * must refuse to write when this is set.
+   */
+  isTruncated?: boolean;
+}
+export const fileContentCache = new Map<string, FileCacheEntry>();
 
 export type TabId =
   | 'code'
@@ -91,6 +110,8 @@ interface AppState {
   setTerminalFontSize: (size: number) => void;
   terminalFontFamily: string;
   setTerminalFontFamily: (family: string) => void;
+  terminalCursorStyle: 'block' | 'underline' | 'bar';
+  setTerminalCursorStyle: (style: 'block' | 'underline' | 'bar') => void;
 
   // v0.7.0 — Keyboard Shortcuts
   shortcutsEnabled: boolean;
@@ -164,6 +185,9 @@ interface AppState {
   togglePlugin: (id: string, enabled: boolean) => void;
   installPlugin: (manifest: PluginManifest) => void;
   uninstallPlugin: (id: string) => void;
+
+  // v0.7.3 — Reset all settings to defaults
+  resetSettings: () => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -230,6 +254,8 @@ export const useAppStore = create<AppState>()(
       setTerminalFontSize: (size) => set({ terminalFontSize: Math.max(10, Math.min(24, size)) }),
       terminalFontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
       setTerminalFontFamily: (family) => set({ terminalFontFamily: family }),
+      terminalCursorStyle: 'block',
+      setTerminalCursorStyle: (style) => set({ terminalCursorStyle: style }),
 
       // v0.7.0 — Keyboard Shortcuts
       shortcutsEnabled: true,
@@ -303,6 +329,23 @@ export const useAppStore = create<AppState>()(
         set((s) => ({
           plugins: s.plugins.filter((p) => p.manifest.id !== id),
         })),
+
+      // v0.7.3 — Reset all settings to defaults
+      resetSettings: () =>
+        set({
+          theme: 'dark',
+          language: DEFAULT_LOCALE,
+          logLevel: 'info',
+          editorFontSize: 14,
+          editorWordWrap: true,
+          editorMinimap: true,
+          editorLineNumbers: true,
+          editorTabSize: 2,
+          terminalFontSize: 13,
+          terminalFontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
+          terminalCursorStyle: 'block',
+          shortcutsEnabled: true,
+        }),
     }),
     {
       name: 'ghita-app-storage',
@@ -331,6 +374,7 @@ export const useAppStore = create<AppState>()(
         editorTabSize: state.editorTabSize,
         terminalFontSize: state.terminalFontSize,
         terminalFontFamily: state.terminalFontFamily,
+        terminalCursorStyle: state.terminalCursorStyle,
         shortcutsEnabled: state.shortcutsEnabled,
         activeWorkspace: state.activeWorkspace,
         recentWorkspaces: state.recentWorkspaces,

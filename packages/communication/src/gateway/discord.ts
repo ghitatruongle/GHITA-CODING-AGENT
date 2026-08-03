@@ -28,7 +28,11 @@ export class DiscordGateway implements CommunicationGateway {
   }
 
   async initialize(): Promise<boolean> {
-    if (this.isMock) return true;
+    if (this.isMock) {
+      // v0.8.0: a mock gateway cannot actually initialize; report truthfully.
+      console.warn('[Discord Gateway] Mock mode — no real token/webhook. Not initialized.');
+      return false;
+    }
     if (!this.config?.token) return Boolean(this.config?.webhookUrl);
 
     try {
@@ -48,7 +52,9 @@ export class DiscordGateway implements CommunicationGateway {
 
   async sendMessage(_channelId: string, text: string): Promise<boolean> {
     if (this.isMock) {
-      return true;
+      // v0.8.0: never fake delivery — a MOCK token means nothing was sent.
+      console.warn('[Discord Gateway] Cannot send in mock mode (no real token/webhook).');
+      return false;
     }
 
     try {

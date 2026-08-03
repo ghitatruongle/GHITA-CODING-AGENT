@@ -454,7 +454,27 @@ export function useChatSocket({ setMessages, tRef, reconnectTrigger }: UseChatSo
       if (import.meta.env.DEV)
         console.info('[ChatPanel] Manual reconnect triggered, starting sidecar server...');
       await invoke('start_server');
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      // L5 FIX: Wait for server readiness signal instead of hardcoded timeout
+      const maxWait = 10000;
+      const pollInterval = 200;
+      let waited = 0;
+      let serverReady = false;
+      while (waited < maxWait) {
+        try {
+          const status = await invoke<{ status: string }>('get_server_status');
+          if (status.status === 'running' || status.status === 'starting') {
+            serverReady = true;
+            break;
+          }
+        } catch {
+          // Server not ready yet
+        }
+        await new Promise((resolve) => setTimeout(resolve, pollInterval));
+        waited += pollInterval;
+      }
+      if (!serverReady && import.meta.env.DEV) {
+        console.warn('[ChatPanel] Server readiness timeout after', maxWait, 'ms');
+      }
       // Caller must increment reconnectTrigger to trigger re-init
     } catch (e) {
       console.error('[ChatPanel] Manual reconnect failed:', e);

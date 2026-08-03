@@ -59,6 +59,7 @@ export const vi: TranslationKeys = {
     pairErrSocket: 'Gặp sự cố khi kết nối Socket.io. Vui lòng thử lại.',
     pairErrBtPermission: 'Bạn chưa cấp quyền truy cập Bluetooth hoặc Định vị vị trí.',
     pairErrBtStart: 'Không thể khởi chạy quét Bluetooth. Vui lòng kiểm tra và bật Bluetooth.',
+    btUnavailable: 'Bluetooth không khả dụng trên thiết bị này. Không tìm thấy máy tính nào.',
     pairErrInvalidName: 'Tên thiết bị không hợp lệ để thực hiện dò tìm tự động.',
     pairErrNoIpCloud:
       "Không tìm thấy địa chỉ IP của máy tính '{{name}}' trên dịch vụ Cloud Registry. Vui lòng kiểm tra Máy chủ đã bật trên máy tính.",

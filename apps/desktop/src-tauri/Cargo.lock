@@ -1643,7 +1643,7 @@ dependencies = [
 
 [[package]]
 name = "ghita-coding-agent"
-version = "0.7.1"
+version = "0.8.0"
 dependencies = [
  "base64 0.22.1",
  "bytes",
@@ -1669,9 +1669,9 @@ dependencies = [
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
- "tauri-plugin-fs",
  "tauri-plugin-updater",
  "tokio",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]

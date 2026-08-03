@@ -30,8 +30,10 @@ export class SlackAdapter implements ChannelAdapter {
    */
   async sendMessage(channelId: string, text: string): Promise<boolean> {
     if (!this.botToken || this.botToken.startsWith('MOCK_')) {
-      // Simulate mock outbound delivery for testing
-      return true;
+      // v0.8.0: never fake a successful delivery — a missing/MOCK token means
+      // the message was NOT sent.
+      console.warn('[SlackAdapter] Cannot send message: missing or mock bot token.');
+      return false;
     }
 
     try {
@@ -62,7 +64,9 @@ export class SlackAdapter implements ChannelAdapter {
   async start(): Promise<void> {
     this.isRunning = true;
     if (!this.appToken || this.appToken.startsWith('MOCK_')) {
-      return; // No-op in test/mock mode
+      // Missing/mock token: report that the channel is not actually connected.
+      console.warn('[SlackAdapter] Cannot connect: missing or mock app token.');
+      return;
     }
     await this.startSocketMode();
   }

@@ -45,6 +45,7 @@ export interface TranslationKeys {
     pairErrSocket: string;
     pairErrBtPermission: string;
     pairErrBtStart: string;
+    btUnavailable: string;
     pairErrInvalidName: string;
     pairErrNoIpCloud: string;
     pairErrCloudPcFail: string;

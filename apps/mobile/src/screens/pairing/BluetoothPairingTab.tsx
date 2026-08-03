@@ -62,19 +62,20 @@ export function BluetoothPairingTab({
           scanTimeoutRef.current = null;
         }, 8000);
       } else {
-        // Fallback: Virtual/Simulated Bluetooth scanner
-        scanTimeoutRef.current = setTimeout(() => {
-          const mockDevices: BluetoothDevice[] = [
-            { address: 'VIRTUAL-01', name: 'PC-GHITA (Auto Bluetooth/Cloud)', bonded: true },
-            { address: 'VIRTUAL-02', name: 'DESKTOP-TAURI (Auto Bluetooth/Cloud)', bonded: false },
-          ];
-          setBtDevices(mockDevices);
-          setIsScanningBt(false);
-          scanTimeoutRef.current = null;
-        }, 1500);
+        // v0.8.0: Bluetooth module unavailable → show an honest empty state.
+        // Previously this fabricated "VIRTUAL-01 / VIRTUAL-02" devices so the
+        // list appeared populated with fake machines; connecting to them did
+        // nothing real. Now we surface a truthful "Bluetooth unavailable"
+        // message so users are never misled.
+        setIsScanningBt(false);
+        throw new Error(t('pairing.btUnavailable'));
       }
     } catch (err: unknown) {
       setIsScanningBt(false);
+      // Keep the honest error visible: the parent owns errorMessage; we clear
+      // stale state so the next scan starts fresh, leaving the list empty (no
+      // fabricated devices).
+      console.warn('[Bluetooth] scan failed:', err instanceof Error ? err.message : err);
       onClearError();
     }
   }, [t, onClearError]);

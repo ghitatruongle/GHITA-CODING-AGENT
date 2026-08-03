@@ -5,6 +5,251 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.0] - 2026-08-02
+
+### Added
+
+- **Native filesystem access**: new Tauri commands `fs_read_dir`, `fs_read_text`,
+  `fs_write_text`, `fs_metadata`, `fs_mkdir`, `fs_remove`, `fs_rename` bypass the
+  restricted `plugin-fs` scope so the editor can open/edit files in ANY folder
+  (Documents/Desktop/Downloads no longer required). Encoding-aware read/write
+  (UTF-8 BOM, UTF-16 LE/BE, latin-1 fallback) prevents mojibake.
+- **Ctrl+N** now creates AND opens a new file in the current folder (the welcome
+  hint advertised it, but the binding never existed).
+- Error surfacing in the File Explorer: non-permitted/inaccessible folders now
+  show a clear error toast instead of silently rendering an empty tree.
+
+### Fixed
+
+- **Mở / edit file không lỗi**: browser `plugin-fs` scope failures were the root
+  cause of "cannot open file" — replaced with native fs commands (see Added).
+- **Blank editor tabs after restart**: persisted tabs (path-only) are now
+  re-hydrated from disk when focused, instead of showing empty content forever.
+- **AI proposal accept discarding unsaved manual edits**: a confirmation prompt
+  now guards against overwriting the user's own changes.
+- **Double Ctrl+S**: Monaco's keybinding and the window-level handler both fired
+  save → duplicated writes/toasts. Monaco's binding was removed; one source owns
+  save/save-all.
+- **New file never opening in editor** after creation.
+- **DocsGriller** no longer returns an empty stub: real heuristic analysis of
+  the markdown content (cross-document contradictions, Socratic questions from
+  decision markers, design-decision extraction); response now uses camelCase to
+  match the frontend contract.
+- **Ralph self-healing** no longer uses a fake "mock compiler": generated code is
+  written to a temp file and really type-checked with `tsc` (esbuild fallback).
+- **Windows console windows**: sidecar spawn and approved-command spawn now use
+  `CREATE_NO_WINDOW`; all remaining Node `execFileSync`/`execFile` call-sites
+  (builtins, mobile-adb, docsGriller, dynamicGenerator) now pass
+  `windowsHide: true`. Launching the app no longer flashes terminal windows.
+
+### Removed (no more demo/simulated data)
+
+- **Ecosystem view**: removed the fake gRPC/Agent-Protocol daemon cards and the
+  `Math.random` log/request simulator. Replaced with the real sidecar server
+  status (port, LAN addresses, version).
+- **Quota view**: removed fabricated sample usage that inflated the budget gauge.
+- **Monitoring view**: removed synthetic error-group naming; shows real telemetry
+  only (empty until real errors occur).
+- **SaaS catalog**: `loadComposioCatalog` no longer registers 150+ non-functional
+  stub tools (`composio:*`) — the agent can never propose a dead integration.
+- **OAuth**: `OAuthHandoffManager.handleCallback` and
+  `ComposioSkillAdapter.interceptAndRefreshToken` no longer mint mock tokens;
+  they surface a clear error so no connection is faked.
+- **Communication channels** (Telegram/Slack/Discord/iMessage): mock-mode paths
+  no longer report fake success; missing/MOCK tokens return honest failure.
+- **Mobile Bluetooth pairing**: removed fabricated `VIRTUAL-01/02` devices; shows
+  a truthful "Bluetooth unavailable" state.
+
+### Performance
+
+- Chat messages are memoized per-message (`MessageBubble`) so streaming updates
+  re-render only the changed message, not the whole history.
+- Polling loops (Ecosystem, Devices, Sandbox, Quota, Monitoring, MobileScreen,
+  Model selector) now pause while the window is hidden / tab inactive via a new
+  `useActivePolling` hook.
+- `CodeEditor` dirty-check uses a cheap length comparison instead of a full
+  O(n) string compare per keystroke.
+
+### Changed
+
+- All package/workspace versions synchronized to **0.8.0**.
+- Removed dead `EditorTabBar.tsx` and `FileExplorerDirtyBadge.tsx`.
+
+### Deep review & debug pass (post-release hardening)
+
+#### Data-loss prevention
+
+- **Oversized-file truncation guard**: reading a file larger than the 5 MiB cap
+  now returns `isTruncated`; the editor opens it read-only and **blocks saving**
+  so the truncated preview can never overwrite the original file.
+- **DocsGriller symlink crash**: the recursive doc scan could stack-overflow on
+  symlink cycles; now tracks visited canonical paths with a depth cap.
+- **Reload-vs-typing race**: auto-reload of a rehydrated tab no longer clobbers
+  keystrokes typed while the disk read was in flight.
+- **Encoding-safe AI proposal accept**: when applying an AI-proposed edit to a
+  file whose encoding isn't cached yet, the real on-disk encoding is resolved
+  before writing (no more UTF-8-corrupting UTF-16/latin-1 files).
+
+#### Correctness
+
+- UTF-16 files are no longer mislabelled as "binary" — the NUL-byte sniff now
+  runs on the _decoded_ text instead of the raw bytes.
+- Ecosystem view clears the last-known server status on poll failure instead of
+  keeping a stale green "RUNNING" while the sidecar is gone.
+- Chat "scroll to bottom" is anchored to the correct container.
+- `PermissionGateManager` is now fail-closed (no dialog handler ⇒ denied)
+  instead of failing open.
+- `composioAdapter` no longer permanently isolates an app when its token simply
+  expires — credential refresh clears the isolation so a good token works.
+- Telegram/Discord/Slack/WhatsApp gateways no longer report fake success in mock
+  mode; missing tokens surface honest failure.
+
+#### Performance & UX
+
+- Removed duplicate initial poll effects (Quota, Monitoring, SandboxDashboard)
+  — `useActivePolling` already fires once on mount, so views no longer double
+  the first request.
+- Keyboard shortcuts (Ctrl+S/W/O/N) now honor the `shortcutsEnabled` setting and
+  are skipped while typing in an input/textarea/select or when the command
+  palette is open.
+
+### Removed
+
+- **`plugin-fs` fully removed**: the Tauri `fs` plugin, its frontend package,
+  its Rust registration, and all `fs:*` capabilities are gone. The native
+  fs commands (added in "Added") are the single filesystem path.
+- Orphan `codeView.fieldTransferred` i18n key and invalid `toast.warning` calls
+  (react-hot-toast has no `warning`) replaced with the correct API.
+
+### Fixed (found during real-machine install verification)
+
+- **Orphaned sidecar after app death**: if the app was force-killed or crashed,
+  the bundled Node sidecar survived and kept squatting on the HTTP/gRPC ports;
+  the next launch could not bind and drifted to a different port. The sidecar
+  is now placed in a Windows Job Object with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`
+  (`windows-sys`), so the kernel reaps it whenever the app process dies for ANY
+  reason — no code path required. Verified live: `taskkill /F` on the app kills
+  the sidecar and the next launch rebinds 8080/50051 immediately.
+- **Monaco editor stuck on "Đang chuẩn bị..." spinner**: the default
+  `@monaco-editor/react` loader fetches Monaco from `cdn.jsdelivr.net`. Any
+  machine offline / behind a firewall / on a slow link would never finish
+  loading and the user could not edit files. `monaco-editor@0.55.1` is now a
+  direct dependency, and `src/lib/monaco-setup.ts` configures
+  `loader.config({ monaco })` + `MonacoEnvironment.getWorker` so the editor
+  runs entirely from the local bundle (5 workers bundled: editor, json, css,
+  html, ts). Verified: app exe grew ~2.8 MB (the bundled Monaco ESM) and the
+  editor now works offline.
+
+### Fixed (deep review pass #2 — verified)
+
+#### P0 (would silently break key flows)
+
+- `capabilities/default.json` was missing `dialog:allow-message` (and
+  `ask`/`confirm`). `execute_approved_command` calls `app.dialog().message`
+  which the dialog plugin rejects without those permissions, so every approved
+  command short-circuited to "Explicit user approval is required." Added the
+  three `dialog:allow-*` permissions.
+- `start_server` would set `s.starting = true` then `?`-propagate out of
+  `spawn_blocking.await` on a join error, never clearing the flag. Every
+  subsequent `start_server` would then early-return with "Server is already
+  starting" until the app was restarted. Reset the flag explicitly on any
+  join failure.
+
+#### P1 (data-loss / correctness / security)
+
+- `start_server` did not `try_wait()` before the `is_some()` check, so a
+  silently-crashed sidecar left `s.child = Some(dead)` wedged forever. Mirrored
+  the `try_wait` reap pattern from `get_server_status`.
+- Frontend handlers (`handleContentChange`, `handleSave`, `handleSaveAll`,
+  `useAiEditProposal.acceptProposal`, surface effect) all snapshotted
+  `openFiles` from the React closure. An `onChange` arriving one tick after a
+  tab close could write the closed-tab array back into the store and
+  **resurrect** the closed tab. Switched every write to
+  `useAppStore.getState().codeOpenFiles.map(...)` and mirrored the
+  `handleSave` modified-recheck into `handleSaveAll`.
+- `acceptProposal` did not guard against (a) the file being changed externally
+  between proposal creation and accept, or (b) the file being a truncated
+  preview > 5 MiB. Now re-reads the file before writing, aborts if it drifted
+  from `originalContent`, and refuses to write when `cache.isTruncated`.
+- Slack gateway was acking every envelope, training Slack to retry on
+  malformed/unhandled events. `dispatchEvent` now returns `true`/`false` and
+  the socket only acks envelopes whose handler actually consumed the event.
+- Sidecar gRPC bind failure (ports 50051–50059 all busy) silently kept the
+  sidecar running with a dead channel — every ReAct call would no-op. Now
+  emits `ipcEmit('server_error', { type: 'grpcUnavailable' })` and
+  `process.exit(1)` so the Tauri host can restart against a fresh port.
+- `dynamicGenerator.runGit` used `execAsync(\`git add "${hubPath}/\*.json"\`)`,
+which is shell-injectable if `hubPath`contains a quote. Switched to`execFile('git', [...args], { windowsHide: true })` everywhere and updated
+  the test mocks.
+- `runtime-security.mjs` allowed any loopback peer to authenticate as the
+  desktop client when `SESSION_TOKEN` was unset. Tightened to require the
+  token to match even on loopback (the Tauri host always sets a non-empty
+  token).
+- `imessage.ts` (macOS) lacked `windowsHide: true` for consistency with the
+  rest of the codebase. Added to all three `execFileAsync` call sites.
+
+#### P2 (perf / correctness)
+
+- Sidecar now emits `__GHITA_IPC__:http_listening {port, ...}` right after
+  `httpServer.listen` resolves. The Rust stdout reader thread updates
+  `ServerState.port` so `/health` probes and `get_server_status` can't drift
+  from the actual bound port (closes the `find_free_port` TOCTOU window).
+- `vite.config.ts` pre-bundles `monaco-editor` and includes it in the
+  `monaco-vendor` chunk to cut the dev-server cold start.
+- `CodeEditor.tsx` theme is hoisted to a module-level `GHITA_DARK_THEME`
+  constant and registered through `ensureGhitaDarkTheme`, so toggling
+  between editor and diff mode no longer clobbers the theme with the
+  less-coloured diff variant.
+- `CodeEditor.tsx` diagnostics effect: dropped `value` from the deps array
+  so `setModelMarkers` doesn't fire on every keystroke.
+- `DocsGrillerDashboard.tsx` resolves a relative `docsPath` against the
+  workspace `terminalCwd` so the Rust side never sees a path relative to an
+  unrelated CWD.
+
+## [0.7.3] - 2026-08-01
+
+### Fixed
+
+#### Critical / Security
+
+- **C1**: Register missing `run_grill_session` Tauri command handler (already present in 0.7.1, verified)
+- **C2**: Disable cloud discovery (`publishToCloud`) — pairing codes + LAN IP + hostname no longer leaked to public KV endpoint
+
+#### High Priority
+
+- **H1**: Sidecar Node process is now properly reaped on Tauri shutdown via `cleanup_before_exit`
+- **H2**: Added `zsh` to the shell capability allowlist (`shell:allow-execute` in `default.json`) so `terminal_create` with `shell: 'zsh'` works correctly
+- **H3**: Iframe sandbox already removed `allow-same-origin` (verified in WebViewPanel)
+- **H4**: CSP already includes `https://www.google.com/s2/favicons` in `img-src` (verified in tauri.conf.json)
+
+#### Medium Priority
+
+- **M6**: `rateLimitCleanupInterval` is now cleared on `SIGTERM`/`SIGINT`/`exit` to prevent event loop leaks
+- **M9**: Workflow dependency validation now runs at load time via `AdvancedWorkflowEngine.validate()` instead of throwing at execution time
+- **M10**: IPC parse errors are now logged with `eprintln!` (already present)
+
+#### Low Priority / Code Quality
+
+- **L1**: Fire-and-forget `terminal_kill` IPC now logs errors via `console.warn`
+- **L3**: `parseInt` calls in `ApModuleCard.tsx` and `GrpcModuleCard.tsx` now include radix `10`
+- **L5**: `start_server` now polls `get_server_status` until server is ready (10s timeout) instead of hardcoded 1.5s sleep
+
+#### UI/UX Improvements
+
+- **Command Palette**: ArrowUp/ArrowDown now wrap around (last → first, first → last)
+- **Welcome Screen**: Shows "No recent workspaces" message when workspace list is empty
+- **Settings**: Added "Reset to Defaults" button that restores all settings to their default values
+- **Settings**: Added Cursor Style option (Block / Underline / Bar) in Terminal Preferences
+- **Chat Panel**: Added floating "Scroll to bottom" button when user has scrolled up in message list
+- **Terminal**: Fire-and-forget IPC errors now logged with `console.warn`
+
+### Changed
+
+- Version bumped to 0.7.3 across all manifests
+- Updated `default.json` capability allowlist to include `zsh`
+- Added `terminalCursorStyle` to Zustand store with persistence
+- Added `resetSettings` action to appStore
+
 ## [0.7.1] - 2026-08-01
 
 ### Added

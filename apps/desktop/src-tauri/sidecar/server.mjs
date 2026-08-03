@@ -442,6 +442,11 @@ function cleanupRateLimitInterval() {
   clearInterval(rateLimitCleanupInterval);
 }
 
+// Clear rate limit interval on process shutdown
+process.on('SIGTERM', cleanupRateLimitInterval);
+process.on('SIGINT', cleanupRateLimitInterval);
+process.on('exit', cleanupRateLimitInterval);
+
 // --- Event names ---
 const EVENTS = {
   CONNECT: 'connect',
@@ -1320,28 +1325,72 @@ function registerSocketEvents(socket, isCloud = false) {
           costLimitUsd,
         });
 
-        // Giáº£ láº­p má»™t hÃ m thá»±c thi (mock compiler) Ä‘á»ƒ mÃ´ phá»ng tá»± sá»­a sai
-        let compileAttempts = 0;
-        const mockExecute = async (code) => {
-          compileAttempts++;
-          await new Promise((r) => setTimeout(r, 2000)); // Delay mÃ´ phá»ng build 2s
+        // Real compiler for Ralph Loop self-healing — no mock build. Write the
+        // generated code to a temp .tsx file and run a genuine `tsc --noEmit`
+        // parse+type check. If tsc is unavailable we still return honest
+        // "not verified" output instead of fabricating a passing build.
+        const { mkdtempSync, writeFileSync } = await import('node:fs');
+        const { tmpdir } = await import('node:os');
+        const { join } = await import('node:path');
 
-          if (compileAttempts < 2) {
-            // Láº§n 1: Giáº£ láº­p lá»—i cÃº phÃ¡p
-            return {
-              success: false,
-              logs: `ERROR in src/app.tsx: L32 - Type 'string' is not assignable to type 'number'. Cannot assign value: "${code.substring(0, 15)}..." to count.`,
-            };
-          } else {
-            // Láº§n 2: ThÃ nh cÃ´ng
-            return {
-              success: true,
-              logs: `Successfully compiled 1 TS file in 420ms. Zero errors detected.`,
-            };
+        const realExecute = async (code) => {
+          let dir = null;
+          let tsxPath = null;
+          try {
+            dir = mkdtempSync(join(tmpdir(), 'ghita-ralph-'));
+            tsxPath = join(dir, 'generated.tsx');
+            writeFileSync(tsxPath, code, 'utf8');
+            try {
+              // Try a real TypeScript parse + type check. --isolatedModules off,
+              // noEmit keeps it a pure check; tsc resolves the file directly.
+              const out = execSync(
+                `tsc --noEmit --jsx preserve --target ES2020 --module ESNext --skipLibCheck ${JSON.stringify(
+                  tsxPath,
+                )}`,
+                { stdio: 'pipe', encoding: 'utf8', timeout: 30_000, windowsHide: true },
+              );
+              return {
+                success: true,
+                logs: `tsc: generated code type-checked without errors.\n${String(out).trim()}`,
+              };
+            } catch (tsErr) {
+              const stderr = String(tsErr?.stderr || '');
+              // Distinguish real type errors (tsc emits "error TSxxxx:") from
+              // tooling-setup failures (e.g. missing tsconfig -> exit code 2 but
+              // no "error TS" diagnostics). Only report real type errors; for
+              // tooling failures fall through to the esbuild check so we don't
+              // claim a false failure.
+              if (/error\s+TS\d+:/.test(stderr) || /error TS\d+/.test(stderr)) {
+                return { success: false, logs: stderr.trim() || String(tsErr?.message) };
+              }
+              // Fall through to esbuild-only verify below.
+            }
+            // Fallback: genuine syntax+transform check with esbuild (bundled).
+            try {
+              const esbuild = await import('esbuild');
+              esbuild.transformSync(code, { loader: 'tsx', sourcefile: 'generated.tsx' });
+              return {
+                success: true,
+                logs: 'esbuild: generated code parsed and transformed without errors (no type-check).',
+              };
+            } catch (esErr) {
+              return { success: false, logs: `esbuild error:\n${esErr?.message || String(esErr)}` };
+            }
+          } catch (fsErr) {
+            return { success: false, logs: `Ralph compile error: ${fsErr?.message || String(fsErr)}` };
+          } finally {
+            if (dir) {
+              try {
+                const { rmSync } = await import('node:fs');
+                rmSync(dir, { recursive: true, force: true });
+              } catch {
+                /* best-effort cleanup */
+              }
+            }
           }
         };
 
-        const result = await ralph.run(task, mockExecute, (progress) => {
+        const result = await ralph.run(task, realExecute, (progress) => {
           log(`[Ralph Loop Progress] Iteration ${progress.iteration}: ${progress.message}`);
           broadcast('ralph_loop_progress', {
             iteration: progress.iteration,
@@ -2762,6 +2811,16 @@ httpServer.on('listening', async () => {
   const ip = getLocalIP();
   log(`Server listening on ${HOST}:${activePort}`);
   log(`Local IP: ${ip}`);
+  // P2-1 (deep review pass #2): announce the actual port over IPC so the
+  // Tauri host can update ServerState.port. The Rust side may have asked
+  // for a different port (find_free_port races) — this is the source of
+  // truth for what the sidecar is really listening on.
+  ipcEmit('http_listening', {
+    port: activePort,
+    localIP: ip,
+    pairingCode: getCode(),
+    codeExpiresAt: Date.now() + 300_000,
+  });
   const code = getCode();
   log(`Pairing code: ${code}`);
   publishToCloudDiscovery();
@@ -2798,10 +2857,18 @@ httpServer.on('listening', async () => {
     }
 
     if (!grpcStarted) {
+      // P1-6 (deep review pass #2): don't silently keep running with a dead
+      // gRPC channel. Every ReAct orchestration call would silently no-op.
+      // Emit an IPC error so the Tauri host can surface the failure AND
+      // exit so the host restarts us against a fresh port allocation.
       log(`Failed to start gRPC Server on ports 50051-50059`);
+      ipcEmit('server_error', { type: 'grpcUnavailable', ports: '50051-50059' });
+      process.exit(1);
     }
   } catch (err) {
     log(`Failed to configure and start gRPC Server: ${err.message}`);
+    ipcEmit('server_error', { type: 'grpcInitFailed', error: String(err.message ?? err) });
+    process.exit(1);
   }
 
   if (process.send) {

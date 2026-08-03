@@ -1,102 +1,54 @@
 // ==============================================================================
-// GHITA CODING AGENT — Ecosystem & Integration Settings (Phase 5 Dashboard)
+// GHITA CODING AGENT — Ecosystem & Integration Settings
 // ==============================================================================
+// v0.8.0: Removed the simulated "Demo Mode" data entirely. The gRPC / Agent
+// Protocol cards previously fabricated random logs and requests; there was no
+// real daemon behind them. This view now shows the *real* sidecar server status
+// (from the native get_server_status command) plus the routing configuration.
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTranslation } from '../i18n';
+import { invoke } from '@tauri-apps/api/core';
+import { useActivePolling } from '../hooks/useActivePolling';
 
 import { INITIAL_ROUTER_ROUTES, type RouterRoute } from './ecosystem/routerRoutes';
 import { RouterPanel } from './ecosystem/RouterPanel';
-import { GrpcModuleCard } from './ecosystem/GrpcModuleCard';
-import { ApModuleCard } from './ecosystem/ApModuleCard';
+
+interface ServerStatus {
+  status: string;
+  port?: number;
+  localIps?: string[];
+  version?: string;
+}
 
 export function EcosystemView() {
   const { t } = useTranslation();
 
-  // gRPC Server states
-  const [grpcActive, setGrpcActive] = useState(true);
-  const [grpcPort, setGrpcPort] = useState(50051);
-  const [grpcLogs, setGrpcLogs] = useState<string[]>([
-    '[gRPC] gRPC daemon started on port 50051.',
-    '[gRPC] Registered GhitaService v1 protobuf schemas.',
-    '[gRPC] Handshake request received from VS Code extension sidecar (PID: 9482).',
-    '[gRPC] Connection authenticated successfully.',
-  ]);
+  // Real sidecar server status (no simulated data).
+  const [serverStatus, setServerStatus] = useState<ServerStatus | null>(null);
+  const [serverError, setServerError] = useState<string | null>(null);
 
-  // Agent Protocol states
-  const [apActive, setApActive] = useState(true);
-  const [apPort, setApPort] = useState(8000);
-  const [apRequests, setApRequests] = useState<
-    Array<{ id: string; method: string; path: string; status: number; time: string }>
-  >([
-    { id: 'ap-req-1', method: 'POST', path: '/api/v1/agent/tasks', status: 201, time: '17:40:12' },
-    {
-      id: 'ap-req-2',
-      method: 'GET',
-      path: '/api/v1/agent/tasks/task-9382',
-      status: 200,
-      time: '17:40:15',
-    },
-    {
-      id: 'ap-req-3',
-      method: 'POST',
-      path: '/api/v1/agent/tasks/task-9382/steps',
-      status: 200,
-      time: '17:41:02',
-    },
-  ]);
-
-  // Dynamic Router settings
+  // Dynamic Router settings (UI configuration only)
   const [routerRoutes, setRouterRoutes] = useState<RouterRoute[]>(INITIAL_ROUTER_ROUTES);
   const [maxCostThreshold, setMaxCostThreshold] = useState(0.05); // USD
   const [complexityBoundary, setComplexityBoundary] = useState('automatic');
 
-  // Simulator loop for live log feed & mock requests
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (grpcActive) {
-        // Mock gRPC activity logs
-        const logTemplates = [
-          `[gRPC] Client keep-alive ping received.`,
-          `[gRPC] Querying workspace files for code intelligence.`,
-          `[gRPC] Invoking remote procedure CallSubagent.`,
-          `[gRPC] Stream channel heartbeats processed.`,
-        ];
-        const randomLog = logTemplates[Math.floor(Math.random() * logTemplates.length)] ?? '';
-        setGrpcLogs((prev) => [
-          ...prev.slice(-30),
-          `[${new Date().toLocaleTimeString()}] ${randomLog}`,
-        ]);
-      }
+  const refreshStatus = async () => {
+    try {
+      const status = await invoke<ServerStatus>('get_server_status');
+      setServerStatus(status);
+      setServerError(null);
+    } catch (e) {
+      // Clear the last known-good state so the UI does not keep showing green
+      // RUNNING while the sidecar has actually died.
+      setServerStatus(null);
+      setServerError(e instanceof Error ? e.message : String(e));
+    }
+  };
 
-      if (apActive && Math.random() > 0.6) {
-        // Mock Agent Protocol requests
-        const paths = [
-          '/api/v1/agent/tasks',
-          '/api/v1/agent/tasks/task-9382',
-          '/api/v1/agent/tasks/task-9382/steps',
-          '/api/v1/agent/tasks/task-9382/artifacts',
-        ];
-        const methods = ['GET', 'POST'];
-        const method = methods[Math.floor(Math.random() * methods.length)] ?? 'GET';
-        const path = paths[Math.floor(Math.random() * paths.length)] ?? '/';
-        const status = Math.random() > 0.05 ? 200 : 404;
-
-        setApRequests((prev) => [
-          {
-            id: `ap-req-${Date.now()}`,
-            method,
-            path,
-            status,
-            time: new Date().toLocaleTimeString(),
-          },
-          ...prev.slice(0, 14),
-        ]);
-      }
-    }, 4000);
-
-    return () => clearInterval(interval);
-  }, [grpcActive, apActive]);
+  // Poll real server status once on mount, then while the view is visible
+  // (pauses when the window is hidden — no fake data, no background waste).
+  useActivePolling(5000, refreshStatus, 'ecosystem');
 
   const toggleRouteStatus = (index: number) => {
     setRouterRoutes((prev) =>
@@ -108,6 +60,18 @@ export function EcosystemView() {
       }),
     );
   };
+
+  const isRunning = serverStatus?.status === 'running' || serverStatus?.status === 'ok';
+  const statusLabel = isRunning
+    ? t('ecosystem.running')
+    : serverStatus?.status === 'starting'
+      ? t('ecosystem.starting')
+      : t('ecosystem.stopped');
+  const statusColor = isRunning
+    ? '#34d399'
+    : serverStatus?.status === 'starting'
+      ? '#fbbf24'
+      : '#f87171';
 
   return (
     <div
@@ -125,27 +89,6 @@ export function EcosystemView() {
       }}
       className="custom-scrollbar"
     >
-      {/* Demo Mode Banner */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '8px',
-          padding: '6px 14px',
-          borderRadius: '8px',
-          background: 'rgba(251, 191, 36, 0.12)',
-          border: '1px solid rgba(251, 191, 36, 0.25)',
-          fontSize: '11px',
-          fontWeight: 600,
-          color: '#fbbf24',
-          letterSpacing: '0.3px',
-        }}
-      >
-        <span style={{ fontSize: '13px' }}>⚠</span>
-        {t('ecosystem.demoMode') || 'Demo Mode — Data is simulated'}
-      </div>
-
       <div>
         <h2
           style={{
@@ -173,23 +116,94 @@ export function EcosystemView() {
           gap: '20px',
         }}
       >
-        <GrpcModuleCard
-          t={t}
-          grpcActive={grpcActive}
-          setGrpcActive={setGrpcActive}
-          grpcPort={grpcPort}
-          setGrpcPort={setGrpcPort}
-          grpcLogs={grpcLogs}
-          setGrpcLogs={setGrpcLogs}
-        />
-        <ApModuleCard
-          t={t}
-          apActive={apActive}
-          setApActive={setApActive}
-          apPort={apPort}
-          setApPort={setApPort}
-          apRequests={apRequests}
-        />
+        {/* Real Core Server status — no simulated data */}
+        <div
+          style={{
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: '12px',
+            padding: '16px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '14px',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span
+              style={{
+                fontSize: '13px',
+                fontWeight: 700,
+                color: 'var(--text-accent)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              {t('ecosystem.coreServer')}
+            </span>
+            <span
+              style={{
+                fontSize: '10px',
+                padding: '3px 8px',
+                borderRadius: '6px',
+                fontWeight: 600,
+                background: 'rgba(99, 102, 241, 0.15)',
+                color: statusColor,
+                border: `1px solid ${statusColor}55`,
+              }}
+            >
+              ● {statusLabel}
+            </span>
+          </div>
+
+          <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+            {serverStatus
+              ? t('ecosystem.coreServerDesc', {
+                  port: String(serverStatus.port ?? '—'),
+                })
+              : serverError
+                ? t('ecosystem.coreServerError', { error: serverError })
+                : t('ecosystem.coreServerChecking')}
+          </p>
+
+          {serverStatus?.localIps && serverStatus.localIps.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600 }}>
+                {t('ecosystem.localNetwork')}
+              </span>
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '6px',
+                }}
+              >
+                {serverStatus.localIps.map((ip) => (
+                  <span
+                    key={ip}
+                    style={{
+                      fontSize: '10px',
+                      fontFamily: 'monospace',
+                      padding: '2px 8px',
+                      borderRadius: '6px',
+                      background: 'rgba(99, 102, 241, 0.1)',
+                      color: '#a5b4fc',
+                    }}
+                  >
+                    {ip}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {serverStatus?.version && (
+            <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+              {t('ecosystem.serverVersion', { version: serverStatus.version })}
+            </div>
+          )}
+        </div>
       </div>
 
       <RouterPanel

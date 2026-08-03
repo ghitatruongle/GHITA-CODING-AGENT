@@ -83,6 +83,9 @@ export class ComposioSkillAdapter {
     filtered.push(conn);
     this.credentials.set(appId, filtered);
     this.consecutiveFailures.set(appId, 0);
+    // Fresh credentials mean the app is presumably healthy again; don't let a
+    // stale fault-isolation flag block a reconnected account.
+    this.isolatedApps.delete(appId);
   }
 
   public getCredential(appId: string, accountId?: string): SaaSConnection | undefined {
@@ -159,6 +162,19 @@ export class ComposioSkillAdapter {
 
   // --- OAuth Token Refresh ---
 
+  /**
+   * Checks whether an access token needs refreshing.
+   *
+   * v0.8.0: This method no longer fabricates tokens. Minting a mock
+   * "refreshed_access_…" token made the connection appear valid when nothing
+   * was actually refreshed, which is indistinguishable from a real bug.
+   *
+   * - Tokens that are not near expiry are left untouched (returns true).
+   * - Tokens near expiry are ONLY refreshed through a real provider exchange.
+   *   Since this adapter has no real refresh-token endpoint configured, near-
+   *   expiry tokens are reported as needing attention and an honest error is
+   *   surfaced instead of inventing a refresh.
+   */
   public async interceptAndRefreshToken(appId: string): Promise<boolean> {
     const conn = this.getCredential(appId);
     if (!conn) return false;
@@ -169,23 +185,17 @@ export class ComposioSkillAdapter {
     const FIVE_MINUTES_MS = 5 * 60 * 1000;
 
     if (timeDiff <= FIVE_MINUTES_MS) {
-      const start = Date.now();
-      await new Promise((resolve) => setTimeout(resolve, 50));
-
-      const newAccessToken = `refreshed_access_${Math.random().toString(36).substring(2, 10)}`;
-      const newExpiresAt = Date.now() + 3600 * 1000;
-
-      this.setCredential({
-        appId: conn.appId,
-        accountId: conn.accountId,
-        accountLabel: conn.accountLabel,
-        accessToken: newAccessToken,
-        refreshToken: conn.refreshToken,
-        expiresAt: newExpiresAt,
-      });
-
-      this.recordAPILog(conn.appId, 'oauth.refresh_token', true, Date.now() - start);
-      return true;
+      // Tag the error so executeSaaSAction does NOT treat an expired token as a
+      // transient fault: it is a deterministic credential problem, not a service
+      // outage — counting it toward isolation would permanently lock the app
+      // with no automatic recovery path.
+      const err = new Error(
+        `OAuth token for "${appId}" has expired or is near expiry and cannot be ` +
+          'refreshed: no real provider refresh endpoint is configured. Reconnect the ' +
+          'account with fresh credentials via a genuine OAuth exchange.',
+      ) as Error & { code?: string };
+      err.code = 'ghita_token_expired';
+      throw err;
     }
 
     return true;
@@ -271,11 +281,16 @@ export class ComposioSkillAdapter {
     } catch (err: unknown) {
       const errorMsg = (err as { message?: string })?.message ?? String(err);
 
-      const currentFailures = (this.consecutiveFailures.get(appId) || 0) + 1;
-      this.consecutiveFailures.set(appId, currentFailures);
-
-      if (currentFailures >= 3) {
-        this.isolateApp(appId);
+      // Deterministic credential failures (e.g. expired token) are not transient
+      // service faults — skip fault isolation so reconnecting credentials clears
+      // the situation instead of leaving the app permanently quarantined.
+      const isCredentialError = (err as { code?: string })?.code === 'ghita_token_expired';
+      if (!isCredentialError) {
+        const currentFailures = (this.consecutiveFailures.get(appId) || 0) + 1;
+        this.consecutiveFailures.set(appId, currentFailures);
+        if (currentFailures >= 3) {
+          this.isolateApp(appId);
+        }
       }
 
       this.recordAPILog(appId, action, false, Date.now() - start, errorMsg);

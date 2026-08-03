@@ -199,7 +199,9 @@ function XtermPane({
         });
 
         if (!active) {
-          await invoke('terminal_kill', { id: currentTabId }).catch(() => {});
+          await invoke('terminal_kill', { id: currentTabId }).catch((e) =>
+            console.warn('[terminal] kill failed:', e),
+          );
           return;
         }
 

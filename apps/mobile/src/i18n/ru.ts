@@ -59,6 +59,7 @@ export const ru: TranslationKeys = {
     pairErrSocket: 'Ошибка подключения Socket.io. Пожалуйста, попробуйте еще раз.',
     pairErrBtPermission: 'Разрешение на доступ к Bluetooth или геолокации не получено.',
     pairErrBtStart: 'Не удалось запустить поиск Bluetooth. Пожалуйста, включите Bluetooth.',
+    btUnavailable: 'Bluetooth недоступен на этом устройстве. Компьютеры не найдены.',
     pairErrInvalidName: 'Недопустимое имя ПК для автопоиска.',
     pairErrNoIpCloud:
       'IP-адрес ПК не найден для «{{name}}» в облачном реестре. Убедитесь, что сервер на ПК запущен.',

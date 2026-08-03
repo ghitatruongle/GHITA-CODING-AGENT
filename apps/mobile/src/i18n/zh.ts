@@ -57,6 +57,7 @@ export const zh: TranslationKeys = {
     pairErrSocket: '无法连接到 Socket.io。请重试。',
     pairErrBtPermission: '未授予蓝牙或定位权限。',
     pairErrBtStart: '无法启动蓝牙扫描。请开启蓝牙。',
+    btUnavailable: '此设备不支持蓝牙，未找到任何电脑。',
     pairErrInvalidName: '用于自动搜索的设备名称无效。',
     pairErrNoIpCloud: "在云端注册表中未找到电脑 '{{name}}' 的 IP。请确保电脑上的服务器已开启。",
     pairErrCloudPcFail: '电脑的云端搜索数据错误或已过期。',

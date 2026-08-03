@@ -121,6 +121,7 @@ export interface TranslationKeys {
     logInfo: string;
     logWarn: string;
     logError: string;
+    resetDefaults: string;
     mcpNamePlaceholder: string;
     mcpCommandPlaceholder: string;
     hookToolPlaceholder: string;
@@ -146,6 +147,9 @@ export interface TranslationKeys {
     reject: string;
     editApplied: string;
     editRejected: string;
+    unsavedEditsProposalConfirm: string;
+    fileTruncated: string;
+    fileTooLargeToSave: string;
   };
   devices: {
     title: string;
@@ -300,10 +304,17 @@ export interface TranslationKeys {
     avgLatency: string;
     routingState: string;
     running: string;
+    starting: string;
     stopped: string;
     compliant: string;
     disabledLabel: string;
     demoMode: string;
+    coreServer: string;
+    coreServerDesc: string;
+    coreServerError: string;
+    coreServerChecking: string;
+    localNetwork: string;
+    serverVersion: string;
   };
   chat: {
     welcomeMessage: string;
@@ -393,6 +404,7 @@ export interface TranslationKeys {
     rename: string;
     renamePrompt: string;
     renameInvalid: string;
+    loadFailed: string;
   };
   apiManager: {
     title: string;

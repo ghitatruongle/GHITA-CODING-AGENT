@@ -84,7 +84,14 @@ describe('Telegram Channel Adapter', () => {
   it('should correctly split messages longer than 4096 characters', async () => {
     const adapter = new TelegramAdapter('MOCK_TELEGRAM_TOKEN');
     const longText = 'A'.repeat(5000);
-    const sendSpy = vi.spyOn(adapter as any, 'sendHttpRequest').mockResolvedValue(true);
+    const sendSpy = vi
+      .spyOn(
+        adapter as unknown as {
+          sendHttpRequest: (channelId: string, text: string) => Promise<boolean>;
+        },
+        'sendHttpRequest',
+      )
+      .mockResolvedValue(true);
 
     const success = await adapter.sendMessage('chat123', longText);
 
@@ -99,7 +106,14 @@ describe('Telegram Channel Adapter', () => {
   it('should respect rate-throttling on send', async () => {
     // Set low throttle window for test speed (50ms)
     const adapter = new TelegramAdapter('MOCK_TELEGRAM_TOKEN', { throttleMs: 50 });
-    const sendSpy = vi.spyOn(adapter as any, 'sendHttpRequest').mockResolvedValue(true);
+    const sendSpy = vi
+      .spyOn(
+        adapter as unknown as {
+          sendHttpRequest: (channelId: string, text: string) => Promise<boolean>;
+        },
+        'sendHttpRequest',
+      )
+      .mockResolvedValue(true);
 
     const start = Date.now();
     const p1 = adapter.sendMessage('chat123', 'msg1');
@@ -114,9 +128,9 @@ describe('Telegram Channel Adapter', () => {
 
   it('should poll and route incoming messages correctly', async () => {
     const adapter = new TelegramAdapter('MOCK_TELEGRAM_TOKEN');
-    const received: any[] = [];
+    const received: Array<{ text: string; chat: { id: number } }> = [];
     adapter.onMessage((msg) => {
-      received.push(msg);
+      received.push(msg as { text: string; chat: { id: number } });
     });
 
     adapter.simulateMessage('123456', 'hello bot');
@@ -128,15 +142,16 @@ describe('Telegram Channel Adapter', () => {
 });
 
 describe('Discord Channel Adapter', () => {
-  it('should support sending and receiving messages in simulation mode', async () => {
+  it('should handle incoming messages and honestly reject sends without a real token', async () => {
     const adapter = new DiscordAdapter('MOCK_DISCORD_TOKEN');
-    const received: any[] = [];
+    const received: Array<{ content: string; channelId: string }> = [];
     adapter.onMessage((msg) => {
-      received.push(msg);
+      received.push(msg as { content: string; channelId: string });
     });
 
+    // v0.8.0: a MOCK/none token must NOT report a fake successful delivery.
     const sent = await adapter.sendMessage('chan_123', 'Hello Discord');
-    expect(sent).toBe(true);
+    expect(sent).toBe(false);
 
     adapter.simulateMessage('chan_123', 'hello from discord');
 
@@ -147,23 +162,20 @@ describe('Discord Channel Adapter', () => {
 });
 
 describe('WhatsApp Channel Adapter', () => {
-  it('should simulate linkage and handle incoming/outgoing messages', async () => {
+  it('should not fake linkage and should honestly reject sends with a mock URL', async () => {
     const adapter = new WhatsAppAdapter('ws://MOCK_WHATSAPP_HOST');
     await adapter.start();
 
-    expect(adapter.getPairingStatus()).toBe('LINKED');
+    // v0.8.0: a mock gateway must NOT report a fabricated LINKED state.
+    expect(adapter.getPairingStatus()).toBe('UNLINKED');
 
-    const pairingCode = adapter.simulatePairingCode();
-    expect(pairingCode).toBeDefined();
-    expect(adapter.getPairingStatus()).toBe('PAIRING');
-
-    const received: any[] = [];
+    const received: Array<{ text: string; from: string }> = [];
     adapter.onMessage((msg) => {
-      received.push(msg);
+      received.push(msg as { text: string; from: string });
     });
 
     const sent = await adapter.sendMessage('phone_number', 'Hi on WhatsApp');
-    expect(sent).toBe(true);
+    expect(sent).toBe(false);
 
     adapter.simulateMessage('phone_number', 'hello from whatsapp');
     expect(received.length).toBe(1);
@@ -175,15 +187,16 @@ describe('WhatsApp Channel Adapter', () => {
 });
 
 describe('iMessage Channel Adapter', () => {
-  it('should perform sendMessage command and capture incoming messages', async () => {
+  it('should honestly reject sends on non-macOS and capture incoming messages', async () => {
     const adapter = new IMessageAdapter();
-    const received: any[] = [];
+    const received: Array<{ text: string; sender: string }> = [];
     adapter.onMessage((msg) => {
-      received.push(msg);
+      received.push(msg as { text: string; sender: string });
     });
 
+    // v0.8.0: iMessage has no transport off macOS; send must be an honest false.
     const sent = await adapter.sendMessage('+1234567890', 'Hello iMessage');
-    expect(sent).toBe(true);
+    expect(sent).toBe(false);
 
     adapter.simulateMessage('+1234567890', 'hi back');
     expect(received.length).toBe(1);
@@ -193,15 +206,16 @@ describe('iMessage Channel Adapter', () => {
 });
 
 describe('Slack Channel Adapter', () => {
-  it('should support sendMessage and trigger callbacks on messages', async () => {
+  it('should honestly reject sends with mock tokens and trigger callbacks on messages', async () => {
     const adapter = new SlackAdapter('MOCK_APP_TOKEN', 'MOCK_BOT_TOKEN');
-    const received: any[] = [];
+    const received: Array<{ text: string; channel: string }> = [];
     adapter.onMessage((msg) => {
-      received.push(msg);
+      received.push(msg as { text: string; channel: string });
     });
 
+    // v0.8.0: MOCK tokens must not report a fake delivery.
     const sent = await adapter.sendMessage('C123', 'Hello Slack');
-    expect(sent).toBe(true);
+    expect(sent).toBe(false);
 
     adapter.simulateMessage('C123', 'hey slackbot');
     expect(received.length).toBe(1);
@@ -214,7 +228,14 @@ describe('Omnichannel E2E Loop Simulation', () => {
   it('should complete E2E cycle: incoming message -> execute tool -> send response', async () => {
     // Setup Telegram Adapter
     const adapter = new TelegramAdapter('MOCK_TELEGRAM_TOKEN');
-    const responseSpy = vi.spyOn(adapter as any, 'sendHttpRequest').mockResolvedValue(true);
+    const responseSpy = vi
+      .spyOn(
+        adapter as unknown as {
+          sendHttpRequest: (channelId: string, text: string) => Promise<boolean>;
+        },
+        'sendHttpRequest',
+      )
+      .mockResolvedValue(true);
 
     // Mock Tool Registry & Execution Function
     const tools = {

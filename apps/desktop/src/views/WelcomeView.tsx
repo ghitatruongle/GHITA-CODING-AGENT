@@ -105,7 +105,7 @@ export function WelcomeView() {
       </motion.button>
 
       {/* Recent workspaces */}
-      {recentWorkspaces.length > 0 && (
+      {recentWorkspaces.length > 0 ? (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -133,6 +133,22 @@ export function WelcomeView() {
                 </span>
               </button>
             ))}
+          </div>
+        </motion.div>
+      ) : (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.4 }}
+          className="w-full max-w-lg mb-8"
+        >
+          <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3 flex items-center gap-2">
+            <Clock size={12} />
+            {t('welcome.recentWorkspaces')}
+          </h3>
+          <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-bg-hover/50">
+            <FolderOpen size={16} className="text-text-muted" />
+            <span className="text-sm text-text-muted">{t('welcome.noRecentWorkspaces')}</span>
           </div>
         </motion.div>
       )}
