@@ -140,12 +140,18 @@ fn fs_read_dir(path: String) -> Result<Vec<NativeFsEntry>, String> {
 fn fs_read_text(path: String, max_bytes: Option<u64>) -> Result<NativeFsReadText, String> {
     use std::io::Read;
     let file = std::fs::File::open(&path).map_err(|e| format!("Failed to open file: {e}"))?;
-    let metadata = file.metadata().map_err(|e| format!("Failed to stat file: {e}"))?;
+    let metadata = file
+        .metadata()
+        .map_err(|e| format!("Failed to stat file: {e}"))?;
     let limit = max_bytes.unwrap_or(5 * 1024 * 1024);
     let is_truncated = metadata.len() > limit;
     // If the file is oversized we still read exactly `limit` bytes for preview,
     // but is_truncated tells the frontend the content is incomplete.
-    let read_bytes = if is_truncated { limit as usize } else { metadata.len() as usize };
+    let read_bytes = if is_truncated {
+        limit as usize
+    } else {
+        metadata.len() as usize
+    };
     let mut buf = Vec::with_capacity(read_bytes);
     file.take(limit)
         .read_to_end(&mut buf)
@@ -204,7 +210,13 @@ fn fs_write_text(path: String, content: String, encoding: Option<String>) -> Res
         }
         Some("latin-1") => content
             .chars()
-            .map(|c| if c.is_ascii() || (c as u32) < 256 { c as u8 } else { b'?' })
+            .map(|c| {
+                if c.is_ascii() || (c as u32) < 256 {
+                    c as u8
+                } else {
+                    b'?'
+                }
+            })
             .collect(),
         _ => content.into_bytes(),
     };
@@ -256,9 +268,7 @@ fn fs_remove(path: String, recursive: Option<bool>) -> Result<(), String> {
     let recursive = recursive.unwrap_or(false);
     let meta = std::fs::symlink_metadata(&path).map_err(|e| format!("Failed to stat path: {e}"))?;
     if meta.is_dir() && !recursive {
-        return Err(
-            "Directory is not empty; pass recursive to remove it.".to_string(),
-        );
+        return Err("Directory is not empty; pass recursive to remove it.".to_string());
     }
     if meta.is_dir() {
         std::fs::remove_dir_all(&path).map_err(|e| format!("Failed to remove directory: {e}"))
@@ -440,9 +450,8 @@ fn assign_kill_on_close_job(child: &std::process::Child) {
     // when used. The OS closes it at process exit, which is what triggers the
     // kill-on-close reap.
     static JOB: std::sync::OnceLock<isize> = std::sync::OnceLock::new();
-    let job = *JOB.get_or_init(|| {
-        (unsafe { CreateJobObjectW(std::ptr::null(), std::ptr::null()) }) as isize
-    });
+    let job = *JOB
+        .get_or_init(|| (unsafe { CreateJobObjectW(std::ptr::null(), std::ptr::null()) }) as isize);
     if job == 0 {
         return; // No job object available — graceful-exit cleanup still covers us.
     }
@@ -751,8 +760,10 @@ async fn start_server(
                     // this closure as non-'static.
                     if let Ok(value) = serde_json::from_str::<serde_json::Value>(payload) {
                         if value.get("event").and_then(|v| v.as_str()) == Some("http_listening") {
-                            if let Some(actual_port) =
-                                value.get("data").and_then(|d| d.get("port")).and_then(|p| p.as_u64())
+                            if let Some(actual_port) = value
+                                .get("data")
+                                .and_then(|d| d.get("port"))
+                                .and_then(|p| p.as_u64())
                             {
                                 if let Some(state) = app_handle.try_state::<Mutex<ServerState>>() {
                                     if let Ok(mut s) = state.lock() {
@@ -1416,13 +1427,13 @@ async fn auto_start_server(app_handle: &tauri::AppHandle) -> Result<(), String> 
             false
         }
     };
-    
+
     if should_start {
         // Get the state and security_state for the command
         let state = app_handle.state::<Mutex<ServerState>>();
         let security_state = app_handle.state::<SecurityState>();
         let app_handle_clone = app_handle.clone();
-        
+
         // Call the start_server command internally
         start_server(app_handle_clone, state, security_state).await?;
     }
@@ -1502,7 +1513,7 @@ pub fn run(headless: bool) {
             // In headless mode: skip window management, auto-start server
             if headless {
                 eprintln!("[GHITA] Running in headless mode — skipping window setup");
-                
+
                 // Auto-start sidecar server in background
                 let app_handle = app.handle().clone();
                 tauri::async_runtime::spawn(async move {
@@ -1510,7 +1521,7 @@ pub fn run(headless: bool) {
                         eprintln!("[GHITA] Failed to auto-start server in headless mode: {}", e);
                     }
                 });
-                
+
                 return Ok(());
             }
 
