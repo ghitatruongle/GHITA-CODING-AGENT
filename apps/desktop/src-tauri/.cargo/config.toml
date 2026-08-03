@@ -1,4 +1,9 @@
-[build]
+# /STACK is a Windows-MSVC-only linker flag (16 MiB stack for the deep
+# recursion in the release build). It MUST be scoped to Windows: the
+# release pipeline gates on Linux (ubuntu runner) and `cargo test`/
+# `cargo clippy` there would otherwise fail to link with
+# `rust-lld: cannot open /STACK:16777216`.
+[target.'cfg(target_os = "windows")']
 rustflags = ["-C", "link-arg=/STACK:16777216"]
 
 [profile.dev]
