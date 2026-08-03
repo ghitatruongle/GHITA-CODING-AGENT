@@ -71,7 +71,13 @@ export class OAuthHandoffManager {
   }
 
   /**
-   * Validates state, verifier, and generates simulated SaaS Connection tokens.
+   * Validates state, verifier, and completes the OAuth callback.
+   *
+   * v0.8.0: This method NEVER mints simulated/mock tokens. There is no real
+   * provider token exchange configured for this handoff, so returning a
+   * fabricated "mock_access_…" token would make the connection appear valid
+   * when nothing was actually authorized. Instead it throws a clear error and
+   * the caller must store credentials obtained from a real provider exchange.
    */
   public async handleCallback(
     state: string,
@@ -99,14 +105,11 @@ export class OAuthHandoffManager {
     // Clean up used session
     this.sessions.delete(state);
 
-    return {
-      appId: session.appId,
-      accountId: 'default',
-      accountLabel: `${session.appId} Account`,
-      accessToken: `mock_access_${crypto.randomBytes(8).toString('hex')}`,
-      refreshToken: `mock_refresh_${crypto.randomBytes(8).toString('hex')}`,
-      expiresAt: Date.now() + 3600 * 1000, // 1 hour expiry
-    };
+    throw new Error(
+      `OAuth callback for "${session.appId}" could not be completed: no real token ` +
+        'exchange is configured. Store credentials returned by a genuine provider ' +
+        'exchanges directly rather than relying on this simulated handoff.',
+    );
   }
 
   /**
@@ -206,8 +209,9 @@ export class KeychainStore {
     } catch (err) {
       // Read failure — leave cache empty but do NOT destroy existing memory
       throw new Error(
-        `KeychainStore: failed to read credentials file at ${this.storagePath}: ${ 
-          err instanceof Error ? err.message : String(err)}`,
+        `KeychainStore: failed to read credentials file at ${this.storagePath}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
       );
     }
 
@@ -286,7 +290,7 @@ export class PermissionGateManager {
   public allowedActions = new Set<string>();
   public deniedActions = new Set<string>();
 
-  private dialogHandler: (appId: string, action?: string) => Promise<boolean> = async () => true;
+  private dialogHandler: ((appId: string, action?: string) => Promise<boolean>) | null = null;
 
   /**
    * Sets the dialog callback that displays the confirmation prompt to the user.
@@ -336,7 +340,10 @@ export class PermissionGateManager {
     if (actionKey && this.allowedActions.has(actionKey)) return true;
     if (this.allowedProviders.has(appKey)) return true;
 
-    // Trigger confirmation dialog fallback
+    // No explicit dialog handler is wired → fail closed. Auto-approving every
+    // SaaS action by default would silently hand out permissions nobody
+    // reviewed. Callers must call setDialogHandler() (or pre-grant) to allow.
+    if (!this.dialogHandler) return false;
     const approved = await this.dialogHandler(appId, action);
     if (approved) {
       if (actionKey) {

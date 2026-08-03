@@ -59,6 +59,7 @@ export const ja: TranslationKeys = {
     pairErrSocket: 'Socket.ioへの接続に失敗しました。もう一度お試しください。',
     pairErrBtPermission: 'Bluetoothまたは位置情報の権限が付与されていません。',
     pairErrBtStart: 'Bluetooth検出を開始できません。Bluetoothをオンにしてください。',
+    btUnavailable: 'この端末ではBluetoothを利用できません。コンピューターが見つかりませんでした。',
     pairErrInvalidName: '自動検出に使用できないPC名です。',
     pairErrNoIpCloud:
       "クラウドレジストリで '{{name}}' のPC IPが見つかりません。サーバーが動作中であることを確認してください。",
@@ -106,8 +107,7 @@ export const ja: TranslationKeys = {
     actionApprove: '承認',
     actionReject: '拒否',
     securityApprovalTitle: '🛡️ セキュリティコマンドの承認',
-    securityApprovalDesc:
-      'AIエージェントが次のターミナルコマンドの実行許可を求めています:',
+    securityApprovalDesc: 'AIエージェントが次のターミナルコマンドの実行許可を求めています:',
     securityApproveBtn: '承認',
     securityRejectBtn: '拒否',
     skillsTitle: 'スキル',

@@ -108,11 +108,20 @@ export function createBuiltinSlashCommands(): SlashCommand[] {
 
         let diff = '';
         try {
-          diff = execFileSync('git', ['diff', target], { encoding: 'utf8', timeout: 5000 }).trim();
+          diff = execFileSync('git', ['diff', target], {
+            encoding: 'utf8',
+            timeout: 5000,
+            windowsHide: true,
+          }).trim();
           if (!diff) {
-            diff =
-              `No changes found against target. Current status:\n${ 
-              execFileSync('git', ['status', '-s'], { encoding: 'utf8' }).trim()}`;
+            diff = `No changes found against target. Current status:\n${execFileSync(
+              'git',
+              ['status', '-s'],
+              {
+                encoding: 'utf8',
+                windowsHide: true,
+              },
+            ).trim()}`;
           }
         } catch (err: unknown) {
           diff = `// Git diff failed: ${(err as Error).message}\nShowing mock code diff:\n+ export function profileFunction() {\n- export function wrap() {\n+ console.log("AHPI wrap");\n+ }`;
@@ -322,7 +331,11 @@ Provide a structured review including:
         const [cmd, ...cmdArgs] = args;
         if (!cmd) return 'No command resolved';
         try {
-          const result = execFileSync(cmd, cmdArgs, { encoding: 'utf8', timeout: 60000 });
+          const result = execFileSync(cmd, cmdArgs, {
+            encoding: 'utf8',
+            timeout: 60000,
+            windowsHide: true,
+          });
           return `\`\`\`\n${result.slice(0, 3000)}\n\`\`\``;
         } catch (err: unknown) {
           const e = err as { stdout?: string; stderr?: string; message?: string };
@@ -364,6 +377,7 @@ Provide a structured review including:
           const result = execFileSync(formatter, ['--write', path], {
             encoding: 'utf8',
             timeout: 30000,
+            windowsHide: true,
           });
           return `Formatted \`${path}\` with ${formatter}.\n\`\`\`\n${result.slice(0, 1000)}\n\`\`\``;
         } catch (err: unknown) {
@@ -407,7 +421,11 @@ Provide a structured review including:
         const args = [path];
         if (fix) args.push('--fix');
         try {
-          const result = execFileSync(linter, args, { encoding: 'utf8', timeout: 30000 });
+          const result = execFileSync(linter, args, {
+            encoding: 'utf8',
+            timeout: 30000,
+            windowsHide: true,
+          });
           return `Lint results for \`${path}\`:\n\`\`\`\n${result.slice(0, 3000)}\n\`\`\``;
         } catch (err: unknown) {
           const e = err as { stdout?: string; stderr?: string; message?: string };
@@ -597,6 +615,7 @@ Provide a structured review including:
             encoding: 'utf8',
             timeout: 30000,
             cwd: auditPath,
+            windowsHide: true,
           });
           results.push(`npm audit:\n\`\`\`json\n${npmResult.slice(0, 2000)}\n\`\`\``);
         } catch {
@@ -607,7 +626,7 @@ Provide a structured review including:
           const grepResult = execFileSync(
             'grep',
             ['-rn', 'password\\|secret\\|api_key\\|token', `${auditPath}/src/`],
-            { encoding: 'utf8', timeout: 10000 },
+            { encoding: 'utf8', timeout: 10000, windowsHide: true },
           );
           const lines = grepResult.trim().split('\n').slice(0, 20).join('\n');
           if (lines) {
@@ -639,7 +658,11 @@ Provide a structured review including:
         const type = allowedTypes.includes(analysisType) ? analysisType : 'outdated';
         try {
           const args = type === 'tree' ? ['ls', '--depth=1'] : ['outdated'];
-          const result = execFileSync('npm', args, { encoding: 'utf8', timeout: 30000 });
+          const result = execFileSync('npm', args, {
+            encoding: 'utf8',
+            timeout: 30000,
+            windowsHide: true,
+          });
           return `### Dependencies (${analysisType}):\n\`\`\`\n${result.slice(0, 3000)}\n\`\`\``;
         } catch (err: unknown) {
           const e = err as { stdout?: string; message?: string };
@@ -696,7 +719,11 @@ Provide a structured review including:
         try {
           const start = Date.now();
           for (let i = 0; i < iterations; i++) {
-            execFileSync('node', [path], { encoding: 'utf8', timeout: 30000 });
+            execFileSync('node', [path], {
+              encoding: 'utf8',
+              timeout: 30000,
+              windowsHide: true,
+            });
           }
           const elapsed = Date.now() - start;
           const avg = elapsed / iterations;

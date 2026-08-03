@@ -8,4 +8,4 @@ export { ConnectionBroker } from './connection-broker.js';
 export { RateLimiter } from './rate-limiter.js';
 export type { RelayConfig, RelayRoom, RelayMessage } from './types.js';
 
-export const RELAY_VERSION = '0.6.2';
+export const RELAY_VERSION = '0.8.0';

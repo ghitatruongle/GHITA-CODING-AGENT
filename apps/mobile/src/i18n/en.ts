@@ -59,6 +59,7 @@ export const en: TranslationKeys = {
     pairErrSocket: 'Failed to connect to Socket.io. Please try again.',
     pairErrBtPermission: 'Bluetooth or Location permission is not granted.',
     pairErrBtStart: 'Could not start Bluetooth discovery. Please turn on Bluetooth.',
+    btUnavailable: 'Bluetooth is not available on this device. No computers were found.',
     pairErrInvalidName: 'Invalid PC name for auto-discovery.',
     pairErrNoIpCloud:
       "PC IP not found for '{{name}}' in Cloud Registry. Make sure the Server is running on the computer.",

@@ -32,8 +32,9 @@ export class WhatsAppAdapter implements ChannelAdapter {
    */
   async sendMessage(channelId: string, text: string): Promise<boolean> {
     if (this.wsUrl.includes('MOCK_')) {
-      // Simulate mock outbound delivery for testing
-      return true;
+      // v0.8.0: never fake a delivery — a MOCK URL means the message was NOT sent.
+      console.warn('[WhatsAppAdapter] Cannot send message: mock gateway URL.');
+      return false;
     }
 
     if (this.ws && this.ws.readyState === 1 /* OPEN */) {
@@ -47,7 +48,7 @@ export class WhatsAppAdapter implements ChannelAdapter {
 
     // Fallback: POST request to gateway REST API
     try {
-      const httpUrl = `${this.wsUrl.replace(/^ws/, 'http')  }/send`;
+      const httpUrl = `${this.wsUrl.replace(/^ws/, 'http')}/send`;
       const response = await fetch(httpUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -66,7 +67,9 @@ export class WhatsAppAdapter implements ChannelAdapter {
   async start(): Promise<void> {
     this.isRunning = true;
     if (this.wsUrl.includes('MOCK_')) {
-      this.pairingStatus = 'LINKED';
+      // v0.8.0: never report a fabricated LINKED state for a mock gateway.
+      console.warn('[WhatsAppAdapter] Cannot connect: mock gateway URL. Status stays UNLINKED.');
+      this.isRunning = false;
       return;
     }
     await this.connectWS();
@@ -193,9 +196,10 @@ export class WhatsAppAdapter implements ChannelAdapter {
       channelId: this.id,
       connected: wsOpen && linked,
       latencyMs: Date.now() - start,
-      message: wsOpen && linked
-        ? 'WhatsApp linked device connected'
-        : `WhatsApp ${this.pairingStatus.toLowerCase()}${wsOpen ? '' : ', WS disconnected'}`,
+      message:
+        wsOpen && linked
+          ? 'WhatsApp linked device connected'
+          : `WhatsApp ${this.pairingStatus.toLowerCase()}${wsOpen ? '' : ', WS disconnected'}`,
       checkedAt: Date.now(),
     };
   }

@@ -3,10 +3,11 @@
 // (ErrorMonitor is a Tauri-Rust concern; we use UsageTelemetry + AlertEngine here.)
 // ==============================================================================
 
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { UsageTelemetry, AlertEngine } from '../../../../packages/monitoring/src/index.js';
 import type { TelemetryEvent, Severity } from '../../../../packages/monitoring/src/index.js';
 import { useTranslation } from '../i18n';
+import { useActivePolling } from '../hooks/useActivePolling';
 
 let _usage: UsageTelemetry | null = null;
 let _alerts: AlertEngine | null = null;
@@ -22,9 +23,9 @@ function getAlerts(): AlertEngine {
 }
 
 interface Snapshot {
-  // Surface a small synthetic error group list so the UI has data to render.
-  // Real error ingest from the Tauri side is wired in a follow-up patch.
-  syntheticGroups: Array<{
+  // Error groups derived from real local telemetry events (UsageTelemetry).
+  // Empty until actual errors are recorded — no fabricated sample data.
+  errorGroups: Array<{
     fingerprint: string;
     type: string;
     message: string;
@@ -39,7 +40,7 @@ interface Snapshot {
 export function MonitoringView() {
   const { t } = useTranslation();
   const [snap, setSnap] = useState<Snapshot>({
-    syntheticGroups: [],
+    errorGroups: [],
     totalErrors: 0,
     alertRules: 0,
     telemetry: [],
@@ -50,9 +51,8 @@ export function MonitoringView() {
     const usage = getUsage();
     const alerts = getAlerts();
 
-    // The React side does not own error ingest (that lives in Tauri/Rust);
-    // we synthesize a "recently observed" view from local telemetry events
-    // so the page is never empty after a few user actions.
+    // Group real error events from local telemetry into a "recently observed"
+    // view. Nothing is fabricated — an empty page just means no errors yet.
     const events = usage.getEvents();
     const errorEvents = events.filter((e) => e.category === 'system' && /error|fail/i.test(e.name));
     const seen = new Map<
@@ -74,7 +74,7 @@ export function MonitoringView() {
         });
       }
     }
-    const syntheticGroups = Array.from(seen.entries()).map(([fingerprint, v]) => ({
+    const errorGroups = Array.from(seen.entries()).map(([fingerprint, v]) => ({
       fingerprint,
       type: v.type,
       message: v.message,
@@ -83,7 +83,7 @@ export function MonitoringView() {
     }));
 
     setSnap({
-      syntheticGroups,
+      errorGroups,
       totalErrors: errorEvents.length,
       alertRules: alerts.listRules().length,
       telemetry: events,
@@ -91,11 +91,10 @@ export function MonitoringView() {
     setLoading(false);
   }, []);
 
-  useEffect(() => {
-    refresh();
-    const id = setInterval(refresh, 15_000);
-    return () => clearInterval(id);
-  }, [refresh]);
+  // Poll only while the window is visible — no background polling while hidden.
+  // useActivePolling fires once immediately on mount, so no separate initial
+  // refresh effect is needed.
+  useActivePolling(15_000, refresh, 'monitoring');
 
   const severityColor = (s: Severity | string): string => {
     switch (s) {
@@ -145,7 +144,7 @@ export function MonitoringView() {
         />
         <StatCard
           title={t('monitoring.errorGroups')}
-          value={snap.syntheticGroups.length}
+          value={snap.errorGroups.length}
           color="#f59e0b"
           icon="📁"
         />
@@ -168,11 +167,11 @@ export function MonitoringView() {
         <h2 style={{ fontSize: '16px', margin: '0 0 12px', color: 'var(--text-secondary)' }}>
           {t('monitoring.recentErrors')}
         </h2>
-        {snap.syntheticGroups.length === 0 ? (
+        {snap.errorGroups.length === 0 ? (
           <Empty msg={t('monitoring.noErrors')} />
         ) : (
           <div>
-            {snap.syntheticGroups.slice(0, 10).map((g) => (
+            {snap.errorGroups.slice(0, 10).map((g) => (
               <div
                 key={g.fingerprint}
                 style={{

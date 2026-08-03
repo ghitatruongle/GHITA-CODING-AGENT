@@ -108,12 +108,16 @@ export function CommandPalette() {
       }
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setSelectedIndex((prev) => Math.min(prev + 1, filtered.length - 1));
+        setSelectedIndex((prev) =>
+          filtered.length === 0 ? 0 : prev >= filtered.length - 1 ? 0 : prev + 1,
+        );
         return;
       }
       if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setSelectedIndex((prev) => Math.max(prev - 1, 0));
+        setSelectedIndex((prev) =>
+          filtered.length === 0 ? 0 : prev <= 0 ? filtered.length - 1 : prev - 1,
+        );
         return;
       }
       if (e.key === 'Enter') {
@@ -354,18 +358,6 @@ function useBuildCommands({
       execute: () => {
         toggleSidebar();
         setIsOpen(false);
-      },
-    },
-    {
-      id: 'action-search-files',
-      label: t('commandPalette.searchFiles') || 'Search Files',
-      description: 'Search for files in the explorer',
-      category: 'Actions',
-      icon: <span>🔍</span>,
-      shortcut: 'Ctrl+P',
-      execute: () => {
-        setIsOpen(false);
-        // Already in command palette, allow user to search files by typing
       },
     },
   ];

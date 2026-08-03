@@ -54,11 +54,11 @@ export const ko: TranslationKeys = {
     pairErrNoComputer:
       '이 PIN 코드와 일치하는 컴퓨터를 찾을 수 없습니다. 코드가 올바르고 컴퓨터의 연결 서버가 작동 중인지 확인하세요.',
     pairErrCloudFail: '클라우드 디스커버리 데이터가 잘못되었거나 연결 세션이 만료되었습니다.',
-    pairErrConnection:
-      '입력한 IP 주소로 연결을 설정할 수 없습니다. 네트워크 연결을 확인하세요.',
+    pairErrConnection: '입력한 IP 주소로 연결을 설정할 수 없습니다. 네트워크 연결을 확인하세요.',
     pairErrSocket: 'Socket.io 연결 중 오류가 발생했습니다. 다시 시도해 주세요.',
     pairErrBtPermission: '블루투스 또는 위치 정보 액세스 권한이 허용되지 않았습니다.',
     pairErrBtStart: '블루투스 검색을 시작할 수 없습니다. 블루투스를 켜고 확인하세요.',
+    btUnavailable: '이 기기에서는 블루투스를 사용할 수 없습니다. 컴퓨터를 찾을 수 없습니다.',
     pairErrInvalidName: '자동 검색에 유효하지 않은 기기 이름입니다.',
     pairErrNoIpCloud:
       "클라우드 레지스트리 서비스에서 컴퓨터 '{{name}}'의 IP 주소를 찾을 수 없습니다. 컴퓨터에서 서버가 켜져 있는지 확인하세요.",
@@ -79,8 +79,7 @@ export const ko: TranslationKeys = {
     stay: '연결 유지',
     disconnectBtn: '연결 끊기',
     lostConnectionTitle: '연결 끊김',
-    lostConnectionDesc:
-      '컴퓨터와의 연결이 끊어졌습니다. 페어링 설정 화면으로 돌아가시겠습니까?',
+    lostConnectionDesc: '컴퓨터와의 연결이 끊어졌습니다. 페어링 설정 화면으로 돌아가시겠습니까?',
     goBack: '돌아가기',
     chatTimeoutTitle: '화면 캡처 대기 시간 초과',
     screenshotTimeoutDesc: '15초 동안 데스크톱으로부터 화면 캡처 이미지를 받지 못했습니다.',

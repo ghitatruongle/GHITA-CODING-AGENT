@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useAppStore } from '../../stores/appStore';
 import { useTranslation } from '../../i18n';
+import { useActivePolling } from '../../hooks/useActivePolling';
 import {
   getOnlineDevices,
   formatCountdown,
@@ -88,7 +89,7 @@ export function useDevicesView() {
     }
   }, [setServerStatus, setPairingCode, setConnectedDevices]);
 
-  // Poll every 3 seconds and auto-start if offline
+  // Initial poll + auto-start the server if it is offline.
   useEffect(() => {
     const initAndPoll = async () => {
       try {
@@ -118,10 +119,12 @@ export function useDevicesView() {
       }
     };
 
-    initAndPoll();
-    const interval = setInterval(pollStatus, 3000);
-    return () => clearInterval(interval);
+    void initAndPoll();
   }, [pollStatus, setServerStatus, setPairingCode, setConnectedDevices]);
+
+  // Ongoing polls only run while the Devices tab is active AND the window is
+  // visible (previously a hard 3s interval ran even when the view was hidden).
+  useActivePolling(3000, pollStatus, 'devices');
 
   // Countdown for pairing code
   useEffect(() => {

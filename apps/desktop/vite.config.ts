@@ -108,8 +108,12 @@ export default defineConfig({
       '@tauri-apps/api/core',
       '@tauri-apps/api/event',
       '@tauri-apps/api/window',
-      '@tauri-apps/plugin-fs',
       '@tauri-apps/plugin-dialog',
+      // P2-2 (deep review pass #2): pre-bundle the wrapped monaco-editor
+      // module so the first dev-server cold start doesn't stall on Vite
+      // walking the entire ESM graph on-the-fly.
+      '@monaco-editor/react',
+      'monaco-editor',
       'socket.io-client',
     ],
   },
@@ -143,11 +147,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-dom/client'],
-          'tauri-vendor': [
-            '@tauri-apps/api/window',
-            '@tauri-apps/plugin-fs',
-            '@tauri-apps/plugin-dialog',
-          ],
+          'tauri-vendor': ['@tauri-apps/api/window', '@tauri-apps/plugin-dialog'],
           'state-vendor': ['zustand', 'react-error-boundary', 'react-hot-toast'],
           'socket-vendor': ['socket.io-client'],
           // Markdown rendering is heavy (react-markdown + rehype-sanitize + remark-gfm);
@@ -156,7 +156,7 @@ export default defineConfig({
           // v0.4.9 B1: Monaco editor and xterm are large, independently-loaded
           // vendors. Splitting them keeps the initial app shell small so the
           // Tauri WebView paints fast on Windows cold start.
-          'monaco-vendor': ['@monaco-editor/react'],
+          'monaco-vendor': ['@monaco-editor/react', 'monaco-editor'],
           'xterm-vendor': ['@xterm/xterm', '@xterm/addon-fit'],
         },
       },

@@ -7,4 +7,4 @@ export { MigrationRegistry } from './registry.js';
 export { compareVersions, isValidVersion } from './version-detector.js';
 export type { Migration, MigrationState, MigrationRunnerConfig } from './types.js';
 
-export const MIGRATION_VERSION = '0.6.2';
+export const MIGRATION_VERSION = '0.8.0';

@@ -2,10 +2,11 @@
 // Quota & Rate Limiting Dashboard
 // ==============================================================================
 
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { RateLimiter } from '../../../../packages/quotas/src/index.js';
 import { UsageTracker } from '../../../../packages/quotas/src/index.js';
 import { BudgetManager } from '../../../../packages/ai-engine/src/index.js';
+import { useActivePolling } from '../hooks/useActivePolling';
 import type {
   RateLimit,
   UsageRecord,
@@ -38,28 +39,10 @@ function getLimiter(): RateLimiter {
 
 function getTracker(): UsageTracker {
   if (!_tracker) {
+    // v0.8.0: no seeded/fake sample data. The quota gauge and usage table must
+    // reflect real usage only; an empty (zero) state is honest until the
+    // telemetry hook-up records actual provider calls.
     _tracker = new UsageTracker();
-    // Seed with some example data so the UI isn't empty on first view.
-    // Each recorded call also advances the budget so the gauge reflects real
-    // spend instead of always showing $0.
-    const now = Date.now();
-    const budget = getBudget();
-    const samples: Array<{ provider: string; model: string; p: number; c: number }> = [
-      { provider: 'openai', model: 'gpt-4o', p: 1200, c: 800 },
-      { provider: 'anthropic', model: 'claude-3-5-sonnet', p: 800, c: 600 },
-    ];
-    for (const s of samples) {
-      const record = _tracker.record({
-        userId: 'local',
-        provider: s.provider,
-        model: s.model,
-        promptTokens: s.p,
-        completionTokens: s.c,
-        timestamp: now,
-      });
-      // C4: feed the budget from the same usage stream so the gauge is live.
-      budget.recordSpent(record.costUsd);
-    }
   }
   return _tracker;
 }
@@ -110,11 +93,9 @@ export function QuotaView() {
     setLoading(false);
   }, []);
 
-  useEffect(() => {
-    refresh();
-    const id = setInterval(refresh, 10_000);
-    return () => clearInterval(id);
-  }, [refresh]);
+  // useActivePolling fires immediately on mount (when eligible) and then keeps
+  // polling only while the app window is visible (no background polling).
+  useActivePolling(10_000, refresh, 'quota');
 
   const pct = snap.limit > 0 ? Math.min(100, (snap.spent / snap.limit) * 100) : 0;
   const remaining = Math.max(0, snap.limit - snap.spent);

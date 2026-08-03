@@ -35,7 +35,7 @@ export const zh: TranslationKeys = {
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v0.6.2',
+    version: 'v0.8.0',
     deviceReconnected: '已重新连接设备: {{name}}',
     devicePaired: '成功配对设备: {{name}}',
     commandReceived: '从设备收到命令: {{action}}',
@@ -97,6 +97,7 @@ export const zh: TranslationKeys = {
     themeDark: '深色模式',
     themeLight: '浅色模式',
     logDebug: '调试 (Debug)',
+    resetDefaults: '重置为默认设置',
     logInfo: '信息 (Info)',
     logWarn: '警告 (Warn)',
     logError: '错误 (Error)',
@@ -125,6 +126,12 @@ export const zh: TranslationKeys = {
     reject: '拒绝',
     editApplied: '已将修改应用到 {{name}}',
     editRejected: '已拒绝对 {{name}} 的修改',
+    unsavedEditsProposalConfirm:
+      '文件 "{{name}}" 包含未保存的手动修改。接受 AI 提案将覆盖它们。是否继续？',
+    fileTruncated:
+      '"{{name}}" 超出编辑器限制，已以只读方式打开（内容可能被截断）。为避免数据丢失，已禁用保存。',
+    fileTooLargeToSave:
+      '"{{name}}" 太大，无法从编辑器保存（已打开截断预览)。请使用文件资源管理器查看。',
   },
   devices: {
     title: '关联设备',
@@ -285,10 +292,17 @@ export const zh: TranslationKeys = {
     avgLatency: '平均响应耗时',
     routingState: '路由状态 (ROUTING STATE)',
     running: '运行中',
+    starting: '启动中',
     stopped: '已停止',
     compliant: '标准合规',
     disabledLabel: '已禁用',
     demoMode: '演示模式 — 数据为模拟',
+    coreServer: '核心服务状态',
+    coreServerDesc: '后台服务正在端口 {{port}} 上监听。状态由原生进程实时上报，无模拟数据。',
+    coreServerError: '无法读取服务状态: {{error}}',
+    coreServerChecking: '正在检查后台服务状态…',
+    localNetwork: '局域网地址:',
+    serverVersion: '服务版本: {{version}}',
   },
   chat: {
     welcomeMessage:
@@ -381,6 +395,7 @@ export const zh: TranslationKeys = {
     rename: '重命名',
     renamePrompt: '输入新名称:',
     renameInvalid: '名称无效：不能为空或包含路径分隔符。',
+    loadFailed: '无法打开 "{{path}}": {{error}}',
   },
   apiManager: {
     title: 'API 密钥配置与管理',

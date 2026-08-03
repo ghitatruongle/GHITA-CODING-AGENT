@@ -140,6 +140,26 @@ export class AdvancedWorkflowEngine {
     for (const s of steps) this.status.set(s.id, 'pending');
   }
 
+  /**
+   * Validate the workflow at load time. Checks that every declared
+   * dependency in `dependsOn` references an existing step id.
+   * Returns an array of error messages (empty = valid).
+   */
+  validate(): string[] {
+    const stepIds = new Set(this.steps.map((s) => s.id));
+    const errors: string[] = [];
+    for (const step of this.steps) {
+      for (const depId of step.dependsOn ?? []) {
+        if (!stepIds.has(depId)) {
+          errors.push(
+            `Step "${step.id}" depends on "${depId}" which does not exist in workflow "${this.name}"`,
+          );
+        }
+      }
+    }
+    return errors;
+  }
+
   async run(
     initialState: Record<string, unknown> = {},
     callbacks: AdvancedWorkflowCallbacks = {},
@@ -181,11 +201,14 @@ export class AdvancedWorkflowEngine {
         }
       };
 
+      // M9 FIX: Validate dependencies at load time, not execution time.
+      // The validate() method checks all dependsOn references upfront.
+      // Runtime execution assumes the workflow has been validated.
       const runStep = async (step: AdvancedWorkflowStep): Promise<void> => {
-        // ROBUSTNESS (audit fix 2.2): validate that every declared dependency exists
         for (const depId of step.dependsOn ?? []) {
           const depStep = this.steps.find((s) => s.id === depId);
           if (!depStep) {
+            // This should never happen if validate() was called at load time.
             throw new Error(
               `Step "${step.id}" depends on "${depId}" which does not exist in workflow "${this.name}"`,
             );

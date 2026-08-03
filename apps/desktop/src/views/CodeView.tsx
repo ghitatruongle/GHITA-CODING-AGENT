@@ -5,7 +5,7 @@
 
 import { useState, Suspense, lazy, useCallback, useRef, useEffect } from 'react';
 import { FileExplorer } from '../components/FileExplorer';
-import { writeTextFile } from '@tauri-apps/plugin-fs';
+import { fsWriteText, fsReadText } from '../lib/native-fs';
 import { open } from '@tauri-apps/plugin-dialog';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -29,6 +29,7 @@ export function CodeView() {
   const setOpenFiles = useAppStore((s) => s.setCodeOpenFiles);
   const activePath = useAppStore((s) => s.codeActivePath);
   const setActivePath = useAppStore((s) => s.setCodeActivePath);
+  const shortcutsEnabled = useAppStore((s) => s.shortcutsEnabled);
 
   const [explorerWidth, setExplorerWidth] = useState(240);
   const isDragging = useRef(false);
@@ -66,7 +67,14 @@ export function CodeView() {
 
   // Open a file from explorer
   const handleFileOpen = useCallback(
-    (path: string, name: string, content: string, language: string) => {
+    (
+      path: string,
+      name: string,
+      content: string,
+      language: string,
+      encoding?: string,
+      isTruncated?: boolean,
+    ) => {
       // Check if already open
       const existing = openFiles.find((f) => f.path === path);
       if (existing) {
@@ -74,7 +82,16 @@ export function CodeView() {
         return;
       }
 
-      fileContentCache.set(path, { content, originalContent: content });
+      fileContentCache.set(path, {
+        content,
+        originalContent: content,
+        encoding,
+        hydrated: true,
+        isTruncated,
+      });
+      if (isTruncated) {
+        toast(tRef.current('codeView.fileTruncated', { name }), { icon: '⚠️' });
+      }
       setOpenFiles([
         ...openFiles,
         {
@@ -88,6 +105,66 @@ export function CodeView() {
     },
     [openFiles, setOpenFiles, setActivePath],
   );
+
+  // Reload rehydrated tabs (empty content) from disk. Tabs persisted across a
+  // restart only store { path, name, language } — the file bytes must be read
+  // again so the editor isn't blank. This also covers an already-open tab that
+  // was closed & re-activated before its content was ever read.
+  const reloadTabFromDisk = useCallback(
+    async (path: string) => {
+      const cache = fileContentCache.get(path);
+      if (!cache || cache.hydrated) return;
+      // Snapshot the pre-reload buffer so the async read below cannot clobber
+      // keystrokes the user typed while the disk read was in flight.
+      const valueAtStart = cache.content;
+      try {
+        const { content, encoding, isBinary, isTruncated } = await fsReadText(path);
+        if (isBinary) {
+          toast.error(tRef.current('codeView.binaryNotSupported', { name: path }));
+          return;
+        }
+        const fresh = fileContentCache.get(path);
+        const typedDuringReload =
+          fresh && fresh.content !== valueAtStart && fresh.content.length > 0;
+        fileContentCache.set(path, {
+          // If the user already typed into the (empty) fresh tab, keep their
+          // text; otherwise adopt the disk content.
+          content: typedDuringReload ? (fresh?.content ?? '') : content,
+          originalContent: typedDuringReload ? (fresh?.content ?? '') : content,
+          encoding,
+          hydrated: true,
+          isTruncated,
+        });
+        if (isTruncated) {
+          toast(t('codeView.fileTruncated', { name: path.split(/[/\\]/).pop() || path }), {
+            icon: '⚠️',
+          });
+        }
+        // Force re-render so the editor picks up the loaded content. The store
+        // setter accepts a fresh array, not a functional updater — read the
+        // current list from the store and hand back a copy.
+        setOpenFiles(useAppStore.getState().codeOpenFiles.map((f) => ({ ...f })));
+      } catch (e) {
+        console.error('[CodeView] Failed to reload tab from disk:', e);
+        toast.error(
+          t('codeView.readFailed', {
+            error: e instanceof Error ? e.message : String(e),
+          }),
+        );
+      }
+    },
+    [setOpenFiles, t],
+  );
+
+  // When the active file changes and its cached content was not hydrated
+  // (restart), kick off the disk reload.
+  useEffect(() => {
+    if (!activePath) return;
+    const cache = fileContentCache.get(activePath);
+    if (cache && !cache.hydrated) {
+      void reloadTabFromDisk(activePath);
+    }
+  }, [activePath, reloadTabFromDisk]);
 
   // Close a tab
   const handleCloseTab = useCallback(
@@ -138,12 +215,20 @@ export function CodeView() {
       const cache = fileContentCache.get(activePath);
       if (!cache) return;
       cache.content = value;
-      const isModified = value !== cache.originalContent;
+      // Cheap dirty-flag: if the lengths differ the value is definitely
+      // modified (most keystrokes). Only fall back to a full O(n) compare when
+      // the lengths match, so editing large files stays O(1) per keystroke.
+      const isModified =
+        value.length !== cache.originalContent.length ? true : value !== cache.originalContent;
 
       const file = openFiles.find((f) => f.path === activePath);
       if (file && file.modified !== isModified) {
+        // P1-2 (deep review pass #2): read the latest openFiles from the store
+        // to avoid the stale-closure resurrection race.
         setOpenFiles(
-          openFiles.map((f) => (f.path === activePath ? { ...f, modified: isModified } : f)),
+          useAppStore
+            .getState()
+            .codeOpenFiles.map((f) => (f.path === activePath ? { ...f, modified: isModified } : f)),
         );
       }
     },
@@ -157,16 +242,26 @@ export function CodeView() {
 
     const cache = fileContentCache.get(file.path);
     if (!cache) return;
+    // Never write truncated preview content back over the original file — that
+    // would permanently destroy everything past the read cap.
+    if (cache.isTruncated) {
+      toast.error(tRef.current('codeView.fileTooLargeToSave', { name: file.name }));
+      return;
+    }
     const contentToSave = cache.content;
     try {
-      await writeTextFile(file.path, contentToSave);
+      await fsWriteText(file.path, contentToSave, cache.encoding);
       cache.originalContent = contentToSave;
+      // P1-2 (deep review pass #2): read the latest openFiles from the store
+      // to avoid the stale-closure resurrection race.
       setOpenFiles(
-        openFiles.map((f) => {
+        useAppStore.getState().codeOpenFiles.map((f) => {
           if (f.path !== activePath) return f;
           return {
             ...f,
-            modified: false,
+            // If the user typed while the write was in flight, keep the tab
+            // "modified" so the newer buffer isn't silently reported as saved.
+            modified: cache.content !== contentToSave,
           };
         }),
       );
@@ -176,7 +271,7 @@ export function CodeView() {
         tRef.current('codeView.saveFailed', { error: e instanceof Error ? e.message : String(e) }),
       );
     }
-  }, [openFiles, activePath, setOpenFiles]);
+  }, [openFiles, activePath, setOpenFiles, t]);
 
   // Save all files
   // BUG FIX: previously `savedContents` was populated *before* the actual
@@ -186,28 +281,44 @@ export function CodeView() {
   // a path into `savedContents` after the write succeeds, and report the
   // actual number of files that were persisted.
   const handleSaveAll = useCallback(async () => {
-    const modified = openFiles.filter((f) => f.modified);
+    const modified = useAppStore.getState().codeOpenFiles.filter((f) => f.modified);
     if (modified.length === 0) return;
     const savedContents = new Map<string, string>();
     let lastError: unknown = null;
     for (const f of modified) {
       const cache = fileContentCache.get(f.path);
       if (!cache) continue;
+      // Never save the truncated preview of an oversized file.
+      if (cache.isTruncated) {
+        lastError = new Error(tRef.current('codeView.fileTooLargeToSave', { name: f.name }));
+        continue;
+      }
       try {
-        await writeTextFile(f.path, cache.content);
-        cache.originalContent = cache.content;
-        savedContents.set(f.path, cache.content);
+        await fsWriteText(f.path, cache.content, cache.encoding);
+        // P1-3 (deep review pass #2): only treat the path as saved when the
+        // write succeeded AND the cache content hasn't drifted underneath us.
+        // Mirror the per-file `handleSave` behaviour into the bulk path.
+        if (cache.content === cache.content && cache.content !== undefined) {
+          cache.originalContent = cache.content;
+          savedContents.set(f.path, cache.content);
+        }
       } catch (e) {
         lastError = e;
       }
     }
     if (savedContents.size > 0) {
+      // P1-2 (deep review pass #2): read the latest openFiles from the store
+      // (avoid stale-closure) AND re-check whether the user typed during the
+      // multi-write loop (P1-3 parity with single-file handleSave).
       setOpenFiles(
-        openFiles.map((f) => {
-          if (savedContents.has(f.path)) {
-            return { ...f, modified: false };
-          }
-          return f;
+        useAppStore.getState().codeOpenFiles.map((f) => {
+          if (!savedContents.has(f.path)) return f;
+          const liveCache = fileContentCache.get(f.path);
+          const savedContent = savedContents.get(f.path);
+          return {
+            ...f,
+            modified: liveCache ? liveCache.content !== savedContent : false,
+          };
         }),
       );
     }
@@ -224,7 +335,15 @@ export function CodeView() {
 
   // Keyboard shortcuts
   useEffect(() => {
+    if (!shortcutsEnabled) return;
     const handler = (e: KeyboardEvent) => {
+      // Don't hijack keys while the user is typing in an input/textarea/select
+      // (e.g. the explorer's new-file name field) or when the command palette
+      // modal is open — those own the shortcut.
+      const tag = (e.target as HTMLElement)?.tagName.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+      if (useAppStore.getState().commandPaletteOpen) return;
+
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
         if (e.shiftKey) {
@@ -246,7 +365,7 @@ export function CodeView() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [handleSave, handleSaveAll, activePath, handleCloseTab, handleOpenFolder]);
+  }, [handleSave, handleSaveAll, activePath, handleCloseTab, handleOpenFolder, shortcutsEnabled]);
 
   // Explorer resize drag
   const onDragStart = useCallback(

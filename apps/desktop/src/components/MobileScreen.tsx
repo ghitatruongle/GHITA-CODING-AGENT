@@ -116,7 +116,11 @@ export function MobileScreen({
     }
     if (autoRefresh && currentDevice) {
       capture();
-      intervalRef.current = setInterval(capture, refreshIntervalMs);
+      intervalRef.current = setInterval(() => {
+        // Pause screenshot capture while the window is hidden (no wasted
+        // captures in the background).
+        if (document.visibilityState === 'visible') void capture();
+      }, refreshIntervalMs);
     }
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);

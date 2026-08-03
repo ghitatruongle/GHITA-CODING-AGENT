@@ -2,10 +2,7 @@
 // GHITA CODING AGENT — Phase 7: DynamicSkillGenerator Unit Tests
 // ==============================================================================
 
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
-import { exec } from 'node:child_process';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   DynamicSkillGenerator,
   createSkillsSyncCommand,
@@ -22,10 +19,18 @@ vi.mock('node:fs', () => ({
   unlinkSync: vi.fn(),
 }));
 
-// Mock child_process
-vi.mock('node:child_process', () => ({
-  exec: vi.fn(),
+// Mock child_process — after P1-7 the sync command only uses execFile
+// (promisified, array-args). Hoisted refs let each test configure behavior.
+const { mockExecFile } = vi.hoisted(() => ({
+  mockExecFile: vi.fn(),
 }));
+
+vi.mock('node:child_process', () => ({
+  execFile: mockExecFile,
+}));
+
+/** Callback shape promised by execFile via util.promisify. */
+type GitCb = (error: Error | null, result: { stdout: string; stderr: string }) => void;
 
 describe('DynamicSkillGenerator', () => {
   let generator: DynamicSkillGenerator;
@@ -223,14 +228,11 @@ describe('createSkillsSyncCommand', () => {
       },
     ]);
 
-    const { exec } = await import('node:child_process');
-    vi.mocked(exec).mockImplementation(((cmd: string, cb: any) => {
-      if (cmd.includes('git status')) {
-        cb(null, { stdout: '', stderr: '' }); // No changes
-      } else {
-        cb(null, { stdout: '', stderr: '' });
-      }
-    }) as any);
+    mockExecFile.mockImplementation(
+      (_file: string, _args: string[], _opts: unknown, cb?: GitCb) => {
+        cb?.(null, { stdout: '', stderr: '' });
+      },
+    );
 
     const cmd = createSkillsSyncCommand(hub);
     const res = await cmd.execute('');
@@ -251,14 +253,13 @@ describe('createSkillsSyncCommand', () => {
       },
     ]);
 
-    const { exec } = await import('node:child_process');
-    vi.mocked(exec).mockImplementation(((cmd: string, cb: any) => {
-      if (cmd.includes('git status')) {
-        cb(null, { stdout: 'M  /mock/hub/auto_terminal_my_skill.json', stderr: '' });
+    mockExecFile.mockImplementation((_file: string, args: string[], _opts: unknown, cb?: GitCb) => {
+      if (args[0] === 'status') {
+        cb?.(null, { stdout: 'M  /mock/hub/auto_terminal_my_skill.json', stderr: '' });
       } else {
-        cb(null, { stdout: 'Success', stderr: '' });
+        cb?.(null, { stdout: 'Success', stderr: '' });
       }
-    }) as any);
+    });
 
     const cmd = createSkillsSyncCommand(hub);
     const res = await cmd.execute('');
@@ -280,16 +281,15 @@ describe('createSkillsSyncCommand', () => {
       },
     ]);
 
-    const { exec } = await import('node:child_process');
-    vi.mocked(exec).mockImplementation(((cmd: string, cb: any) => {
-      if (cmd.includes('git status')) {
-        cb(null, { stdout: 'M  /mock/hub/auto_terminal_my_skill.json', stderr: '' });
-      } else if (cmd.includes('git push')) {
-        cb(new Error('No remote configured'), null);
+    mockExecFile.mockImplementation((_file: string, args: string[], _opts: unknown, cb?: GitCb) => {
+      if (args[0] === 'status') {
+        cb?.(null, { stdout: 'M  /mock/hub/auto_terminal_my_skill.json', stderr: '' });
+      } else if (args[0] === 'push') {
+        cb?.(new Error('No remote configured'), { stdout: '', stderr: '' });
       } else {
-        cb(null, { stdout: 'Success', stderr: '' });
+        cb?.(null, { stdout: 'Success', stderr: '' });
       }
-    }) as any);
+    });
 
     const cmd = createSkillsSyncCommand(hub);
     const res = await cmd.execute('');

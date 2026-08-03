@@ -885,6 +885,7 @@ export class DocsGriller {
         encoding: 'utf-8',
         timeout: 5000,
         stdio: ['pipe', 'pipe', 'pipe'],
+        windowsHide: true,
       }).trim();
       const epoch = parseInt(timestamp, 10);
       return isNaN(epoch) ? null : epoch * 1000;

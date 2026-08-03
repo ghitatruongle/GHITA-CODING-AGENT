@@ -4,7 +4,6 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import {
-  AgentManager,
   SubagentSpawner,
   CronScheduler,
   createDefaultAgentManager,
@@ -85,9 +84,10 @@ describe('4: Advanced Agent Capabilities', () => {
       // Wait 2.5 seconds to let execution run
       await new Promise((resolve) => setTimeout(resolve, 2500));
 
-      const updatedTask = scheduler.getTask('nl_interval_task')!;
-      expect(updatedTask.runCount).toBeGreaterThanOrEqual(2);
-      expect(updatedTask.status).toBe('completed');
+      const updatedTask = scheduler.getTask('nl_interval_task');
+      expect(updatedTask).toBeDefined();
+      expect(updatedTask?.runCount).toBeGreaterThanOrEqual(2);
+      expect(updatedTask?.status).toBe('completed');
 
       scheduler.stop();
     });
@@ -122,14 +122,16 @@ describe('4: Advanced Agent Capabilities', () => {
         text: '/run cleanup',
       });
 
+      // v0.8.0: mock gateways must NOT report a fake delivery — sends with
+      // MOCK tokens fail honestly.
       const tgSent = await gatewayManager.sendMessage('telegram', 'tg_chat_88', 'GHITA response');
       const dcSent = await gatewayManager.sendMessage(
         'discord',
         'discord_chan_1',
         'GHITA notification',
       );
-      expect(tgSent).toBe(true);
-      expect(dcSent).toBe(true);
+      expect(tgSent).toBe(false);
+      expect(dcSent).toBe(false);
 
       await gatewayManager.stop();
     });

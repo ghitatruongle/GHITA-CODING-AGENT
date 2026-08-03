@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { type DynamicModelOption, loadModelOptions } from '../../utils/buildModelOptions';
+import { useActivePolling } from '../../hooks/useActivePolling';
 
 export function useChatModelSelector() {
   const [modelOptions, setModelOptions] = useState<DynamicModelOption[]>([]);
@@ -49,16 +50,24 @@ export function useChatModelSelector() {
     };
     window.addEventListener('focus', onFocus);
 
-    const interval = setInterval(() => {
-      void refresh();
-    }, 10000);
-
     return () => {
       disposed = true;
-      clearInterval(interval);
       window.removeEventListener('focus', onFocus);
     };
   }, [provider]);
+
+  // The hook keeps refreshing only while the app window is visible; it pauses
+  // entirely while hidden instead of polling pointlessly in the background.
+  useActivePolling(10_000, () => {
+    void loadModelOptions().then((newOptions) => {
+      setModelOptions(newOptions);
+      if (newOptions.length > 0 && !newOptions.some((o) => o.value === provider)) {
+        setProvider(newOptions[0]?.value ?? '');
+      } else if (newOptions.length === 0 && provider) {
+        setProvider('');
+      }
+    });
+  });
 
   return {
     modelOptions,

@@ -11,7 +11,14 @@ export interface FileEntry {
 }
 
 export interface FileExplorerProps {
-  onFileOpen: (path: string, name: string, content: string, language: string) => void;
+  onFileOpen: (
+    path: string,
+    name: string,
+    content: string,
+    language: string,
+    encoding?: string,
+    isTruncated?: boolean,
+  ) => void;
   rootPath?: string;
 }
 

@@ -35,7 +35,7 @@ export const ko: TranslationKeys = {
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v0.6.2',
+    version: 'v0.8.0',
     deviceReconnected: '기기에 다시 연결됨: {{name}}',
     devicePaired: '기기 페어링 성공: {{name}}',
     commandReceived: '기기로부터 명령 수신: {{action}}',
@@ -97,6 +97,7 @@ export const ko: TranslationKeys = {
     themeDark: '다크 모드',
     themeLight: '라이트 모드',
     logDebug: '디버그',
+    resetDefaults: '기본값으로 재설정',
     logInfo: '정보',
     logWarn: '경고',
     logError: '오류',
@@ -126,6 +127,12 @@ export const ko: TranslationKeys = {
     reject: '거부',
     editApplied: '{{name}}에 편집 적용됨',
     editRejected: '{{name}}의 편집 거부됨',
+    unsavedEditsProposalConfirm:
+      '"{{name}}"에 저장되지 않은 수동 편집이 있습니다. AI 제안을 수락하면 덮어씁니다. 계속하시겠습니까?',
+    fileTruncated:
+      '"{{name}}"이(가) 편집기 한도를 초과하여 읽기 전용으로 열렸습니다(내용이 잘릴 수 있음). 데이터 손실을 막기 위해 저장이 비활성화되었습니다.',
+    fileTooLargeToSave:
+      '"{{name}}"은(는) 편집기에서 저장하기에 너무 큽니다(잘린 미리보기로 열림). 파일 탐색기에서 여세요.',
   },
   devices: {
     title: '연결된 기기',
@@ -289,10 +296,18 @@ export const ko: TranslationKeys = {
     avgLatency: '평균 지연 시간',
     routingState: '라우팅 상태',
     running: '실행 중',
+    starting: '시작 중',
     stopped: '중지됨',
     compliant: '준수함',
     disabledLabel: '비활성화됨',
     demoMode: '데모 모드 — 데이터가 시뮬레이션됩니다',
+    coreServer: '핵심 서버 상태',
+    coreServerDesc:
+      '백그라운드 서비스가 포트 {{port}}에서 대기 중입니다. 상태는 네이티브 프로세스에서 직접 보고됩니다(시뮬레이션 데이터 없음).',
+    coreServerError: '서버 상태를 읽을 수 없습니다: {{error}}',
+    coreServerChecking: '백그라운드 서비스 상태 확인 중…',
+    localNetwork: '로컬 네트워크 주소:',
+    serverVersion: '서버 버전: {{version}}',
   },
   chat: {
     welcomeMessage:
@@ -387,6 +402,7 @@ export const ko: TranslationKeys = {
     rename: '이름 바꾸기',
     renamePrompt: '새 이름 입력:',
     renameInvalid: '잘못된 이름: 비어 있거나 경로 구분자를 포함할 수 없습니다.',
+    loadFailed: '"{{path}}"을(를) 열지 못했습니다: {{error}}',
   },
   apiManager: {
     title: 'API 키 구성',

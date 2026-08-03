@@ -8,13 +8,49 @@
 // - Tauri command bridge interface (frontend-callable)
 // ==============================================================================
 
-import { spawn, execFile } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { writeFile, mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 const execFileAsync = promisify(execFile);
+
+/**
+ * Run adb via promisified execFile with a hidden console on Windows
+ * (CREATE_NO_WINDOW) so running adb never flashes a terminal window.
+ * Text output variant (utf8 default → stdout is a string).
+ */
+async function runAdb(
+  file: string,
+  args: string[],
+  options?: { maxBuffer?: number; encoding?: 'utf8' | BufferEncoding },
+): Promise<{ stdout: string; stderr: string }> {
+  const result = await execFileAsync(file, args, {
+    windowsHide: true,
+    ...(options ?? { encoding: 'utf8' }),
+  });
+  const asString = (v: unknown): string =>
+    typeof v === 'string' ? v : String(Buffer.from(v as Buffer));
+  return { stdout: asString(result.stdout), stderr: asString(result.stderr) };
+}
+
+/**
+ * Binary output variant for `adb exec-out screencap -p` (returns a Buffer).
+ */
+async function runAdbBuffer(
+  file: string,
+  args: string[],
+  options?: { maxBuffer?: number; encoding?: 'buffer' },
+): Promise<{ stdout: Buffer; stderr: Buffer }> {
+  const result = await execFileAsync(file, args, {
+    windowsHide: true,
+    ...(options ?? { encoding: 'buffer' }),
+  });
+  const toBuffer = (v: unknown): Buffer =>
+    Buffer.isBuffer(v) ? v : Buffer.from(String(v), 'utf8');
+  return { stdout: toBuffer(result.stdout), stderr: toBuffer(result.stderr) };
+}
 
 // ----- Types -----
 
@@ -72,7 +108,7 @@ export class MobileAdbOperator {
 
   /** List connected devices via `adb devices -l` */
   async listDevices(): Promise<AdbDevice[]> {
-    const { stdout } = await execFileAsync(this.adbPath, ['devices', '-l']);
+    const { stdout } = await runAdb(this.adbPath, ['devices', '-l']);
     const lines = stdout.split('\n').slice(1); // skip header
     const devices: AdbDevice[] = [];
     for (const raw of lines) {
@@ -111,7 +147,7 @@ export class MobileAdbOperator {
   /** Get screen size for the current device */
   async getScreenSize(): Promise<ScreenSize> {
     const dev = this.requireDevice();
-    const { stdout } = await execFileAsync(this.adbPath, ['-s', dev, 'shell', 'wm', 'size']);
+    const { stdout } = await runAdb(this.adbPath, ['-s', dev, 'shell', 'wm', 'size']);
     // Output: "Physical size: 1080x2400"
     const match = stdout.match(/(\d+)x(\d+)/);
     if (!match) throw new Error(`Failed to parse screen size: ${stdout}`);
@@ -124,7 +160,7 @@ export class MobileAdbOperator {
   /** Capture screenshot as PNG buffer */
   async screenshot(): Promise<ScreenshotResult> {
     const dev = this.requireDevice();
-    const { stdout } = await execFileAsync(
+    const { stdout } = await runAdbBuffer(
       this.adbPath,
       ['-s', dev, 'exec-out', 'screencap', '-p'],
       {
@@ -134,7 +170,7 @@ export class MobileAdbOperator {
     );
     const size = await this.getScreenSize();
     return {
-      png: stdout as unknown as Buffer,
+      png: stdout,
       width: size.width,
       height: size.height,
       capturedAt: Date.now(),
@@ -146,7 +182,7 @@ export class MobileAdbOperator {
     const dev = this.requireDevice();
     switch (action.type) {
       case 'tap': {
-        await execFileAsync(this.adbPath, [
+        await runAdb(this.adbPath, [
           '-s',
           dev,
           'shell',
@@ -162,7 +198,7 @@ export class MobileAdbOperator {
           throw new Error('swipe requires endX and endY');
         }
         const duration = action.durationMs ?? 300;
-        await execFileAsync(this.adbPath, [
+        await runAdb(this.adbPath, [
           '-s',
           dev,
           'shell',
@@ -179,7 +215,7 @@ export class MobileAdbOperator {
       case 'long-press': {
         const duration = action.durationMs ?? 1000;
         // Long-press = swipe to same coordinate with long duration
-        await execFileAsync(this.adbPath, [
+        await runAdb(this.adbPath, [
           '-s',
           dev,
           'shell',
@@ -200,7 +236,7 @@ export class MobileAdbOperator {
         const cy = action.y;
         const zoomOut = action.zoom === 'out';
         const factor = zoomOut ? -1 : 1;
-        await execFileAsync(this.adbPath, [
+        await runAdb(this.adbPath, [
           '-s',
           dev,
           'shell',
@@ -212,7 +248,7 @@ export class MobileAdbOperator {
           String(cy),
           '300',
         ]);
-        await execFileAsync(this.adbPath, [
+        await runAdb(this.adbPath, [
           '-s',
           dev,
           'shell',
@@ -224,7 +260,6 @@ export class MobileAdbOperator {
           String(cy),
           '300',
         ]);
-        
       }
     }
   }
@@ -242,13 +277,13 @@ export class MobileAdbOperator {
   /** Push a file to device (e.g. install APK) */
   async pushFile(localPath: string, remotePath: string): Promise<void> {
     const dev = this.requireDevice();
-    await execFileAsync(this.adbPath, ['-s', dev, 'push', localPath, remotePath]);
+    await runAdb(this.adbPath, ['-s', dev, 'push', localPath, remotePath]);
   }
 
   /** Pull a file from device */
   async pullFile(remotePath: string, localPath: string): Promise<void> {
     const dev = this.requireDevice();
-    await execFileAsync(this.adbPath, ['-s', dev, 'pull', remotePath, localPath]);
+    await runAdb(this.adbPath, ['-s', dev, 'pull', remotePath, localPath]);
   }
 
   /** Run a shell command on device (command is passed as a single arg to adb shell) */
@@ -260,12 +295,10 @@ export class MobileAdbOperator {
     if (SHELL_META.test(command)) {
       // Wrap in single quotes and escape any embedded single quotes
       const escaped = command.replace(/'/g, "'\\''");
-      const { stdout } = await execFileAsync(this.adbPath, [
-        '-s', dev, 'shell', `'${escaped}'`,
-      ]);
+      const { stdout } = await runAdb(this.adbPath, ['-s', dev, 'shell', `'${escaped}'`]);
       return stdout;
     }
-    const { stdout } = await execFileAsync(this.adbPath, ['-s', dev, 'shell', command]);
+    const { stdout } = await runAdb(this.adbPath, ['-s', dev, 'shell', command]);
     return stdout;
   }
 
@@ -351,4 +384,4 @@ export async function tauriSwipe(
 }
 
 /** Suppress unused import warnings */
-export const _internal = { spawn, execFile, writeFile, mkdtemp, rm, join, tmpdir, execFileAsync };
+export const _internal = { execFile, writeFile, mkdtemp, rm, join, tmpdir, execFileAsync, runAdb };

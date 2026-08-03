@@ -61,6 +61,221 @@ pub fn clamp_command_timeout(timeout_ms: Option<u64>) -> u64 {
     timeout_ms.unwrap_or(120_000).clamp(1_000, 300_000)
 }
 
+// --- Native filesystem commands ---
+// The editor must be able to open/edit files in ANY folder the user navigates
+// to. These commands use std::fs directly and are used by the file explorer
+// and code editor (the previous plugin-fs scope restriction has been removed).
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct NativeFsEntry {
+    name: String,
+    path: String,
+    is_directory: bool,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct NativeFsMetadata {
+    is_directory: bool,
+    size: u64,
+    modified_ms: u64,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct NativeFsReadText {
+    content: String,
+    encoding: String,
+    is_binary: bool,
+    /// True when the file is larger than the read cap and content was
+    /// truncated. Callers MUST NOT write the truncated content back to disk.
+    is_truncated: bool,
+}
+
+fn decode_utf16_bytes(bytes: &[u8], little_endian: bool) -> String {
+    let units: Vec<u16> = bytes
+        .chunks_exact(2)
+        .map(|c| {
+            if little_endian {
+                u16::from_le_bytes([c[0], c[1]])
+            } else {
+                u16::from_be_bytes([c[0], c[1]])
+            }
+        })
+        .collect();
+    String::from_utf16_lossy(&units)
+}
+
+/// List a directory using native std::fs.
+/// Entries are sorted directories-first, then case-insensitively by name.
+#[tauri::command]
+fn fs_read_dir(path: String) -> Result<Vec<NativeFsEntry>, String> {
+    let dir = std::fs::read_dir(&path).map_err(|e| format!("Failed to read directory: {e}"))?;
+    let mut entries: Vec<NativeFsEntry> = Vec::new();
+    for entry in dir.flatten() {
+        let p = entry.path();
+        let is_directory = p.is_dir();
+        entries.push(NativeFsEntry {
+            name: entry.file_name().to_string_lossy().into_owned(),
+            path: p.to_string_lossy().into_owned(),
+            is_directory,
+        });
+    }
+    entries.sort_by(|a, b| match (a.is_directory, b.is_directory) {
+        (true, false) => std::cmp::Ordering::Less,
+        (false, true) => std::cmp::Ordering::Greater,
+        _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
+    });
+    Ok(entries)
+}
+
+/// Read a text file with native std::fs. Detects UTF-8 BOM, UTF-16 LE/BE BOM,
+/// or valid UTF-8; falls back to a lossless latin-1 decode otherwise. Flags
+/// binary files by sniffing for NUL bytes in the first 8 KiB. `max_bytes`
+/// caps the read (default 5 MiB) to avoid OOM on huge files; oversized files
+/// are reported via `is_truncated` so callers never write the clipped content
+/// back over the original.
+#[tauri::command]
+fn fs_read_text(path: String, max_bytes: Option<u64>) -> Result<NativeFsReadText, String> {
+    use std::io::Read;
+    let file = std::fs::File::open(&path).map_err(|e| format!("Failed to open file: {e}"))?;
+    let metadata = file.metadata().map_err(|e| format!("Failed to stat file: {e}"))?;
+    let limit = max_bytes.unwrap_or(5 * 1024 * 1024);
+    let is_truncated = metadata.len() > limit;
+    // If the file is oversized we still read exactly `limit` bytes for preview,
+    // but is_truncated tells the frontend the content is incomplete.
+    let read_bytes = if is_truncated { limit as usize } else { metadata.len() as usize };
+    let mut buf = Vec::with_capacity(read_bytes);
+    file.take(limit)
+        .read_to_end(&mut buf)
+        .map_err(|e| format!("Failed to read file: {e}"))?;
+
+    let (encoding, content) = if buf.starts_with(&[0xEF, 0xBB, 0xBF]) {
+        ("utf-8-bom", String::from_utf8_lossy(&buf[3..]).into_owned())
+    } else if buf.starts_with(&[0xFF, 0xFE]) {
+        ("utf-16le", decode_utf16_bytes(&buf[2..], true))
+    } else if buf.starts_with(&[0xFE, 0xFF]) {
+        ("utf-16be", decode_utf16_bytes(&buf[2..], false))
+    } else if std::str::from_utf8(&buf).is_ok() {
+        ("utf-8", String::from_utf8_lossy(&buf).into_owned())
+    } else {
+        ("latin-1", buf.iter().map(|&b| b as char).collect())
+    };
+
+    // Binary sniff on DECODED text: UTF-16 payloads are full of 0x00 bytes and
+    // would otherwise be mislabeled as binary, making the whole UTF-16 path
+    // dead. NUL in decoded text reliably indicates a true binary file.
+    let is_binary = content[..content.len().min(8192)].contains('\0');
+
+    Ok(NativeFsReadText {
+        content,
+        encoding: encoding.to_string(),
+        is_binary,
+        is_truncated,
+    })
+}
+
+/// Write text to a file with native std::fs. `encoding` must match the value
+/// returned by `fs_read_text` (utf-8-bom / utf-16le / utf-16be / latin-1), so
+/// the file is written back in its original encoding instead of being
+/// corrupted; when omitted, plain UTF-8 is written.
+#[tauri::command]
+fn fs_write_text(path: String, content: String, encoding: Option<String>) -> Result<(), String> {
+    let bytes: Vec<u8> = match encoding.as_deref() {
+        Some("utf-8-bom") => {
+            let mut v = vec![0xEF, 0xBB, 0xBF];
+            v.extend_from_slice(content.as_bytes());
+            v
+        }
+        Some("utf-16le") => {
+            let mut v = vec![0xFF, 0xFE];
+            for u in content.encode_utf16() {
+                v.extend_from_slice(&u.to_le_bytes());
+            }
+            v
+        }
+        Some("utf-16be") => {
+            let mut v = vec![0xFE, 0xFF];
+            for u in content.encode_utf16() {
+                v.extend_from_slice(&u.to_be_bytes());
+            }
+            v
+        }
+        Some("latin-1") => content
+            .chars()
+            .map(|c| if c.is_ascii() || (c as u32) < 256 { c as u8 } else { b'?' })
+            .collect(),
+        _ => content.into_bytes(),
+    };
+    std::fs::write(&path, bytes).map_err(|e| format!("Failed to write file: {e}"))?;
+    Ok(())
+}
+
+/// Stat a file/dir with native std::fs.
+#[tauri::command]
+fn fs_metadata(path: String) -> Result<NativeFsMetadata, String> {
+    let m = std::fs::metadata(&path).map_err(|e| format!("Failed to stat path: {e}"))?;
+    let modified_ms = m
+        .modified()
+        .ok()
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0);
+    Ok(NativeFsMetadata {
+        is_directory: m.is_dir(),
+        size: m.len(),
+        modified_ms,
+    })
+}
+
+/// Create a directory with native std::fs (`recursive` mirrors `mkdir -p`).
+#[tauri::command]
+fn fs_mkdir(path: String, recursive: Option<bool>) -> Result<(), String> {
+    let recursive = recursive.unwrap_or(false);
+    if recursive {
+        std::fs::create_dir_all(&path).map_err(|e| format!("Failed to create directory: {e}"))
+    } else {
+        std::fs::create_dir(&path).map_err(|e| format!("Failed to create directory: {e}"))
+    }
+}
+
+/// Remove a file or directory with native std::fs. Empty-string guards and a
+/// no-recursive default protect against accidental bulk deletion.
+#[tauri::command]
+fn fs_remove(path: String, recursive: Option<bool>) -> Result<(), String> {
+    let trimmed = path.trim();
+    if trimmed.is_empty()
+        || trimmed == "/"
+        || trimmed == "\\"
+        || trimmed == "C:"
+        || trimmed == "C:\\"
+    {
+        return Err("Refusing to remove a filesystem root.".to_string());
+    }
+    let recursive = recursive.unwrap_or(false);
+    let meta = std::fs::symlink_metadata(&path).map_err(|e| format!("Failed to stat path: {e}"))?;
+    if meta.is_dir() && !recursive {
+        return Err(
+            "Directory is not empty; pass recursive to remove it.".to_string(),
+        );
+    }
+    if meta.is_dir() {
+        std::fs::remove_dir_all(&path).map_err(|e| format!("Failed to remove directory: {e}"))
+    } else {
+        std::fs::remove_file(&path).map_err(|e| format!("Failed to remove file: {e}"))
+    }
+}
+
+/// Rename/move a file or directory with native std::fs.
+#[tauri::command]
+fn fs_rename(from: String, to: String) -> Result<(), String> {
+    if from.trim().is_empty() || to.trim().is_empty() {
+        return Err("Rename requires both source and destination paths.".to_string());
+    }
+    std::fs::rename(&from, &to).map_err(|e| format!("Failed to rename: {e}"))
+}
+
 #[tauri::command]
 async fn execute_approved_command(
     app: tauri::AppHandle,
@@ -124,6 +339,14 @@ async fn execute_approved_command(
         .kill_on_drop(true)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
+    // Hide the console window on Windows so approved commands run in the
+    // background without flashing a visible terminal (CREATE_NO_WINDOW).
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        process.as_std_mut().creation_flags(CREATE_NO_WINDOW);
+    }
     if let Some(cwd) = cwd {
         let directory = std::path::PathBuf::from(cwd);
         if !directory.is_dir() {
@@ -189,6 +412,55 @@ pub fn find_free_port(preferred: u16) -> std::io::Result<u16> {
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! Welcome to GHITA CODING AGENT.", name)
+}
+
+/// Put the sidecar process into a Windows Job Object with
+/// `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`.
+///
+/// Why: `cleanup_before_exit` only runs when the app shuts down gracefully
+/// (window close / `RunEvent::Exit`). If the app crashes or is force-killed,
+/// no Rust code runs and the sidecar survives as an orphan, squatting on the
+/// HTTP/gRPC ports — the next launch then cannot bind and drifts to another
+/// port. With a kill-on-close job, the kernel reaps every process in the job
+/// the moment the last handle to the job closes, i.e. when the app process
+/// dies for ANY reason. The job handle is intentionally held for the process
+/// lifetime (leaked); the OS closes it automatically at process exit.
+#[cfg(target_os = "windows")]
+fn assign_kill_on_close_job(child: &std::process::Child) {
+    use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::Foundation::HANDLE;
+    use windows_sys::Win32::System::JobObjects::{
+        AssignProcessToJobObject, CreateJobObjectW, JobObjectExtendedLimitInformation,
+        SetInformationJobObject, JOBOBJECT_EXTENDED_LIMIT_INFORMATION,
+        JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
+    };
+
+    // The job handle is a raw HANDLE (not Sync), so we keep it as an isize;
+    // it is intentionally held for the process lifetime and only cast back
+    // when used. The OS closes it at process exit, which is what triggers the
+    // kill-on-close reap.
+    static JOB: std::sync::OnceLock<isize> = std::sync::OnceLock::new();
+    let job = *JOB.get_or_init(|| {
+        (unsafe { CreateJobObjectW(std::ptr::null(), std::ptr::null()) }) as isize
+    });
+    if job == 0 {
+        return; // No job object available — graceful-exit cleanup still covers us.
+    }
+
+    let mut info: JOBOBJECT_EXTENDED_LIMIT_INFORMATION = unsafe { std::mem::zeroed() };
+    info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+    unsafe {
+        SetInformationJobObject(
+            job as HANDLE,
+            JobObjectExtendedLimitInformation,
+            &info as *const _ as *const core::ffi::c_void,
+            std::mem::size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>() as u32,
+        );
+        // If the child is already nested in a job (e.g. launched from an IDE
+        // or CI runner) the assignment may fail — acceptable, normal-exit
+        // cleanup still applies in that rare case.
+        let _ = AssignProcessToJobObject(job as HANDLE, child.as_raw_handle() as HANDLE);
+    }
 }
 
 /// Result of a bundled-node integrity check (audit fix M8).
@@ -268,6 +540,16 @@ async fn start_server(
     // (StrictMode or multiple UI triggers could call start_server concurrently)
     {
         let mut s = state.lock().map_err(|e| e.to_string())?;
+        // P1-1 (deep review pass #2): mirror `get_server_status` and reap a
+        // dead-but-still-present sidecar before the is_some() check. Without
+        // this, a sidecar that crashed silently (port collision, OOM, script
+        // error) keeps `s.child = Some(dead)` forever and start_server becomes
+        // permanently wedged.
+        if let Some(ref mut child) = s.child {
+            if let Ok(Some(_status)) = child.try_wait() {
+                s.child = None;
+            }
+        }
         if s.child.is_some() {
             return Ok("Server already running".to_string());
         }
@@ -389,7 +671,8 @@ async fn start_server(
         let lan_config_path = data_dir.join("lan-enabled.txt");
         let lan_enabled = fs::read_to_string(&lan_config_path).unwrap_or_default().trim() == "true";
 
-        let child = std::process::Command::new(node_command)
+        let mut command = std::process::Command::new(node_command);
+        command
             .arg(server_script)
             .env("GHITA_PORT", port.to_string())
             .env("GHITA_DATA_DIR", &data_dir)
@@ -400,14 +683,39 @@ async fn start_server(
             .env("GHITA_LIBERATE_PORTS", "0")
             .env("GHITA_SESSION_TOKEN", session_token)
             .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::inherit())
+            .stderr(std::process::Stdio::null());
+
+        // Hide the console window on Windows so the sidecar node runs silently
+        // in the background (CREATE_NO_WINDOW).
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+            command.creation_flags(CREATE_NO_WINDOW);
+        }
+
+        let child = command
             .spawn()
             .map_err(|e| format!("Failed to start sidecar server: {}", e))?;
 
         Ok::<std::process::Child, String>(child)
     })
-    .await
-    .map_err(|e| format!("Task join error: {}", e))?;
+    .await;
+
+    // P0-2 (deep review pass #2): if the blocking task panicked or the
+    // runtime was shutting down, the `?` propagated without resetting
+    // `s.starting` — every subsequent start_server call would short-circuit
+    // with "Server is already starting" until the process was restarted.
+    // Reset the flag on any join error so the user can recover.
+    let spawn_result = match spawn_result {
+        Ok(r) => r,
+        Err(e) => {
+            if let Ok(mut s) = state.lock() {
+                s.starting = false;
+            }
+            return Err(format!("Task join error: {}", e));
+        }
+    };
 
     // If spawn failed, reset starting flag before returning error
     let mut child = match spawn_result {
@@ -420,6 +728,11 @@ async fn start_server(
         }
     };
 
+    // Tie the sidecar's lifetime to ours so a crash/force-kill of the app
+    // cannot leave an orphan node.exe holding the HTTP/gRPC ports.
+    #[cfg(target_os = "windows")]
+    assign_kill_on_close_job(&child);
+
     // Spawn a thread to read stdout line-by-line
     if let Some(stdout) = child.stdout.take() {
         let app_handle = app_handle.clone();
@@ -428,8 +741,27 @@ async fn start_server(
             let reader = BufReader::new(stdout);
             for line_str in reader.lines().map_while(Result::ok) {
                 if let Some(payload) = line_str.strip_prefix("__GHITA_IPC__:") {
-                    if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(payload) {
-                        let _ = app_handle.emit("sidecar-event", parsed);
+                    // P2-1 (deep review pass #2): the sidecar announces the
+                    // actual port it bound to via `http_listening`. Patch
+                    // ServerState.port in place so get_server_status and
+                    // /health probes don't drift from the listener.
+                    // We re-acquire the state through the AppHandle (which
+                    // is 'static) rather than capturing the `state` lifetime
+                    // token — the borrow checker would otherwise reject
+                    // this closure as non-'static.
+                    if let Ok(value) = serde_json::from_str::<serde_json::Value>(payload) {
+                        if value.get("event").and_then(|v| v.as_str()) == Some("http_listening") {
+                            if let Some(actual_port) =
+                                value.get("data").and_then(|d| d.get("port")).and_then(|p| p.as_u64())
+                            {
+                                if let Some(state) = app_handle.try_state::<Mutex<ServerState>>() {
+                                    if let Ok(mut s) = state.lock() {
+                                        s.port = actual_port as u16;
+                                    }
+                                }
+                            }
+                        }
+                        let _ = app_handle.emit("sidecar-event", value);
                     } else {
                         eprintln!("[sidecar] malformed IPC payload: {}", payload);
                     }
@@ -536,6 +868,7 @@ async fn get_server_status(
 
 // --- DocsGriller types (must match frontend GrillSession interface) ---
 #[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 struct GrillContradiction {
     topic: String,
     doc_a: GrillDocRef,
@@ -545,12 +878,14 @@ struct GrillContradiction {
 }
 
 #[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 struct GrillDocRef {
     file: String,
     excerpt: String,
 }
 
 #[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 struct GrillQuestion {
     question: String,
     source_docs: Vec<String>,
@@ -558,6 +893,7 @@ struct GrillQuestion {
 }
 
 #[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 struct GrillSession {
     id: String,
     timestamp: String,
@@ -569,11 +905,18 @@ struct GrillSession {
     design_decisions: Vec<String>,
 }
 
-/// Run a DocsGriller session: scan docs directory for markdown files and
-/// return a session with analysis results. Currently returns a stub session
-/// with file count; full Socratic analysis is planned for v2.0.
+/// Run a DocsGriller session: scan the docs directory, read the actual markdown
+/// files, and produce a *real* heuristic analysis of their content:
+/// - cross-document contradictions (the same topic heading described
+///   differently in two files),
+/// - Socratic questions derived from decision markers / open questions in the
+///   text,
+/// - design-decision statements extracted from the text.
+/// This is deterministic content analysis — no placeholder or simulated data.
 #[tauri::command]
 fn run_grill_session(docs_path: String) -> Result<GrillSession, String> {
+    use std::collections::HashMap;
+
     let path = std::path::PathBuf::from(&docs_path);
     if !path.exists() {
         return Err(format!("Docs path does not exist: {}", docs_path));
@@ -582,21 +925,238 @@ fn run_grill_session(docs_path: String) -> Result<GrillSession, String> {
         return Err(format!("Docs path is not a directory: {}", docs_path));
     }
 
-    // Count markdown files in the directory
-    let mut docs_scanned: u32 = 0;
-    fn count_md(dir: &std::path::Path, count: &mut u32) {
+    // Collect .md/.mdx files (bounded to keep analysis responsive). A visited
+    // set of canonicalized paths guards against symlink/junction cycles that
+    // would otherwise recurse forever and overflow the stack.
+    const MAX_FILES: usize = 300;
+    const MAX_BYTES_PER_FILE: usize = 256 * 1024; // 256 KiB per doc
+    let mut files: Vec<(PathBuf, String)> = Vec::new();
+    let mut visited: std::collections::HashSet<PathBuf> = std::collections::HashSet::new();
+    fn collect_md(
+        dir: &std::path::Path,
+        files: &mut Vec<(PathBuf, String)>,
+        visited: &mut std::collections::HashSet<PathBuf>,
+        depth: usize,
+    ) {
+        if files.len() >= MAX_FILES || depth > 32 {
+            return;
+        }
+        // Canonicalize to be cycle-safe (handles symlinks + Windows junctions).
+        let canonical = dir.canonicalize().unwrap_or_else(|_| dir.to_path_buf());
+        if !visited.insert(canonical) {
+            return;
+        }
         if let Ok(entries) = fs::read_dir(dir) {
             for entry in entries.flatten() {
+                if files.len() >= MAX_FILES {
+                    return;
+                }
                 let p = entry.path();
                 if p.is_dir() {
-                    count_md(&p, count);
-                } else if p.extension().is_some_and(|e| e == "md" || e == "mdx") {
-                    *count += 1;
+                    collect_md(&p, files, visited, depth + 1);
+                } else if p
+                    .extension()
+                    .is_some_and(|e| e == "md" || e == "mdx" || e == "txt" || e == "markdown")
+                {
+                    if let Ok(content) = fs::read_to_string(&p) {
+                        let bounded: String = content.chars().take(MAX_BYTES_PER_FILE).collect();
+                        files.push((p, bounded));
+                    }
                 }
             }
         }
     }
-    count_md(&path, &mut docs_scanned);
+    collect_md(&path, &mut files, &mut visited, 0);
+
+    let docs_scanned = files.len() as u32;
+
+    // Build a topic → [(file, first paragraph)] index from real headings.
+    // A "topic" is the first H1/H2 heading of a document (normalized); when the
+    // same topic appears in multiple docs, we compare the body text to detect
+    // a contradiction rather than relying on named abstracts.
+    let mut topic_excerpts: HashMap<String, Vec<(String, String)>> = HashMap::new();
+    let mut questions: Vec<GrillQuestion> = Vec::new();
+    let mut design_decisions: Vec<String> = Vec::new();
+
+    // Decision / uncertainty markers that drive genuine Socratic questions.
+    const DECISION_MARKERS: [&str; 14] = [
+        "should we",
+        "should the",
+        "we should decide",
+        "need to decide",
+        "undecided",
+        "to be decided",
+        "tbd",
+        "todo",
+        "open question",
+        "not yet decided",
+        "future work",
+        "trade-off",
+        "tradeoff",
+        "what if",
+    ];
+
+    const DESIGN_MARKERS: [&str; 10] = [
+        "we chose",
+        "we choose",
+        "we decided",
+        "decision:",
+        "we will use",
+        "we selected",
+        "we adopt",
+        "chosen approach",
+        "this design",
+        "recommend using",
+    ];
+
+    for (file_path, content) in &files {
+        let file = file_path.to_string_lossy().into_owned();
+        let mut lines = content.lines().collect::<Vec<_>>();
+        // Locate the primary topic heading (first H1 or H2).
+        let mut primary_heading: Option<String> = None;
+        for line in &lines {
+            let trimmed = line.trim();
+            if trimmed.starts_with("# ") || trimmed.starts_with("## ") {
+                let heading = trimmed
+                    .trim_start_matches('#')
+                    .trim()
+                    .trim_matches('`')
+                    .trim()
+                    .to_lowercase();
+                if !heading.is_empty() {
+                    primary_heading = Some(heading);
+                    break;
+                }
+            }
+        }
+
+        if let Some(topic) = primary_heading {
+            // Gather a bounded body excerpt after the heading.
+            let mut body = String::new();
+            for line in &lines {
+                if line.trim().starts_with('#') {
+                    continue;
+                }
+                body.push_str(line);
+                body.push(' ');
+                if body.len() > 600 {
+                    break;
+                }
+            }
+            topic_excerpts
+                .entry(topic)
+                .or_default()
+                .push((file.clone(), body.trim().to_string()));
+        }
+
+        // Socratic questions from decision markers (capitalize the sentence).
+        let lower = content.to_lowercase();
+        for marker in DECISION_MARKERS.iter() {
+            if lower.contains(marker) {
+                // Pull the sentence containing the marker, truncated, real text.
+                let mut sentence = String::new();
+                for line in &mut lines {
+                    let s = line.trim().to_string();
+                    if s.to_lowercase().contains(marker) {
+                        sentence = s;
+                        break;
+                    }
+                }
+                if sentence.is_empty() {
+                    sentence = content
+                        .lines()
+                        .find(|l| l.to_lowercase().contains(marker))
+                        .unwrap_or(marker)
+                        .to_string();
+                }
+                let truncated: String = sentence.chars().take(220).collect();
+                questions.push(GrillQuestion {
+                    question: format!(
+                        "From \"{}\": the text notes — \"{}\". What is the intended resolution?",
+                        file.split(['/', '\\']).last().unwrap_or(&file),
+                        truncated
+                    ),
+                    source_docs: vec![file.clone()],
+                    severity: "warning".to_string(),
+                });
+                break; // at most one question per file per marker set
+            }
+        }
+
+        // Design-decision statements.
+        for marker in DESIGN_MARKERS.iter() {
+            if lower.contains(marker) {
+                let sentence = content
+                    .lines()
+                    .find(|l| l.to_lowercase().contains(marker))
+                    .unwrap_or(marker)
+                    .trim()
+                    .to_string();
+                if !sentence.is_empty() {
+                    design_decisions.push(sentence.chars().take(220).collect());
+                }
+                break;
+            }
+        }
+    }
+
+    // Cross-document contradictions: topic described in more than one doc.
+    let mut contradictions: Vec<GrillContradiction> = Vec::new();
+    for (topic, entries) in topic_excerpts.iter() {
+        if entries.len() < 2 {
+            continue;
+        }
+        let (first_file, first_excerpt) = &entries[0];
+        for other in entries.iter().skip(1) {
+            let (other_file, other_excerpt) = other;
+            // Careful: docs that merely reference the same topic without
+            // diverging are not contradictions — compare a normalized token
+            // signature to estimate whether the descriptions actually differ.
+            let a: Vec<&str> = first_excerpt
+                .split_whitespace()
+                .filter(|w| w.len() > 3)
+                .collect();
+            let b: Vec<&str> = other_excerpt
+                .split_whitespace()
+                .filter(|w| w.len() > 3)
+                .collect();
+            if a.is_empty() || b.is_empty() {
+                continue;
+            }
+            let mut shared = 0usize;
+            for tok in &a {
+                if b.contains(tok) {
+                    shared += 1;
+                }
+            }
+            let overlap = shared as f32 / a.len() as f32;
+            if overlap < 0.25 {
+                contradictions.push(GrillContradiction {
+                    topic: topic.clone(),
+                    doc_a: GrillDocRef {
+                        file: first_file.clone(),
+                        excerpt: first_excerpt.chars().take(300).collect(),
+                    },
+                    doc_b: GrillDocRef {
+                        file: other_file.clone(),
+                        excerpt: other_excerpt.chars().take(300).collect(),
+                    },
+                    severity: if overlap < 0.1 { "major" } else { "minor" }.to_string(),
+                    recommendation: format!(
+                        "Two documents describe the topic \"{topic}\" differently. Reconcile them or explicitly document the distinction."
+                    ),
+                });
+                break;
+            }
+        }
+    }
+
+    // De-duplicate questions (same text from multiple files).
+    let mut seen_q = std::collections::HashSet::new();
+    questions.retain(|q| seen_q.insert(q.question.clone()));
+    questions.truncate(12);
+    contradictions.truncate(12);
+    design_decisions.truncate(12);
 
     let session_id = format!(
         "grill_{:016x}{:016x}",
@@ -609,10 +1169,10 @@ fn run_grill_session(docs_path: String) -> Result<GrillSession, String> {
         timestamp: chrono::Utc::now().to_rfc3339(),
         docs_path,
         docs_scanned,
-        questions: Vec::new(),
-        contradictions: Vec::new(),
+        questions,
+        contradictions,
         user_answers: std::collections::HashMap::new(),
-        design_decisions: Vec::new(),
+        design_decisions,
     })
 }
 
@@ -873,7 +1433,6 @@ pub fn run(headless: bool) {
     let session_token = generate_session_token();
 
     let app = tauri::Builder::default()
-        .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(Mutex::new(ServerState {
@@ -930,6 +1489,14 @@ pub fn run(headless: bool) {
             terminal::terminal_list,
             // DocsGriller
             run_grill_session,
+            // Native filesystem commands (editor — full access, no fs-scope)
+            fs_read_dir,
+            fs_read_text,
+            fs_write_text,
+            fs_metadata,
+            fs_mkdir,
+            fs_remove,
+            fs_rename,
         ])
         .setup(move |app| {
             // In headless mode: skip window management, auto-start server
@@ -978,7 +1545,10 @@ pub fn run(headless: bool) {
                 let main_handle = main.clone();
                 let splash_handle = splash.clone();
                 let shown_clone = shown.clone();
-                main_handle.clone().listen("ready", move |_event| {
+                // The listener stays registered for the app lifetime (the window
+                // is shown once, then ignored). We bind the returned id to a
+                // discard binding only to satisfy the API's #[must_use].
+                let _event_id = main_handle.clone().listen("ready", move |_event| {
                     if shown_clone.swap(true, std::sync::atomic::Ordering::SeqCst) {
                         return; // Already handled
                     }

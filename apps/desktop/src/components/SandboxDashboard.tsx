@@ -3,9 +3,10 @@
 // Hiển thị trạng thái hoạt động và CPU/RAM sử dụng của các container sandbox
 // =============================================================================
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from '../i18n';
+import { useActivePolling } from '../hooks/useActivePolling';
 import { ResourceBar } from './ResourceBar';
 import { StatusBadge } from './StatusBadge';
 
@@ -113,12 +114,11 @@ export function SandboxDashboard() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchSandboxData();
-    // Poll mỗi 3 giây
-    const interval = setInterval(fetchSandboxData, 3000);
-    return () => clearInterval(interval);
-  }, [fetchSandboxData]);
+  // Poll every 3 s only while the app is visible (dashboard tab). The view is
+  // remounted when its tab becomes active, and useActivePolling fires once
+  // immediately on mount — so no separate initial-fetch effect is needed and
+  // hidden tabs never make background requests.
+  useActivePolling(3000, fetchSandboxData, 'dashboard');
 
   // =========================================================================
   // Loading State

@@ -84,7 +84,7 @@ describe('ComposioSkillAdapter', () => {
       expect(conn?.expiresAt).toBe(farFuture);
     });
 
-    it('should automatically refresh token if expiresAt is within 5 minutes', async () => {
+    it('should fail loudly when a near-expiry token cannot be truly refreshed', async () => {
       const nearFuture = Date.now() + 4 * 60 * 1000; // 4 minutes
       adapter.setCredential({
         appId: 'slack',
@@ -93,14 +93,14 @@ describe('ComposioSkillAdapter', () => {
         expiresAt: nearFuture,
       });
 
-      const refreshSuccess = await adapter.interceptAndRefreshToken('slack');
-      expect(refreshSuccess).toBe(true);
+      // v0.8.0: near-expiry tokens must NOT be "refreshed" into fabricated
+      // mock_tokens. Without a real provider refresh endpoint the refresh is
+      // impossible, so the adapter surfaces an honest error instead of minting
+      // a fake refreshed_access_ token.
+      await expect(adapter.interceptAndRefreshToken('slack')).rejects.toThrow(/no real provider/);
 
       const conn = adapter.getCredential('slack');
-      expect(conn?.accessToken).toContain('refreshed_access_');
-      expect(conn?.expiresAt).toBeGreaterThan(Date.now() + 3500 * 1000); // 1 hour
-      expect(adapter.getLogs()).toHaveLength(1);
-      expect(adapter.getLogs()[0].action).toBe('oauth.refresh_token');
+      expect(conn?.accessToken).toBe('old_access'); // Not secretly swapped
     });
   });
 

@@ -20,8 +20,12 @@ export class TelegramGateway implements CommunicationGateway {
 
   async initialize(): Promise<boolean> {
     if (this.isMock) {
-      // Setup mock polling or event simulator for testing
-      return true;
+      // v0.8.0: mock mode no longer pretends to be initialized. A mock gateway
+      // cannot send real messages; callers must treat it as unconfigured.
+      console.warn(
+        '[Telegram Gateway] Running in mock mode — no real token. Messages will NOT be delivered.',
+      );
+      return false;
     }
 
     try {
@@ -37,11 +41,13 @@ export class TelegramGateway implements CommunicationGateway {
 
   async sendMessage(channelId: string, text: string): Promise<boolean> {
     if (this.isMock) {
-      return true;
+      // v0.8.0: never report a fake success for an undelivered message.
+      console.error('[Telegram Gateway] Cannot send message in mock mode (no real token).');
+      return false;
     }
     try {
       if (!this.token) return false;
-      // In production: HTTP POST to https://api.telegram.org/bot<token>/sendMessage
+      // HTTP POST to https://api.telegram.org/bot<token>/sendMessage
       const response = await fetch(`https://api.telegram.org/bot${this.token}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

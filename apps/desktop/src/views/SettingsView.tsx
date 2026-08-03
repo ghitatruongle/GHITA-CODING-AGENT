@@ -99,6 +99,9 @@ export function SettingsView() {
   const setTerminalFontSize = useAppStore((s) => s.setTerminalFontSize);
   const terminalFontFamily = useAppStore((s) => s.terminalFontFamily);
   const setTerminalFontFamily = useAppStore((s) => s.setTerminalFontFamily);
+  const terminalCursorStyle = useAppStore((s) => s.terminalCursorStyle);
+  const setTerminalCursorStyle = useAppStore((s) => s.setTerminalCursorStyle);
+  const resetSettings = useAppStore((s) => s.resetSettings);
 
   const theme = useAppStore((s) => s.theme);
   const language = useAppStore((s) => s.language);
@@ -446,6 +449,19 @@ export function SettingsView() {
             placeholder="Font family"
           />
         </SettingRow>
+        <SettingRow label="Cursor Style">
+          <select
+            value={terminalCursorStyle}
+            onChange={(e) =>
+              setTerminalCursorStyle(e.target.value as 'block' | 'underline' | 'bar')
+            }
+            className="text-sm bg-bg-surface border border-border-default rounded-md px-2 py-1 text-text-primary outline-none"
+          >
+            <option value="block">Block</option>
+            <option value="underline">Underline</option>
+            <option value="bar">Bar</option>
+          </select>
+        </SettingRow>
       </Section>
 
       {/* v0.7.0 — Keyboard Shortcuts */}
@@ -488,6 +504,21 @@ export function SettingsView() {
           </span>
         </SettingRow>
       </Section>
+
+      {/* Reset */}
+      <div className="flex justify-end pt-4 border-t border-[var(--border-subtle)]">
+        <Button
+          variant="ghost"
+          onClick={() => {
+            if (window.confirm('Reset all settings to defaults?')) {
+              resetSettings();
+            }
+          }}
+          className="text-sm"
+        >
+          {t('settings.resetDefaults')}
+        </Button>
+      </div>
     </div>
   );
 }

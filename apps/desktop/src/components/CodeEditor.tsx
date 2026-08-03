@@ -34,6 +34,61 @@ export interface Diagnostic {
   code?: string;
 }
 
+// ---------------------------------------------------------------------------
+// Monaco theme — registered once at module load (P2-3, deep review pass #2)
+// ---------------------------------------------------------------------------
+// The previous code called `defineTheme('ghita-dark', …)` inside both
+// handleMount and handleDiffMount with different rule sets, so toggling
+// between editor and diff mode would replace the theme definition with the
+// less-coloured diff variant. Centralise the definition here so all mounts
+// see the same theme.
+const GHITA_DARK_THEME = {
+  base: 'vs-dark' as const,
+  inherit: true,
+  rules: [
+    { token: 'comment', foreground: '606080', fontStyle: 'italic' },
+    { token: 'keyword', foreground: 'c084fc' },
+    { token: 'string', foreground: '22c55e' },
+    { token: 'number', foreground: 'eab308' },
+    { token: 'type', foreground: '818cf8' },
+  ],
+  colors: {
+    'editor.background': '#0a0a1a',
+    'editor.foreground': '#e0e0e0',
+    'editor.lineHighlightBackground': '#1a1a2e',
+    'editor.selectionBackground': '#a78bfa33',
+    'editorCursor.foreground': '#a78bfa',
+    'editorLineNumber.foreground': '#404060',
+    'editorLineNumber.activeForeground': '#818cf8',
+    'editorIndentGuide.background1': '#1a1a2e',
+    'editorIndentGuide.activeBackground1': '#2a2a4e',
+    'editor.selectionHighlightBackground': '#818cf822',
+    'editorBracketMatch.background': '#818cf833',
+    'editorBracketMatch.border': '#818cf866',
+    'diffEditor.insertedTextBackground': '#22c55e22',
+    'diffEditor.removedTextBackground': '#ef444422',
+    'diffEditor.insertedLineBackground': '#22c55e11',
+    'diffEditor.removedLineBackground': '#ef444411',
+  },
+};
+
+// We can't call defineTheme until the monaco editor is loaded (the AMD
+// loader resolves it on first mount). We register on the first mount, then
+// reuse the cached registration on every subsequent mount.
+let ghitaDarkThemeRegistered = false;
+function ensureGhitaDarkTheme(monaco: {
+  editor: {
+    defineTheme: (name: string, theme: typeof GHITA_DARK_THEME) => void;
+    setTheme: (name: string) => void;
+  };
+}): void {
+  if (!ghitaDarkThemeRegistered) {
+    monaco.editor.defineTheme('ghita-dark', GHITA_DARK_THEME);
+    ghitaDarkThemeRegistered = true;
+  }
+  monaco.editor.setTheme('ghita-dark');
+}
+
 interface CodeEditorProps {
   value: string;
   language?: string;
@@ -181,8 +236,6 @@ function CodeEditorInner({
   language = 'typescript',
   onChange,
   readOnly = false,
-  onSave,
-  onSaveAll,
   diagnostics = [],
   originalValue,
   diffMode = 'sideBySide',
@@ -192,15 +245,8 @@ function CodeEditorInner({
 }: CodeEditorProps) {
   const { t } = useTranslation();
 
-  const onSaveRef = useRef(onSave);
-  const onSaveAllRef = useRef(onSaveAll);
   const editorRef = useRef<unknown>(null);
   const monacoRef = useRef<unknown>(null);
-
-  useEffect(() => {
-    onSaveRef.current = onSave;
-    onSaveAllRef.current = onSaveAll;
-  }, [onSave, onSaveAll]);
 
   // Apply diagnostics as Monaco model markers
   useEffect(() => {
@@ -227,48 +273,23 @@ function CodeEditorInner({
     }));
 
     monaco.editor.setModelMarkers(model, 'ghita', markers);
-  }, [diagnostics, value]);
+    // P2-4 (deep review pass #2): markers attach to the Monaco model, not to
+    // the `value` prop. Removing `value` from the deps avoids re-running
+    // setModelMarkers on every keystroke.
+  }, [diagnostics]);
 
   // Standard editor mount handler
   const handleMount: OnMount = useCallback((editor, monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
+    // P2-3 (deep review pass #2): registers the theme on the first mount,
+    // then setTheme on every mount. See ensureGhitaDarkTheme above.
+    ensureGhitaDarkTheme(monaco);
 
-    // GHITA dark theme
-    monaco.editor.defineTheme('ghita-dark', {
-      base: 'vs-dark',
-      inherit: true,
-      rules: [
-        { token: 'comment', foreground: '606080', fontStyle: 'italic' },
-        { token: 'keyword', foreground: 'c084fc' },
-        { token: 'string', foreground: '22c55e' },
-        { token: 'number', foreground: 'eab308' },
-        { token: 'type', foreground: '818cf8' },
-      ],
-      colors: {
-        'editor.background': '#0a0a1a',
-        'editor.foreground': '#e0e0e0',
-        'editor.lineHighlightBackground': '#1a1a2e',
-        'editor.selectionBackground': '#a78bfa33',
-        'editorCursor.foreground': '#a78bfa',
-        'editorLineNumber.foreground': '#404060',
-        'editorLineNumber.activeForeground': '#818cf8',
-        'editorIndentGuide.background1': '#1a1a2e',
-        'editorIndentGuide.activeBackground1': '#2a2a4e',
-        'editor.selectionHighlightBackground': '#818cf822',
-        'editorBracketMatch.background': '#818cf833',
-        'editorBracketMatch.border': '#818cf866',
-      },
-    });
-    monaco.editor.setTheme('ghita-dark');
-
-    // Keybindings
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-      onSaveRef.current?.();
-    });
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyS, () => {
-      onSaveAllRef.current?.();
-    });
+    // NOTE: Ctrl+S / Ctrl+Shift+S are intentionally NOT registered here.
+    // CodeView owns a single window-level keydown handler for save/save-all;
+    // adding a second Monaco-level binding fired the same handler twice,
+    // producing duplicate toasts and double writes.
 
     editor.focus();
   }, []);
@@ -277,24 +298,7 @@ function CodeEditorInner({
   const handleDiffMount: DiffOnMount = useCallback((diffEditor, monaco) => {
     editorRef.current = diffEditor;
     monacoRef.current = monaco;
-
-    monaco.editor.defineTheme('ghita-dark', {
-      base: 'vs-dark',
-      inherit: true,
-      rules: [
-        { token: 'comment', foreground: '606080', fontStyle: 'italic' },
-        { token: 'keyword', foreground: 'c084fc' },
-        { token: 'string', foreground: '22c55e' },
-      ],
-      colors: {
-        'editor.background': '#0a0a1a',
-        'diffEditor.insertedTextBackground': '#22c55e22',
-        'diffEditor.removedTextBackground': '#ef444422',
-        'diffEditor.insertedLineBackground': '#22c55e11',
-        'diffEditor.removedLineBackground': '#ef444411',
-      },
-    });
-    monaco.editor.setTheme('ghita-dark');
+    ensureGhitaDarkTheme(monaco);
   }, []);
 
   const isLoading = (

@@ -35,7 +35,7 @@ export const en: TranslationKeys = {
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v0.7.0',
+    version: 'v0.8.0',
     deviceReconnected: 'Reconnected to device: {{name}}',
     devicePaired: 'Successfully paired device: {{name}}',
     commandReceived: 'Command received from device: {{action}}',
@@ -97,6 +97,7 @@ export const en: TranslationKeys = {
     themeDark: 'Dark Mode',
     themeLight: 'Light Mode',
     logDebug: 'Debug',
+    resetDefaults: 'Reset to Defaults',
     logInfo: 'Info',
     logWarn: 'Warning',
     logError: 'Error',
@@ -126,6 +127,12 @@ export const en: TranslationKeys = {
     reject: 'Reject',
     editApplied: 'Edit applied to {{name}}',
     editRejected: 'Edit rejected for {{name}}',
+    unsavedEditsProposalConfirm:
+      'The file "{{name}}" has unsaved manual edits. Accepting the AI proposal will overwrite them. Continue?',
+    fileTruncated:
+      '"{{name}}" is larger than the editor limit and was opened read-only (content may be truncated). Save is disabled to avoid data loss.',
+    fileTooLargeToSave:
+      '"{{name}}" is too large to save from the editor (opened in truncated preview). Use the file explorer to view it instead.',
   },
   devices: {
     title: 'Connected Devices',
@@ -291,10 +298,18 @@ export const en: TranslationKeys = {
     avgLatency: 'AVG LATENCY',
     routingState: 'ROUTING STATE',
     running: 'RUNNING',
+    starting: 'STARTING',
     stopped: 'STOPPED',
     compliant: 'COMPLIANT',
     disabledLabel: 'DISABLED',
     demoMode: 'Demo Mode — Data is simulated',
+    coreServer: 'CORE SERVER STATUS',
+    coreServerDesc:
+      'Background service is listening on port {{port}}. Status is reported live by the native process — no simulated data.',
+    coreServerError: 'Unable to read server status: {{error}}',
+    coreServerChecking: 'Checking background service status…',
+    localNetwork: 'LOCAL NETWORK ADDRESSES:',
+    serverVersion: 'Server version: {{version}}',
   },
   chat: {
     welcomeMessage:
@@ -390,6 +405,7 @@ export const en: TranslationKeys = {
     rename: 'Rename',
     renamePrompt: 'Enter new name:',
     renameInvalid: 'Invalid name: must not be empty or contain path separators.',
+    loadFailed: 'Failed to open "{{path}}": {{error}}',
   },
   apiManager: {
     title: 'API Keys Configuration',
