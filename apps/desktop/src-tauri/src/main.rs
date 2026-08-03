@@ -25,15 +25,17 @@ fn print_help() {
 fn main() {
     // Parse CLI arguments for headless mode
     let args: Vec<String> = env::args().collect();
-    
+
     // Check for help flag first
     if args.iter().any(|arg| arg == "--help") {
         print_help();
         return;
     }
-    
+
     let headless = args.iter().any(|arg| arg == "--headless" || arg == "-h")
-        || env::var("GHITA_HEADLESS").map(|v| v == "1" || v.to_lowercase() == "true").unwrap_or(false);
+        || env::var("GHITA_HEADLESS")
+            .map(|v| v == "1" || v.to_lowercase() == "true")
+            .unwrap_or(false);
 
     // Set up panic hook for crash logging in release builds
     let default_hook = panic::take_hook();
