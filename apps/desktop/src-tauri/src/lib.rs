@@ -1084,7 +1084,7 @@ fn run_grill_session(docs_path: String) -> Result<GrillSession, String> {
                 questions.push(GrillQuestion {
                     question: format!(
                         "From \"{}\": the text notes — \"{}\". What is the intended resolution?",
-                        file.split(['/', '\\']).last().unwrap_or(&file),
+                        file.split(['/', '\\']).next_back().unwrap_or(&file),
                         truncated
                     ),
                     source_docs: vec![file.clone()],
