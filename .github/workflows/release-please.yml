@@ -10,9 +10,9 @@ permissions:
 jobs:
   release-please:
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: googleapis/release-please-action@v4
+        continue-on-error: true
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
