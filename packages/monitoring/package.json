@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@ghita/shared": "workspace:*",
-    "@sentry/node": "^10.56.0"
+    "@sentry/node": "^10.69.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
