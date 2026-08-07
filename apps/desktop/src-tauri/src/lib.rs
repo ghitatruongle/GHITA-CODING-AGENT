@@ -1244,13 +1244,10 @@ fn load_api_config(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
     }
     let content = fs::read_to_string(&legacy_path).map_err(|e| e.to_string())?;
     let parsed = serde_json::from_str::<serde_json::Value>(&content).map_err(|e| e.to_string())?;
-    match api_config_keyring_entry() {
-        Ok(entry) => {
-            if let Err(e) = entry.set_password(&content) {
-                eprintln!("[GHITA] Failed to migrate API keys to the credential vault: {e}");
-            }
+    if let Ok(entry) = api_config_keyring_entry() {
+        if let Err(e) = entry.set_password(&content) {
+            eprintln!("[GHITA] Failed to migrate API keys to the credential vault: {e}");
         }
-        Err(_) => {}
     }
     Ok(parsed)
 }
