@@ -2,7 +2,7 @@
 // GHITA CODING AGENT — Visual Workflow Builder View (Tailwind Edition)
 // ==============================================================================
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from '../i18n';
 import { Button } from '../components/ui';
 
@@ -88,6 +88,19 @@ export function WorkflowView() {
   } | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
+  // deep-review fix (L6): Escape cancels an in-progress link-draw (previously
+  // the rubber-band persisted until a successful drop, blocking node drag).
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setLinkingFrom(null);
+        setDraggingNodeId(null);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   const handleNodeMouseDown = (e: React.MouseEvent, node: WorkflowNode) => {
     if (linkingFrom) return;
     setSelectedNodeId(node.id);
@@ -136,23 +149,35 @@ export function WorkflowView() {
 
   const getPlaceholderTitle = (type: WorkflowNode['type']) => {
     switch (type) {
-      case 'start': return `🏁 ${t('workflow.startTrigger')}`;
-      case 'tool': return `🔌 ${t('workflow.callMcpTool')}`;
-      case 'command': return `💻 ${t('workflow.runCommand')}`;
-      case 'condition': return `❓ ${t('workflow.conditionalCheck')}`;
-      case 'loop': return `🔄 ${t('workflow.repeatLoop')}`;
-      case 'end': return `🎯 ${t('workflow.endNode')}`;
+      case 'start':
+        return `🏁 ${t('workflow.startTrigger')}`;
+      case 'tool':
+        return `🔌 ${t('workflow.callMcpTool')}`;
+      case 'command':
+        return `💻 ${t('workflow.runCommand')}`;
+      case 'condition':
+        return `❓ ${t('workflow.conditionalCheck')}`;
+      case 'loop':
+        return `🔄 ${t('workflow.repeatLoop')}`;
+      case 'end':
+        return `🎯 ${t('workflow.endNode')}`;
     }
   };
 
   const getDefaultConfig = (type: WorkflowNode['type']): Record<string, string> => {
     switch (type) {
-      case 'start': return { trigger: 'Manual Run' };
-      case 'tool': return { tool: 'file-writer', target: 'index.ts' };
-      case 'command': return { command: 'npm run lint' };
-      case 'condition': return { condition: 'success === true' };
-      case 'loop': return { maxIterations: '5' };
-      case 'end': return { message: 'Successfully Completed' };
+      case 'start':
+        return { trigger: 'Manual Run' };
+      case 'tool':
+        return { tool: 'file-writer', target: 'index.ts' };
+      case 'command':
+        return { command: 'npm run lint' };
+      case 'condition':
+        return { condition: 'success === true' };
+      case 'loop':
+        return { maxIterations: '5' };
+      case 'end':
+        return { message: 'Successfully Completed' };
     }
   };
 
@@ -162,8 +187,12 @@ export function WorkflowView() {
     const x = e.clientX - canvasRect.left - 80;
     const y = e.clientY - canvasRect.top - 24;
     const newNode: WorkflowNode = {
-      id: `node-${Date.now()}`, type: 'command',
-      title: '💻 New Exec Step', x, y, config: { command: 'echo "hello"' },
+      id: `node-${Date.now()}`,
+      type: 'command',
+      title: '💻 New Exec Step',
+      x,
+      y,
+      config: { command: 'echo "hello"' },
     };
     setNodes((prev) => [...prev, newNode]);
     setSelectedNodeId(newNode.id);
@@ -184,7 +213,12 @@ export function WorkflowView() {
       setConnections((prev) =>
         prev
           .filter((c) => !(c.fromId === linkingFrom.nodeId && c.fromPort === linkingFrom.port))
-          .concat({ fromId: linkingFrom.nodeId, toId: toNodeId, fromPort: linkingFrom.port, toPort: 'input' }),
+          .concat({
+            fromId: linkingFrom.nodeId,
+            toId: toNodeId,
+            fromPort: linkingFrom.port,
+            toPort: 'input',
+          }),
       );
     }
     setLinkingFrom(null);
@@ -268,8 +302,12 @@ export function WorkflowView() {
               className="drawer-item"
             >
               <span>
-                {type === 'start' && '🏁'}{type === 'command' && '💻'}{type === 'tool' && '🔌'}
-                {type === 'condition' && '❓'}{type === 'loop' && '🔄'}{type === 'end' && '🎯'}
+                {type === 'start' && '🏁'}
+                {type === 'command' && '💻'}
+                {type === 'tool' && '🔌'}
+                {type === 'condition' && '❓'}
+                {type === 'loop' && '🔄'}
+                {type === 'end' && '🎯'}
               </span>
               <span>
                 {type === 'start' && t('workflow.startTrigger')}
@@ -296,11 +334,7 @@ export function WorkflowView() {
           >
             🔄 {t('workflow.resetDemo')}
           </Button>
-          <Button
-            size="sm"
-            variant="danger"
-            onClick={clearCanvas}
-          >
+          <Button size="sm" variant="danger" onClick={clearCanvas}>
             🗑️ {t('workflow.clearCanvas')}
           </Button>
         </div>
@@ -316,7 +350,9 @@ export function WorkflowView() {
         <div className="px-5 py-3 border-b border-white/5 bg-slate-800/25 flex items-center justify-between z-30">
           <div className="flex items-center gap-2">
             <span className="text-lg">🎨</span>
-            <span className="font-bold text-[13px] tracking-wide">{t('workflow.visualCanvas')}</span>
+            <span className="font-bold text-[13px] tracking-wide">
+              {t('workflow.visualCanvas')}
+            </span>
             <span className="text-[11px] text-slate-400 bg-white/5 px-2 py-0.5 rounded">
               {t('workflow.doubleClickHint')}
             </span>
@@ -342,7 +378,15 @@ export function WorkflowView() {
           {/* SVG Connector lines */}
           <svg className="absolute top-0 left-0 w-[2000px] h-[1000px] pointer-events-none z-[2]">
             <defs>
-              <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <marker
+                id="arrow"
+                viewBox="0 0 10 10"
+                refX="8"
+                refY="5"
+                markerWidth="6"
+                markerHeight="6"
+                orient="auto-start-reverse"
+              >
                 <path d="M 0 1 L 10 5 L 0 9 z" fill="#818cf8" />
               </marker>
             </defs>
@@ -365,27 +409,42 @@ export function WorkflowView() {
               const pathStr = `M ${outX} ${outY} C ${outX + dx} ${outY}, ${inX - dx} ${inY}, ${inX} ${inY}`;
               return (
                 <path
-                  key={index} d={pathStr} fill="none"
-                  stroke={c.fromPort === 'no' ? '#f43f5e' : c.fromPort === 'yes' ? '#10b981' : '#818cf8'}
-                  strokeWidth="2" markerEnd="url(#arrow)" className="opacity-85"
+                  key={index}
+                  d={pathStr}
+                  fill="none"
+                  stroke={
+                    c.fromPort === 'no' ? '#f43f5e' : c.fromPort === 'yes' ? '#10b981' : '#818cf8'
+                  }
+                  strokeWidth="2"
+                  markerEnd="url(#arrow)"
+                  className="opacity-85"
                 />
               );
             })}
-            {linkingFrom && (() => {
-              const fromNode = nodes.find((n) => n.id === linkingFrom.nodeId);
-              if (!fromNode) return null;
-              const fromWidth = 160;
-              const fromHeight = fromNode.type === 'condition' ? 76 : 58;
-              const outX = fromNode.x + fromWidth;
-              let outY = fromNode.y + fromHeight / 2;
-              if (fromNode.type === 'condition') {
-                if (linkingFrom.port === 'yes') outY = fromNode.y + 24;
-                else if (linkingFrom.port === 'no') outY = fromNode.y + 52;
-              }
-              const dx = Math.abs(mousePos.x - outX) * 0.4;
-              const pathStr = `M ${outX} ${outY} C ${outX + dx} ${outY}, ${mousePos.x - dx} ${mousePos.y}, ${mousePos.x} ${mousePos.y}`;
-              return <path d={pathStr} fill="none" stroke="#fbbf24" strokeWidth="2" strokeDasharray="4 4" />;
-            })()}
+            {linkingFrom &&
+              (() => {
+                const fromNode = nodes.find((n) => n.id === linkingFrom.nodeId);
+                if (!fromNode) return null;
+                const fromWidth = 160;
+                const fromHeight = fromNode.type === 'condition' ? 76 : 58;
+                const outX = fromNode.x + fromWidth;
+                let outY = fromNode.y + fromHeight / 2;
+                if (fromNode.type === 'condition') {
+                  if (linkingFrom.port === 'yes') outY = fromNode.y + 24;
+                  else if (linkingFrom.port === 'no') outY = fromNode.y + 52;
+                }
+                const dx = Math.abs(mousePos.x - outX) * 0.4;
+                const pathStr = `M ${outX} ${outY} C ${outX + dx} ${outY}, ${mousePos.x - dx} ${mousePos.y}, ${mousePos.x} ${mousePos.y}`;
+                return (
+                  <path
+                    d={pathStr}
+                    fill="none"
+                    stroke="#fbbf24"
+                    strokeWidth="2"
+                    strokeDasharray="4 4"
+                  />
+                );
+              })()}
           </svg>
 
           {/* Render workflow nodes */}
@@ -396,18 +455,31 @@ export function WorkflowView() {
               <div
                 key={node.id}
                 onMouseDown={(e) => handleNodeMouseDown(e, node)}
-                onClick={(e) => { setSelectedNodeId(node.id); e.stopPropagation(); }}
+                onClick={(e) => {
+                  setSelectedNodeId(node.id);
+                  e.stopPropagation();
+                }}
                 className={`canvas-node ${isSelected ? 'selected' : ''}`}
                 style={{
-                  position: 'absolute', left: `${node.x}px`, top: `${node.y}px`,
-                  width: '160px', zIndex: 10, cursor: 'move', userSelect: 'none',
+                  position: 'absolute',
+                  left: `${node.x}px`,
+                  top: `${node.y}px`,
+                  width: '160px',
+                  zIndex: 10,
+                  cursor: 'move',
+                  userSelect: 'none',
                 }}
               >
                 {/* Drag Header */}
                 <div className="px-2.5 py-2 text-[11px] font-bold border-b border-white/5 bg-white/[0.02] flex justify-between items-center rounded-t-lg">
-                  <span className="overflow-hidden text-ellipsis whitespace-nowrap">{node.title}</span>
+                  <span className="overflow-hidden text-ellipsis whitespace-nowrap">
+                    {node.title}
+                  </span>
                   <button
-                    onClick={(e) => { e.stopPropagation(); deleteNode(node.id); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteNode(node.id);
+                    }}
                     className="border-none bg-none text-red-400/60 text-[10px] cursor-pointer hover:text-red-500"
                   >
                     ✕
@@ -415,12 +487,12 @@ export function WorkflowView() {
                 </div>
                 {/* Node details */}
                 <div className="px-2.5 py-2 text-[10px] text-slate-400">
-                  {node.type === 'start' && `Trigger: ${  node.config.trigger || ''}`}
-                  {node.type === 'command' && `CMD: ${  node.config.command || ''}`}
-                  {node.type === 'tool' && `Tool: ${  node.config.tool || ''}`}
-                  {node.type === 'condition' && `IF: ${  node.config.condition || ''}`}
-                  {node.type === 'loop' && `Loops: ${  node.config.maxIterations || '5'}`}
-                  {node.type === 'end' && `Msg: ${  node.config.message || ''}`}
+                  {node.type === 'start' && `Trigger: ${node.config.trigger || ''}`}
+                  {node.type === 'command' && `CMD: ${node.config.command || ''}`}
+                  {node.type === 'tool' && `Tool: ${node.config.tool || ''}`}
+                  {node.type === 'condition' && `IF: ${node.config.condition || ''}`}
+                  {node.type === 'loop' && `Loops: ${node.config.maxIterations || '5'}`}
+                  {node.type === 'end' && `Msg: ${node.config.message || ''}`}
                 </div>
                 {/* Left Input Port */}
                 {node.type !== 'start' && (
@@ -440,14 +512,18 @@ export function WorkflowView() {
                       style={{ right: '-6px', top: '19px', background: '#10b981' }}
                       title="Branch: YES"
                     />
-                    <span className="absolute right-2 top-[15px] text-[8px] text-emerald-500 font-semibold">YES</span>
+                    <span className="absolute right-2 top-[15px] text-[8px] text-emerald-500 font-semibold">
+                      YES
+                    </span>
                     <div
                       onMouseDown={(e) => handleStartLink(e, node.id, 'no')}
                       className="node-port absolute"
                       style={{ right: '-6px', top: '47px', background: '#f43f5e' }}
                       title="Branch: NO"
                     />
-                    <span className="absolute right-2 top-[43px] text-[8px] text-rose-500 font-semibold">NO</span>
+                    <span className="absolute right-2 top-[43px] text-[8px] text-rose-500 font-semibold">
+                      NO
+                    </span>
                   </>
                 ) : (
                   node.type !== 'end' && (
@@ -480,7 +556,9 @@ export function WorkflowView() {
                 value={selectedNode.title}
                 onChange={(e) => {
                   const val = e.target.value;
-                  setNodes((prev) => prev.map((n) => (n.id === selectedNode.id ? { ...n, title: val } : n)));
+                  setNodes((prev) =>
+                    prev.map((n) => (n.id === selectedNode.id ? { ...n, title: val } : n)),
+                  );
                 }}
                 className="px-2.5 py-2 text-xs rounded-md bg-slate-900/60 border border-white/10 text-slate-50 outline-none focus:border-indigo-500/50"
               />
@@ -496,7 +574,9 @@ export function WorkflowView() {
                     const val = e.target.value;
                     setNodes((prev) =>
                       prev.map((n) =>
-                        n.id === selectedNode.id ? { ...n, config: { ...n.config, [key]: val } } : n,
+                        n.id === selectedNode.id
+                          ? { ...n, config: { ...n.config, [key]: val } }
+                          : n,
                       ),
                     );
                   }}
@@ -517,7 +597,9 @@ export function WorkflowView() {
 
         {/* JSON Code Compile Preview */}
         <div className="flex flex-col gap-1.5 border-t border-white/5 pt-4">
-          <span className="text-[11px] text-slate-400 font-semibold">{t('workflow.compiledJson')}</span>
+          <span className="text-[11px] text-slate-400 font-semibold">
+            {t('workflow.compiledJson')}
+          </span>
           <pre className="m-0 p-2.5 rounded-lg bg-[#090d16] border border-white/5 text-[10px] font-mono text-sky-400 max-h-40 overflow-auto whitespace-pre-wrap break-all">
             {compileWorkflowJSON()}
           </pre>

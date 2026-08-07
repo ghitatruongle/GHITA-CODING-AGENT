@@ -8,7 +8,12 @@ import type { Socket } from 'socket.io-client';
 import { invoke } from '@tauri-apps/api/core';
 import { getSharedSocket } from '../../utils/sharedSocket';
 import { generateUUID, type AgentEvent } from '@ghita/shared';
-import { useAppStore } from '../../stores/appStore';
+import { useAppStore, fileContentCache } from '../../stores/appStore';
+import {
+  useEditProposalStore,
+  type RemoteEditProposalPayload,
+} from '../../stores/editProposalStore';
+import { fsReadText } from '../../lib/native-fs';
 import type { ChatMessage } from '../../hooks/useChatSessions';
 import { loadApiConfig } from '../../utils/apiConfig';
 
@@ -58,7 +63,18 @@ interface UseChatSocketConfig {
   reconnectTrigger: number;
 }
 
-export function useChatSocket({ setMessages, tRef, reconnectTrigger }: UseChatSocketConfig) {
+// v1.0.0 RAM optimization (O02): cap the in-memory chat history so a long
+// session cannot grow without bound. Older messages live on in the session
+// store (useChatSessions) and reload when the session is reopened.
+// deep-review fix (BUG-5): defined at module scope so the callback below
+// cannot reference a temporal-dead-zone binding.
+const CHAT_MESSAGE_LIMIT = 200;
+
+export function useChatSocket({
+  setMessages: setMessagesRaw,
+  tRef,
+  reconnectTrigger,
+}: UseChatSocketConfig) {
   const [connectionStatus, setConnectionStatus] = useState<
     'connecting' | 'connected' | 'disconnected'
   >('disconnected');
@@ -72,6 +88,21 @@ export function useChatSocket({ setMessages, tRef, reconnectTrigger }: UseChatSo
   const [ralphProgress, setRalphProgress] = useState<RalphProgress | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [activeFlow, setActiveFlow] = useState<'ralph' | 'agent' | null>(null);
+
+  // Wrap the incoming setMessages so the in-memory list never exceeds the cap.
+  const setMessages = useCallback(
+    (updater: React.SetStateAction<ChatMessage[]>) => {
+      setMessagesRaw((prev) => {
+        const next =
+          typeof updater === 'function'
+            ? (updater as (p: ChatMessage[]) => ChatMessage[])(prev)
+            : updater;
+        if (next.length <= CHAT_MESSAGE_LIMIT) return next;
+        return next.slice(next.length - CHAT_MESSAGE_LIMIT);
+      });
+    },
+    [setMessagesRaw],
+  );
 
   const terminalCwd = useAppStore((s) => s.terminalCwd);
 
@@ -229,6 +260,7 @@ export function useChatSocket({ setMessages, tRef, reconnectTrigger }: UseChatSo
           'chat_done',
           (data: {
             text: string;
+            runId?: string;
             usage?: {
               promptTokens: number;
               completionTokens: number;
@@ -238,6 +270,11 @@ export function useChatSocket({ setMessages, tRef, reconnectTrigger }: UseChatSo
           }) => {
             if (!active) return;
             stopStreamFlush();
+            // deep-review fix (BUG-A): agent runs that failed/short-circuited
+            // may not emit `agent_run_done` — clean stale proposals here too.
+            if (data.runId) {
+              useEditProposalStore.getState().removeForRun(data.runId);
+            }
             const finalId = generateUUID();
             setMessages((prev) =>
               prev.map((msg) =>
@@ -268,9 +305,13 @@ export function useChatSocket({ setMessages, tRef, reconnectTrigger }: UseChatSo
           },
         );
 
-        socket.on('chat_error', (data: { message: string }) => {
+        socket.on('chat_error', (data: { message: string; runId?: string }) => {
           if (!active) return;
           stopStreamFlush();
+          // deep-review fix (BUG-A): same stale-proposal cleanup as chat_done.
+          if (data.runId) {
+            useEditProposalStore.getState().removeForRun(data.runId);
+          }
           const errorMessage = `❌ **${tRef.current('chat.systemError')}** ${data.message}`;
           setMessages((prev) => {
             let replacedStreaming = false;
@@ -347,8 +388,14 @@ export function useChatSocket({ setMessages, tRef, reconnectTrigger }: UseChatSo
           }
         });
 
-        socket.on('agent_run_done', () => {
+        socket.on('agent_run_done', (data: { runId?: string }) => {
           socket.emit('list_agent_runs', { limit: 30 });
+          // deep-review fix (BUG-A): drop any edit proposals still awaiting
+          // review from this run — the sidecar has drained them too, so
+          // accepting one now would report a write that never happens.
+          if (data?.runId) {
+            useEditProposalStore.getState().removeForRun(data.runId);
+          }
         });
 
         // Phase 3: Listen to live agent runtime events
@@ -413,6 +460,41 @@ export function useChatSocket({ setMessages, tRef, reconnectTrigger }: UseChatSo
             }
           },
         );
+
+        // v1.0.0 — Antigravity edit review: the agent proposes a file edit and
+        // pauses until the user accepts/rejects the diff in the editor.
+        socket.on('edit_proposal', (payload: RemoteEditProposalPayload) => {
+          if (!active) return;
+          useEditProposalStore.getState().proposeRemote(payload);
+        });
+
+        // The sidecar finished writing an accepted edit — refresh any open tab
+        // so the editor shows the applied content (not the stale pre-edit copy).
+        socket.on('edit_applied', (data: { path: string; relPath?: string; runId?: string }) => {
+          if (!active) return;
+          void (async () => {
+            try {
+              const { content, encoding, isTruncated } = await fsReadText(data.path);
+              fileContentCache.set(data.path, {
+                content,
+                originalContent: content,
+                encoding,
+                hydrated: true,
+                isTruncated,
+              });
+              const files = useAppStore.getState().codeOpenFiles;
+              if (files.some((f) => f.path === data.path)) {
+                useAppStore
+                  .getState()
+                  .setCodeOpenFiles(
+                    files.map((f) => (f.path === data.path ? { ...f, modified: false } : f)),
+                  );
+              }
+            } catch {
+              // File may be binary or unreadable — leave the tab as-is.
+            }
+          })();
+        });
       } catch (err) {
         console.error('[ChatPanel] Socket initialization failed:', err);
         if (active) setConnectionStatus('disconnected');
@@ -443,9 +525,13 @@ export function useChatSocket({ setMessages, tRef, reconnectTrigger }: UseChatSo
         sock.off('ralph_loop_progress');
         sock.off('ralph_loop_done');
         sock.off('computer_use_step');
+        sock.off('edit_proposal');
+        sock.off('edit_applied');
       }
     };
-  }, [reconnectTrigger, stopStreamFlush, syncApiConfig]);
+    // setMessages/startStreamFlush/tRef are stable useCallbacks/refs — listed
+    // so exhaustive-deps is satisfied (no behavioural change).
+  }, [reconnectTrigger, stopStreamFlush, startStreamFlush, syncApiConfig, setMessages, tRef]);
 
   const handleReconnect = async () => {
     if (connectionStatus === 'connected') return;

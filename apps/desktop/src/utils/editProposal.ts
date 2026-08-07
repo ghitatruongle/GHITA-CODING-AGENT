@@ -23,6 +23,18 @@ export interface EditProposal {
   description?: string;
   status: EditProposalStatus;
   createdAt: number;
+  /**
+   * v1.0.0 — Antigravity gate: when set, this proposal came from the agent's
+   * live tool call; accepting/rejecting must answer the sidecar via
+   * `edit_proposal_response` (the sidecar performs the actual write +
+   * checkpoint). Local-only proposals (chat "Apply" button) have no remoteId
+   * and are written to disk directly by the frontend.
+   */
+  remoteId?: string;
+  /** Agent run that produced this proposal (remote proposals only). */
+  runId?: string;
+  /** True when the target file did not exist before the edit. */
+  isNewFile?: boolean;
 }
 
 /** Result of trying to build a proposal from a targeted replacement. */

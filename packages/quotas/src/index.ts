@@ -27,4 +27,4 @@ export type {
   QuotaConfig,
 } from './types.js';
 
-export const QUOTAS_VERSION = '0.8.0';
+export const QUOTAS_VERSION = '1.0.0';

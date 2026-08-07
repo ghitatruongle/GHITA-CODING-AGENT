@@ -115,6 +115,8 @@ export function ChatPanel() {
     connectionStatus,
     modelOptions,
     provider,
+    // deep-review fix (M2): pass the in-flight flag so Enter cannot double-send.
+    isSending,
     setIsSending,
     setActiveFlow,
     t,
@@ -151,6 +153,7 @@ export function ChatPanel() {
         setCurrentView={setCurrentView}
         handleCreateSession={handleCreateSession}
         handleReconnect={onReconnect}
+        messages={messages}
         modelOptions={modelOptions}
         provider={provider}
         setProvider={setProvider}

@@ -18,6 +18,22 @@ export async function createPlaywrightAdapter(
   let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
   let page: Awaited<ReturnType<Awaited<ReturnType<typeof chromium.launch>>['newPage']>> | undefined;
 
+  // deep-review fix (L8): only http(s) navigation is allowed. Anything else
+  // (file://, javascript:, data:, ...) is rejected up front so a
+  // prompt-injected URL cannot turn the browser into a local file reader.
+  function assertSafeUrl(url: string): string {
+    let parsed: URL;
+    try {
+      parsed = new URL(url);
+    } catch {
+      throw new Error(`Invalid URL: ${url}`);
+    }
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      throw new Error(`Only http:// and https:// URLs are allowed (got ${parsed.protocol}//).`);
+    }
+    return parsed.toString();
+  }
+
   async function ensurePage() {
     if (!browser) {
       browser = await chromium.launch({
@@ -44,8 +60,9 @@ export async function createPlaywrightAdapter(
       page = undefined;
     },
     navigate: async (url) => {
+      const safeUrl = assertSafeUrl(url);
       const currentPage = await ensurePage();
-      await currentPage.goto(url, { waitUntil: 'domcontentloaded' });
+      await currentPage.goto(safeUrl, { waitUntil: 'domcontentloaded' });
     },
     click: async (selector) => {
       const currentPage = await ensurePage();

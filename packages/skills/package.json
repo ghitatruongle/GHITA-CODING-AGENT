@@ -1,6 +1,6 @@
 {
   "name": "@ghita/skills",
-  "version": "0.8.0",
+  "version": "1.0.0",
   "private": true,
   "sideEffects": false,
   "description": "Skill system cho GHITA CODING AGENT",

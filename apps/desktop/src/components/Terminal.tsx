@@ -97,6 +97,10 @@ function XtermPane({
   // v0.7.0 — terminal preferences read through the hook (test-compatible)
   const terminalFontSize = useAppStore((s) => s.terminalFontSize);
   const terminalFontFamily = useAppStore((s) => s.terminalFontFamily);
+  // v1.0.0 — Low-RAM mode lowers scrollback at terminal construction time.
+  // The terminal re-mounts when the tab becomes visible (Terminal.tsx mounts
+  // lazily), so re-evaluating this on every render is harmless.
+  const lowRamMode = useAppStore((s) => s.lowRamMode);
   const [ptyConnected, setPtyConnected] = useState(false);
 
   // Apply font preferences live (without recreating the terminal session)
@@ -111,7 +115,7 @@ function XtermPane({
         /* Ignore fit errors during font change */
       }
     }
-  }, [terminalFontSize, terminalFontFamily]);
+  }, [terminalFontSize, terminalFontFamily, lowRamMode]);
 
   // Re-fit xterm when visibility becomes active
   useEffect(() => {
@@ -167,7 +171,8 @@ function XtermPane({
         brightWhite: '#ffffff',
       },
       convertEol: true,
-      scrollback: 5000,
+      // v1.0.0 RAM optimization (O06): cap scrollback tighter in low-RAM mode.
+      scrollback: lowRamMode ? 1000 : 5000,
     });
 
     const FitAddonCtor = FitAddonImpl as unknown as typeof FitAddonType;
@@ -279,7 +284,10 @@ function XtermPane({
       if (unlistenData) unlistenData();
       if (unlistenExit) unlistenExit();
     };
-  }, [shell, tabId, cwd]);
+    // Font/scrollback prefs are read at construction time only — listed so
+    // exhaustive-deps is satisfied; the session is intentionally NOT recreated
+    // when they change (font prefs are applied live by the effect above).
+  }, [shell, tabId, cwd, terminalFontSize, terminalFontFamily, lowRamMode]);
 
   return (
     <div

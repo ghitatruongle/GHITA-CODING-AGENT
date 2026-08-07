@@ -73,6 +73,30 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
     isDir: boolean;
   } | null>(null);
 
+  const loadRoot = useCallback(
+    async (dir: string) => {
+      setLoading(true);
+      try {
+        const entries = await loadDirectory(dir);
+        setRootEntries(entries);
+        setTree(new Map());
+      } catch (e) {
+        console.error('[FileExplorer] Failed to load root directory:', e);
+        setRootEntries([]);
+        setTree(new Map());
+        toast.error(
+          t('fileExplorer.loadFailed', {
+            path: dir,
+            error: e instanceof Error ? e.message : String(e),
+          }),
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [t],
+  );
+
   // Sync rootDir state with props or store changes
   useEffect(() => {
     const targetDir = rootPath || storeCwd || '';
@@ -88,7 +112,7 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
       return;
     }
     void loadRoot(targetDir);
-  }, [rootPath, storeCwd]);
+  }, [rootPath, storeCwd, loadRoot, rootDir]);
 
   // Sync rootDir state to store Cwd
   useEffect(() => {
@@ -96,27 +120,6 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
       setTerminalCwd(rootDir);
     }
   }, [rootDir, storeCwd, setTerminalCwd]);
-
-  const loadRoot = async (dir: string) => {
-    setLoading(true);
-    try {
-      const entries = await loadDirectory(dir);
-      setRootEntries(entries);
-      setTree(new Map());
-    } catch (e) {
-      console.error('[FileExplorer] Failed to load root directory:', e);
-      setRootEntries([]);
-      setTree(new Map());
-      toast.error(
-        t('fileExplorer.loadFailed', {
-          path: dir,
-          error: e instanceof Error ? e.message : String(e),
-        }),
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const toggleFolder = useCallback(
     async (path: string) => {
@@ -162,7 +165,7 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
         });
       }
     },
-    [tree, loadingPaths],
+    [tree, loadingPaths, t],
   );
 
   const handleFileClick = useCallback(
@@ -226,13 +229,20 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
         });
       }
     },
-    [rootDir],
+    [rootDir, loadRoot],
   );
 
   const handleNewFile = useCallback(
     async (dirPath: string) => {
       const name = prompt(t('fileExplorer.newFilePrompt'));
       if (!name) return;
+      // deep-review fix (M6): reject separators and traversal names — the raw
+      // name was previously concatenated into the path, so `..\..\Users\me\x`
+      // could write anywhere on disk. Mirrors the renamePath validator.
+      if (name.trim() === '' || /[\\/]/.test(name) || name === '.' || name === '..') {
+        toast.error(t('fileExplorer.renameInvalid'));
+        return;
+      }
       const filePath = `${dirPath}/${name}`;
       try {
         await fsWriteText(filePath, '', 'utf-8');
@@ -253,6 +263,11 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
     async (dirPath: string) => {
       const name = prompt(t('fileExplorer.newFolderPrompt'));
       if (!name) return;
+      // deep-review fix (M6): same traversal guard as handleNewFile.
+      if (name.trim() === '' || /[\\/]/.test(name) || name === '.' || name === '..') {
+        toast.error(t('fileExplorer.renameInvalid'));
+        return;
+      }
       const folderPath = `${dirPath}/${name}`;
       try {
         await fsMkdir(folderPath, true);

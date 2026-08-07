@@ -127,6 +127,9 @@ export function useChatSessions() {
     return () => {
       active = false;
     };
+    // persist/t are stable (useCallback/translation context) — listed for
+    // exhaustive-deps; the effect must still run exactly once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -155,12 +158,22 @@ export function useChatSessions() {
             const firstUser = messages.find((m) => m.role === 'user');
             if (firstUser?.content.trim()) {
               const txt = firstUser.content.trim();
-              newTitle = txt.length > 25 ? `${txt.substring(0, 25)  }...` : txt;
+              newTitle = txt.length > 25 ? `${txt.substring(0, 25)}...` : txt;
             }
           }
-          return { ...s, messages, title: newTitle, timestamp: Date.now() };
+          // deep-review fix (M7): bound what gets persisted. The full message
+          // list (including multi-MB base64 image attachments) was serialized
+          // unboundedly into a single JSON file that grew without limit and
+          // was fully parsed on startup. Keep the latest 200 messages per
+          // session and drop image payloads older than the cap.
+          const boundedMessages = messages
+            .slice(-200)
+            .map((m) => (m.imageAttachment ? { ...m, imageAttachment: undefined } : m));
+          return { ...s, messages: boundedMessages, title: newTitle, timestamp: Date.now() };
         });
-        const sorted = [...updated].sort((a, b) => b.timestamp - a.timestamp);
+        // Bound the number of persisted sessions too (newest 50).
+        const bounded = updated.slice(0, 50);
+        const sorted = [...bounded].sort((a, b) => b.timestamp - a.timestamp);
         void persist(sorted, activeSessionId);
         return sorted;
       });
@@ -174,7 +187,9 @@ export function useChatSessions() {
         persistTimerRef.current = null;
       }
     };
-  }, [messages, activeSessionId]);
+    // persist is a stable useCallback; sessions.length guards against
+    // persisting during the initial empty state.
+  }, [messages, activeSessionId, sessions.length, persist]);
 
   const selectSession = useCallback(
     (sessionId: string) => {
@@ -205,7 +220,7 @@ export function useChatSessions() {
     setTimeout(() => {
       isSwitchingRef.current = false;
     }, 50);
-  }, [sessions, persist]);
+  }, [sessions, persist, t]);
 
   const deleteSession = useCallback(
     (sessionId: string, e: React.MouseEvent) => {

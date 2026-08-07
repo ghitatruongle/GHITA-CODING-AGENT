@@ -277,20 +277,34 @@ export function SkillManager() {
   // Use shared socket singleton instead of creating a separate connection
   useEffect(() => {
     let active = true;
-    getSharedSocket().then((s) => {
-      if (active && s) {
-        setSocket(s);
-        setConnected(s.connected);
-        s.on('connect', () => {
-          if (active) setConnected(true);
-        });
-        s.on('disconnect', () => {
-          if (active) setConnected(false);
-        });
+    // deep-review fix (M3): keep the handler refs so the listeners added here
+    // are actually removed on cleanup. The previous code only flipped
+    // `active = false`, leaving the two listeners permanently attached to the
+    // app-lifetime socket — every visit to the Skills tab added another pair.
+    let s: Socket | null = null;
+    const onConnect = () => {
+      if (active) setConnected(true);
+    };
+    const onDisconnect = () => {
+      if (active) setConnected(false);
+    };
+    getSharedSocket().then((shared) => {
+      if (active && shared) {
+        s = shared;
+        setSocket(shared);
+        setConnected(shared.connected);
+        shared.on('connect', onConnect);
+        shared.on('disconnect', onDisconnect);
       }
     });
     return () => {
       active = false;
+      // Unsubscribe the exact handlers we registered (mock sockets in tests
+      // may not implement `off` — guard defensively).
+      if (typeof s?.off === 'function') {
+        s.off('connect', onConnect);
+        s.off('disconnect', onDisconnect);
+      }
     };
   }, []);
 
@@ -319,13 +333,28 @@ export function SkillManager() {
     if (connected && socket) {
       // Proxy skill run to Node sidecar
       try {
+        // deep-review fix (M4): the enablement sync previously awaited a
+        // socket ack with no timeout — if the sidecar never answered (dead
+        // handler, disconnect race), the promise never settled and the Run
+        // button stayed disabled forever. Same 15s bound as the run itself.
         const syncResult = await new Promise<{ success: boolean; error?: string }>(
           (resolvePromise) => {
+            let settled = false;
+            const timer = setTimeout(() => {
+              if (!settled) {
+                settled = true;
+                resolvePromise({ success: false, error: 'Sidecar sync timed out.' });
+              }
+            }, 15000);
             socket.emit(
               'set_skill_enabled',
               { id: skill.id, enabled: skill.enabled },
               (res: { success: boolean; error?: string }) => {
-                resolvePromise(res);
+                if (!settled) {
+                  settled = true;
+                  clearTimeout(timer);
+                  resolvePromise(res);
+                }
               },
             );
           },

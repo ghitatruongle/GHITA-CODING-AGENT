@@ -269,6 +269,23 @@ export function useRemoteControl(
     return () => handler.remove();
   }, [navigation, t, activeApproval]);
 
+  const loadSkills = useCallback(async () => {
+    setSkillsLoading(true);
+    try {
+      const result = await socketService.listSkills();
+      if (!mountedRef.current) return;
+      if (result.success && result.skills) {
+        setSkillsList(result.skills.filter((s) => s.enabled));
+      } else {
+        Alert.alert('Error', result.error || 'Failed to load skills');
+      }
+    } catch {
+      if (mountedRef.current) Alert.alert('Error', 'Failed to load skills');
+    } finally {
+      if (mountedRef.current) setSkillsLoading(false);
+    }
+  }, []);
+
   const handleQuickAction = useCallback(
     (type: QuickAction['type']) => {
       switch (type) {
@@ -299,7 +316,7 @@ export function useRemoteControl(
           break;
       }
     },
-    [clearScreenshotTimeout, isConnected, t],
+    [clearScreenshotTimeout, isConnected, t, loadSkills],
   );
 
   const handleChatSend = useCallback((text: string) => {
@@ -353,23 +370,6 @@ export function useRemoteControl(
       setActiveApproval(null);
     }
   }, [activeApproval]);
-
-  const loadSkills = useCallback(async () => {
-    setSkillsLoading(true);
-    try {
-      const result = await socketService.listSkills();
-      if (!mountedRef.current) return;
-      if (result.success && result.skills) {
-        setSkillsList(result.skills.filter((s) => s.enabled));
-      } else {
-        Alert.alert('Error', result.error || 'Failed to load skills');
-      }
-    } catch {
-      if (mountedRef.current) Alert.alert('Error', 'Failed to load skills');
-    } finally {
-      if (mountedRef.current) setSkillsLoading(false);
-    }
-  }, []);
 
   const runSkill = useCallback(async (skillId: string) => {
     setSkillRunning(skillId);

@@ -5,6 +5,83 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.0.0] - 2026-08-06
+
+### Added — Antigravity-style agentic editing (the v1.0 centerpiece)
+
+- **Antigravity edit-review gate**: agent file edits (`write_file` /
+  `replace_file_content`) no longer write blindly. Each edit is shown to the
+  user as a Monaco diff for review, and the agent **pauses** until the user
+  accepts or rejects. Rejected edits return a clear refusal to the agent so it
+  self-corrects instead of retrying the same change. (All permission modes
+  except `auto`.)
+- **Multi-file edit queue** (`EditProposalTray`): every pending AI edit across
+  files is listed in one tray with per-file +/- line stats, Accept/Reject per
+  file, and Accept All / Reject All. Collapsible, with a badge count.
+- **Edit checkpoints + undo**: before the sidecar writes an accepted edit, the
+  original file is snapshotted under `.ghita/checkpoints/<runId>/` (new files get
+  a `.NEW_MARKER`), so a rejected/undone run can restore the prior state.
+- **"Apply to file"** on chat code blocks: turns any AI-generated code block
+  into a reviewable diff proposal instead of a blind copy/paste.
+- New sidecar events: `edit_proposal`, `edit_apposal_response`, `edit_applied`.
+  Extended the agent's system prompt to explain the review flow.
+- Agent runs in non-`auto` permission mode now have a 10-minute overall timeout
+  (vs 3 minutes) to leave the user time to review diffs.
+
+### Added — Editor & IDE
+
+- **Quick File Open** (`Ctrl+Shift+P` / `Ctrl+Shift+O`): VS Code-style fuzzy
+  file picker over open tabs and recently-opened files (basename, acronym, and
+  subsequence matching). Rehydrates evicted buffers from disk on selection.
+- **Recent-files history**: the 20 most recently opened files are persisted and
+  surfaced in Quick File Open.
+- **Editor status bar**: live cursor position (Ln/Col), selection length, and
+  word count beneath the Monaco surface.
+- **Auto-save** (toggle in Settings → Performance): saves the active file 1.5s
+  after the user stops typing.
+- **Shortcuts overlay** (press `?`): searchable reference of every keyboard
+  shortcut, grouped by General / Editor / Panels.
+
+### Added — Chat & AI UX
+
+- **Chat export to Markdown**: one-click download of the current conversation
+  with role labels and timestamps.
+- **Chat history cap** (RAM): the in-memory message list is capped at 200
+  messages; older messages remain in the persistent session store.
+
+### Added — Installation & DevEx
+
+- **One-command setup**: `scripts/setup.ps1` (Windows) and `scripts/setup.sh`
+  (Linux/macOS) check prerequisites, install deps, build all packages and the
+  sidecar.
+- **`pnpm doctor`**: diagnostics for Node/pnpm/Rust/toolchain, workspace state,
+  disk/RAM, and the sidecar port. Used as a gate by the setup scripts.
+- **Auto-save**, **Low-RAM mode**, **Performance** section in Settings.
+- Rewrote README Quick Start around the one-command setup + `pnpm doctor`.
+
+### Added — Performance & RAM (30+ techniques, highlights)
+
+- **LRU file cache** (`O01`): `fileContentCache` is now bounded to 128 entries
+  and evicts the least-recently-used files, never dropping an open tab's buffer
+  (which would lose unsaved edits).
+- **Low-RAM mode** (`S36`): a single toggle that disables the editor minimap,
+  smooth scrolling, smooth caret animation, font ligatures, and rounded
+  selections, and tightens the terminal scrollback (1000 vs 5000 lines).
+- **Chat message cap** (`O02`): see Chat above.
+- Terminal scrollback tightened in Low-RAM mode (`O06`).
+
+### Changed
+
+- All package/workspace versions synchronized to **1.0.0**.
+- `package.json` gains `pnpm doctor` and `pnpm setup` scripts.
+- Agent system prompt now explains the edit-review flow.
+
+### Fixed
+
+- `pnpm doctor` correctly detects the pinned pnpm on Windows (corepack shim).
+- Editor cursor-tracking hooks moved above the diff-view early-return so React
+  rules-of-hooks is satisfied (lint-clean).
+
 ## [0.8.0] - 2026-08-02
 
 ### Added

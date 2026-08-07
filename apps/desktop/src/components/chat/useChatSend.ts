@@ -18,6 +18,10 @@ interface UseChatSendConfig {
   connectionStatus: 'connecting' | 'connected' | 'disconnected';
   modelOptions: DynamicModelOption[];
   provider: string;
+  // deep-review fix (M2): in-flight guard — without it, pressing Enter twice
+  // (or Enter while the send button is disabled) emitted two identical
+  // requests, double-billing and double-running tools.
+  isSending: boolean;
   setIsSending: (v: boolean) => void;
   setActiveFlow: (v: 'ralph' | 'agent' | null) => void;
   t: (key: string, params?: Record<string, string | number>) => string;
@@ -30,6 +34,7 @@ export function useChatSend({
   connectionStatus,
   modelOptions,
   provider,
+  isSending,
   setIsSending,
   setActiveFlow,
   t,
@@ -114,6 +119,8 @@ export function useChatSend({
   };
 
   const handleSend = async () => {
+    // deep-review fix (M2): reject while a request is already in flight.
+    if (isSending) return;
     const trimmedInput = input.trim();
     if (!trimmedInput) return;
 
@@ -191,7 +198,10 @@ export function useChatSend({
           setFeatureMode(false);
           setRalphMode(false);
         }
-        appendLocalExchange(trimmedInput, '✅ Đã bật mode tương ứng. Nhập yêu cầu tiếp theo để chạy.');
+        appendLocalExchange(
+          trimmedInput,
+          '✅ Đã bật mode tương ứng. Nhập yêu cầu tiếp theo để chạy.',
+        );
         resetComposer();
         return;
       }
@@ -265,6 +275,10 @@ export function useChatSend({
         task: outgoingInput,
         maxIterations: 3,
         costLimitUsd: 0.15,
+        // deep-review fix (M1): forward the attached image so the backend can
+        // use it; previously the image was only rendered locally and silently
+        // dropped from every payload.
+        ...(attachedImage ? { image: attachedImage } : {}),
       });
       setActiveFlow('ralph');
       setActiveFlowLocal('ralph');
@@ -293,6 +307,8 @@ export function useChatSend({
         model: selectedModel,
         baseUrl: providerBaseUrl,
         permissionMode,
+        // deep-review fix (M1): forward the attached image.
+        ...(attachedImage ? { image: attachedImage } : {}),
       });
       setActiveFlow('agent');
       setActiveFlowLocal('agent');
@@ -338,6 +354,8 @@ export function useChatSend({
         agentRole: agentRole,
         history: [...history, { role: 'user', content: outgoingInput }],
         baseUrl: providerBaseUrl,
+        // deep-review fix (M1): forward the attached image.
+        ...(attachedImage ? { image: attachedImage } : {}),
       });
     }
 

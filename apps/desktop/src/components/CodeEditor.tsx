@@ -111,6 +111,16 @@ interface CodeEditorProps {
 }
 
 // ---------------------------------------------------------------------------
+// Word count helper (status bar)
+// ---------------------------------------------------------------------------
+function wordCount(text: string): number {
+  const t = text.trim();
+  if (!t) return 0;
+  // Split on whitespace; ignore empty runs.
+  return t.split(/\s+/).filter(Boolean).length;
+}
+
+// ---------------------------------------------------------------------------
 // Severity helpers
 // ---------------------------------------------------------------------------
 
@@ -324,29 +334,72 @@ function CodeEditorInner({
   const storeMinimap = useAppStore((s) => s.editorMinimap);
   const storeLineNumbers = useAppStore((s) => s.editorLineNumbers);
   const storeTabSize = useAppStore((s) => s.editorTabSize);
+  // v1.0.0 — Low-RAM mode turns off the eye-candy that costs memory/CPU.
+  const lowRamMode = useAppStore((s) => s.lowRamMode);
 
   const editorOptions = {
     readOnly,
-    minimap: { enabled: showMinimap ?? storeMinimap },
+    minimap: { enabled: lowRamMode ? false : (showMinimap ?? storeMinimap) },
     fontSize: storeFontSize,
     fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
-    fontLigatures: true,
+    fontLigatures: !lowRamMode,
     scrollBeyondLastLine: false,
     automaticLayout: true,
     renderWhitespace: 'selection' as const,
     bracketPairColorization: { enabled: true },
     padding: { top: 12 },
-    smoothScrolling: true,
-    cursorBlinking: 'smooth' as const,
-    cursorSmoothCaretAnimation: 'on' as const,
+    smoothScrolling: !lowRamMode,
+    // v1.0.0 fix (lỗi 3 — cursor không hiển thị): `smooth` blinking and the
+    // smooth caret animation are unreliable in WebView2 and could leave the
+    // caret invisible. Use the classic `blink` caret (solid in low-RAM mode),
+    // widen it slightly, and always render the line highlight so the user can
+    // always see where the caret is.
+    cursorBlinking: (lowRamMode ? 'solid' : 'blink') as 'solid' | 'blink',
+    cursorSmoothCaretAnimation: 'off' as const,
+    cursorWidth: 2,
     wordWrap: (storeWordWrap ? 'on' : 'off') as 'on' | 'off',
     lineNumbers: (storeLineNumbers ? 'on' : 'off') as 'on' | 'off',
     tabSize: storeTabSize,
     insertSpaces: true,
     lineHeight: 22,
-    roundedSelection: true,
-    renderLineHighlightOnlyWhenFocus: true,
+    roundedSelection: !lowRamMode,
+    renderLineHighlightOnlyWhenFocus: false,
   };
+
+  // Track cursor position for the status bar (v1.0.0). These hooks MUST live
+  // above the diff-view early return so they run on every render.
+  // deep-review fix (BUG-10): kept in state (not a ref read during render) —
+  // reading a ref in JSX is a side-effect-prone anti-pattern. The functional
+  // updater bails out when the position is unchanged so cursor movement does
+  // not cause useless re-renders.
+  const [cursor, setCursor] = useState({ line: 1, column: 1, selected: 0 });
+  useEffect(() => {
+    const editor = editorRef.current as {
+      onDidChangeCursorPosition?: (cb: () => void) => unknown;
+      onDidChangeCursorSelection?: (cb: () => void) => unknown;
+      getPosition?: () => { lineNumber: number; column: number };
+      getSelection?: () => { getSelectedText?: () => string };
+    } | null;
+    if (!editor) return;
+    const notify = () => {
+      const pos = editor.getPosition?.();
+      const sel = editor.getSelection?.();
+      const line = pos?.lineNumber ?? 1;
+      const column = pos?.column ?? 1;
+      const selected = sel?.getSelectedText?.().length ?? 0;
+      setCursor((prev) =>
+        prev.line === line && prev.column === column && prev.selected === selected
+          ? prev
+          : { line, column, selected },
+      );
+    };
+    const d1 = editor.onDidChangeCursorPosition?.(notify);
+    const d2 = editor.onDidChangeCursorSelection?.(notify);
+    return () => {
+      (d1 as { dispose?: () => void } | undefined)?.dispose?.();
+      (d2 as { dispose?: () => void } | undefined)?.dispose?.();
+    };
+  }, []);
 
   // --- Diff View Mode ---
   if (originalValue !== undefined) {
@@ -414,6 +467,32 @@ function CodeEditorInner({
           options={editorOptions}
           loading={isLoading}
         />
+      </div>
+
+      {/* v1.0.0 — Editor status bar: cursor pos + word count. */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '14px',
+          padding: '2px 10px',
+          borderTop: '1px solid var(--border-subtle)',
+          background: 'var(--bg-tertiary)',
+          fontSize: '11px',
+          color: 'var(--text-muted)',
+          fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
+          userSelect: 'none',
+        }}
+      >
+        <span>
+          Ln {cursor.line}, Col {cursor.column}
+        </span>
+        {cursor.selected > 0 && (
+          <span style={{ color: 'var(--accent-primary)' }}>(Sel {cursor.selected})</span>
+        )}
+        <span style={{ marginLeft: 'auto' }}>
+          {t('codeView.words') || 'Words'}: {wordCount(value)}
+        </span>
       </div>
 
       {showProblems && diagnostics.length > 0 && (

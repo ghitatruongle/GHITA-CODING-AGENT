@@ -8,5 +8,11 @@
       "apps__mobile>",
       "packages__communication>screenshot-desktop>"
     ]
+  },
+  "GHSA-5p4m-2wfm-xmqj": {
+    "expires": "2026-12-31",
+    "severity": "high",
+    "reason": "Build-time / CI-only js-yaml (3.x/4.x) reached via Docusaurus (docs) and React Native CLI tooling (metro, cosmiconfig, babel-plugin-istanbul). Not shipped to end users at runtime; upstream has not backported the CVE-2026-59870 fix for these majors. Revisit when upstream releases a patched 3.x/4.x.",
+    "allowedPaths": ["apps__mobile>", "docs>"]
   }
 }

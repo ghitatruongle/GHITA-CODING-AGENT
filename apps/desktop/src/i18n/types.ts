@@ -101,6 +101,15 @@ export interface TranslationKeys {
     logging: string;
     logLevel: string;
     logLevelDesc: string;
+    performance: string;
+    lowRamMode: string;
+    lowRamModeDesc: string;
+    lowRamOn: string;
+    lowRamOff: string;
+    autoSave: string;
+    autoSaveDesc: string;
+    autoSaveOn: string;
+    autoSaveOff: string;
     aiProviders: string;
     apiKeys: string;
     apiKeysDesc: string;
@@ -147,9 +156,26 @@ export interface TranslationKeys {
     reject: string;
     editApplied: string;
     editRejected: string;
+    editStale: string;
     unsavedEditsProposalConfirm: string;
     fileTruncated: string;
     fileTooLargeToSave: string;
+    proposalsTitle: string;
+    proposalsPending: string;
+    acceptAll: string;
+    rejectAll: string;
+    proposalNewFile: string;
+    proposalReview: string;
+    proposalAgentWaiting: string;
+    applyToFile: string;
+    applyPromptPath: string;
+    applyNoWorkspace: string;
+    quickFilePlaceholder: string;
+    quickFileNoResults: string;
+    quickFileNav: string;
+    quickFileSelect: string;
+    quickFileClose: string;
+    quickFileOpen: string;
   };
   devices: {
     title: string;
@@ -359,6 +385,7 @@ export interface TranslationKeys {
     attachImage: string;
     chatHistory: string;
     newChat: string;
+    exportChat: string;
     deleteChat: string;
     backToChat: string;
     noHistory: string;
@@ -534,6 +561,27 @@ export interface TranslationKeys {
     shortcutToggleChat: string;
     shortcutSaveFile: string;
     learnMore: string;
+  };
+  // v1.0.0 — Shortcuts overlay (press `?`)
+  shortcuts: {
+    cmdPalette: string;
+    quickFile: string;
+    showShortcuts: string;
+    closeOverlay: string;
+    save: string;
+    saveAll: string;
+    closeTab: string;
+    openFolder: string;
+    newFile: string;
+    toggleSidebar: string;
+    toggleTerminal: string;
+    toggleChat: string;
+    switchTab: string;
+    searchPlaceholder: string;
+    noResults: string;
+    catGeneral: string;
+    catEditor: string;
+    catPanels: string;
   };
   docsGriller: {
     title: string;

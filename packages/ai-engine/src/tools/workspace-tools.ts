@@ -235,6 +235,11 @@ export async function listDirectory(args: { recursive?: boolean; path?: string }
 /**
  * 2. read_file tool implementation
  */
+// v1.0.0 deep-review fix (M10): cap file reads at 5 MiB — the same limit the
+// frontend uses. Without this an agent reading a huge file would OOM the
+// sidecar; the cap mirrors the editor's truncated-preview behaviour.
+const READ_FILE_MAX_BYTES = 5 * 1024 * 1024;
+
 export async function readFile(args: {
   filePath: string;
   startLine?: number;
@@ -248,6 +253,12 @@ export async function readFile(args: {
   const stat = fs.statSync(fullPath);
   if (!stat.isFile()) {
     throw new Error(`Path is not a file: ${args.filePath}`);
+  }
+  if (stat.size > READ_FILE_MAX_BYTES) {
+    throw new Error(
+      `File too large to read (${stat.size} bytes, max ${READ_FILE_MAX_BYTES}). ` +
+        `Use grep_search or ask the user to split the file.`,
+    );
   }
 
   const content = fs.readFileSync(fullPath, 'utf8');

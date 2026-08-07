@@ -6,6 +6,11 @@ import type { MCPServerConfig } from './types.js';
 import { spawn } from 'node:child_process';
 import * as readline from 'node:readline';
 
+// deep-review fix (M13): every MCP request must settle within this window or
+// the promise rejects and the pending entry is cleaned up. Without a timeout a
+// silent MCP server would hang the agent loop forever.
+const MCP_REQUEST_TIMEOUT_MS = 30_000;
+
 export interface MCPTransport {
   connect(): Promise<void>;
   disconnect(): Promise<void>;
@@ -110,9 +115,28 @@ export class StdioTransport implements MCPTransport {
     const jsonRpc = { jsonrpc: '2.0', id, ...request };
 
     return new Promise((resolve, reject) => {
-      this.pendingRequests.set(id, { resolve, reject });
+      // deep-review fix (M13): reject and clean up if the server never answers.
+      const timer = setTimeout(() => {
+        this.pendingRequests.delete(id);
+        reject(
+          new Error(
+            `MCP server "${this.config.name}" did not respond within ${MCP_REQUEST_TIMEOUT_MS}ms`,
+          ),
+        );
+      }, MCP_REQUEST_TIMEOUT_MS);
+      this.pendingRequests.set(id, {
+        resolve: (res) => {
+          clearTimeout(timer);
+          resolve(res);
+        },
+        reject: (err) => {
+          clearTimeout(timer);
+          reject(err);
+        },
+      });
       stdin.write(`${JSON.stringify(jsonRpc)}\n`, (err) => {
         if (err) {
+          clearTimeout(timer);
           this.pendingRequests.delete(id);
           reject(err);
         }
@@ -155,17 +179,33 @@ export class SSETransport implements MCPTransport {
     const id = ++this.requestId;
     const jsonRpc = { jsonrpc: '2.0', id, ...request };
 
-    const response = await fetch(this.config.url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(jsonRpc),
-    });
+    // deep-review fix (M13): bounded fetch so a silent SSE server cannot hang
+    // the agent loop.
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), MCP_REQUEST_TIMEOUT_MS);
+    try {
+      const response = await fetch(this.config.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(jsonRpc),
+        signal: controller.signal,
+      });
 
-    if (!response.ok) {
-      throw new Error(`MCP server "${this.config.name}" returned ${response.status}`);
+      if (!response.ok) {
+        throw new Error(`MCP server "${this.config.name}" returned ${response.status}`);
+      }
+
+      return (await response.json()) as Record<string, unknown>;
+    } catch (error) {
+      if (controller.signal.aborted) {
+        throw new Error(
+          `MCP server "${this.config.name}" did not respond within ${MCP_REQUEST_TIMEOUT_MS}ms`,
+        );
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
     }
-
-    return (await response.json()) as Record<string, unknown>;
   }
 
   isConnected(): boolean {

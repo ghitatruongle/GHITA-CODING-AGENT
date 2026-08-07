@@ -40,6 +40,10 @@ import type {
 import { GRILL_MODE_LIMITS } from './types.js';
 import { tokenize, buildVector, cosineSimilarity, extractExcerpt } from './utils.js';
 
+// deep-review fix (L9): cap individual doc/source reads to avoid OOM on huge
+// files (mirrors the Rust run_grill_session cap of 256 KiB per file).
+const DOCS_GRILL_MAX_FILE_BYTES = 256 * 1024;
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Markdown Structure Parser
 // ──────────────────────────────────────────────────────────────────────────────
@@ -256,6 +260,13 @@ export class DocsGriller {
       if (!this.config.extensions.includes(ext)) continue;
 
       try {
+        // deep-review fix (L9): cap per-file reads (256 KiB) so an oversized
+        // doc cannot OOM the process — mirrors the Rust run_grill_session cap.
+        const stat = fs.statSync(filePath);
+        if (stat.size > DOCS_GRILL_MAX_FILE_BYTES) {
+          console.warn(`[DocsGriller] Skipping oversized doc: ${filePath}`);
+          continue;
+        }
         const content = fs.readFileSync(filePath, 'utf-8');
         const lastModified = this.getGitCommitTime(filePath) ?? fs.statSync(filePath).mtimeMs;
         const vector = buildVector(tokenize(content));
@@ -309,6 +320,9 @@ export class DocsGriller {
       }
 
       try {
+        // deep-review fix (L9): cap source file reads too.
+        const stat = fs.statSync(filePath);
+        if (stat.size > DOCS_GRILL_MAX_FILE_BYTES) continue;
         const content = fs.readFileSync(filePath, 'utf-8');
         const ref = extractSourceSymbols(content, relPath);
         ref.lastModified = this.getGitCommitTime(filePath) ?? fs.statSync(filePath).mtimeMs;

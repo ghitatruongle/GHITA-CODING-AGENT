@@ -5,6 +5,14 @@
 // Encapsulates the "AI proposes an edit → review a Monaco diff → accept/reject"
 // behaviour: exposing the active proposal, applying it to disk on accept, and
 // auto-surfacing a newly-arrived proposal by opening/focusing its file.
+//
+// v1.0.0 — two proposal sources:
+//  1. LOCAL  (chat "Apply" button): accept writes the file directly via the
+//     native fs commands.
+//  2. REMOTE (Antigravity gate — the running agent paused on a write_file /
+//     replace_file_content call): accept/reject is answered back to the
+//     sidecar via `edit_proposal_response`; the sidecar performs the actual
+//     write + checkpoint and broadcasts `edit_applied`.
 // ==============================================================================
 
 import { useCallback, useEffect, useRef } from 'react';
@@ -12,6 +20,7 @@ import { fsWriteText, fsReadText } from '../lib/native-fs';
 import toast from 'react-hot-toast';
 import { fileContentCache, useAppStore } from '../stores/appStore';
 import { useEditProposalStore } from '../stores/editProposalStore';
+import { getSharedSocket } from '../utils/sharedSocket';
 import type { EditProposal } from '../utils/editProposal';
 
 export interface OpenFileEntry {
@@ -35,6 +44,37 @@ interface UseAiEditProposalResult {
   rejectProposal: () => void;
 }
 
+/**
+ * Answer a remote (agent-side) proposal through the shared socket.
+ *
+ * v1.0.0 deep-review fix (BUG-A): the sidecar now acks `edit_proposal_response`.
+ * Returns 'ok' when the sidecar still had the proposal and handled it, 'stale'
+ * when the proposal is gone (run ended / 5-min timeout — the file was NOT
+ * written), or 'offline' when there is no socket. Callers must not optimistically
+ * mark a file saved unless we get 'ok'.
+ */
+export type RemoteResponse = 'ok' | 'stale' | 'offline';
+
+export async function respondRemote(remoteId: string, accepted: boolean): Promise<RemoteResponse> {
+  try {
+    const socket = await getSharedSocket();
+    if (!socket) return 'offline';
+    return await new Promise<RemoteResponse>((resolve) => {
+      const timer = setTimeout(() => resolve('stale'), 3000);
+      socket.emit(
+        'edit_proposal_response',
+        { proposalId: remoteId, accepted },
+        (res: { ok?: boolean; reason?: string } | undefined) => {
+          clearTimeout(timer);
+          resolve(res?.ok === true ? 'ok' : 'stale');
+        },
+      );
+    });
+  } catch {
+    return 'offline';
+  }
+}
+
 export function useAiEditProposal({
   activePath,
   openFiles,
@@ -52,6 +92,41 @@ export function useAiEditProposal({
 
   const acceptProposal = useCallback(async () => {
     if (!activeProposal) return;
+
+    // ---- Remote proposal (Antigravity gate): the sidecar owns the write ----
+    if (activeProposal.remoteId) {
+      const res = await respondRemote(activeProposal.remoteId, true);
+      // deep-review fix (BUG-A): never optimistically mark the file saved
+      // unless the sidecar confirmed it still had the proposal.
+      if (res !== 'ok') {
+        removeProposal(activeProposal.id);
+        if (res === 'stale') {
+          toast.error(t('codeView.editStale'));
+        } else {
+          toast.error(t('codeView.saveFailed', { error: 'Sidecar server is not connected.' }));
+        }
+        return;
+      }
+      // Optimistically show the proposed content; `edit_applied` will re-read
+      // the authoritative bytes from disk and refresh the cache.
+      fileContentCache.set(activeProposal.path, {
+        content: activeProposal.proposedContent,
+        originalContent: activeProposal.proposedContent,
+        hydrated: true,
+      });
+      setOpenFiles(
+        useAppStore
+          .getState()
+          .codeOpenFiles.map((f) =>
+            f.path === activeProposal.path ? { ...f, modified: false } : f,
+          ),
+      );
+      removeProposal(activeProposal.id);
+      toast.success(t('codeView.editApplied', { name: activeProposal.fileName }));
+      return;
+    }
+
+    // ---- Local proposal: write to disk directly (v0.8.0 hardened flow) ----
 
     // Safety: never silently discard the user's own unsaved edits. The diff
     // review shows the AI's version as the new content — if the file has
@@ -92,18 +167,23 @@ export function useAiEditProposal({
       try {
         disk = await fsReadText(activeProposal.path);
       } catch (readErr) {
-        toast.error(
-          t('codeView.saveFailed', {
-            error: readErr instanceof Error ? readErr.message : String(readErr),
-          }),
-        );
-        return;
+        // New-file proposals legitimately have nothing on disk yet.
+        if (activeProposal.isNewFile) {
+          disk = { content: '', encoding: 'utf-8', isBinary: false, isTruncated: false };
+        } else {
+          toast.error(
+            t('codeView.saveFailed', {
+              error: readErr instanceof Error ? readErr.message : String(readErr),
+            }),
+          );
+          return;
+        }
       }
       if (disk.isBinary) {
         toast.error(t('codeView.saveFailed', { error: 'The target file is binary.' }));
         return;
       }
-      if (disk.content !== activeProposal.originalContent) {
+      if (!activeProposal.isNewFile && disk.content !== activeProposal.originalContent) {
         toast.error(
           t('codeView.saveFailed', {
             error:
@@ -136,10 +216,18 @@ export function useAiEditProposal({
     } catch (e) {
       toast.error(t('codeView.saveFailed', { error: e instanceof Error ? e.message : String(e) }));
     }
-  }, [activeProposal, openFiles, setOpenFiles, removeProposal, t]);
+    // deep-review fix (BUG-7): `openFiles` is only used to seed the surface
+    // effect below, not here — the store read above is the source of truth,
+    // so listing it in the deps just caused needless re-creations.
+  }, [activeProposal, setOpenFiles, removeProposal, t]);
 
   const rejectProposal = useCallback(() => {
     if (!activeProposal) return;
+    if (activeProposal.remoteId) {
+      // Reject is safe to fire-and-forget: the proposal is removed locally
+      // either way, and the sidecar handles stale ids gracefully.
+      void respondRemote(activeProposal.remoteId, false);
+    }
     removeProposal(activeProposal.id);
     toast(t('codeView.editRejected', { name: activeProposal.fileName }));
   }, [activeProposal, removeProposal, t]);

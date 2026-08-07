@@ -2,7 +2,7 @@
 // GHITA CODING AGENT — App Root
 // ==============================================================================
 
-import { useEffect, useRef, lazy, Suspense } from 'react';
+import { useEffect, useRef, lazy, Suspense, useState, useCallback } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { ErrorFallback } from './components/ErrorFallback';
 import { isLocaleCode } from './i18n/types';
@@ -12,6 +12,8 @@ const MainLayout = lazy(() =>
 );
 import { Toast } from './components/Toast';
 import { CommandPalette } from './components/CommandPalette';
+import { QuickFileOpen } from './components/QuickFileOpen';
+import { ShortcutsOverlay } from './components/ShortcutsOverlay';
 import { useAppStore, type TabId } from './stores/appStore';
 import { I18nProvider, useTranslation } from './i18n';
 import toast from 'react-hot-toast';
@@ -58,6 +60,10 @@ function AppContent() {
   const { t } = useTranslation();
   const tRef = useRef(t);
   tRef.current = t;
+  // v1.0.0 — Quick File Open modal (Ctrl+Shift+P / Ctrl+Shift+O).
+  const [quickFileOpen, setQuickFileOpen] = useState(false);
+  // v1.0.0 — Shortcuts overlay (press `?`).
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
   const lastSyncedLangRef = useRef(language);
 
@@ -97,15 +103,15 @@ function AppContent() {
     const autoStartServer = async () => {
       // Skip outside Tauri to avoid console errors in browser-only dev
       if (!isTauri()) return;
-      // Guard against React StrictMode double-invocation;
-      // reset the guard if the server is confirmed stopped so the
-      // app can re-trigger start_server after a sidecar update without
-      // requiring a full app restart (hot-update support).
-      {
-        const s = serverStartupInFlight;
-        serverStartupInFlight = false;
-        if (s) return; // already attempted in this strict-mode flush
-      }
+      // deep-review fix (BUG-4): guard against React StrictMode double
+      // invocation. The flag must be set to `true` BEFORE the async work so
+      // the second flush sees it; the previous code read the flag, reset it to
+      // `false`, then checked it — which could never be true, so two
+      // concurrent start_server calls raced. The flag is cleared again by the
+      // tauri://update-status listener when the sidecar stops, so a later
+      // reconnect (e.g. after an in-place update) can re-trigger startup.
+      if (serverStartupInFlight) return;
+      serverStartupInFlight = true;
 
       try {
         const result = await invoke<{ status?: string }>('get_server_status');
@@ -277,6 +283,27 @@ function AppContent() {
     if (!shortcutsEnabled) return;
 
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Overlay ownership (deep-review fix BUG-1/BUG-12): while a modal overlay
+      // is open it owns the keyboard — only its own toggle shortcut works, all
+      // other shortcuts are suppressed so they cannot fire underneath.
+      const isQuickFileShortcut =
+        (e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'P' || e.key === 'O');
+
+      if (quickFileOpen) {
+        if (isQuickFileShortcut) {
+          e.preventDefault();
+          setQuickFileOpen(false);
+        }
+        return;
+      }
+      if (shortcutsOpen) {
+        if (e.key === '?') {
+          e.preventDefault();
+          setShortcutsOpen(false);
+        }
+        return;
+      }
+
       // Don't intercept when user is typing in an input/textarea
       const tag = (e.target as HTMLElement).tagName.toLowerCase();
       if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
@@ -328,18 +355,38 @@ function AppContent() {
           setActiveTab(tabOrder[tabIndex] as TabId);
         }
       }
+
+      // v1.0.0 — Ctrl+Shift+P / Ctrl+Shift+O: Quick File Open (fuzzy file picker)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'P' || e.key === 'O')) {
+        e.preventDefault();
+        setQuickFileOpen((prev) => !prev);
+      }
+      // v1.0.0 — `?` (Shift+/): shortcuts overlay (skip when typing in inputs)
+      if (e.key === '?' && shortcutsEnabled) {
+        const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+        if (tag !== 'input' && tag !== 'textarea' && tag !== 'select') {
+          e.preventDefault();
+          setShortcutsOpen((prev) => !prev);
+        }
+      }
     };
 
     window.addEventListener('keydown', handleGlobalKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', handleGlobalKeyDown, { capture: true });
   }, [
     shortcutsEnabled,
+    quickFileOpen,
+    shortcutsOpen,
     setCommandPaletteOpen,
     toggleTerminal,
     toggleChat,
     toggleSidebar,
     setActiveTab,
   ]);
+
+  // v1.0.0 — When Quick File Open requests to close (via Esc / overlay click),
+  // mirror that back into state so the modal hides.
+  const handleQuickFileClose = useCallback(() => setQuickFileOpen(false), []);
 
   // Sync workspace path to sidecar when it changes
   useEffect(() => {
@@ -392,6 +439,8 @@ function AppContent() {
       >
         <MainLayout />
       </Suspense>
+      <QuickFileOpen open={quickFileOpen} onClose={handleQuickFileClose} />
+      <ShortcutsOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <Toast />
     </>
   );

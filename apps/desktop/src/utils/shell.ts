@@ -108,7 +108,42 @@ const MALICIOUS_PATTERNS: Array<{
     reason: 'Phát hiện tạo user/group hệ thống.',
     threatLevel: 'HIGH',
   },
+  // deep-review fix (L1): Windows destructive patterns that previously
+  // bypassed the scan entirely.
+  {
+    regex: /\bdel\s+\/[fsq]+\s+.*[a-zA-Z]:[\\/]/i,
+    reason: 'Phát hiện xóa file hệ thống Windows bằng del /f /s /q.',
+    threatLevel: 'CRITICAL',
+  },
+  {
+    regex: /\brmdir\s+\/[sq]+\s+.*[a-zA-Z]:[\\/]/i,
+    reason: 'Phát hiện xóa thư mục hệ thống Windows bằng rmdir /s /q.',
+    threatLevel: 'CRITICAL',
+  },
+  {
+    regex: /\btaskkill\s+\/F\b/i,
+    reason: 'Phát hiện force-kill process bằng taskkill /F.',
+    threatLevel: 'MEDIUM',
+  },
 ];
+
+/**
+ * Normalize a command before pattern matching: strip quote characters and the
+ * `--` end-of-options marker so `rm -rf "/"`, `rm -rf -- /` and drive-letter
+ * paths can no longer bypass the blocklist regexes (deep-review fix M8). The
+ * native Rust gate remains the enforcement layer; this makes the client-side
+ * preview consistent with it.
+ */
+function normalizeForScan(command: string): string {
+  return (
+    command
+      .replace(/["'`]/g, '')
+      .replace(/\s+--\s+/g, ' ')
+      .replace(/^--\s+/, '')
+      // Windows drive paths: `rm -rf C:/Users/x` → `rm -rf c:/users/x`
+      .replace(/\b([a-zA-Z]):[\\/]/g, (m) => m.toLowerCase())
+  );
+}
 
 export function assessShellCommand(command: string): SecurityScanResult {
   const trimmed = command.trim();
@@ -116,8 +151,12 @@ export function assessShellCommand(command: string): SecurityScanResult {
     return { safe: true };
   }
 
+  // deep-review fix (M8): match against the quote-stripped form so quoted
+  // arguments are scanned identically to unquoted ones.
+  const scanTarget = normalizeForScan(trimmed);
+
   for (const pattern of MALICIOUS_PATTERNS) {
-    if (pattern.regex.test(trimmed)) {
+    if (pattern.regex.test(scanTarget)) {
       return {
         safe: false,
         reason: pattern.reason,

@@ -427,7 +427,18 @@ export class SocketService {
     this.healthCheckInterval = setInterval(async () => {
       if (!this.lastLocalAddress) return;
       try {
-        const response = await fetch(`${this.lastLocalAddress}/health`);
+        // deep-review fix (L12): bound the health probe so a hanging server
+        // cannot pile up in-flight fetches.
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 5000);
+        let response: Response;
+        try {
+          response = await fetch(`${this.lastLocalAddress}/health`, {
+            signal: controller.signal,
+          });
+        } finally {
+          clearTimeout(timer);
+        }
         if (response.ok) {
           console.info('[SocketService] Local LAN server is back online! Recovering connection...');
           this.stopLocalHealthCheck();
