@@ -80,9 +80,15 @@ function createManifest(args) {
     };
   }
 
+  // Emit a manifest for whatever platforms actually produced a signed
+  // artifact. A missing platform (e.g. no macOS certs / no Android keystore)
+  // must NOT block publishing the platforms that did build successfully.
   const missing = requiredPlatforms.filter((platform) => !platforms[platform]);
   if (missing.length > 0) {
-    throw new Error(`Missing updater records: ${missing.join(', ')}`);
+    console.warn(`WARN: no updater record for ${missing.join(', ')} — omitted from manifest`);
+  }
+  if (Object.keys(platforms).length === 0) {
+    throw new Error('No updater records found — nothing to publish');
   }
 
   writeJson(output, {

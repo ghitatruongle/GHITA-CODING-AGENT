@@ -43,7 +43,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
+    "targets": ["nsis", "msi", "deb", "appimage", "dmg"],
     "createUpdaterArtifacts": true,
     "resources": ["sidecar/*", "proto/*"],
     "icon": [
