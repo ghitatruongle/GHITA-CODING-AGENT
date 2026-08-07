@@ -1208,14 +1208,31 @@ fn chat_sessions_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
 
 #[tauri::command]
 fn load_api_config(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
-    let entry = api_config_keyring_entry()?;
-    match entry.get_password() {
-        Ok(content) => return serde_json::from_str(&content).map_err(|e| e.to_string()),
-        Err(keyring::Error::NoEntry) => {}
-        Err(e) => {
-            return Err(format!(
-                "Failed to read API keys from the credential vault: {e}"
-            ))
+    // Prefer the OS credential vault; fall back to the app-data file when the
+    // vault is unavailable (e.g. after a reinstall the keyring service may
+    // not be reachable yet). Never fail the load outright — the UI depends on
+    // it to render the saved providers.
+    let fallback_path = api_config_path(&app)?;
+    let read_file = || -> Result<serde_json::Value, String> {
+        if !fallback_path.exists() {
+            return Ok(serde_json::json!({}));
+        }
+        let content = fs::read_to_string(&fallback_path).map_err(|e| e.to_string())?;
+        serde_json::from_str::<serde_json::Value>(&content).map_err(|e| e.to_string())
+    };
+
+    match api_config_keyring_entry() {
+        Ok(entry) => match entry.get_password() {
+            Ok(content) => return serde_json::from_str(&content).map_err(|e| e.to_string()),
+            Err(keyring::Error::NoEntry) => {}
+            Err(_e) => {
+                // Vault exists but read failed — try the file before giving up.
+                return read_file();
+            }
+        },
+        Err(_e) => {
+            // Vault completely unavailable (reinstall case) — use the file.
+            return read_file();
         }
     }
 
@@ -1227,27 +1244,44 @@ fn load_api_config(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
     }
     let content = fs::read_to_string(&legacy_path).map_err(|e| e.to_string())?;
     let parsed = serde_json::from_str::<serde_json::Value>(&content).map_err(|e| e.to_string())?;
-    entry
-        .set_password(&content)
-        .map_err(|e| format!("Failed to migrate API keys to the credential vault: {e}"))?;
-    fs::remove_file(&legacy_path)
-        .map_err(|e| format!("API keys migrated, but the legacy file could not be removed: {e}"))?;
+    match api_config_keyring_entry() {
+        Ok(entry) => {
+            if let Err(e) = entry.set_password(&content) {
+                eprintln!("[GHITA] Failed to migrate API keys to the credential vault: {e}");
+            }
+        }
+        Err(_) => {}
+    }
     Ok(parsed)
 }
 
 #[tauri::command]
 fn save_api_config(app: tauri::AppHandle, config: serde_json::Value) -> Result<(), String> {
     let content = serde_json::to_string(&config).map_err(|e| e.to_string())?;
-    api_config_keyring_entry()?
-        .set_password(&content)
-        .map_err(|e| format!("Failed to store API keys in the credential vault: {e}"))?;
 
-    let legacy_path = api_config_path(&app)?;
-    if legacy_path.exists() {
-        fs::remove_file(legacy_path).map_err(|e| {
-            format!("API keys saved, but the legacy file could not be removed: {e}")
-        })?;
+    // Try the OS credential vault first. When it fails (reinstall / locked
+    // Credential Manager), fall back to the app-data file so the user's keys
+    // are NEVER silently lost — the load path reads both sources.
+    let mut vault_ok = false;
+    match api_config_keyring_entry() {
+        Ok(entry) => {
+            match entry.set_password(&content) {
+                Ok(()) => vault_ok = true,
+                Err(e) => {
+                    eprintln!("[GHITA] Credential vault unavailable ({e}) — falling back to file storage.");
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!("[GHITA] Credential vault unavailable ({e}) — falling back to file storage.");
+        }
     }
+
+    // Keep the file in sync whenever the vault path is used too, so a later
+    // reinstall (where the vault may be gone) still finds the keys.
+    let file_path = api_config_path(&app)?;
+    fs::write(&file_path, &content)
+        .map_err(|e| format!("Failed to persist API keys (vault: {vault_ok}, file: {e})"))?;
     Ok(())
 }
 

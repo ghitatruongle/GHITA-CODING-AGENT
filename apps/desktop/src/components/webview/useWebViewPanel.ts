@@ -17,6 +17,14 @@ export function useWebViewPanel() {
   const inputRef = useRef<HTMLInputElement>(null);
   const proxyPortRef = useRef(0);
 
+  // deep-review fix (M9): per-tab navigation history. The previous toolbar
+  // called `iframe.contentWindow.history.back()` directly, which is a
+  // cross-origin access (tauri:// app vs http://127.0.0.1 proxy) and always
+  // threw a SecurityError — the back/forward buttons were dead. We track the
+  // stack ourselves and re-navigate through the proxy.
+  const [historyMap, setHistoryMap] = useState<Record<string, string[]>>({});
+  const [historyIndexMap, setHistoryIndexMap] = useState<Record<string, number>>({});
+
   // Giữ ref đồng bộ
   useEffect(() => {
     proxyPortRef.current = proxyPort;
@@ -66,6 +74,23 @@ export function useWebViewPanel() {
       setError(null);
       setIsEditing(false);
 
+      // deep-review fix (M9): record the navigation in the tab's history
+      // stack (truncating any forward entries when navigating fresh).
+      setHistoryMap((prev) => {
+        const stack = prev[activeTabId] ?? [normalizedUrl];
+        const idx = historyIndexMap[activeTabId] ?? stack.length - 1;
+        const truncated = stack.slice(0, idx + 1);
+        if (truncated[truncated.length - 1] === normalizedUrl) return prev;
+        return { ...prev, [activeTabId]: [...truncated, normalizedUrl] };
+      });
+      setHistoryIndexMap((prev) => {
+        const stack = historyMap[activeTabId] ?? [normalizedUrl];
+        const idx = prev[activeTabId] ?? stack.length - 1;
+        const truncated = stack.slice(0, idx + 1);
+        if (truncated[truncated.length - 1] === normalizedUrl) return prev;
+        return { ...prev, [activeTabId]: truncated.length };
+      });
+
       // Cập nhật tab thành loading ngay lập tức
       setTabs((prev) =>
         prev.map((t) =>
@@ -104,8 +129,29 @@ export function useWebViewPanel() {
 
       setAddressInput(normalizedUrl);
     },
-    [activeTabId, ensureProxy],
+    [activeTabId, ensureProxy, historyIndexMap, historyMap],
   );
+
+  // deep-review fix (M9): navigate the active tab through its own history.
+  const goBack = useCallback(() => {
+    const stack = historyMap[activeTabId] ?? [];
+    const idx = historyIndexMap[activeTabId] ?? stack.length - 1;
+    if (idx <= 0) return;
+    const target = stack[idx - 1];
+    if (!target) return;
+    setHistoryIndexMap((prev) => ({ ...prev, [activeTabId]: idx - 1 }));
+    void navigateTo(target);
+  }, [activeTabId, historyMap, historyIndexMap, navigateTo]);
+
+  const goForward = useCallback(() => {
+    const stack = historyMap[activeTabId] ?? [];
+    const idx = historyIndexMap[activeTabId] ?? stack.length - 1;
+    if (idx >= stack.length - 1) return;
+    const target = stack[idx + 1];
+    if (!target) return;
+    setHistoryIndexMap((prev) => ({ ...prev, [activeTabId]: idx + 1 }));
+    void navigateTo(target);
+  }, [activeTabId, historyMap, historyIndexMap, navigateTo]);
 
   const handleAddressSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,22 +217,25 @@ export function useWebViewPanel() {
   };
 
   const handleRefresh = () => {
-    if (!activeTab?.url) return;
-    // Force reload bằng cách set src lại
+    const tabUrl = activeTab?.url;
+    if (!tabUrl) return;
+    // deep-review fix (L3): reload the tab's own URL from state instead of
+    // reading `iframe.src` — the previous code snapshotted the live src and
+    // restored it 50ms later, which could clobber a navigation that happened
+    // in that window.
     setTabs((prev) => prev.map((t) => (t.id === activeTabId ? { ...t, isLoading: true } : t)));
     if (iframeRef.current) {
-      const currentSrc = iframeRef.current.src;
       iframeRef.current.src = '';
       setTimeout(() => {
-        if (iframeRef.current) iframeRef.current.src = currentSrc;
+        if (iframeRef.current) iframeRef.current.src = tabUrl;
       }, 50);
     }
   };
 
-  // Cập nhật address bar khi đổi tab
+  // Cập nhật address bar khi đổi tab / khi tab điều hướng
   useEffect(() => {
     setAddressInput(activeTab?.displayUrl || '');
-  }, [activeTabId]);
+  }, [activeTabId, activeTab?.displayUrl]);
 
   // ─── Render ───────────────────────────────────────────────────────────
 
@@ -212,5 +261,8 @@ export function useWebViewPanel() {
     switchTab,
     handleIframeLoad,
     handleRefresh,
+    // deep-review fix (M9): history navigation exposed to the toolbar.
+    goBack,
+    goForward,
   };
 }

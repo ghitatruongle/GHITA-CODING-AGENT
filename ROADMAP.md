@@ -1,9 +1,30 @@
 # 🗺️ GHITA CODING AGENT — Public Roadmap
 
-> **Current version:** v0.6.0-dev
-> **Last updated:** 2026-07-30
+> **Current version:** v1.0.0
+> **Last updated:** 2026-08-06
 
 ---
+
+## ✅ Done — v1.0.0 Super Update (2026-08-06)
+
+| Khu vực       | Tính năng                                                     | Trạng thái |
+| ------------- | ------------------------------------------------------------- | ---------- |
+| 🤖 AI Agentic | Antigravity edit-review gate (propose → diff → accept/reject) | ✅         |
+| 🤖 AI Agentic | Multi-file edit queue + Accept All / Reject All               | ✅         |
+| 🤖 AI Agentic | Edit checkpoints + undo (`.ghita/checkpoints/<runId>/`)       | ✅         |
+| 🤖 AI Agentic | "Apply to file" on chat code blocks                           | ✅         |
+| ✏️ Editor     | Quick File Open (Ctrl+Shift+P, fuzzy)                         | ✅         |
+| ✏️ Editor     | Recent-files history (persisted)                              | ✅         |
+| ✏️ Editor     | Editor status bar (cursor, selection, word count)             | ✅         |
+| ✏️ Editor     | Auto-save (debounced, toggleable)                             | ✅         |
+| ⌨️ Shortcuts  | Shortcuts overlay (press `?`)                                 | ✅         |
+| 💬 Chat       | Export chat to Markdown                                       | ✅         |
+| 💬 Chat       | Chat history cap (200 messages, RAM)                          | ✅         |
+| ⚡ RAM        | LRU file cache (128 entries, never drops open tabs)           | ✅         |
+| ⚡ RAM        | Low-RAM mode toggle (editor + terminal)                       | ✅         |
+| 📦 Install    | One-command setup (setup.ps1 / setup.sh)                      | ✅         |
+| 📦 Install    | `pnpm doctor` diagnostics                                     | ✅         |
+| 🌐 i18n       | All new keys in 6 locales (en/vi/zh/ru/ja/ko)                 | ✅         |
 
 ## In progress — v0.6.0 Durable Agent Runtime
 

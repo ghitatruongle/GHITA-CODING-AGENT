@@ -64,13 +64,19 @@ export function ApiManager() {
       .finally(() => {
         if (!cancelled) setIsConfigLoaded(true);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Persist config
   useEffect(() => {
     if (!isConfigLoaded) return;
-    try { void saveApiConfig(serializeApiKeysState(keys)); } catch { /* ignore */ }
+    // deep-review fix (Lỗi 1): surface save failures instead of swallowing
+    // them — a silent catch left users believing their API key was stored.
+    saveApiConfig(serializeApiKeysState(keys)).catch((e) => {
+      console.error('[ApiManager] Failed to persist API config:', e);
+    });
   }, [keys, isConfigLoaded]);
 
   const updateKey = useCallback((id: ProviderId, patch: Partial<ApiKeyEntry>) => {
@@ -87,84 +93,117 @@ export function ApiManager() {
     });
   }, []);
 
-  const handleSave = useCallback((id: ProviderId) => {
-    const entry = keys[id];
-    const needsNoKey = id === 'ollama' || id === 'opencode-zen';
-    const input = document.getElementById(`new-key-${id}`) as HTMLInputElement | null;
-    const pendingKey = input?.value?.trim();
-    const apiKeys =
-      pendingKey && !entry.apiKeys.includes(pendingKey)
-        ? [...entry.apiKeys, pendingKey]
-        : entry.apiKeys;
-    const nextKeys = {
-      ...keys,
-      [id]: { ...entry, apiKeys, active: apiKeys.length > 0 || needsNoKey },
-    };
-    if (input) input.value = '';
-    setKeys(nextKeys);
-    void saveApiConfig(serializeApiKeysState(nextKeys));
-    setExpandedId(null);
-  }, [keys]);
+  const handleSave = useCallback(
+    (id: ProviderId) => {
+      const entry = keys[id];
+      const needsNoKey = id === 'ollama' || id === 'opencode-zen';
+      const input = document.getElementById(`new-key-${id}`) as HTMLInputElement | null;
+      const pendingKey = input?.value?.trim();
+      const apiKeys =
+        pendingKey && !entry.apiKeys.includes(pendingKey)
+          ? [...entry.apiKeys, pendingKey]
+          : entry.apiKeys;
+      const nextKeys = {
+        ...keys,
+        [id]: { ...entry, apiKeys, active: apiKeys.length > 0 || needsNoKey },
+      };
+      if (input) input.value = '';
+      setKeys(nextKeys);
+      // deep-review fix (Lỗi 1): await the save and report failures.
+      saveApiConfig(serializeApiKeysState(nextKeys))
+        .then(() => {})
+        .catch((e) => {
+          console.error('[ApiManager] Save failed:', e);
+        });
+      setExpandedId(null);
+    },
+    [keys],
+  );
 
-  const handleFetchModels = useCallback(async (id: ProviderId) => {
-    const entry = keys[id];
-    const provider = PROVIDERS.find((p) => p.id === id);
-    if (!provider?.fetchModelsUrl) return;
+  const handleFetchModels = useCallback(
+    async (id: ProviderId) => {
+      const entry = keys[id];
+      const provider = PROVIDERS.find((p) => p.id === id);
+      if (!provider?.fetchModelsUrl) return;
 
-    updateKey(id, { isFetchingModels: true, fetchError: null });
-    try {
-      const activeKey = entry.apiKeys[0] ?? '';
-      const url = provider.fetchModelsUrl(activeKey, entry.baseUrl);
-      const headers: Record<string, string> = {};
-      const openAiCompat = [
-        'openai', 'opengateway', 'opencode-zen', 'nvidia-nim', 'mimo', 'openrouter',
-        'deepseek', 'groq', 'mistral', 'hicap', 'github-models', 'cerebras', 'together',
-        'fireworks', 'cohere', 'xai', 'replicate', 'perplexity', 'voyage', 'ai21',
-        'sambanova', 'novita',
-      ];
-      if (activeKey && openAiCompat.includes(id)) headers['Authorization'] = `Bearer ${activeKey}`;
-      if (activeKey && id === 'anthropic') {
-        headers['x-api-key'] = activeKey;
-        headers['anthropic-version'] = '2023-06-01';
-      }
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-      let res: Response;
+      updateKey(id, { isFetchingModels: true, fetchError: null });
       try {
-        res = await fetch(url, { headers, signal: controller.signal });
-      } finally {
-        clearTimeout(timeoutId);
+        const activeKey = entry.apiKeys[0] ?? '';
+        const url = provider.fetchModelsUrl(activeKey, entry.baseUrl);
+        const headers: Record<string, string> = {};
+        const openAiCompat = [
+          'openai',
+          'opengateway',
+          'opencode-zen',
+          'nvidia-nim',
+          'mimo',
+          'openrouter',
+          'deepseek',
+          'groq',
+          'mistral',
+          'hicap',
+          'github-models',
+          'cerebras',
+          'together',
+          'fireworks',
+          'cohere',
+          'xai',
+          'replicate',
+          'perplexity',
+          'voyage',
+          'ai21',
+          'sambanova',
+          'novita',
+        ];
+        if (activeKey && openAiCompat.includes(id))
+          headers['Authorization'] = `Bearer ${activeKey}`;
+        if (activeKey && id === 'anthropic') {
+          headers['x-api-key'] = activeKey;
+          headers['anthropic-version'] = '2023-06-01';
+        }
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        let res: Response;
+        try {
+          res = await fetch(url, { headers, signal: controller.signal });
+        } finally {
+          clearTimeout(timeoutId);
+        }
+        if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        const data = await res.json();
+        const models = provider.parseModels?.(data) ?? provider.defaultModels;
+        updateKey(id, {
+          availableModels: models.length > 0 ? models : provider.defaultModels,
+          selectedModel: models[0] ?? entry.selectedModel,
+          isFetchingModels: false,
+        });
+      } catch (e) {
+        updateKey(id, {
+          isFetchingModels: false,
+          fetchError: e instanceof Error ? e.message : String(e),
+        });
       }
-      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-      const data = await res.json();
-      const models = provider.parseModels?.(data) ?? provider.defaultModels;
-      updateKey(id, {
-        availableModels: models.length > 0 ? models : provider.defaultModels,
-        selectedModel: models[0] ?? entry.selectedModel,
-        isFetchingModels: false,
-      });
-    } catch (e) {
-      updateKey(id, {
-        isFetchingModels: false,
-        fetchError: e instanceof Error ? e.message : String(e),
-      });
-    }
-  }, [keys, updateKey]);
+    },
+    [keys, updateKey],
+  );
 
-  const handleReset = useCallback((id: ProviderId) => {
-    updateKey(id, {
-      apiKeys: [],
-      active: false,
-      selectedModel: PROVIDERS.find((p) => p.id === id)?.defaultModels[0] ?? '',
-      availableModels: PROVIDERS.find((p) => p.id === id)?.defaultModels ?? [],
-      fetchError: null,
-    });
-    setModelDraft((prev) => {
-      if (!(id in prev)) return prev;
-      const { [id]: _omit, ...rest } = prev;
-      return rest;
-    });
-  }, [updateKey]);
+  const handleReset = useCallback(
+    (id: ProviderId) => {
+      updateKey(id, {
+        apiKeys: [],
+        active: false,
+        selectedModel: PROVIDERS.find((p) => p.id === id)?.defaultModels[0] ?? '',
+        availableModels: PROVIDERS.find((p) => p.id === id)?.defaultModels ?? [],
+        fetchError: null,
+      });
+      setModelDraft((prev) => {
+        if (!(id in prev)) return prev;
+        const { [id]: _omit, ...rest } = prev;
+        return rest;
+      });
+    },
+    [updateKey],
+  );
 
   // Filter + group
   const filtered = useMemo(() => {

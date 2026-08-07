@@ -21,6 +21,10 @@ export function AddressToolbar(props: {
   handleAddressClick: () => void;
   handleRefresh: () => void;
   navigateTo: (url: string) => void;
+  // deep-review fix (M9): history navigation handled by the panel hook
+  // instead of the (cross-origin) iframe contentWindow.
+  goBack: () => void;
+  goForward: () => void;
 }) {
   const {
     activeTab,
@@ -30,10 +34,11 @@ export function AddressToolbar(props: {
     setIsEditing,
     proxyPort,
     inputRef,
-    iframeRef,
     handleAddressSubmit,
     handleAddressClick,
     handleRefresh,
+    goBack,
+    goForward,
   } = props;
   void props.navigateTo;
   return (
@@ -50,17 +55,18 @@ export function AddressToolbar(props: {
           flexShrink: 0,
         }}
       >
-        {/* Navigation buttons */}
+        {/* Navigation buttons — deep-review fix (M9): use the hook-managed
+            history stack; direct contentWindow access is cross-origin. */}
         {[
           {
             label: '←',
             title: 'Go back',
-            action: () => iframeRef.current?.contentWindow?.history.back(),
+            action: goBack,
           },
           {
             label: '→',
             title: 'Go forward',
-            action: () => iframeRef.current?.contentWindow?.history.forward(),
+            action: goForward,
           },
         ].map((btn) => (
           <button

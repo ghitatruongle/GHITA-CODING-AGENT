@@ -189,7 +189,11 @@ export function normalizePath(p: string): string {
  */
 export function renamePath(oldPath: string, newName: string): string | null {
   const trimmed = newName.trim();
-  if (trimmed.length === 0 || /[/\\]/.test(trimmed)) return null;
+  // deep-review fix (L4): also reject `.` and `..` — renaming an entry to `..`
+  // would silently "rename" it to its parent directory.
+  if (trimmed.length === 0 || /[/\\]/.test(trimmed) || trimmed === '.' || trimmed === '..') {
+    return null;
+  }
   const sep = oldPath.includes('\\') && !oldPath.includes('/') ? '\\' : '/';
   const idx = Math.max(oldPath.lastIndexOf('/'), oldPath.lastIndexOf('\\'));
   if (idx === -1) return trimmed;

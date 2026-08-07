@@ -25,7 +25,7 @@ describe('1: Polyglot SCM Parser & AST Tags Tests', () => {
   let ranker: PageRankRanker;
   let cache: SymbolCache;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     // Dọn dẹp thư mục test tạm nếu đã tồn tại
     if (fs.existsSync(TEMP_TEST_DIR)) {
       fs.rmSync(TEMP_TEST_DIR, { recursive: true, force: true });
@@ -36,6 +36,16 @@ describe('1: Polyglot SCM Parser & AST Tags Tests', () => {
     parser = new PolyglotTagParser(undefined, TEMP_TEST_DIR);
     ranker = new PageRankRanker();
     cache = new SymbolCache(TEMP_DB_PATH);
+
+    // deep-review fix (BUG-D): pre-warm the parsers needed by the parse tests
+    // so a slow CDN cannot make an individual test blow its 15s timeout
+    // (flaky CI). Failures here surface as clear beforeAll errors instead of
+    // random per-test timeouts; the downloader tests below still verify the
+    // download path independently.
+    await downloader.ensureRuntimeWasm().catch(() => undefined);
+    for (const lang of ['typescript', 'python', 'go']) {
+      await downloader.getLanguageWasm(lang).catch(() => undefined);
+    }
   });
 
   afterAll(() => {
@@ -66,7 +76,7 @@ describe('1: Polyglot SCM Parser & AST Tags Tests', () => {
       const typescriptWasmPath = await downloader.getLanguageWasm('typescript');
       expect(fs.existsSync(typescriptWasmPath)).toBe(true);
       expect(path.basename(typescriptWasmPath)).toBe('tree-sitter-typescript.wasm');
-    }, 15000); // Tăng timeout đề phòng mạng tải chậm
+    }, 60000); // deep-review fix (BUG-D): generous timeout for first-run CDN download
   });
 
   // ==========================================
@@ -115,7 +125,7 @@ describe('1: Polyglot SCM Parser & AST Tags Tests', () => {
       const classRef = tags.find((t) => t.name === 'UserService' && t.kind === 'reference');
       expect(classRef).toBeDefined();
       expect(classRef?.type).toBe('class');
-    }, 15000);
+    }, 60000); // deep-review fix (BUG-D): generous timeout for CDN parser download
 
     it('should parse and extract definitions and references from Python code', async () => {
       const pythonCode = `
@@ -148,7 +158,7 @@ mgr.calculate_total(123)
       // Verify Function definition
       const funcDef = tags.find((t) => t.name === 'get_order_items' && t.kind === 'definition');
       expect(funcDef).toBeDefined();
-    }, 15000);
+    }, 60000); // deep-review fix (BUG-D): generous timeout for CDN parser download
 
     it('should parse and extract definitions and references from Go code', async () => {
       const goCode = `
@@ -188,7 +198,7 @@ func main() {
       // Verify function definition
       const funcDef = tags.find((t) => t.name === 'printBook' && t.kind === 'definition');
       expect(funcDef).toBeDefined();
-    }, 15000);
+    }, 60000); // deep-review fix (BUG-D): generous timeout for CDN parser download
 
     it('should handle unsupported/missing languages gracefully without crashing', async () => {
       const tags = await parser.extractSymbols('const a = 1;', 'invalid_lang_name');

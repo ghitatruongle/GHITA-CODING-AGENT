@@ -2,9 +2,40 @@ import { Children, isValidElement, useRef, useState, type ReactNode } from 'reac
 import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
+import toast from 'react-hot-toast';
 import { assessShellCommand, runCommand } from '../utils/shell';
 import { useTranslation } from '../i18n';
 import { useAppStore } from '../stores/appStore';
+import { useEditProposalStore } from '../stores/editProposalStore';
+import { fsReadText } from '../lib/native-fs';
+
+/** Join workspace root + relative path using the platform separator. */
+function joinWorkspacePath(root: string, rel: string): string {
+  const sep = root.includes('\\') ? '\\' : '/';
+  const normalized = rel.replace(/[\\/]+/g, sep);
+  const cleanRoot = root.endsWith(sep) ? root.slice(0, -1) : root;
+  return `${cleanRoot}${sep}${normalized.replace(new RegExp(`^\\${sep}`), '')}`;
+}
+
+/** Guess a sensible default file name from the fence language tag. */
+function suggestedFileName(lang: string): string {
+  const ext: Record<string, string> = {
+    typescript: 'snippet.ts',
+    tsx: 'snippet.tsx',
+    javascript: 'snippet.js',
+    jsx: 'snippet.jsx',
+    json: 'snippet.json',
+    html: 'snippet.html',
+    css: 'snippet.css',
+    python: 'snippet.py',
+    rust: 'snippet.rs',
+    go: 'snippet.go',
+    yaml: 'snippet.yaml',
+    markdown: 'snippet.md',
+    sql: 'snippet.sql',
+  };
+  return ext[lang] || 'snippet.txt';
+}
 
 interface ComputerUsePreviewProps {
   preview: {
@@ -78,6 +109,41 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
     setIsRunning(false);
   };
 
+  // v1.0.0 — "Apply to file": turn this code block into an AI edit proposal
+  // (Antigravity-style diff review) instead of a blind copy/paste.
+  const canApply = !isShellCommand || lang === 'json' || lang === 'yaml' || lang === 'sql';
+  const handleApply = async () => {
+    const workspace = useAppStore.getState().terminalCwd;
+    if (!workspace) {
+      toast.error(t('codeView.applyNoWorkspace'));
+      return;
+    }
+    const rel = window.prompt(t('codeView.applyPromptPath'), suggestedFileName(lang));
+    if (!rel || !rel.trim()) return;
+    const absPath = joinWorkspacePath(workspace, rel.trim());
+    const fileName = rel.trim().split(/[\\/]/).pop() || rel.trim();
+
+    let originalContent = '';
+    try {
+      const disk = await fsReadText(absPath);
+      if (!disk.isBinary) originalContent = disk.content;
+    } catch {
+      // File does not exist yet — treat as a new-file proposal.
+    }
+
+    useEditProposalStore.getState().proposeWrite(
+      {
+        path: absPath,
+        fileName,
+        language: lang || 'plaintext',
+        originalContent,
+        description: t('codeView.applyToFile'),
+      },
+      code,
+    );
+    useAppStore.getState().setActiveTab('code');
+  };
+
   return (
     <div
       style={{
@@ -128,6 +194,30 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
           >
             {copied ? `✓ ${t('common.copied')}` : `📋 ${t('common.copy')}`}
           </button>
+          {canApply && (
+            <button
+              onClick={() => void handleApply()}
+              style={{
+                background: 'rgba(167,139,250,0.15)',
+                color: '#c4b5fd',
+                border: '1px solid rgba(167,139,250,0.3)',
+                borderRadius: '4px',
+                padding: '2px 8px',
+                fontSize: '10px',
+                cursor: 'pointer',
+                fontWeight: 600,
+                transition: 'all 0.15s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(167,139,250,0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(167,139,250,0.15)';
+              }}
+            >
+              📝 {t('codeView.applyToFile')}
+            </button>
+          )}
           {isRunnable && (
             <button
               onClick={handleRun}

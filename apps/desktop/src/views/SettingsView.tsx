@@ -97,6 +97,12 @@ export function SettingsView() {
   const setEditorTabSize = useAppStore((s) => s.setEditorTabSize);
   const terminalFontSize = useAppStore((s) => s.terminalFontSize);
   const setTerminalFontSize = useAppStore((s) => s.setTerminalFontSize);
+  // v1.0.0 — Low-RAM mode toggle (S36)
+  const lowRamMode = useAppStore((s) => s.lowRamMode);
+  const setLowRamMode = useAppStore((s) => s.setLowRamMode);
+  // v1.0.0 — Auto-save toggle (F03)
+  const autoSave = useAppStore((s) => s.autoSave);
+  const setAutoSave = useAppStore((s) => s.setAutoSave);
   const terminalFontFamily = useAppStore((s) => s.terminalFontFamily);
   const setTerminalFontFamily = useAppStore((s) => s.setTerminalFontFamily);
   const terminalCursorStyle = useAppStore((s) => s.terminalCursorStyle);
@@ -461,6 +467,38 @@ export function SettingsView() {
             <option value="underline">Underline</option>
             <option value="bar">Bar</option>
           </select>
+        </SettingRow>
+      </Section>
+
+      {/* v1.0.0 — Performance: Low-RAM mode (S36) */}
+      <Section title={`⚡ ${t('settings.performance')}`}>
+        <SettingRow label={t('settings.lowRamMode')} description={t('settings.lowRamModeDesc')}>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={lowRamMode}
+              onChange={(e) => setLowRamMode(e.target.checked)}
+              className="w-4 h-4 accent-[var(--accent-primary)]"
+              data-testid="low-ram-toggle"
+            />
+            <span className="text-sm text-[var(--text-secondary)]">
+              {lowRamMode ? t('settings.lowRamOn') : t('settings.lowRamOff')}
+            </span>
+          </label>
+        </SettingRow>
+        <SettingRow label={t('settings.autoSave')} description={t('settings.autoSaveDesc')}>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={autoSave}
+              onChange={(e) => setAutoSave(e.target.checked)}
+              className="w-4 h-4 accent-[var(--accent-primary)]"
+              data-testid="auto-save-toggle"
+            />
+            <span className="text-sm text-[var(--text-secondary)]">
+              {autoSave ? t('settings.autoSaveOn') : t('settings.autoSaveOff')}
+            </span>
+          </label>
         </SettingRow>
       </Section>
 

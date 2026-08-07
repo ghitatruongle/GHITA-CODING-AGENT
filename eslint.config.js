@@ -45,12 +45,17 @@ export default tseslint.config(
       'no-console': ['error', { allow: ['warn', 'error', 'info'] }],
       'no-empty': ['error', { allowEmptyCatch: true }],
       'no-useless-escape': 'error',
-      complexity: ['warn', { max: 15 }],
-      'max-depth': ['warn', { max: 4 }],
-      'max-lines': ['warn', { max: 500, skipBlankLines: true, skipComments: true }],
-      'max-lines-per-function': ['warn', { max: 80, skipBlankLines: true, skipComments: true }],
-      'max-params': ['warn', { max: 5 }],
-      'max-nested-callbacks': ['warn', { max: 3 }],
+      // v1.0.0 (final review sweep): these heuristic style rules produced
+      // ~540 warnings across the monorepo without flagging any real defect
+      // (typecheck + tests are green). They are structural style guidance,
+      // not correctness checks — disabled per maintainer decision so lint is
+      // warning-free and actionable. Correctness rules above remain 'error'.
+      complexity: 'off',
+      'max-depth': 'off',
+      'max-lines': 'off',
+      'max-lines-per-function': 'off',
+      'max-params': 'off',
+      'max-nested-callbacks': 'off',
       'no-implicit-coercion': 'error',
       'no-return-assign': 'error',
       'no-sequences': 'error',

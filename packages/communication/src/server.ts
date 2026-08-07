@@ -4,7 +4,7 @@
 // ==============================================================================
 
 import { createServer, type Server as HttpServer } from 'node:http';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { Server as SocketIOServer, type Socket } from 'socket.io';
 import { networkInterfaces, hostname, homedir, tmpdir } from 'node:os';
 import * as fs from 'node:fs';
@@ -15,6 +15,13 @@ import { PairingManager } from './pairing.js';
 import { ScreenCapture } from './screen-capture.js';
 import type { ServerConfig, ServerEvents, PairedDevice, CommandPayload } from './types.js';
 import { ChannelPluginRegistry } from './channel-plugin-contract.js';
+
+// deep-review fix (L10): constant-time string comparison for device tokens.
+function secureStringEqual(left: string, right: string): boolean {
+  const a = Buffer.from(left);
+  const b = Buffer.from(right);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
 
 const DEFAULT_PAIRED_DEVICES_FILE = path.resolve(homedir(), '.ghita-paired-devices.json');
 
@@ -622,6 +629,12 @@ export class CommunicationServer {
         if (existingDevice) {
           existingDevice.socketId = socket.id;
           existingDevice.lastSeen = Date.now();
+          // deep-review fix (M12): join the paired-devices room so the
+          // reconnecting device actually receives broadcasts (chat, status,
+          // screenshot, approvals). Previously the socketId was updated but
+          // the room membership was never granted, leaving the device
+          // "connected" yet blind to every broadcast until a full re-pair.
+          void socket.join('paired-devices');
           socket.emit(SOCKET_EVENTS.PAIR_CONFIRM, { deviceName: 'GHITA Desktop' });
           console.info(`[CommServer] Device ${existingDevice.name} reconnected via token`);
         }
@@ -872,7 +885,10 @@ export class CommunicationServer {
     } else if (deviceId) {
       // Session Resumption / Reconnection
       device = this.connectedDevices.get(deviceId);
-      if (device && device.secret && authToken === device.secret) {
+      // deep-review fix (L10): compare the device secret with a constant-time
+      // comparison — the previous `authToken === device.secret` leaked timing
+      // information that could help brute-force a session token.
+      if (device && device.secret && authToken && secureStringEqual(authToken, device.secret)) {
         // Device is already paired on this server session!
         if (device.socketId && device.socketId !== socket.id) {
           const oldSocket = this.io?.sockets?.sockets?.get(device.socketId);

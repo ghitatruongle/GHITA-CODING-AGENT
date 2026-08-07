@@ -101,52 +101,66 @@ GHITA-CODING-AGENT/
 ### Requirements
 
 - **Node.js** >= 20
-- **pnpm** >= 10.x (`npm install -g pnpm`)
-- **Rust** (for Tauri desktop)
-- **Android Studio** (for React Native)
-- **Android device/emulator** running Android 9+ (API 28)
+- **pnpm** (auto-enabled via corepack — pinned to the repo version)
+- **Rust** (for the Tauri desktop app)
+- **Android Studio** (only for the React Native mobile app)
 - **Git**
 
-### Step 1: Clone the project
+### Quick start (one command)
 
 ```bash
 git clone https://github.com/ghitatruongle/GHITA-CODING-AGENT.git
 cd GHITA-CODING-AGENT
 ```
 
-### Step 2: Install dependencies
+Then run the setup script for your platform — it checks prerequisites,
+installs dependencies, builds all packages and the sidecar:
 
-```bash
-pnpm install
+```powershell
+# Windows (PowerShell)
+powershell -ExecutionPolicy Bypass -File scripts/setup.ps1
 ```
 
-### Step 3: Configure environment
+```bash
+# Linux / macOS
+bash scripts/setup.sh
+```
+
+Anytime you hit a problem, run the built-in diagnostics:
+
+```bash
+pnpm doctor
+```
+
+### Manual steps
+
+<details>
+<summary>Click to expand</summary>
+
+#### 1. Install dependencies
+
+```bash
+pnpm bootstrap
+```
+
+#### 2. Configure environment (optional)
 
 ```bash
 cp .env.example .env
 # Edit .env with your API keys
 ```
 
-See [`.env.example`](.env.example) for required environment variables.
+You can also add API keys later from the app's **API Manager** tab
+(stored in the OS credential vault). For local AI, point the app at a
+running Ollama instance (`http://localhost:11434`).
 
-**Important:**
-
-- At minimum, configure one AI provider (OpenAI, Anthropic, Google, or Ollama)
-- For local AI, set `OLLAMA_BASE_URL=http://localhost:11434` and ensure Ollama is running
-- Default port for Socket.IO server is `8080` (configurable via `SOCKET_PORT`)
-
-### Step 4: Build the sidecar server (required for desktop app)
-
-The desktop app requires a Node.js sidecar server for communication and AI operations:
+#### 3. Build the sidecar server (required for the desktop app)
 
 ```bash
-# Build the sidecar server bundle
-cd apps/desktop/src-tauri/sidecar
-node server.mjs --build
-cd ../../..
+node apps/desktop/scripts/build-sidecar.mjs
 ```
 
-### Step 5: Run development
+#### 4. Run development
 
 ```bash
 # Desktop (Tauri + React)
@@ -155,6 +169,8 @@ pnpm dev:desktop
 # Mobile (React Native - Android)
 pnpm dev:android
 ```
+
+</details>
 
 ---
 
@@ -315,52 +331,66 @@ GHITA-CODING-AGENT/
 ### Yêu cầu hệ thống
 
 - **Node.js** >= 20
-- **pnpm** >= 10.x (`npm install -g pnpm`)
+- **pnpm** (tự bật qua corepack — đúng phiên bản repo đang dùng)
 - **Rust** (cho ứng dụng máy tính Tauri)
-- **Android Studio** (cho ứng dụng di động React Native)
-- **Thiết bị/giả lập Android** chạy phiên bản Android 9+ (API 28)
+- **Android Studio** (chỉ cần nếu chạy ứng dụng di động React Native)
 - **Git**
 
-### Bước 1: Nhân bản dự án (Clone)
+### Cài nhanh (một lệnh)
 
 ```bash
 git clone https://github.com/ghitatruongle/GHITA-CODING-AGENT.git
 cd GHITA-CODING-AGENT
 ```
 
-### Bước 2: Cài đặt các gói phụ thuộc
+Chạy script setup tương ứng hệ điều hành — script sẽ kiểm tra điều kiện,
+cài dependencies, build toàn bộ packages và sidecar:
 
-```bash
-pnpm install
+```powershell
+# Windows (PowerShell)
+powershell -ExecutionPolicy Bypass -File scripts/setup.ps1
 ```
 
-### Bước 3: Cấu hình biến môi trường
+```bash
+# Linux / macOS
+bash scripts/setup.sh
+```
+
+Bất cứ khi nào gặp sự cố, chạy công cụ chẩn đoán tích hợp:
+
+```bash
+pnpm doctor
+```
+
+### Các bước thủ công
+
+<details>
+<summary>Bấm để mở rộng</summary>
+
+#### 1. Cài đặt các gói phụ thuộc
+
+```bash
+pnpm bootstrap
+```
+
+#### 2. Cấu hình biến môi trường (tuỳ chọn)
 
 ```bash
 cp .env.example .env
 # Chỉnh sửa tệp .env và điền các khóa API của bạn
 ```
 
-Xem tệp [`.env.example`](.env.example) để biết danh sách các biến môi trường bắt buộc.
+Bạn cũng có thể thêm API key sau này trong tab **API Manager** của ứng dụng
+(lưu trong két thông tin của hệ điều hành). Với AI cục bộ, trỏ ứng dụng tới
+Ollama đang chạy (`http://localhost:11434`).
 
-**Lưu ý quan trọng:**
-
-- Tối thiểu, hãy cấu hình một nhà cung cấp AI (OpenAI, Anthropic, Google hoặc Ollama)
-- Đối với AI cục bộ, hãy đặt `OLLAMA_BASE_URL=http://localhost:11434` và đảm bảo Ollama đang chạy
-- Cổng mặc định cho Socket.IO server là `8080` (có thể cấu hình qua `SOCKET_PORT`)
-
-### Bước 4: Xây dựng sidecar server (bắt buộc cho ứng dụng desktop)
-
-Ứng dụng desktop yêu cầu một Node.js sidecar server để giao tiếp và các hoạt động AI:
+#### 3. Xây dựng sidecar server (bắt buộc cho ứng dụng desktop)
 
 ```bash
-# Xây dựng gói sidecar server
-cd apps/desktop/src-tauri/sidecar
-node server.mjs --build
-cd ../../..
+node apps/desktop/scripts/build-sidecar.mjs
 ```
 
-### Bước 5: Khởi chạy môi trường phát triển
+#### 4. Khởi chạy môi trường phát triển
 
 ```bash
 # Ứng dụng Desktop (Tauri + React)
@@ -369,6 +399,8 @@ pnpm dev:desktop
 # Ứng dụng Di động (React Native - Android)
 pnpm dev:android
 ```
+
+</details>
 
 ---
 

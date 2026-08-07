@@ -584,7 +584,16 @@ export class DSOOrchestrator {
 
     for (let i = 0; i < maxRetries; i++) {
       try {
-        const resp = await fetch(hc.url);
+        // deep-review fix (L11): bound the health check request — a hung
+        // container endpoint previously blocked spawnContainer forever.
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 5000);
+        let resp: Response;
+        try {
+          resp = await fetch(hc.url, { signal: controller.signal });
+        } finally {
+          clearTimeout(timer);
+        }
         if (resp.ok) {
           this.logger.log({
             containerId,

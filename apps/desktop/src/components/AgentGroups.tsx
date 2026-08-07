@@ -195,13 +195,32 @@ export function AgentGroups() {
 
   const runGroup = async (group: AgentGroup) => {
     setRunningGroupId(group.id);
-    const tasks = await runtime.groups.runGroup(group.id);
-    const newest = tasks.at(-1);
-    if (newest) {
-      setLatestTasks((current) => ({ ...current, [group.id]: newest }));
+    // deep-review fix (M5): a rejected runGroup previously left the button
+    // disabled forever and produced an unhandled rejection. Always clear the
+    // running state, and surface the failure as a task entry.
+    try {
+      const tasks = await runtime.groups.runGroup(group.id);
+      const newest = tasks.at(-1);
+      if (newest) {
+        setLatestTasks((current) => ({ ...current, [group.id]: newest }));
+      }
+    } catch (err: unknown) {
+      setLatestTasks((current) => ({
+        ...current,
+        [group.id]: {
+          id: `task_${Date.now()}`,
+          agentId: group.id,
+          groupId: group.id,
+          description: group.name,
+          status: 'failed',
+          error: err instanceof Error ? err.message : String(err),
+          startTime: Date.now(),
+        } as AgentTask,
+      }));
+    } finally {
+      refresh();
+      setRunningGroupId(null);
     }
-    refresh();
-    setRunningGroupId(null);
   };
 
   return (

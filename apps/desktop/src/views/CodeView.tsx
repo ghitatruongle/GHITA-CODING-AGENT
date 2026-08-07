@@ -5,6 +5,7 @@
 
 import { useState, Suspense, lazy, useCallback, useRef, useEffect } from 'react';
 import { FileExplorer } from '../components/FileExplorer';
+import { EditProposalTray } from '../components/EditProposalTray';
 import { fsWriteText, fsReadText } from '../lib/native-fs';
 import { open } from '@tauri-apps/plugin-dialog';
 import { motion } from 'framer-motion';
@@ -30,6 +31,10 @@ export function CodeView() {
   const activePath = useAppStore((s) => s.codeActivePath);
   const setActivePath = useAppStore((s) => s.setCodeActivePath);
   const shortcutsEnabled = useAppStore((s) => s.shortcutsEnabled);
+  // v1.0.0 — Auto-save debounce handle.
+  const autoSave = useAppStore((s) => s.autoSave);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoSavePathRef = useRef<string | null>(null);
 
   const [explorerWidth, setExplorerWidth] = useState(240);
   const isDragging = useRef(false);
@@ -38,6 +43,17 @@ export function CodeView() {
 
   // Active file
   const activeFile = openFiles.find((f) => f.path === activePath);
+
+  // deep-review fix (BUG-2): never fire a pending auto-save after CodeView
+  // unmounts — the debounced handleSave could otherwise run on stale state.
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
+      }
+    };
+  }, []);
 
   // AI edit proposals (diff review → accept/reject) — logic lives in the hook.
   const { activeProposal, acceptProposal, rejectProposal } = useAiEditProposal({
@@ -89,6 +105,7 @@ export function CodeView() {
         hydrated: true,
         isTruncated,
       });
+      useAppStore.getState().addRecentFile(path);
       if (isTruncated) {
         toast(tRef.current('codeView.fileTruncated', { name }), { icon: '⚠️' });
       }
@@ -208,34 +225,7 @@ export function CodeView() {
     [openFiles, activePath, setActivePath, setOpenFiles],
   );
 
-  // Handle editor content change
-  const handleContentChange = useCallback(
-    (value: string) => {
-      if (!activePath) return;
-      const cache = fileContentCache.get(activePath);
-      if (!cache) return;
-      cache.content = value;
-      // Cheap dirty-flag: if the lengths differ the value is definitely
-      // modified (most keystrokes). Only fall back to a full O(n) compare when
-      // the lengths match, so editing large files stays O(1) per keystroke.
-      const isModified =
-        value.length !== cache.originalContent.length ? true : value !== cache.originalContent;
-
-      const file = openFiles.find((f) => f.path === activePath);
-      if (file && file.modified !== isModified) {
-        // P1-2 (deep review pass #2): read the latest openFiles from the store
-        // to avoid the stale-closure resurrection race.
-        setOpenFiles(
-          useAppStore
-            .getState()
-            .codeOpenFiles.map((f) => (f.path === activePath ? { ...f, modified: isModified } : f)),
-        );
-      }
-    },
-    [activePath, openFiles, setOpenFiles],
-  );
-
-  // Save current file
+  // Save current file (declared before handleContentChange which references it)
   const handleSave = useCallback(async () => {
     const file = openFiles.find((f) => f.path === activePath);
     if (!file) return;
@@ -271,7 +261,46 @@ export function CodeView() {
         tRef.current('codeView.saveFailed', { error: e instanceof Error ? e.message : String(e) }),
       );
     }
-  }, [openFiles, activePath, setOpenFiles, t]);
+  }, [openFiles, activePath, setOpenFiles]);
+
+  // Handle editor content change
+  const handleContentChange = useCallback(
+    (value: string) => {
+      if (!activePath) return;
+      const cache = fileContentCache.get(activePath);
+      if (!cache) return;
+      cache.content = value;
+      // Cheap dirty-flag: if the lengths differ the value is definitely
+      // modified (most keystrokes). Only fall back to a full O(n) compare when
+      // the lengths match, so editing large files stays O(1) per keystroke.
+      const isModified =
+        value.length !== cache.originalContent.length ? true : value !== cache.originalContent;
+
+      const file = openFiles.find((f) => f.path === activePath);
+      if (file && file.modified !== isModified) {
+        // P1-2 (deep review pass #2): read the latest openFiles from the store
+        // to avoid the stale-closure resurrection race.
+        setOpenFiles(
+          useAppStore
+            .getState()
+            .codeOpenFiles.map((f) => (f.path === activePath ? { ...f, modified: isModified } : f)),
+        );
+      }
+
+      // v1.0.0 — Auto-save: debounce 1.5s after the last keystroke, then save.
+      if (autoSave && isModified) {
+        autoSavePathRef.current = activePath;
+        if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = setTimeout(() => {
+          // Only fire if the active path is still the same and still modified.
+          if (autoSavePathRef.current === activePath) {
+            void handleSave();
+          }
+        }, 1500);
+      }
+    },
+    [activePath, openFiles, setOpenFiles, autoSave, handleSave],
+  );
 
   // Save all files
   // BUG FIX: previously `savedContents` was populated *before* the actual
@@ -294,14 +323,13 @@ export function CodeView() {
         continue;
       }
       try {
-        await fsWriteText(f.path, cache.content, cache.encoding);
-        // P1-3 (deep review pass #2): only treat the path as saved when the
-        // write succeeded AND the cache content hasn't drifted underneath us.
-        // Mirror the per-file `handleSave` behaviour into the bulk path.
-        if (cache.content === cache.content && cache.content !== undefined) {
-          cache.originalContent = cache.content;
-          savedContents.set(f.path, cache.content);
-        }
+        // deep-review fix (BUG-11): snapshot the content BEFORE the write and
+        // compare against the live cache afterwards — the previous
+        // `cache.content === cache.content` tautology always evaluated true.
+        const contentToSave = cache.content;
+        await fsWriteText(f.path, contentToSave, cache.encoding);
+        cache.originalContent = contentToSave;
+        savedContents.set(f.path, contentToSave);
       } catch (e) {
         lastError = e;
       }
@@ -331,7 +359,7 @@ export function CodeView() {
       return;
     }
     toast.success(tRef.current('codeView.filesSaved', { count: savedContents.size }));
-  }, [openFiles, setOpenFiles]);
+  }, [setOpenFiles]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -596,6 +624,9 @@ export function CodeView() {
             </span>
           </div>
         )}
+
+        {/* v1.0.0 — Antigravity edit-review queue (all pending AI edits) */}
+        <EditProposalTray activePath={activePath} onJumpTo={setActivePath} />
 
         {/* AI edit proposal review bar */}
         {activeProposal && (

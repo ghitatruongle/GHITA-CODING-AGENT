@@ -26,6 +26,9 @@ export function WebViewPanel() {
     switchTab,
     handleIframeLoad,
     handleRefresh,
+    // deep-review fix (M9): history navigation.
+    goBack,
+    goForward,
   } = useWebViewPanel();
 
   const ACCENT = '#3b82f6';
@@ -65,6 +68,8 @@ export function WebViewPanel() {
         handleAddressClick={handleAddressClick}
         handleRefresh={handleRefresh}
         navigateTo={navigateTo}
+        goBack={goBack}
+        goForward={goForward}
       />
 
       {/* ── Error banner ── */}

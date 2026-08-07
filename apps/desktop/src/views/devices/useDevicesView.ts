@@ -1,5 +1,5 @@
 // Extracted logic from DevicesView (v0.1.5 lint max-lines cleanup)
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useAppStore } from '../../stores/appStore';
 import { useTranslation } from '../../i18n';
@@ -24,12 +24,22 @@ export function useDevicesView() {
   const [codeCountdown, setCodeCountdown] = useState(300);
   const [lanEnabled, setLanEnabled] = useState(false);
 
+  // deep-review fix (L5): guard delayed callbacks against firing after the
+  // view unmounts (setState on an unmounted component).
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   // Load initial LAN setting
   useEffect(() => {
     const loadLan = async () => {
       try {
         const enabled = await invoke<boolean>('get_lan_enabled');
-        setLanEnabled(enabled);
+        if (mountedRef.current) setLanEnabled(enabled);
       } catch (e) {
         console.error('Failed to load LAN setting:', e);
       }
@@ -50,15 +60,17 @@ export function useDevicesView() {
         await invoke('stop_server');
         setServerStatus('offline');
         setHealth(null);
-        // Start server again after 1.5 seconds
+        // Start server again after 1.5 seconds (deep-review L5: guard unmount)
         setTimeout(async () => {
           try {
             await invoke<string>('start_server');
-            setTimeout(pollStatus, 1500);
-            setError(null);
+            if (mountedRef.current) setTimeout(pollStatus, 1500);
+            if (mountedRef.current) setError(null);
           } catch (e) {
-            setError(String(e));
-            setServerStatus('error');
+            if (mountedRef.current) {
+              setError(String(e));
+              setServerStatus('error');
+            }
           }
         }, 1500);
       }
@@ -104,12 +116,12 @@ export function useDevicesView() {
           setPairingCode(null);
           setConnectedDevices([]);
           await invoke('start_server');
-          setTimeout(pollStatus, 1500);
+          if (mountedRef.current) setTimeout(pollStatus, 1500);
         }
       } catch (e) {
         try {
           await invoke('start_server');
-          setTimeout(pollStatus, 1500);
+          if (mountedRef.current) setTimeout(pollStatus, 1500);
         } catch (_) {
           setServerStatus('error');
           setPairingCode(null);
@@ -145,12 +157,12 @@ export function useDevicesView() {
     setError(null);
     try {
       await invoke<string>('start_server');
-      setTimeout(pollStatus, 2000);
+      if (mountedRef.current) setTimeout(pollStatus, 2000);
     } catch (e) {
       setError(String(e));
       setServerStatus('error');
     } finally {
-      setIsStarting(false);
+      if (mountedRef.current) setIsStarting(false);
     }
   };
 
@@ -166,9 +178,14 @@ export function useDevicesView() {
 
   const handleUnpairDevice = async (deviceId: string) => {
     try {
-      const response = await fetch(`http://127.0.0.1:${port}/unpair?deviceId=${deviceId}`, {
-        method: 'POST',
-      });
+      // deep-review fix (L2): URL-encode the device id so ids containing
+      // reserved characters cannot corrupt the query string.
+      const response = await fetch(
+        `http://127.0.0.1:${port}/unpair?deviceId=${encodeURIComponent(deviceId)}`,
+        {
+          method: 'POST',
+        },
+      );
       if (response.ok) {
         pollStatus();
       } else {

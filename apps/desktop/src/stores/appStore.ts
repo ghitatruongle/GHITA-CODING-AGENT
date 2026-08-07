@@ -28,7 +28,83 @@ export interface FileCacheEntry {
    */
   isTruncated?: boolean;
 }
-export const fileContentCache = new Map<string, FileCacheEntry>();
+
+/**
+ * v1.0.0 RAM optimization (O01) — LRU-bounded file cache.
+ *
+ * The previous implementation was an unbounded `Map`: every file ever opened
+ * stayed in memory for the whole session. With 5 MiB read caps a handful of
+ * large files could hold tens of MB hostage. The cache now keeps at most
+ * `FILE_CACHE_MAX_ENTRIES` entries and evicts the least-recently-used ones,
+ * never touching files that currently have an open editor tab (their buffers
+ * hold unsaved edits). Evicted entries for open tabs are transparently
+ * re-hydrated from disk by CodeView when needed.
+ */
+const FILE_CACHE_MAX_ENTRIES = 128;
+
+class FileContentLruCache {
+  private map = new Map<string, FileCacheEntry>();
+
+  /** Paths that must never be evicted (open editor tabs). */
+  private pinnedPaths(): Set<string> {
+    try {
+      return new Set(useAppStore.getState().codeOpenFiles.map((f) => f.path));
+    } catch {
+      // Store not initialized yet (module-load order in tests) — pin nothing.
+      return new Set();
+    }
+  }
+
+  get size(): number {
+    return this.map.size;
+  }
+
+  get(path: string): FileCacheEntry | undefined {
+    const entry = this.map.get(path);
+    if (entry) {
+      // Refresh recency (Map iteration order = insertion order).
+      this.map.delete(path);
+      this.map.set(path, entry);
+    }
+    return entry;
+  }
+
+  set(path: string, entry: FileCacheEntry): void {
+    if (this.map.has(path)) this.map.delete(path);
+    this.map.set(path, entry);
+    if (this.map.size > FILE_CACHE_MAX_ENTRIES) this.evict();
+  }
+
+  has(path: string): boolean {
+    return this.map.has(path);
+  }
+
+  delete(path: string): boolean {
+    return this.map.delete(path);
+  }
+
+  clear(): void {
+    this.map.clear();
+  }
+
+  keys(): IterableIterator<string> {
+    return this.map.keys();
+  }
+
+  private evict(): void {
+    const pinned = this.pinnedPaths();
+    const overflow = this.map.size - FILE_CACHE_MAX_ENTRIES;
+    let evicted = 0;
+    for (const path of this.map.keys()) {
+      if (evicted >= overflow) break;
+      if (pinned.has(path)) continue; // never drop an open tab's buffer
+      this.map.delete(path);
+      evicted += 1;
+    }
+  }
+}
+
+export const fileContentCache = new FileContentLruCache();
 
 export type TabId =
   | 'code'
@@ -94,6 +170,9 @@ interface AppState {
   setActiveWorkspace: (path: string | null) => void;
   recentWorkspaces: string[];
   addRecentWorkspace: (path: string) => void;
+  // v1.0.0 — recently opened files (Quick File Open history).
+  recentFiles: string[];
+  addRecentFile: (path: string) => void;
 
   // v0.7.0 — Editor Preferences
   editorFontSize: number;
@@ -116,6 +195,15 @@ interface AppState {
   // v0.7.0 — Keyboard Shortcuts
   shortcutsEnabled: boolean;
   toggleShortcutsEnabled: () => void;
+
+  // v1.0.0 — Low-RAM mode: disables editor eye-candy (minimap, smooth
+  // scrolling/animations) and caps caches harder to shrink the memory
+  // footprint on modest machines.
+  lowRamMode: boolean;
+  setLowRamMode: (enabled: boolean) => void;
+  // v1.0.0 — Auto-save: debounced save when the user stops typing.
+  autoSave: boolean;
+  setAutoSave: (enabled: boolean) => void;
 
   // Settings
   theme: ThemeMode;
@@ -238,6 +326,12 @@ export const useAppStore = create<AppState>()(
         set((s) => ({
           recentWorkspaces: [path, ...s.recentWorkspaces.filter((w) => w !== path)].slice(0, 10),
         })),
+      // v1.0.0 — recently opened files (Quick File Open history).
+      recentFiles: [] as string[],
+      addRecentFile: (path) =>
+        set((s) => ({
+          recentFiles: [path, ...s.recentFiles.filter((w) => w !== path)].slice(0, 20),
+        })),
 
       // v0.7.0 — Editor Preferences
       editorFontSize: 14,
@@ -260,6 +354,13 @@ export const useAppStore = create<AppState>()(
       // v0.7.0 — Keyboard Shortcuts
       shortcutsEnabled: true,
       toggleShortcutsEnabled: () => set((s) => ({ shortcutsEnabled: !s.shortcutsEnabled })),
+
+      // v1.0.0 — Low-RAM mode
+      lowRamMode: false,
+      setLowRamMode: (enabled) => set({ lowRamMode: enabled }),
+      // v1.0.0 — Auto-save
+      autoSave: false,
+      setAutoSave: (enabled) => set({ autoSave: enabled }),
 
       // Settings
       theme: 'dark' as ThemeMode,
@@ -331,6 +432,7 @@ export const useAppStore = create<AppState>()(
         })),
 
       // v0.7.3 — Reset all settings to defaults
+      // deep-review fix (BUG-C): also reset the v1.0.0 performance settings.
       resetSettings: () =>
         set({
           theme: 'dark',
@@ -345,6 +447,8 @@ export const useAppStore = create<AppState>()(
           terminalFontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
           terminalCursorStyle: 'block',
           shortcutsEnabled: true,
+          lowRamMode: false,
+          autoSave: false,
         }),
     }),
     {
@@ -376,8 +480,11 @@ export const useAppStore = create<AppState>()(
         terminalFontFamily: state.terminalFontFamily,
         terminalCursorStyle: state.terminalCursorStyle,
         shortcutsEnabled: state.shortcutsEnabled,
+        lowRamMode: state.lowRamMode,
+        autoSave: state.autoSave,
         activeWorkspace: state.activeWorkspace,
         recentWorkspaces: state.recentWorkspaces,
+        recentFiles: state.recentFiles,
         showWelcome: state.showWelcome,
       }),
       merge: (persistedState: unknown, currentState: AppState) => {

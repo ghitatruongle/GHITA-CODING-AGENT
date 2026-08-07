@@ -6,6 +6,7 @@
 import React from 'react';
 import { type DynamicModelOption } from '../../utils/buildModelOptions';
 import { type ProviderId, PROVIDER_LABELS } from '../../types/providers';
+import type { ChatMessage } from '../../hooks/useChatSessions';
 
 interface ChatHeaderProps {
   t: (key: string, params?: Record<string, string | number>) => string;
@@ -14,6 +15,8 @@ interface ChatHeaderProps {
   setCurrentView: React.Dispatch<React.SetStateAction<'chat' | 'history'>>;
   handleCreateSession: () => void;
   handleReconnect: () => void;
+  // v1.0.0 — chat export to Markdown
+  messages: ChatMessage[];
   // Model selector
   modelOptions: DynamicModelOption[];
   provider: string;
@@ -31,6 +34,7 @@ export function ChatHeader({
   setCurrentView,
   handleCreateSession,
   handleReconnect,
+  messages,
   modelOptions,
   provider,
   setProvider,
@@ -143,6 +147,49 @@ export function ChatHeader({
             }}
           >
             ➕
+          </button>
+          {/* v1.0.0 — Export chat to Markdown */}
+          <button
+            onClick={() => {
+              if (messages.length === 0) return;
+              const md = messages
+                .map((m) => {
+                  const who = m.role === 'user' ? '**You**' : '**GHITA**';
+                  const ts = m.timestamp
+                    ? `\n<small>${new Date(m.timestamp).toLocaleString()}</small>`
+                    : '';
+                  return `## ${who}${ts}\n\n${m.content}`;
+                })
+                .join('\n\n---\n\n');
+              const blob = new Blob([`# GHITA CODING AGENT — Chat Export\n\n${md}`], {
+                type: 'text/markdown',
+              });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `ghita-chat-${new Date().toISOString().slice(0, 10)}.md`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+            title={t('chat.exportChat') || 'Export chat to Markdown'}
+            disabled={messages.length === 0}
+            style={{
+              background: 'transparent',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '6px',
+              width: '24px',
+              height: '24px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: messages.length === 0 ? 'default' : 'pointer',
+              fontSize: '12px',
+              color: messages.length === 0 ? '#475569' : '#94a3b8',
+              transition: 'all 0.2s',
+              opacity: messages.length === 0 ? 0.5 : 1,
+            }}
+          >
+            📥
           </button>
         </div>
       </div>

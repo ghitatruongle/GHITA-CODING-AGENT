@@ -44,11 +44,20 @@ export class HybridBrowserController {
   }
 
   /**
-   * Navigate to a URL
+   * Navigate to a URL (http/https only — deep-review fix L8).
    */
   async navigate(url: string): Promise<void> {
     if (!this.page) throw new Error('Browser not launched. Call launch() first.');
-    await this.page.goto(url, { waitUntil: 'domcontentloaded' });
+    let parsed: URL;
+    try {
+      parsed = new URL(url);
+    } catch {
+      throw new Error(`Invalid URL: ${url}`);
+    }
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      throw new Error(`Only http:// and https:// URLs are allowed (got ${parsed.protocol}//).`);
+    }
+    await this.page.goto(parsed.toString(), { waitUntil: 'domcontentloaded' });
   }
 
   /**
