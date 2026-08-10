@@ -1,6 +1,6 @@
 # Kế hoạch Release v1.1.0 — Track 13 & 14 (Build Installer + Phát hành 0 bug / 0 warning)
 
-**Ngày:** 2026-08-10 · **Trạng thái: Track 13 ✅ HOÀN THÀNH (chạy sau khi bạn duyệt qua /goal) · Track 14 ⏸ CHỜ DUYỆT.**
+**Ngày:** 2026-08-10 · **Trạng thái: Track 13 ✅ · Track 14 🔄 V1✅ V2✅ V3✅ · V4: CI release đang chạy lại (tag v1.1.0 → c919523 sau fix)**
 **Mục tiêu:** hoàn thiện installer, build installer đủ nền tảng, phát hành **v1.1.0 với 0 bug / 0 warning**.
 **Tổng:** 2 Track · **8 phase** (4 + 4) · phụ thuộc chặt: Track 14 chỉ chạy sau Track 13 xanh.
 
