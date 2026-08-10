@@ -118,7 +118,7 @@ jobs:
           node scripts/updater-manifest.mjs record
           --platform windows-x86_64
           --assets-dir apps/desktop/src-tauri/target/release/bundle
-          --suffix -setup.exe
+          --suffix "-setup.exe"
           --output updater-records/windows-x86_64.json
       - uses: actions/upload-artifact@v4
         with:
@@ -304,7 +304,9 @@ jobs:
           retention-days: 30
 
   generate-updater-json:
-    needs: [build-windows, build-linux, build-macos, build-android, build-ios]
+    # Only desktop bundles produce updater records (.sig); Android/iOS attach
+    # to the release directly and must not block latest.json + publish.
+    needs: [build-windows, build-linux, build-macos]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

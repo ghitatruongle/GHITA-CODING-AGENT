@@ -125,3 +125,10 @@
 - **build-desktop.yml linux**: thiếu `TAURI_SIGNING_PRIVATE_KEY` env → "A public key has been found, but no private key" sau khi bundle deb/AppImage thành công. Đã thêm env (khớp windows/macos).
 - **build-desktop.yml macos**: `beforeBuildCommand` vite OOM ("Ineffective mark-compacts near heap limit") — thiếu `NODE_OPTIONS=--max-old-space-size=8192` (release.yml đã có). Đã thêm.
 - Tag `v1.1.0` tái tạo tại `c919523` để release.yml chạy lại với bản đã sửa.
+
+### Track 14 — V4 CI iteration 2 (2026-08-10)
+
+- **CR-020 fixed** — macOS không compile được computer-use Rust module: enigo kẹp `CGEventSource` (!Send) trong `ComputerUseState` → 25 lỗi E0277/E0609; thêm `SendableEnigo` newtype (`unsafe impl Send` + Deref/DerefMut, Mutex-serialized) + cfg-gate 4 phím macOS thiếu (Insert/Print/Pause/Numlock → fallback layout char). Windows `cargo check` + `clippy -D warnings` xanh.
+- **updater-manifest windows record**: PowerShell runner tách `-setup.exe` thành `-setup` + `.exe` → "found 0"; quote `"--suffix -setup.exe"` trong workflow.
+- **generate-updater-json** chỉ cần windows/linux/macos (android/iOS không sinh updater records; không nên block latest.json + publish). Android đang cần secrets keystore (ANDROID_KEYSTORE_BASE64…) từ user; iOS vướng fmt Pod consteval (toolchain) — cả hai không chặn release desktop, ghi backlog v1.1.x.
+- Release v1.1.0 đầu tiên đã tạo (3 asset Linux); các fix trên sẽ cho windows/macos + latest.json ở lần chạy kế.
