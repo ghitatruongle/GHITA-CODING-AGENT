@@ -1,0 +1,64 @@
+{
+  "passed": true,
+  "score": 88,
+  "evidence": [
+    {
+      "dimension": "change-validation",
+      "level": "outcome-supported",
+      "label": "2/2 expected markers matched"
+    },
+    {
+      "dimension": "change-validation",
+      "level": "observed",
+      "label": "no artifacts produced — output only"
+    },
+    {
+      "dimension": "controlled-execution",
+      "level": "artifact",
+      "label": "1 tool steps executed"
+    },
+    {
+      "dimension": "reliable-delivery",
+      "level": "outcome-supported",
+      "label": "task completed"
+    },
+    {
+      "dimension": "learning-capture",
+      "level": "outcome-supported",
+      "label": "expected markers evidence captured"
+    },
+    {
+      "dimension": "task-understanding",
+      "level": "artifact",
+      "label": "final output satisfies expected markers"
+    }
+  ],
+  "passReasons": [
+    "expected markers matched in output",
+    "steps executed",
+    "task completed (adapter verdict)"
+  ],
+  "failReasons": [],
+  "status": "passed",
+  "runId": "46e27509-e42c-4152-b50e-8e6150714ff9",
+  "suite": "internal-v1.1.0",
+  "task": {
+    "id": "repo-map",
+    "title": "Explain repo structure",
+    "prompt": "Build a map of the module and explain the key files.",
+    "expected": ["package.json", "src"],
+    "fixture": "Key files: package.json, src/index.ts."
+  },
+  "version": "1.1.0",
+  "startedAt": "2026-08-10T04:16:21.964Z",
+  "durationMs": 1,
+  "steps": [
+    {
+      "tool": "fixture.answer",
+      "args": {
+        "taskId": "repo-map"
+      }
+    }
+  ],
+  "trajectoryFingerprint": "7432ac9e"
+}

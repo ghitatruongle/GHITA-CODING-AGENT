@@ -1,26 +1,29 @@
 {
   "$schema_comment": "Bootstrap floors for v0.1.5 landing. Raise only after measured coverage exceeds the new floor.",
-  "version": "0.1.5",
+  "version": "1.1.0",
   "shipTargets": {
-    "packages/security": 70,
-    "packages/agents": 55,
-    "packages/communication": 50,
-    "packages/ai-engine": 55,
-    "packages/memory": 50,
-    "packages/skills": 45
+    "packages/security": 80,
+    "packages/agents": 58,
+    "packages/communication": 53,
+    "packages/ai-engine": 60,
+    "packages/memory": 51,
+    "packages/skills": 55
   },
   "tiers": {
     "T0": {
       "description": "Critical security and orchestration surface",
       "packages": {
         "packages/security": {
-          "lines": 70
+          "lines": 80,
+          "branches": 75
         },
         "packages/agents": {
-          "lines": 55
+          "lines": 58,
+          "branches": 65
         },
         "packages/communication": {
-          "lines": 50
+          "lines": 53,
+          "branches": 65
         }
       }
     },
@@ -28,13 +31,16 @@
       "description": "Core product brain",
       "packages": {
         "packages/ai-engine": {
-          "lines": 45
+          "lines": 60,
+          "branches": 70
         },
         "packages/memory": {
-          "lines": 50
+          "lines": 51,
+          "branches": 60
         },
         "packages/skills": {
-          "lines": 45
+          "lines": 55,
+          "branches": 60
         }
       }
     },

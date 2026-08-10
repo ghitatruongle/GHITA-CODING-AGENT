@@ -7,5 +7,11 @@
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist", "src/**/*.test.ts"],
-  "references": [{ "path": "../shared" }, { "path": "../agents" }, { "path": "../ai-engine" }]
+  "references": [
+    { "path": "../shared" },
+    { "path": "../agents" },
+    { "path": "../ai-engine" },
+    { "path": "../mcp" },
+    { "path": "../ingest" }
+  ]
 }

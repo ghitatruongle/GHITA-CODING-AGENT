@@ -32,6 +32,8 @@ export class LRUCache<T = unknown> {
   private cleanupTimer: ReturnType<typeof setInterval> | null = null;
   private _stats: CacheStats;
   private globalListeners: CacheEventListener[] = [];
+  /** v1.1.0 Track 9 B3: tổng bytes đang giữ (cap theo maxMemoryBytes). */
+  private totalBytes = 0;
 
   constructor(config?: Partial<LRUCacheConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -104,14 +106,22 @@ export class LRUCache<T = unknown> {
     };
 
     if (existing) {
+      this.totalBytes += size - (existing.size ?? 0);
       this.map.set(key, entry);
     } else {
-      // Evict if needed
+      // Evict if needed (entry-count cap, rồi byte cap — v1.1.0 Track 9 B3).
       while (this.map.size >= this.config.maxSize) {
         this.evictOne();
       }
       this.map.set(key, entry);
       this.order.push(key);
+      this.totalBytes += size;
+      if (this.config.maxMemoryBytes > 0) {
+        let guard = 0;
+        while (this.totalBytes > this.config.maxMemoryBytes && guard++ < 10_000) {
+          this.evictOne();
+        }
+      }
     }
 
     this._stats.sets++;
@@ -128,9 +138,11 @@ export class LRUCache<T = unknown> {
   }
 
   delete(key: string): boolean {
+    const entry = this.map.get(key);
     const existed = this.map.delete(key);
     if (existed) {
       this.order = this.order.filter((k) => k !== key);
+      this.totalBytes = Math.max(0, this.totalBytes - (entry?.size ?? 0));
       this._stats.deletes++;
     }
     return existed;
@@ -140,6 +152,7 @@ export class LRUCache<T = unknown> {
     const keys = Array.from(this.map.keys());
     this.map.clear();
     this.order = [];
+    this.totalBytes = 0;
     if (keys.length > 0) {
       this.emit({ type: 'manual', keys });
     }
@@ -292,10 +305,17 @@ export class LRUCache<T = unknown> {
     }
 
     if (victimKey) {
+      const victim = this.map.get(victimKey);
       this.map.delete(victimKey);
+      this.totalBytes = Math.max(0, this.totalBytes - (victim?.size ?? 0));
       this._stats.evictions++;
       this.emit({ type: 'eviction', keys: [victimKey], reason: 'size' });
     }
+  }
+
+  /** v1.1.0 Track 9 B3: bytes đang giữ trong cache. */
+  memoryBytes(): number {
+    return this.totalBytes;
   }
 
   private evictExpired(): void {

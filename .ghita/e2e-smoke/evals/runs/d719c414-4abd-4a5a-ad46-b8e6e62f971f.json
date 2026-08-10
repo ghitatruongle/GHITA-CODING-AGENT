@@ -1,0 +1,55 @@
+{
+  "passed": true,
+  "score": 50,
+  "evidence": [
+    {
+      "dimension": "change-validation",
+      "level": "observed",
+      "label": "no artifacts produced — output only"
+    },
+    {
+      "dimension": "controlled-execution",
+      "level": "artifact",
+      "label": "1 tool steps executed"
+    },
+    {
+      "dimension": "reliable-delivery",
+      "level": "outcome-supported",
+      "label": "task completed"
+    },
+    {
+      "dimension": "learning-capture",
+      "level": "missing",
+      "label": "output unstructured"
+    },
+    {
+      "dimension": "task-understanding",
+      "level": "observed",
+      "label": "agent produced a final output"
+    }
+  ],
+  "passReasons": ["steps executed", "task completed (adapter verdict)"],
+  "failReasons": ["no expected marker matched in output"],
+  "status": "passed",
+  "runId": "d719c414-4abd-4a5a-ad46-b8e6e62f971f",
+  "suite": "internal-v1.1.0",
+  "task": {
+    "id": "edit-fix-typo",
+    "title": "Fix typo in comment",
+    "prompt": "Fix the typo in the license header comment.",
+    "expected": ["ghi"],
+    "fixture": "All headers now say \"GHITA\"."
+  },
+  "version": "1.1.0",
+  "startedAt": "2026-08-10T04:59:56.270Z",
+  "durationMs": 1,
+  "steps": [
+    {
+      "tool": "fixture.answer",
+      "args": {
+        "taskId": "edit-fix-typo"
+      }
+    }
+  ],
+  "trajectoryFingerprint": "63be5526"
+}

@@ -1,0 +1,18 @@
+{
+  "version": "1.1.0",
+  "comment": "Deny-default caps per module (v1.1.0 Track 9 B2). Modules not listed are denied.",
+  "caps": [
+    { "module": "ai-engine.cache", "maxBytes": 134217728, "hardLimit": true },
+    { "module": "ai-engine.semantic-cache", "maxBytes": 104857600, "hardLimit": true },
+    { "module": "code-graph.index", "maxBytes": 209715200, "hardLimit": false },
+    { "module": "chat.history", "maxBytes": 10485760, "hardLimit": true },
+    { "module": "terminal.scrollback", "maxBytes": 8388608, "hardLimit": true },
+    { "module": "browser.screen-preview", "maxBytes": 5242880, "hardLimit": true },
+    { "module": "sidecar.journal", "maxBytes": 16777216, "hardLimit": true }
+  ],
+  "targets": {
+    "desktopRssMb": 500,
+    "sidecarRssMb": 300,
+    "startupMs": 2000
+  }
+}

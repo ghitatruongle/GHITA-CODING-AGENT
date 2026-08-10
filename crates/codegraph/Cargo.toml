@@ -1,0 +1,17 @@
+[package]
+name = "ghita-codegraph"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "GHITA code-graph PageRank CSR core (Track 8 A10/A11) — std core + napi addon"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+addon = ["dep:napi", "dep:napi-derive"]
+
+[dependencies]
+napi = { version = "2", default-features = false, features = ["compat-mode", "napi4", "dyn-symbols"], optional = true }
+napi-derive = { version = "2", optional = true }

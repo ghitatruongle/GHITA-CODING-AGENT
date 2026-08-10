@@ -6,7 +6,24 @@
 // a "repo map" of high-signal context for an LLM.
 // ==============================================================================
 
+import { loadNative } from '@ghita/native-bridge';
 import type { CodeEdge, CodeNode } from './types.js';
+
+/** v1.1.0 Track 8 A11: codegraph native addon surface (via @ghita/native-bridge). */
+interface CodegraphNative {
+  pagerank(
+    n: number,
+    from: Uint32Array,
+    to: Uint32Array,
+    weight: Float32Array,
+    damping?: number,
+    iterations?: number,
+  ): Float32Array;
+}
+
+/** Bridge cho codegraph addon — load một lần (native-first, JS fallback). */
+const codegraphBridge = () =>
+  loadNative<CodegraphNative>('codegraph', undefined as unknown as CodegraphNative);
 
 export interface RepoMapEntry {
   id: string;
@@ -35,6 +52,8 @@ export interface PageRankOptions {
   damping?: number;
   /** Power-iteration count. Default 30. */
   iterations?: number;
+  /** v1.1.0 Track 8 A11: bỏ qua native addon (test parity / debug). */
+  forceJs?: boolean;
 }
 
 /** Edge kinds that convey "importance flows to the target". */
@@ -62,53 +81,90 @@ export function computePageRank(
   const scores = new Map<string, number>();
   if (n === 0) return scores;
 
-  const ids = new Set(nodes.map((node) => node.id));
-  const initial = 1 / n;
-  for (const node of nodes) scores.set(node.id, initial);
-
-  // Build outgoing adjacency (weighted) restricted to known nodes + ranking edges.
-  const outgoing = new Map<string, Array<{ to: string; weight: number }>>();
-  const outWeight = new Map<string, number>();
-  for (const edge of edges) {
-    if (!RANKING_EDGE_KINDS.has(edge.kind)) continue;
-    if (!ids.has(edge.from) || !ids.has(edge.to) || edge.from === edge.to) continue;
-    const w = edge.weight > 0 ? edge.weight : 1;
-    const list = outgoing.get(edge.from) ?? [];
-    list.push({ to: edge.to, weight: w });
-    outgoing.set(edge.from, list);
-    outWeight.set(edge.from, (outWeight.get(edge.from) ?? 0) + w);
+  // ── v1.1.0 Track 8 A11: native pagerank (CSR TypedArray) khi addon có sẵn ──
+  if (!options.forceJs) {
+    const bridge = codegraphBridge();
+    if (bridge.native && typeof bridge.impl.pagerank === 'function') {
+      const indexById = new Map<string, number>();
+      for (const [i, node] of nodes.entries()) indexById.set(node.id, i);
+      const from: number[] = [];
+      const to: number[] = [];
+      const weight: number[] = [];
+      for (const edge of edges) {
+        if (!RANKING_EDGE_KINDS.has(edge.kind)) continue;
+        const fromIdx = indexById.get(edge.from);
+        const toIdx = indexById.get(edge.to);
+        if (fromIdx === undefined || toIdx === undefined || fromIdx === toIdx) continue;
+        from.push(fromIdx);
+        to.push(toIdx);
+        weight.push(edge.weight > 0 ? edge.weight : 1);
+      }
+      const ranks = bridge.impl.pagerank(
+        n,
+        new Uint32Array(from),
+        new Uint32Array(to),
+        new Float32Array(weight),
+        damping,
+        iterations,
+      );
+      for (const [i, node] of nodes.entries()) scores.set(node.id, ranks[i] ?? 0);
+      return scores;
+    }
   }
 
-  const base = (1 - damping) / n;
-  for (let iter = 0; iter < iterations; iter++) {
-    const next = new Map<string, number>();
-    for (const node of nodes) next.set(node.id, base);
+  // ── v1.1.0 Track 8 A5: CSR + TypedArray (Float64Array/Uint32Array) ──────
+  // Map id → index để đổi sang không gian số; mọi vòng lặp nóng chạy trên
+  // mảng gốc (không object churn), giữ nguyên ngữ nghĩa Map đầu ra.
+  const indexById = new Map<string, number>();
+  for (const [i, node] of nodes.entries()) indexById.set(node.id, i);
 
-    // Distribute dangling-node mass uniformly.
+  // Xây danh sách kề trọng số dạng CSR (from/to/weight phẳng).
+  const csrFrom: number[] = [];
+  const csrTo: number[] = [];
+  const csrWeight: number[] = [];
+  const outWeight = new Float64Array(n);
+  for (const edge of edges) {
+    if (!RANKING_EDGE_KINDS.has(edge.kind)) continue;
+    const fromIdx = indexById.get(edge.from);
+    const toIdx = indexById.get(edge.to);
+    if (fromIdx === undefined || toIdx === undefined || fromIdx === toIdx) continue;
+    const w = edge.weight > 0 ? edge.weight : 1;
+    csrFrom.push(fromIdx);
+    csrTo.push(toIdx);
+    csrWeight.push(w);
+    outWeight[fromIdx] = (outWeight[fromIdx] ?? 0) + w;
+  }
+  const edgeCount = csrFrom.length;
+
+  const rank = new Float64Array(n).fill(1 / n);
+  const next = new Float64Array(n);
+  const base = (1 - damping) / n;
+
+  for (let iter = 0; iter < iterations; iter++) {
+    next.fill(base);
+
+    // Phân phối khối lượng dangling node đều cho mọi node.
     let danglingMass = 0;
-    for (const node of nodes) {
-      if (!outgoing.has(node.id)) danglingMass += scores.get(node.id) ?? 0;
+    for (let i = 0; i < n; i++) {
+      if (outWeight[i] === 0) danglingMass += rank[i] ?? 0;
     }
     const danglingShare = (damping * danglingMass) / n;
 
-    for (const node of nodes) {
-      const score = scores.get(node.id) ?? 0;
-      const edgesOut = outgoing.get(node.id);
-      if (edgesOut && edgesOut.length > 0) {
-        const total = outWeight.get(node.id) ?? edgesOut.length;
-        for (const { to, weight } of edgesOut) {
-          next.set(to, (next.get(to) ?? 0) + (damping * score * weight) / total);
-        }
-      }
+    for (let e = 0; e < edgeCount; e++) {
+      const from = csrFrom[e];
+      const to = csrTo[e];
+      if (from === undefined || to === undefined) continue;
+      next[to] =
+        (next[to] ?? 0) +
+        (damping * (rank[from] ?? 0) * (csrWeight[e] ?? 1)) / (outWeight[from] ?? 1);
     }
     if (danglingShare > 0) {
-      for (const node of nodes) {
-        next.set(node.id, (next.get(node.id) ?? 0) + danglingShare);
-      }
+      for (let i = 0; i < n; i++) next[i] = (next[i] ?? 0) + danglingShare;
     }
-    for (const [id, value] of next) scores.set(id, value);
+    rank.set(next);
   }
 
+  for (const [i, node] of nodes.entries()) scores.set(node.id, rank[i] ?? 0);
   return scores;
 }
 

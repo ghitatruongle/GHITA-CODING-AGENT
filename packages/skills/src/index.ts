@@ -422,6 +422,10 @@ export {
   type SystemEventType,
 } from './openclaw/trigger-engine.js';
 
+// v1.1.0 Track 1 P22: standard MCP server
+export { SkillsMCPServer, createSkillsMCPServer } from './mcp-server.js';
+export type { SkillLike, SkillsMCPServerConfig } from './mcp-server.js';
+
 // --- Instinct Registry (v0.4.9 A4) ---
 export { InstinctRegistry, BUILTIN_INSTINCTS } from './instincts/index.js';
 export type {
@@ -430,3 +434,10 @@ export type {
   InstinctContext,
   FiredInstinct,
 } from './instincts/index.js';
+
+// ── v1.1.0 Track 2: Skill schema v2, sandbox, lock, discovery, creator loop ──
+export * from './v2/index.js';
+
+// ── v1.1.0 Track 6 P68: document.ingest skill ──
+export { createDocumentIngestSkill } from './ingest/document-ingest.js';
+export type { DocumentIngestSkillDeps, DocumentIngestInput } from './ingest/document-ingest.js';

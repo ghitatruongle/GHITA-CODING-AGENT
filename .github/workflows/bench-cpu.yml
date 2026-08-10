@@ -1,0 +1,55 @@
+name: bench-cpu
+
+on:
+  schedule:
+    - cron: '0 4 * * *' # nightly
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'packages/security/**'
+      - 'packages/ingest/**'
+      - 'packages/code-graph/**'
+      - 'packages/native-bridge/**'
+      - 'crates/**'
+      - 'scripts/bench-*.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  bench:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: CPU benchmark + regression gate (JS)
+        run: node scripts/bench-cpu.mjs --baseline
+
+      - name: Rust cores (cargo test)
+        uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --workspace
+        working-directory: crates
+
+      - name: Build native addons (secscan/retrieval/codegraph)
+        run: |
+          npm i -g @napi-rs/cli@3.7.0
+          for c in secscan retrieval codegraph; do
+            napi build --cwd crates/$c --platform --release --features addon --output-dir crates/$c
+          done
+
+      - name: Native benchmark
+        run: node scripts/bench-native.mjs
+
+      - name: Upload bench reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpu-bench
+          path: |
+            docs/perf-baseline.json
+            docs/perf-native.json

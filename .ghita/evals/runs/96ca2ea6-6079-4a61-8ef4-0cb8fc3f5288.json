@@ -1,0 +1,64 @@
+{
+  "passed": true,
+  "score": 88,
+  "evidence": [
+    {
+      "dimension": "change-validation",
+      "level": "outcome-supported",
+      "label": "2/2 expected markers matched"
+    },
+    {
+      "dimension": "change-validation",
+      "level": "observed",
+      "label": "no artifacts produced — output only"
+    },
+    {
+      "dimension": "controlled-execution",
+      "level": "artifact",
+      "label": "1 tool steps executed"
+    },
+    {
+      "dimension": "reliable-delivery",
+      "level": "outcome-supported",
+      "label": "task completed"
+    },
+    {
+      "dimension": "learning-capture",
+      "level": "outcome-supported",
+      "label": "expected markers evidence captured"
+    },
+    {
+      "dimension": "task-understanding",
+      "level": "artifact",
+      "label": "final output satisfies expected markers"
+    }
+  ],
+  "passReasons": [
+    "expected markers matched in output",
+    "steps executed",
+    "task completed (adapter verdict)"
+  ],
+  "failReasons": [],
+  "status": "passed",
+  "runId": "96ca2ea6-6079-4a61-8ef4-0cb8fc3f5288",
+  "suite": "internal-v1.1.0",
+  "task": {
+    "id": "terminal-lint",
+    "title": "Lint the project",
+    "prompt": "Run eslint and fix any reported errors.",
+    "expected": ["all files", "without errors"],
+    "fixture": "Lint complete: all files without errors."
+  },
+  "version": "1.1.0",
+  "startedAt": "2026-08-10T11:18:42.114Z",
+  "durationMs": 1,
+  "steps": [
+    {
+      "tool": "fixture.answer",
+      "args": {
+        "taskId": "terminal-lint"
+      }
+    }
+  ],
+  "trajectoryFingerprint": "7d0af6b1"
+}

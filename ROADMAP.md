@@ -1,7 +1,7 @@
 # 🗺️ GHITA CODING AGENT — Public Roadmap
 
-> **Current version:** v1.0.0
-> **Last updated:** 2026-08-06
+> **Current version:** v1.1.0
+> **Last updated:** 2026-08-10
 
 ---
 
