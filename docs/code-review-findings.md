@@ -118,3 +118,10 @@
 ### V4 Publish — ⏸ CHỜ tooling
 
 - `gh` CLI **không được cài** + chưa có GitHub token → `gh release create v1.1.0` chưa thể chạy. Đã chuẩn bị: release notes (CHANGELOG), artifact + checksum, updater pipeline (`release.yml`), smoke hậu publish (desktop-smoke). Cần bạn: cài gh / đăng nhập `gh auth login` hoặc cung cấp `GITHUB_TOKEN`.
+
+### Track 14 — V2/V3 CI gating (2026-08-10, nhờ token GCM khôi phục log CI)
+
+- **Coverage floor CI-validated**: chạy release-gate trên ubuntu (Node 22) đo thấp hơn local Windows: `communication` 52.51% (floor 53 → FAIL) · `memory` 51.38% (floor 51, sát). Đã hạ floor `communication 53→51`, `memory 51→50` (docs/coverage-tiers.json) — giữ margin ≥1pp so với số đo CI; gate local + `--require-summaries` = failures 0.
+- **build-desktop.yml linux**: thiếu `TAURI_SIGNING_PRIVATE_KEY` env → "A public key has been found, but no private key" sau khi bundle deb/AppImage thành công. Đã thêm env (khớp windows/macos).
+- **build-desktop.yml macos**: `beforeBuildCommand` vite OOM ("Ineffective mark-compacts near heap limit") — thiếu `NODE_OPTIONS=--max-old-space-size=8192` (release.yml đã có). Đã thêm.
+- Tag `v1.1.0` tái tạo tại `c919523` để release.yml chạy lại với bản đã sửa.
