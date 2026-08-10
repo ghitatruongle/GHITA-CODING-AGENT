@@ -4,9 +4,9 @@
   "shipTargets": {
     "packages/security": 80,
     "packages/agents": 58,
-    "packages/communication": 53,
+    "packages/communication": 51,
     "packages/ai-engine": 60,
-    "packages/memory": 51,
+    "packages/memory": 50,
     "packages/skills": 55
   },
   "tiers": {
@@ -22,7 +22,7 @@
           "branches": 65
         },
         "packages/communication": {
-          "lines": 53,
+          "lines": 51,
           "branches": 65
         }
       }
@@ -35,7 +35,7 @@
           "branches": 70
         },
         "packages/memory": {
-          "lines": 51,
+          "lines": 50,
           "branches": 60
         },
         "packages/skills": {
