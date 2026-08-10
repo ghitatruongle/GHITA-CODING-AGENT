@@ -1,4 +1,5 @@
 {
   "name": "GhitaMobile",
-  "displayName": "GHITA Agent Remote"
+  "displayName": "GHITA Agent Remote",
+  "version": "1.1.0"
 }

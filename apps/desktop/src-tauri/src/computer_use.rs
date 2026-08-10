@@ -51,8 +51,28 @@ pub struct ScreenCapture {
 // Managed state — holds the Enigo instance across invocations
 // ---------------------------------------------------------------------------
 
+/// enigo's macOS backend keeps a `CGEventSource` (`NonNull`, `!Send`); Tauri
+/// command futures require `Send`, so we wrap `Enigo` in a newtype with an
+/// explicit `unsafe impl Send`. Access is serialized through the `Mutex` and
+/// enigo's API is only touched from command handlers (CGEventSource is a
+/// thread-safe opaque CF handle in practice), which is the standard pattern
+/// for Tauri + enigo on macOS.
+pub(crate) struct SendableEnigo(Enigo);
+unsafe impl Send for SendableEnigo {}
+impl std::ops::Deref for SendableEnigo {
+    type Target = Enigo;
+    fn deref(&self) -> &Enigo {
+        &self.0
+    }
+}
+impl std::ops::DerefMut for SendableEnigo {
+    fn deref_mut(&mut self) -> &mut Enigo {
+        &mut self.0
+    }
+}
+
 pub struct ComputerUseState {
-    pub enigo: Mutex<Enigo>,
+    pub enigo: Mutex<SendableEnigo>,
 }
 
 impl ComputerUseState {
@@ -67,7 +87,7 @@ impl ComputerUseState {
                 .unwrap_or_else(|_| panic!("Cannot create even dummy enigo controller"))
         });
         Self {
-            enigo: Mutex::new(enigo),
+            enigo: Mutex::new(SendableEnigo(enigo)),
         }
     }
 }
@@ -189,9 +209,23 @@ fn resolve_key(name: &str) -> Key {
         "alt" | "option" => Key::Alt,
         "meta" | "command" | "cmd" | "win" | "super" => Key::Meta,
         "capslock" | "caps_lock" | "caps" => Key::CapsLock,
+        // enigo's macOS `Key` enum lacks these variants — fall back to the
+        // layout-dependent char mapping on macOS, keep the real keys elsewhere.
+        #[cfg(target_os = "macos")]
+        "insert" | "printscreen" | "print_screen" | "prtsc" | "pause" | "numlock" | "num_lock" => {
+            if let Some(ch) = name.chars().next() {
+                Key::Unicode(ch)
+            } else {
+                Key::Space
+            }
+        }
+        #[cfg(not(target_os = "macos"))]
         "insert" => Key::Insert,
+        #[cfg(not(target_os = "macos"))]
         "printscreen" | "print_screen" | "prtsc" => Key::Print,
+        #[cfg(not(target_os = "macos"))]
         "pause" => Key::Pause,
+        #[cfg(not(target_os = "macos"))]
         "numlock" | "num_lock" => Key::Numlock,
         _ => {
             // Fall back to layout-dependent char mapping

@@ -1,6 +1,6 @@
 {
   "name": "@ghita/skills",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "sideEffects": false,
   "description": "Skill system cho GHITA CODING AGENT",
@@ -31,9 +31,11 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@ghita/shared": "workspace:*",
     "@ghita/agents": "workspace:*",
-    "@ghita/ai-engine": "workspace:*"
+    "@ghita/ai-engine": "workspace:*",
+    "@ghita/ingest": "workspace:*",
+    "@ghita/mcp": "workspace:*",
+    "@ghita/shared": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

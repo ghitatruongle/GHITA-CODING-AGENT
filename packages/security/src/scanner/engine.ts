@@ -11,6 +11,7 @@ import { existsSync } from 'node:fs';
 import { readdir, readFile, realpath, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { loadNative } from '@ghita/native-bridge';
 import type {
   FindingSeverityLevel,
   ScanCoverageDocument,
@@ -20,6 +21,14 @@ import type {
   ScanSummary,
 } from './models.js';
 import { DEFAULT_SCANNER_RULES } from './rules.js';
+
+/** v1.1.0 Track 8 A7: native secscan addon surface (via @ghita/native-bridge). */
+interface SecscanNative {
+  scanFast(
+    content: string,
+    rules: Array<{ id: string; pattern: string; negative?: string }>,
+  ): { lines: Uint32Array; ruleIndices: Uint32Array; evidence: string[] };
+}
 
 /** Thư mục luôn bị loại khỏi scan (artifact/dependency dirs). */
 const DEFAULT_EXCLUDED_DIRS = new Set([
@@ -101,6 +110,9 @@ export class InvalidScanTargetError extends Error {
  *   console.log(report.summary.score, report.findings.findings.length);
  */
 export class SecurityScanner {
+  /** v1.1.0 Track 8 A7: ép dùng JS fast path (test parity / debug). */
+  static forceJsScanFast = false;
+
   private readonly rules: ScannerRule[];
   private readonly maxFileSizeBytes: number;
   private readonly maxFiles: number;
@@ -207,37 +219,119 @@ export class SecurityScanner {
     );
     if (applicable.length === 0) return findings;
 
-    const lines = content.split(/\r?\n/);
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i] ?? '';
-      if (line.length > 2000) continue; // minified/generated line — skip
-      for (const rule of applicable) {
-        if (!rule.pattern.test(line)) continue;
-        if (rule.negativePattern?.test(line)) continue;
-        const evidence = line.trim().slice(0, MAX_EVIDENCE_LENGTH);
-        findings.push({
-          findingId: randomUUID(),
-          ruleId: rule.id,
-          title: rule.title,
-          summary: `${rule.title} detected at ${relPath}:${i + 1}`,
-          severity: { level: rule.severity },
-          confidence: {
-            level: rule.confidence,
-            rationale: 'Line-based pattern match by the local rule engine.',
-          },
-          taxonomy: { category: rule.category, cwe: [...rule.cwe] },
-          locations: [{ path: relPath, startLine: i + 1 }],
-          evidence,
-          remediation: rule.remediation,
-          fingerprints: {
-            algorithm: 'ghita-scanner/v1',
-            primary: fingerprint(rule.id, relPath, evidence),
-          },
-          provenance: { source: 'ghita-local-scanner' },
-        });
+    // v1.1.0 Track 8 A3: lazy line iteration — không dựng toàn bộ mảng dòng
+    // (giảm RAM đáng kể trên file lớn; giữ nguyên ngữ nghĩa per-line/per-rule).
+    let lineStart = 0;
+    let lineNo = 1;
+    while (lineStart <= content.length) {
+      const nl = content.indexOf('\n', lineStart);
+      const lineEnd = nl === -1 ? content.length : nl;
+      const line = content.slice(lineStart, lineEnd);
+      if (line.length > 2000) {
+        // minified/generated line — skip
+      } else {
+        for (const rule of applicable) {
+          if (!rule.pattern.test(line)) continue;
+          if (rule.negativePattern?.test(line)) continue;
+          this.pushFinding(findings, rule, relPath, line, lineNo);
+        }
       }
+      if (nl === -1) break;
+      lineStart = nl + 1;
+      lineNo += 1;
     }
     return findings;
+  }
+
+  /**
+   * v1.1.0 Track 8 A3 (fast path): quét bằng MỘT alternation regex trên toàn
+   * buffer (không tách dòng) — nhanh hơn đáng kể trên file lớn, vẫn giữ
+   * ruleId + số dòng cho từng finding.
+   */
+  scanContentFast(relPath: string, content: string, sink?: ScanFinding[]): ScanFinding[] {
+    const findings = sink ?? [];
+    const ext = extname(relPath).toLowerCase();
+    const applicable = this.rules.filter(
+      (r) => !r.fileExtensions || r.fileExtensions.includes(ext),
+    );
+    if (applicable.length === 0) return findings;
+
+    // v1.1.0 Track 8 A7: native fast path qua @ghita/native-bridge (secscan addon).
+    if (!SecurityScanner.forceJsScanFast) {
+      const bridge = loadNative<SecscanNative>('secscan', undefined as unknown as SecscanNative);
+      if (bridge.native && typeof bridge.impl.scanFast === 'function') {
+        const rules = applicable.map((r) => ({
+          id: r.id,
+          pattern: r.pattern.source,
+          negative: r.negativePattern?.source,
+        }));
+        try {
+          const result = bridge.impl.scanFast(content, rules);
+          for (let i = 0; i < result.lines.length; i++) {
+            const rule = applicable[result.ruleIndices[i] ?? 0];
+            if (!rule) continue;
+            this.pushFinding(
+              findings,
+              rule,
+              relPath,
+              result.evidence[i] ?? '',
+              result.lines[i] ?? 0,
+            );
+          }
+          return findings;
+        } catch {
+          // Native không hỗ trợ pattern (vd look-around) → fallback JS bên dưới.
+        }
+      }
+    }
+
+    const combined = new RegExp(`(?:${applicable.map((r) => r.pattern.source).join('|')})`, 'g');
+    let match: RegExpExecArray | null;
+    let lineNo = 1;
+    let lastIndex = 0;
+    while ((match = combined.exec(content)) !== null) {
+      // Cập nhật số dòng theo số ký tự xuống dòng giữa match trước và match này.
+      lineNo += countNewlines(content, lastIndex, match.index);
+      lastIndex = match.index;
+      const matchedText = match[0];
+      const rule = applicable.find(
+        (r) => r.pattern.test(matchedText) && !r.negativePattern?.test(matchedText),
+      );
+      if (!rule) continue;
+      this.pushFinding(findings, rule, relPath, matchedText, lineNo);
+      if (match.index === combined.lastIndex) combined.lastIndex++;
+    }
+    return findings;
+  }
+
+  private pushFinding(
+    findings: ScanFinding[],
+    rule: ScannerRule,
+    relPath: string,
+    matchedText: string,
+    lineNo: number,
+  ): void {
+    const evidence = matchedText.trim().slice(0, MAX_EVIDENCE_LENGTH);
+    findings.push({
+      findingId: randomUUID(),
+      ruleId: rule.id,
+      title: rule.title,
+      summary: `${rule.title} detected at ${relPath}:${lineNo}`,
+      severity: { level: rule.severity },
+      confidence: {
+        level: rule.confidence,
+        rationale: 'Line-based pattern match by the local rule engine.',
+      },
+      taxonomy: { category: rule.category, cwe: [...rule.cwe] },
+      locations: [{ path: relPath, startLine: lineNo }],
+      evidence,
+      remediation: rule.remediation,
+      fingerprints: {
+        algorithm: 'ghita-scanner/v1',
+        primary: fingerprint(rule.id, relPath, evidence),
+      },
+      provenance: { source: 'ghita-local-scanner' },
+    });
   }
 
   // ── Scan-target resolution (path safety + containment) ──────────────────
@@ -328,6 +422,15 @@ function fingerprint(ruleId: string, path: string, evidence: string): string {
   return createHash('sha256')
     .update(`${ruleId}|${path}|${evidence.replace(/\s+/g, ' ')}`)
     .digest('hex');
+}
+
+/** Đếm số ký tự '\n' trong khoảng [start, end) — dùng cho fast scan. */
+function countNewlines(content: string, start: number, end: number): number {
+  let count = 0;
+  for (let i = start; i < end; i++) {
+    if (content.charCodeAt(i) === 10) count++;
+  }
+  return count;
 }
 
 function countBySeverity(findings: ScanFinding[]): Record<FindingSeverityLevel, number> {

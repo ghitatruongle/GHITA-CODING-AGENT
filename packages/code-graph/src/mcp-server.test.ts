@@ -1,13 +1,14 @@
 // ==============================================================================
-// CodeGraph MCP Server Unit Tests
+// CodeGraph MCP Server Unit Tests (standard @ghita/mcp + official SDK)
 // ==============================================================================
 
 import { describe, it, expect } from 'vitest';
+import { createLinkedPair, createMCPClient } from '@ghita/mcp';
 import { CodeKnowledgeGraph } from './index.js';
 import { CodeGraphMCPServer } from './mcp-server.js';
 
 describe('CodeGraphMCPServer', () => {
-  it('should list available MCP tools', () => {
+  it('lists the three standard tools', () => {
     const kg = new CodeKnowledgeGraph();
     const mcpServer = new CodeGraphMCPServer(kg);
 
@@ -18,34 +19,46 @@ describe('CodeGraphMCPServer', () => {
     expect(tools.map((t) => t.name)).toContain('get_graph_stats');
   });
 
-  it('should handle tools/list RPC request', () => {
+  it('serves tools via a standard MCP session (in-memory transport)', async () => {
     const kg = new CodeKnowledgeGraph();
     const mcpServer = new CodeGraphMCPServer(kg);
 
-    const response = mcpServer.handleMessage({
-      jsonrpc: '2.0',
-      id: 'req-1',
-      method: 'tools/list',
-    });
+    const [clientTransport, serverTransport] = createLinkedPair();
+    await mcpServer.createServer().connect(serverTransport);
 
-    expect(response.id).toBe('req-1');
-    expect(response.result?.content[0]?.text).toContain('search_code_symbols');
+    const client = createMCPClient('test-client', {
+      kind: 'in-memory',
+      transport: clientTransport,
+    });
+    await client.connect();
+
+    const names = client.tools.map((t) => t.name);
+    expect(names).toEqual(['search_code_symbols', 'get_symbol_dependencies', 'get_graph_stats']);
+
+    const stats = await client.callTool('get_graph_stats', {});
+    expect(stats.isError).toBe(false);
+    expect(stats.content[0]?.text).toContain('nodes');
+
+    await client.close();
   });
 
-  it('should handle tools/call RPC request for get_graph_stats', () => {
+  it('calls search_code_symbols with a pattern on an empty graph', async () => {
     const kg = new CodeKnowledgeGraph();
     const mcpServer = new CodeGraphMCPServer(kg);
 
-    const response = mcpServer.handleMessage({
-      jsonrpc: '2.0',
-      id: 'req-2',
-      method: 'tools/call',
-      params: {
-        name: 'get_graph_stats',
-      },
-    });
+    const [clientTransport, serverTransport] = createLinkedPair();
+    await mcpServer.createServer().connect(serverTransport);
 
-    expect(response.result).toBeDefined();
-    expect(response.result?.content[0]?.text).toContain('nodes');
+    const client = createMCPClient('test-client', {
+      kind: 'in-memory',
+      transport: clientTransport,
+    });
+    await client.connect();
+
+    const res = await client.callTool('search_code_symbols', { pattern: 'foo' });
+    // Empty graph either returns an empty result set or a graceful error text.
+    expect(res.content[0]?.text).toBeDefined();
+
+    await client.close();
   });
 });

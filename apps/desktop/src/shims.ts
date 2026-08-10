@@ -136,6 +136,48 @@ export const exec = (_cmd: string, cb: (err: null, stdout: string, stderr: strin
   if (cb) cb(null, '', '');
 };
 export const execSync = () => '';
+export const spawnSync = () => ({ status: 0, stdout: '', stderr: '' });
+export const execFileSync = () => '';
+export const execFile = (
+  _cmd: string,
+  _args: unknown[],
+  cb?: (err: null, stdout: unknown, stderr: unknown) => void,
+) => {
+  if (cb) cb(null, '', '');
+};
+export const fork = () => ({ on: () => {} });
+
+// stream exports (browser no-op shims) — the MCP SDK's stdio client imports
+// these named exports from 'node:stream'; without them rollup cannot link the
+// bundle (release blocking, 2026-08-10).
+class StreamMock extends EventEmitter {
+  write(..._args: unknown[]) {
+    return true;
+  }
+  end(..._args: unknown[]) {
+    return this;
+  }
+  pipe(..._args: unknown[]) {
+    return this;
+  }
+  pause() {
+    return this;
+  }
+  resume() {
+    return this;
+  }
+  destroy() {
+    return this;
+  }
+}
+export class PassThrough extends StreamMock {}
+export class Readable extends StreamMock {}
+export class Writable extends StreamMock {}
+export class Transform extends StreamMock {}
+export class Duplex extends StreamMock {}
+export const Stream = StreamMock;
+export const pipeline = (..._args: unknown[]) => StreamMock;
+export const finished = (..._args: unknown[]) => StreamMock;
 
 // util exports
 export const promisify =
@@ -143,6 +185,7 @@ export const promisify =
   (...args: unknown[]) =>
     Promise.resolve(fn(...args));
 export const inspect = (val: unknown) => String(val);
+export const parseArgs = () => ({ values: {}, positionals: [] });
 
 // crypto exports
 export const createHash = () => ({
@@ -201,6 +244,9 @@ export const timingSafeEqual = (a: any, b: any) => {
   }
   return result === 0;
 };
+
+// module exports
+export const createRequire = () => (id: string) => ({ id, default: {}, __esModule: true });
 
 // url exports
 export const fileURLToPath = (url: string) => url;
@@ -275,8 +321,14 @@ const defaultMock = {
   spawn,
   exec,
   execSync,
+  spawnSync,
+  execFileSync,
+  execFile,
+  fork,
+  createRequire,
   promisify,
   inspect,
+  parseArgs,
   createHash,
   randomUUID,
   randomBytes,
@@ -294,6 +346,14 @@ const defaultMock = {
   Database,
   EventEmitter,
   createInterface,
+  PassThrough,
+  Readable,
+  Writable,
+  Transform,
+  Duplex,
+  Stream,
+  pipeline,
+  finished,
   loadSync,
   load,
   fromJSON,

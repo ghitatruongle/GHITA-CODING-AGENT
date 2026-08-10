@@ -8,7 +8,7 @@
 import type { Skill, SkillCategory, SkillResult } from '@ghita/shared';
 
 /** Version constant for the skills package assets. */
-export const SKILLS_VERSION = '1.0.0';
+export const SKILLS_VERSION = '1.1.0';
 
 /** Ready, disabled, or missing status states for loaded skills. */
 export type SkillStatus = 'ready' | 'disabled' | 'missing-adapter' | 'error';
@@ -49,6 +49,22 @@ export interface SkillDefinition extends Skill {
   dangerous?: boolean;
   /** Main executor executing the skill's business logic. */
   run: (invocation: SkillInvocation, context: SkillExecutionContext) => Promise<SkillResult>;
+  // ── v1.1.0 Track 2 (Skill schema v2) ─────────────────────────────────────
+  /** Tool allowlist: adapter keys permitted at execution boundary (deny others). */
+  allowedTools?: string[];
+  /** Sandbox permission level requested by the skill. */
+  sandboxPermissions?: 'default' | 'require_escalated';
+  /** SPDX license identifier (e.g. MIT, Apache-2.0, Proprietary). */
+  license?: string;
+  /** Provenance/attribution sources this skill derives from. */
+  sources?: Array<{ name: string; url?: string }>;
+  /** v2 metadata. */
+  metadata?: {
+    /** Optional quoted version override (defaults to `version`). */
+    version?: string;
+    /** Hide from discovery (internal/WIP tier). */
+    internal?: boolean;
+  };
 }
 
 /** Adapter mapping file read/write methods to Tauri backend or Node fs. */

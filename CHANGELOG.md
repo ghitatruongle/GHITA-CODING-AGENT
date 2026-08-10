@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] - 2026-08-10
+
+### Release & Installer — Track 13/14 (2026-08-10)
+
+- **Installer v1.1.0 Windows NSIS**: `release/GHITA-CODING-AGENT-Setup-v1.1.0.exe` (single-file, currentUser, EN+VI) + SHA-256 checksum; version/identifier đồng bộ `com.ghita.coding-agent`; profile release tối ưu (LTO thin, strip, panic-abort).
+- **Release blocker CR-019 fixed**: `src/shims.ts` thiếu `PassThrough`/`spawnSync`/`createRequire`/`parseArgs` làm vỡ build desktop (trên Node 24 hiện segfault 0xC0000005) — thêm stream/child_process/module/util mocks + alias `node:module`; `vite build` desktop xanh (4596 modules).
+- **Zero-warning đạt 100%**: `pnpm typecheck` (44/44) · `pnpm lint` (43/43, 78 lint vi phạm style đã sửa, 0 warning) · `pnpm knip` (exit 0) · `cargo clippy -D warnings` (desktop + 3 napi crates, dead-code napi = expected) · `cargo fmt --check` 0.
+- **Zero-bug verification xanh**: `pnpm test` (44/44 tasks), cargo test (crates 12 tests + desktop — debug link chỉ ở windows-gnu), evals-gate 79/100 (≥75), e2e-smoke 4/4, desktop-smoke 4/4 (startup 1344ms), bench CPU/RAM PASS, coverage T0/T1 failures=0.
+- **Updater**: workflow `release.yml` sẵn sàng (Windows/Linux/macOS/Android/iOS matrix + `updater-manifest` → `latest.json`); bản ghi ký yêu cầu `TAURI_SIGNING_PRIVATE_KEY` (CI only).
+- Ghi chú: build desktop local nên dùng **Node 22** (khớp CI); Node 24 + vite 6.4.2 → segfault giả.
+
+### Quality Gates — Track 12 (đóng vòng review-fix)
+
+- **Bug→test gate**: `scripts/check-bug-tests.mjs` — mọi finding fixed phải có TestFile (4/4).
+- **Coverage floor nâng**: security 80, ai-engine 60, agents 58, skills 55, communication 53, memory 51 — verify bằng số liệu coverage thật (`check-coverage-tiers --allow-missing`: 0 failures).
+- **E2E smoke**: `scripts/e2e-smoke.mjs` — 4/4 PASS (ingest, evals, scanner, MCP interop).
+- **Workflow mới**: `.github/workflows/quality-gates.yml` — nightly + PR: bug-tests + property/unit + smoke + coverage + bench CPU/RAM.
+
+### Fixed — Track 11 (bug fix & hardening, từ deep review Track 10)
+
+- **SSRF guard hoàn thiện + regression** (`web-fetch`): protocol allowlist, chặn private/reserved IP + cloud metadata, DNS all-records + IP pinning — 11 test mới (`web-fetch.ssrf.test.ts`).
+- **Path containment hoàn thiện + regression** (`workspace-tools`): lexical + symlink-safe (realpath ancestor) — 4 test mới (`workspace-tools.security.test.ts`).
+- **`LRUCache.delete()` không trừ bytes** khỏi bộ đếm `totalBytes` khi xoá entry — đã sửa + test.
+- **Native secscan không hỗ trợ look-around regex** (rules JS có `(?!...)`) → addon trả lỗi rõ và engine tự **fallback JS** — scan vẫn đúng mọi rule.
+- **Bug→test mapping gate**: `scripts/check-bug-tests.mjs` (mọi finding fixed phải có TestFile) ✅.
+- **Property testing** (fast-check) cho splitters + tool-call repair: không throw, bất biến round-trip, deterministic coerce.
+- **E2E integration smoke**: `scripts/e2e-smoke.mjs` — ingest CLI, evals suite, security scanner, MCP interop: **4/4 PASS**.
+
+### Added — Reference-Driven Upgrade (7 tracks / 50 mục tiêu từ đối chiếu 53 dự án tham khảo)
+
+- **Track 1 — Evals & MCP**: `@ghita/evals` (evidence-based scoring 5 chiều, CLI `evals run/compare/replay`, internal/browser/skills suites, longitudinal SQLite, CI gate `scripts/evals-gate.mjs`); `@ghita/mcp` chuẩn SDK (client stdio/SSE/HTTP, server + deny-default hooks, in-memory pair); code-graph/browser/memory/skills → MCP servers; xoá JSON-RPC tự viết; interop check `scripts/mcp-interop-check.mjs` + workflow `evals.yml`.
+- **Track 2 — Skills v2**: schema v2 (`allowed-tools`, `sandbox_permissions`, `metadata.version/internal`, `license`, `sources`), v2 importer + structural contract (scripts/ ⇒ tests/), execution-boundary enforcement, Docker skill sandbox (deny-default), license engine + THIRD_PARTY_NOTICES, skill-lock v3 (folderHash), discovery 3 tầng + shadow, skill-creator eval-loop, instinct metrics, export đa-harness.
+- **Track 3 — Plugins & Marketplace**: Claude plugin/marketplace import, installer (`plugins install <user>/<repo>@tag`), agent-driven `$plugin-installer` skill, catalog tiers (system/curated/experimental/quarantine), supply-chain scan (hash + heuristics → verdict), trust tiers + pin/rollback.
+- **Track 4 — AI Engine & Chat**: tool-call repair, 2-phase tool approvals, adaptive bandit router (Thompson sampling), model roles (10 roles), pricing DB sync, distributed/dual-mode caches; chat stream-parts UI thật (`useAIChat`) + Workflow DAG visualizer (bỏ stub).
+- **Track 5 — Agents**: HITL first-class (`request_human_input` + webhook resume), lifecycle API (launch/pause/resume/enumerate), git worktree isolation + fanout swarm, auto-commit policy, PR review pipeline 2-pass, declarative subagents, flow persistence SQLite + `withHumanFeedback`, error compaction, remote job status.
+- **Track 6 — Memory & RAG**: `@ghita/ingest` (loaders md/json/csv/docx/pdf, splitters, indexer dedup + incremental, CLI `ghita-ingest`, redact secrets), engine sink → KnowledgeEngine, hybrid retriever (BM25+vector RRF, MMR, parent-doc), skill `document.ingest`, memory auto-capture hooks (dedup 5 phút), contradiction/supersede, provenance + rollback.
+- **Track 7 — Terminal & Browser**: `@ghita/terminal-session` (buffer serialize/restore, flow control XOFF/XON, resize pixel), browser ActionRegistry, ActCache (SQLite, replay 0 LLM), outcome verifier + retry, network interception + HAR export, trace-light.
+- Versions: toàn bộ monorepo đồng bộ `1.1.0` (56 vị trí qua `scripts/sync-version.mjs`).
+
 ## [1.0.0] - 2026-08-06
 
 ### Added — Antigravity-style agentic editing (the v1.0 centerpiece)

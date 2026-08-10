@@ -146,3 +146,6 @@ export type {
   FeatureRequest,
   Contributor,
 } from './community/index.js';
+
+// ── v1.1.0 Track 3: Claude plugin import, installer, tiers, scan, trust ──
+export * from './plugins/index.js';

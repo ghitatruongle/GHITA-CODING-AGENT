@@ -118,7 +118,7 @@ jobs:
           node scripts/updater-manifest.mjs record
           --platform windows-x86_64
           --assets-dir apps/desktop/src-tauri/target/release/bundle
-          --suffix -setup.exe
+          --suffix "-setup.exe"
           --output updater-records/windows-x86_64.json
       - uses: actions/upload-artifact@v4
         with:
@@ -203,11 +203,33 @@ jobs:
       - run: pnpm build:packages
       - name: Build signed desktop artifacts
         working-directory: apps/desktop
-        run: pnpm tauri build --target ${{ matrix.target }}
+        # `app` must be a declared bundle so Tauri keeps the .app and emits the
+        # .app.tar.gz updater artifact even when cross-targeting (host arch
+        # differs from the target triple) — otherwise only the dmg survives.
+        run: pnpm tauri build --target ${{ matrix.target }} --bundles app,dmg
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           NODE_OPTIONS: --max-old-space-size=8192
+      - name: Ensure macOS updater tarball signature
+        # Defensive: when the target arch equals the host, Tauri already
+        # produced the .tar.gz + .sig. When it did not (older Tauri versions
+        # skip the updater artifact on cross-target builds), create + sign it
+        # manually so the updater record always has one artifact.
+        run: |
+          set -euo pipefail
+          APP_DIR="apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle/macos"
+          TARBALL="${APP_DIR}/GHITA CODING AGENT.app.tar.gz"
+          if [ ! -f "${TARBALL}" ]; then
+            mkdir -p "${APP_DIR}"
+            tar -C "${APP_DIR}" -czf "${TARBALL}" "GHITA CODING AGENT.app"
+          fi
+          if [ ! -f "${TARBALL}.sig" ]; then
+            pnpm --filter @ghita/desktop tauri sign \
+              --private-key "${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}" \
+              --password "${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}" \
+              --file "${TARBALL}"
+          fi
       - name: Create macOS updater record
         run: >
           node scripts/updater-manifest.mjs record
@@ -304,7 +326,9 @@ jobs:
           retention-days: 30
 
   generate-updater-json:
-    needs: [build-windows, build-linux, build-macos, build-android, build-ios]
+    # Only desktop bundles produce updater records (.sig); Android/iOS attach
+    # to the release directly and must not block latest.json + publish.
+    needs: [build-windows, build-linux, build-macos]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

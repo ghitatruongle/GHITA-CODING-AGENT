@@ -37,6 +37,7 @@ for (const [tierName, tier] of Object.entries(policy.tiers)) {
   for (const [pkg, cfg] of Object.entries(tier.packages)) {
     floors.set(pkg, {
       floor: cfg.lines ?? tier.defaultLines ?? 30,
+      branchFloor: cfg.branches,
       tier: tierName,
     });
   }
@@ -67,6 +68,7 @@ for (const [pkg, meta] of floors) {
   }
   const summary = JSON.parse(readFileSync(summaryPath, 'utf8'));
   const actual = summary?.total?.lines?.pct;
+  const actualBranches = summary?.total?.branches?.pct;
   if (typeof actual !== 'number') {
     console.error(`FAIL ${pkg}: invalid coverage summary`);
     failed++;
@@ -78,6 +80,15 @@ for (const [pkg, meta] of floors) {
     `${status} ${pkg}: ${actual}% lines (floor ${meta.floor}%, tier ${meta.tier})`,
   );
   if (status === 'FAIL') failed++;
+
+  // v1.1.0 Track 12 G4: branch floor (nếu khai báo trong tier config).
+  if (meta.branchFloor !== undefined && actualBranches !== undefined) {
+    const okB = actualBranches + 1e-9 >= meta.branchFloor;
+    console.log(
+      `${okB ? 'OK' : 'FAIL'} ${pkg}: ${actualBranches}% branches (floor ${meta.branchFloor}%, tier ${meta.tier})`,
+    );
+    if (!okB) failed++;
+  }
 }
 
 console.log(

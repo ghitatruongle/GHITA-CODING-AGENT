@@ -24,7 +24,12 @@ import {
   createReActAgent,
   AIMessage,
 } from '../../packages/agents/src/index.js';
-import { useAIChat, WorkflowVisualizer } from '../../packages/shared/src/index.js';
+import {
+  useAIChat,
+  WorkflowVisualizer,
+  parseChatStreamEvent,
+  layoutDag,
+} from '../../packages/shared/src/index.js';
 
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
@@ -131,13 +136,13 @@ describe('5 - Advanced & Platform Features', () => {
     it('should delegate tasks to ReActAgents and run sequentially', async () => {
       const agentA = createReActAgent({
         config: { name: 'Agent A' },
-        llmCall: async (messages) => new AIMessage('Agent A response for task'),
+        llmCall: async (_messages) => new AIMessage('Agent A response for task'),
       });
 
       const agentB = createReActAgent({
         config: { name: 'Agent B' },
         llmCall: async (messages) =>
-          new AIMessage('Agent B received: ' + messages[messages.length - 1].getText()),
+          new AIMessage(`Agent B received: ${messages[messages.length - 1].getText()}`),
       });
 
       const pipeline = new TaskDelegationPipeline({
@@ -332,7 +337,7 @@ describe('5 - Advanced & Platform Features', () => {
 
       await server.start();
 
-      mockFetch.mockImplementation(async (url: string, _init: any) => {
+      mockFetch.mockImplementation(async (url: string, _init: RequestInit) => {
         if (url.includes('/metrics')) {
           return {
             ok: true,
@@ -398,8 +403,13 @@ describe('5 - Advanced & Platform Features', () => {
     });
 
     it('should expose hook and component functions successfully', () => {
-      const chatHook = useAIChat();
-      expect(chatHook.messages).toBeInstanceOf(Array);
+      // useAIChat is a real React hook — verify the pure stream plumbing and
+      // the DAG layout instead of invoking hooks outside a React renderer.
+      expect(typeof useAIChat).toBe('function');
+      expect(parseChatStreamEvent('{"type":"text","delta":"hi"}')?.type).toBe('text');
+
+      const layout = layoutDag([{ id: 'a', name: 'A', status: 'completed' }]);
+      expect(layout.nodes).toHaveLength(1);
 
       const visualizer = WorkflowVisualizer({ steps: [] });
       expect(visualizer.type).toBe('div');

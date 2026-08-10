@@ -1,42 +1,20 @@
 // ==============================================================================
-// GHITA CODING AGENT - CodeGraph MCP (Model Context Protocol) Server Protocol
+// GHITA CODING AGENT - CodeGraph MCP Server (standard @ghita/mcp + official SDK)
 // ==============================================================================
-// Exposes CodeKnowledgeGraph operations via standard MCP tool JSON-RPC payloads.
+// Exposes CodeKnowledgeGraph operations as standard MCP tools. Built on
+// @ghita/mcp (official @modelcontextprotocol SDK) — the previous hand-written
+// JSON-RPC protocol was removed (v1.1.0 Track 1 P19/P23).
 // ==============================================================================
 
+import { createMCPServer, type GhitaMCPServer, type ToolDefinition } from '@ghita/mcp';
 import type { CodeKnowledgeGraph } from './index.js';
 import type { SearchQuery } from './types.js';
-
-export interface MCPToolCallRequest {
-  jsonrpc: '2.0';
-  id: string | number;
-  method: string;
-  params?: {
-    name: string;
-    arguments?: Record<string, unknown>;
-  };
-}
-
-export interface MCPToolCallResponse {
-  jsonrpc: '2.0';
-  id: string | number;
-  result?: {
-    content: Array<{ type: 'text'; text: string }>;
-    isError?: boolean;
-  };
-  error?: {
-    code: number;
-    message: string;
-  };
-}
 
 export class CodeGraphMCPServer {
   constructor(private readonly codeGraph: CodeKnowledgeGraph) {}
 
-  /**
-   * Return the list of available MCP tools exposed by CodeGraph.
-   */
-  listTools() {
+  /** The three standard tools exposed by CodeGraph. */
+  listTools(): ToolDefinition[] {
     return [
       {
         name: 'search_code_symbols',
@@ -49,9 +27,30 @@ export class CodeGraphMCPServer {
               type: 'string',
               description: 'Node kind filter: function, class, variable, module, interface',
             },
-            limit: { type: 'number', description: 'Max results' },
+            limit: { type: 'number', description: 'Max results (default 20)' },
           },
           required: ['pattern'],
+        },
+        handler: async (args) => {
+          try {
+            const query: SearchQuery = {
+              pattern: String(args.pattern ?? ''),
+              scope: args.scope as SearchQuery['scope'],
+              limit: typeof args.limit === 'number' ? args.limit : 20,
+            };
+            const results = this.codeGraph.search(query);
+            return { content: [{ type: 'text', text: JSON.stringify(results, null, 2) }] };
+          } catch (err) {
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: `search error: ${err instanceof Error ? err.message : String(err)}`,
+                },
+              ],
+              isError: true,
+            };
+          }
         },
       },
       {
@@ -64,91 +63,29 @@ export class CodeGraphMCPServer {
           },
           required: ['symbolId'],
         },
+        handler: async (args) => {
+          const deps = this.codeGraph.getDependencies(String(args.symbolId ?? ''));
+          return { content: [{ type: 'text', text: JSON.stringify(deps, null, 2) }] };
+        },
       },
       {
         name: 'get_graph_stats',
         description: 'Get total indexed files, nodes, and edges statistics',
-        inputSchema: {
-          type: 'object',
-          properties: {},
+        inputSchema: { type: 'object', properties: {} },
+        handler: async () => {
+          const stats = this.codeGraph.stats();
+          return { content: [{ type: 'text', text: JSON.stringify(stats, null, 2) }] };
         },
       },
     ];
   }
 
-  /**
-   * Handle incoming MCP JSON-RPC tool call payload.
-   */
-  handleMessage(request: MCPToolCallRequest): MCPToolCallResponse {
-    if (request.method === 'tools/list') {
-      return {
-        jsonrpc: '2.0',
-        id: request.id,
-        result: {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify({ tools: this.listTools() }, null, 2),
-            },
-          ],
-        },
-      };
-    }
-
-    if (request.method === 'tools/call' && request.params) {
-      const toolName = request.params.name;
-      const args = request.params.arguments || {};
-
-      if (toolName === 'search_code_symbols') {
-        const query: SearchQuery = {
-          pattern: String(args.pattern || ''),
-          scope: args.scope as SearchQuery['scope'],
-          limit: typeof args.limit === 'number' ? args.limit : 20,
-        };
-        const results = this.codeGraph.search(query);
-        return {
-          jsonrpc: '2.0',
-          id: request.id,
-          result: {
-            content: [{ type: 'text', text: JSON.stringify(results, null, 2) }],
-          },
-        };
-      }
-
-      if (toolName === 'get_symbol_dependencies') {
-        const symbolId = String(args.symbolId || '');
-        const deps = this.codeGraph.getDependencies(symbolId);
-        return {
-          jsonrpc: '2.0',
-          id: request.id,
-          result: {
-            content: [{ type: 'text', text: JSON.stringify(deps, null, 2) }],
-          },
-        };
-      }
-
-      if (toolName === 'get_graph_stats') {
-        const stats = this.codeGraph.stats();
-        return {
-          jsonrpc: '2.0',
-          id: request.id,
-          result: {
-            content: [{ type: 'text', text: JSON.stringify(stats, null, 2) }],
-          },
-        };
-      }
-
-      return {
-        jsonrpc: '2.0',
-        id: request.id,
-        error: { code: -32601, message: `Tool not found: ${toolName}` },
-      };
-    }
-
-    return {
-      jsonrpc: '2.0',
-      id: request.id,
-      error: { code: -32601, message: `Method not found: ${request.method}` },
-    };
+  /** Build a standard @ghita/mcp server exposing the code-graph tools. */
+  createServer(): GhitaMCPServer {
+    return createMCPServer({
+      name: 'ghita-codegraph',
+      version: '1.0.0',
+      tools: this.listTools(),
+    });
   }
 }
