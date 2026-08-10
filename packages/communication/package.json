@@ -27,7 +27,7 @@
     "@ghita/shared": "workspace:*",
     "screenshot-desktop": "^1.15.4",
     "socket.io": "^4.8.3",
-    "ws": "^8.21.0"
+    "ws": "^8.21.2"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
