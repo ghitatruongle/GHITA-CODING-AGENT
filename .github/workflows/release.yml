@@ -120,7 +120,7 @@ jobs:
           --assets-dir apps/desktop/src-tauri/target/release/bundle
           --suffix "-setup.exe"
           --output updater-records/windows-x86_64.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: updater-record-windows-x86_64
           path: updater-records/windows-x86_64.json
@@ -164,7 +164,7 @@ jobs:
           --assets-dir apps/desktop/src-tauri/target/release/bundle
           --suffix .AppImage
           --output updater-records/linux-x86_64.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: updater-record-linux-x86_64
           path: updater-records/linux-x86_64.json
@@ -215,7 +215,7 @@ jobs:
           --assets-dir apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle
           --suffix .app.tar.gz
           --output updater-records/${{ matrix.platform }}.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: updater-record-${{ matrix.platform }}
           path: updater-records/${{ matrix.platform }}.json
@@ -294,7 +294,7 @@ jobs:
             -sdk iphoneos \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ios-release-build
           path: |
