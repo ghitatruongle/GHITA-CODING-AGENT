@@ -1,0 +1,10 @@
+{
+  "name": "@ghita/codegraph-native",
+  "version": "1.1.0",
+  "private": true,
+  "description": "ghita-codegraph napi addon (Track 8 A11)",
+  "napi": {
+    "name": "codegraph",
+    "triples": {}
+  }
+}

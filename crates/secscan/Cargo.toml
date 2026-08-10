@@ -1,0 +1,23 @@
+[package]
+name = "ghita-secscan"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "GHITA streaming security scanner core (Track 8 A6/A7) — std core + napi addon"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+# Production addon: napi bindings + memchr/regex/rayon.
+# dyn-symbols: napi-sys resolves Node API symbols dynamically (GetProcAddress)
+# → không cần libnode.dll khi link trên windows-gnu.
+addon = ["dep:napi", "dep:napi-derive", "dep:memchr", "dep:regex", "dep:rayon"]
+
+[dependencies]
+memchr = { version = "2", optional = true }
+regex = { version = "1", optional = true }
+rayon = { version = "1", optional = true }
+napi = { version = "2", default-features = false, features = ["compat-mode", "napi4", "dyn-symbols"], optional = true }
+napi-derive = { version = "2", optional = true }

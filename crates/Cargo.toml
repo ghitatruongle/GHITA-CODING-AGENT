@@ -1,0 +1,8 @@
+[workspace]
+resolver = "2"
+members = ["secscan", "retrieval", "codegraph"]
+
+[workspace.package]
+version = "1.1.0"
+edition = "2021"
+license = "MIT"

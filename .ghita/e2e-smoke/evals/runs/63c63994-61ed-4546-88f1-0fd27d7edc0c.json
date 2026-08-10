@@ -1,0 +1,64 @@
+{
+  "passed": true,
+  "score": 88,
+  "evidence": [
+    {
+      "dimension": "change-validation",
+      "level": "outcome-supported",
+      "label": "2/2 expected markers matched"
+    },
+    {
+      "dimension": "change-validation",
+      "level": "observed",
+      "label": "no artifacts produced — output only"
+    },
+    {
+      "dimension": "controlled-execution",
+      "level": "artifact",
+      "label": "1 tool steps executed"
+    },
+    {
+      "dimension": "reliable-delivery",
+      "level": "outcome-supported",
+      "label": "task completed"
+    },
+    {
+      "dimension": "learning-capture",
+      "level": "outcome-supported",
+      "label": "expected markers evidence captured"
+    },
+    {
+      "dimension": "task-understanding",
+      "level": "artifact",
+      "label": "final output satisfies expected markers"
+    }
+  ],
+  "passReasons": [
+    "expected markers matched in output",
+    "steps executed",
+    "task completed (adapter verdict)"
+  ],
+  "failReasons": [],
+  "status": "passed",
+  "runId": "63c63994-61ed-4546-88f1-0fd27d7edc0c",
+  "suite": "internal-v1.1.0",
+  "task": {
+    "id": "workflow-deploy",
+    "title": "Run a workflow",
+    "prompt": "Execute the nightly flow: lint → test → report.",
+    "expected": ["report", "generated"],
+    "fixture": "Workflow executed, report generated."
+  },
+  "version": "1.1.0",
+  "startedAt": "2026-08-10T04:50:23.531Z",
+  "durationMs": 1,
+  "steps": [
+    {
+      "tool": "fixture.answer",
+      "args": {
+        "taskId": "workflow-deploy"
+      }
+    }
+  ],
+  "trajectoryFingerprint": "946c5c50"
+}

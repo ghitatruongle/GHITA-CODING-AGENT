@@ -45,7 +45,7 @@ export type {
   GuardrailConfig,
 } from './guardrail/types.js';
 
-export const MEMORY_VERSION = '1.0.0';
+export const MEMORY_VERSION = '1.1.0';
 
 export interface RememberInput {
   type: MemoryEntry['type'];
@@ -238,6 +238,10 @@ export {
   retrieveEnhanced,
   MemoryFreshnessTracker,
 } from './freshness.js';
+
+// v1.1.0 Track 1 P21: standard MCP server
+export { createMemoryMCPServer } from './mcp-server.js';
+export type { MemoryLike, MemoryMCPServerConfig } from './mcp-server.js';
 export type {
   NamespaceFreshness,
   FreshnessTrackerOptions,
@@ -247,3 +251,6 @@ export type {
 
 // --- Phase 30: Memory Compression ---
 export * from './compression/index.js';
+
+// ── v1.1.0 Track 6: capture hooks, contradiction, provenance ──
+export * from './track6/index.js';

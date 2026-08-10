@@ -1,0 +1,10 @@
+{
+  "name": "@ghita/retrieval-native",
+  "version": "1.1.0",
+  "private": true,
+  "description": "ghita-retrieval napi addon (Track 8 A9)",
+  "napi": {
+    "name": "retrieval",
+    "triples": {}
+  }
+}

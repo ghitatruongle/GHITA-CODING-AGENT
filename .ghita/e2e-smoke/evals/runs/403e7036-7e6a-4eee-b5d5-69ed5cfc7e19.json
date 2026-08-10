@@ -1,0 +1,64 @@
+{
+  "passed": true,
+  "score": 88,
+  "evidence": [
+    {
+      "dimension": "change-validation",
+      "level": "outcome-supported",
+      "label": "2/2 expected markers matched"
+    },
+    {
+      "dimension": "change-validation",
+      "level": "observed",
+      "label": "no artifacts produced — output only"
+    },
+    {
+      "dimension": "controlled-execution",
+      "level": "artifact",
+      "label": "1 tool steps executed"
+    },
+    {
+      "dimension": "reliable-delivery",
+      "level": "outcome-supported",
+      "label": "task completed"
+    },
+    {
+      "dimension": "learning-capture",
+      "level": "outcome-supported",
+      "label": "expected markers evidence captured"
+    },
+    {
+      "dimension": "task-understanding",
+      "level": "artifact",
+      "label": "final output satisfies expected markers"
+    }
+  ],
+  "passReasons": [
+    "expected markers matched in output",
+    "steps executed",
+    "task completed (adapter verdict)"
+  ],
+  "failReasons": [],
+  "status": "passed",
+  "runId": "403e7036-7e6a-4eee-b5d5-69ed5cfc7e19",
+  "suite": "internal-v1.1.0",
+  "task": {
+    "id": "edit-add-fix-todo",
+    "title": "Fix a TODO in a file",
+    "prompt": "Find the TODO in src/main.ts and implement it.",
+    "expected": ["implemented", "done"],
+    "fixture": "implemented: mark TODO as handled. done."
+  },
+  "version": "1.1.0",
+  "startedAt": "2026-08-10T04:18:47.061Z",
+  "durationMs": 1,
+  "steps": [
+    {
+      "tool": "fixture.answer",
+      "args": {
+        "taskId": "edit-add-fix-todo"
+      }
+    }
+  ],
+  "trajectoryFingerprint": "8173b5b8"
+}

@@ -1,6 +1,6 @@
 {
   "name": "@ghita/memory",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "sideEffects": false,
   "description": "Agent memory system cho GHITA CODING AGENT",
@@ -23,6 +23,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@ghita/mcp": "workspace:*",
     "@ghita/shared": "workspace:*"
   },
   "devDependencies": {

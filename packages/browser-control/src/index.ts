@@ -5,7 +5,7 @@
 import type { SkillDefinition } from '@ghita/skills';
 import type { BrowserAction, BrowserResult } from '@ghita/shared';
 
-export const BROWSER_CONTROL_VERSION = '1.0.0';
+export const BROWSER_CONTROL_VERSION = '1.1.0';
 
 export type BrowserSessionStatus = 'idle' | 'launching' | 'ready' | 'closed' | 'error';
 
@@ -248,3 +248,10 @@ export * from './dom-extractor.js';
 // v0.4.9 A6: AI page API — act/extract/observe
 export { AIPageController } from './stagehand.js';
 export type { SchemaLike, ObserveResult, ActResult, ExtractResult } from './stagehand.js';
+
+// v1.1.0 Track 1 P20: standard MCP server
+export { BrowserMCPServer, createBrowserMCPServer } from './mcp-server.js';
+export type { BrowserLike, BrowserMCPServerConfig } from './mcp-server.js';
+
+// ── v1.1.0 Track 7: action registry, cache, verifier, network, trace ──
+export * from './track7/index.js';

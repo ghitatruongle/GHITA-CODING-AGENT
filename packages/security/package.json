@@ -1,6 +1,6 @@
 {
   "name": "@ghita/security",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "sideEffects": false,
   "description": "Security audit toolkit: input sanitization, XSS prevention, CORS review, API key rotation cho GHITA CODING AGENT",
@@ -24,6 +24,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@ghita/native-bridge": "workspace:*",
     "@ghita/shared": "workspace:*"
   },
   "devDependencies": {

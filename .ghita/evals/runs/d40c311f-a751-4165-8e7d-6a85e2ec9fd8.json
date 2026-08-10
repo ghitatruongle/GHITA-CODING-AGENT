@@ -1,0 +1,64 @@
+{
+  "passed": true,
+  "score": 56,
+  "evidence": [
+    {
+      "dimension": "change-validation",
+      "level": "artifact",
+      "label": "1/2 expected markers matched"
+    },
+    {
+      "dimension": "change-validation",
+      "level": "observed",
+      "label": "no artifacts produced — output only"
+    },
+    {
+      "dimension": "controlled-execution",
+      "level": "artifact",
+      "label": "1 tool steps executed"
+    },
+    {
+      "dimension": "reliable-delivery",
+      "level": "outcome-supported",
+      "label": "task completed"
+    },
+    {
+      "dimension": "learning-capture",
+      "level": "missing",
+      "label": "output unstructured"
+    },
+    {
+      "dimension": "task-understanding",
+      "level": "observed",
+      "label": "agent produced a final output"
+    }
+  ],
+  "passReasons": [
+    "expected markers matched in output",
+    "steps executed",
+    "task completed (adapter verdict)"
+  ],
+  "failReasons": [],
+  "status": "passed",
+  "runId": "d40c311f-a751-4165-8e7d-6a85e2ec9fd8",
+  "suite": "internal-v1.1.0",
+  "task": {
+    "id": "security-scan",
+    "title": "Scan for secrets",
+    "prompt": "Scan the workspace for hardcoded API keys and propose fixes.",
+    "expected": ["secret", "found"],
+    "fixture": "Found 1 potential secret (sk-…). Proposed fix."
+  },
+  "version": "1.1.0",
+  "startedAt": "2026-08-09T23:56:45.299Z",
+  "durationMs": 1,
+  "steps": [
+    {
+      "tool": "fixture.answer",
+      "args": {
+        "taskId": "security-scan"
+      }
+    }
+  ],
+  "trajectoryFingerprint": "409b76bb"
+}

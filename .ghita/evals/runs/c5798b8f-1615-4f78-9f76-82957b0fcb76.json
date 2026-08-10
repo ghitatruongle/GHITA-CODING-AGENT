@@ -1,0 +1,55 @@
+{
+  "passed": true,
+  "score": 50,
+  "evidence": [
+    {
+      "dimension": "change-validation",
+      "level": "observed",
+      "label": "no artifacts produced — output only"
+    },
+    {
+      "dimension": "controlled-execution",
+      "level": "artifact",
+      "label": "1 tool steps executed"
+    },
+    {
+      "dimension": "reliable-delivery",
+      "level": "outcome-supported",
+      "label": "task completed"
+    },
+    {
+      "dimension": "learning-capture",
+      "level": "missing",
+      "label": "output unstructured"
+    },
+    {
+      "dimension": "task-understanding",
+      "level": "observed",
+      "label": "agent produced a final output"
+    }
+  ],
+  "passReasons": ["steps executed", "task completed (adapter verdict)"],
+  "failReasons": ["no expected marker matched in output"],
+  "status": "passed",
+  "runId": "c5798b8f-1615-4f78-9f76-82957b0fcb76",
+  "suite": "internal-v1.1.0",
+  "task": {
+    "id": "skill-format",
+    "title": "Run formatting skill",
+    "prompt": "Run the prettier skill over the source folder.",
+    "expected": ["formatted", "clean"],
+    "fixture": "Formatted; 0 files changed."
+  },
+  "version": "1.1.0",
+  "startedAt": "2026-08-10T11:18:42.114Z",
+  "durationMs": 1,
+  "steps": [
+    {
+      "tool": "fixture.answer",
+      "args": {
+        "taskId": "skill-format"
+      }
+    }
+  ],
+  "trajectoryFingerprint": "ec39a6c"
+}

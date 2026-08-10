@@ -184,7 +184,7 @@ export type {
 
 // --- Original exports below ---
 
-export const AGENTS_VERSION = '1.0.0';
+export const AGENTS_VERSION = '1.1.0';
 
 export type AgentStatus = 'idle' | 'working' | 'completed' | 'error';
 
@@ -611,3 +611,6 @@ export type {
   DimensionScore,
   WorkLoopReview,
 } from './harness/index.js';
+
+// ── v1.1.0 Track 5: HITL, lifecycle, worktrees, review, declarative agents ──
+export * from './track5/index.js';

@@ -1,0 +1,47 @@
+name: bench-ram
+
+on:
+  schedule:
+    - cron: '0 5 * * *' # nightly
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'packages/resource-budget/**'
+      - 'packages/ai-engine/src/cache/**'
+      - 'packages/code-graph/**'
+      - 'scripts/bench-ram.mjs'
+      - 'scripts/check-resource-budget.mjs'
+      - 'docs/resource-budget.json'
+
+permissions:
+  contents: read
+
+jobs:
+  ram:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: RAM benchmark + regression gate
+        run: node scripts/bench-ram.mjs --baseline
+
+      - name: Resource budget gate
+        run: node scripts/check-resource-budget.mjs
+
+      - name: Lazy-load audit
+        run: node scripts/audit-lazy-load.mjs
+
+      - name: Zero-copy audit
+        run: node scripts/audit-zero-copy.mjs
+
+      - name: Upload RAM report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ram-bench
+          path: docs/perf-ram-baseline.json

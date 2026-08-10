@@ -33,6 +33,7 @@ export default defineConfig({
       readline: shimPath,
       'node:child_process': shimPath,
       'node:util': shimPath,
+      'node:module': shimPath,
       'node:fs/promises': shimPath,
       'node:fs': shimPath,
       'node:path': shimPath,

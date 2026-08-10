@@ -12,7 +12,13 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+
+function must<T>(value: T | undefined): T {
+  if (value === undefined) throw new Error('expected a value');
+  return value;
+}
 import { join } from 'node:path';
+import { registerNative, unregisterNative } from '@ghita/native-bridge';
 import { SecurityScanner, InvalidScanTargetError } from '../src/scanner/index.js';
 
 describe('SecurityScanner.scanContent', () => {
@@ -28,9 +34,10 @@ describe('SecurityScanner.scanContent', () => {
       "const key = 'sk-proj-abcdef1234567890abcdef1234567890';",
     );
     expect(findings).toHaveLength(1);
-    expect(findings[0]!.ruleId).toBe('GHITA-SEC-001');
-    expect(findings[0]!.severity.level).toBe('critical');
-    expect(findings[0]!.locations[0]).toMatchObject({ path: 'src/app.ts', startLine: 1 });
+    const finding = must(findings[0]);
+    expect(finding.ruleId).toBe('GHITA-SEC-001');
+    expect(finding.severity.level).toBe('critical');
+    expect(finding.locations[0]).toMatchObject({ path: 'src/app.ts', startLine: 1 });
   });
 
   it('suppresses key finding on obvious placeholders', () => {
@@ -72,8 +79,10 @@ describe('SecurityScanner.scanContent', () => {
     const line = "const t = 'ghp_0123456789abcdef0123456789abcdef0123';";
     const a = scanner.scanContent('x.ts', line);
     const b = scanner.scanContent('x.ts', line);
-    expect(a[0]!.fingerprints.primary).toBe(b[0]!.fingerprints.primary);
-    expect(a[0]!.fingerprints.algorithm).toBe('ghita-scanner/v1');
+    const fa = must(a[0]);
+    const fb = must(b[0]);
+    expect(fa.fingerprints.primary).toBe(fb.fingerprints.primary);
+    expect(fa.fingerprints.algorithm).toBe('ghita-scanner/v1');
   });
 
   it('ignores excessively long (minified) lines', () => {
@@ -127,9 +136,9 @@ describe('SecurityScanner.scan (filesystem)', () => {
     const scanner = new SecurityScanner();
     const report = await scanner.scan(dir, { target: ['src'] });
     expect(report.coverage.mode).toBe('scoped_path');
-    expect(report.findings.findings.every((f) => f.locations[0]!.path.startsWith('src/'))).toBe(
-      true,
-    );
+    expect(
+      report.findings.findings.every((f) => (f.locations[0]?.path ?? '').startsWith('src/')),
+    ).toBe(true);
   });
 
   it('rejects path targets outside the repository', async () => {
@@ -152,5 +161,95 @@ describe('SecurityScanner.scan (filesystem)', () => {
     controller.abort();
     const scanner = new SecurityScanner();
     await expect(scanner.scan(dir, { signal: controller.signal })).rejects.toBeTruthy();
+  });
+});
+
+describe('SecurityScanner.scanContentFast (v1.1.0 Track 8 A3)', () => {
+  let scanner: SecurityScanner;
+
+  beforeEach(() => {
+    SecurityScanner.forceJsScanFast = true; // parity vs lazy-line: ép JS fast path
+    scanner = new SecurityScanner();
+  });
+
+  afterEach(() => {
+    SecurityScanner.forceJsScanFast = false;
+  });
+
+  it('produces the same findings as the lazy-line scan on a sample', () => {
+    const content = [
+      "const key = 'sk-proj-abcdef1234567890abcdef1234567890';",
+      'password = "super-secret-value-1"',
+      'const normal = compute(values, index);',
+      'AWS_ACCESS_KEY=AKIAABCDEFGHIJ123456',
+      '// just a comment',
+    ].join('\n');
+    const slow = scanner.scanContent('src/app.ts', content);
+    const fast = scanner.scanContentFast('src/app.ts', content);
+    expect(fast.length).toBe(slow.length);
+    expect(fast.length).toBeGreaterThan(0);
+    // Rule ids and line numbers agree.
+    const slowKeys = slow.map((f) => `${f.ruleId}:${f.locations[0]?.startLine}`).sort();
+    const fastKeys = fast.map((f) => `${f.ruleId}:${f.locations[0]?.startLine}`).sort();
+    expect(fastKeys).toEqual(slowKeys);
+  });
+
+  it('handles empty and huge single-line content', () => {
+    expect(scanner.scanContentFast('a.ts', '')).toHaveLength(0);
+    const minified = 'const x=1;'.repeat(500); // > 2000 chars single line
+    expect(scanner.scanContentFast('a.ts', minified)).toHaveLength(0);
+  });
+});
+
+describe('SecurityScanner.scanContentFast — native addon path (v1.1.0 Track 8 A7)', () => {
+  let scanner: SecurityScanner;
+
+  beforeEach(() => {
+    scanner = new SecurityScanner();
+  });
+
+  afterEach(() => {
+    unregisterNative('secscan'); // isolation: các test khác tiếp tục dùng JS path
+  });
+
+  it('uses the native scan_fast when the addon is registered', () => {
+    registerNative('secscan', {
+      scanFast: (
+        content: string,
+        rules: Array<{ id: string; pattern: string; negative?: string }>,
+      ) => {
+        // Fake native: regex-crate-like semantics (compile pattern sources).
+        const lines: number[] = [];
+        const ruleIndices: number[] = [];
+        const evidence: string[] = [];
+        const textLines = content.split('\n');
+        textLines.forEach((line, idx) => {
+          rules.forEach((rule, ridx) => {
+            const re = new RegExp(rule.pattern);
+            const neg = rule.negative ? new RegExp(rule.negative) : null;
+            if (re.test(line) && !(neg && neg.test(line))) {
+              lines.push(idx + 1);
+              ruleIndices.push(ridx);
+              evidence.push(line.trim());
+            }
+          });
+        });
+        return {
+          lines: new Uint32Array(lines),
+          ruleIndices: new Uint32Array(ruleIndices),
+          evidence,
+        };
+      },
+    } as never);
+
+    const content = [
+      "const key = 'sk-proj-abcdef1234567890abcdef1234567890';",
+      'const normal = compute(values);',
+      'BEGIN RSA PRIVATE KEY',
+    ].join('\n');
+    const findings = scanner.scanContentFast('src/app.ts', content);
+    expect(findings.length).toBeGreaterThan(0);
+    const keys = findings.map((f) => `${f.ruleId}:${f.locations[0]?.startLine}`).sort();
+    expect(keys).toContain('GHITA-SEC-001:1'); // sk- rule on line 1 (native path)
   });
 });

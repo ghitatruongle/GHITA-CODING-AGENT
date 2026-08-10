@@ -86,6 +86,29 @@ export type {
   ProviderMetrics,
 } from './routing/types.js';
 
+// ── v1.1.0 Track 4: adaptive bandit router + model roles ──
+export { AdaptiveBanditRouter, betaSample, REQUEST_BUCKETS } from './routing/adaptive-router.js';
+export type {
+  RequestBucket,
+  BanditArm,
+  ArmStats,
+  BanditRouterConfig,
+  SelectOptions,
+  SignalKind,
+} from './routing/adaptive-router.js';
+export {
+  ModelRoleRouter,
+  DEFAULT_ROLE_CHAINS,
+  MODEL_ROLES,
+  qualifyModelId,
+} from './routing/model-roles.js';
+export type {
+  ModelRole,
+  RoleConfig,
+  ModelRoleRouterOptions,
+  RoleResolution,
+} from './routing/model-roles.js';
+
 /**
  * LLM provider implementations. Each provider extends `BaseProvider`
  * and implements the unified `LLMProvider` interface for chat completion,
@@ -282,6 +305,10 @@ export {
   getModelPricing,
 } from './utils/cost.js';
 export type { ModelPricing, BudgetOptions } from './utils/cost.js';
+
+// ── v1.1.0 Track 4 P52: syncable model pricing database ──
+export { ModelPricingDB, DEFAULT_MODEL_PRICES, estimateCost } from './cost/model-prices.js';
+export type { ModelPrice, PriceSyncFetcher, PriceLookup } from './cost/model-prices.js';
 
 /**
  * Prompt formatting templates (few-shot, templates pipeline, template managers).
@@ -590,6 +617,24 @@ export { DeployConfigGenerator } from './platform/prometheus.js';
 
 /** Memory caching systems with local LRU, embedding deduplication, and pre-warming. */
 export { LRUCache, SemanticDedup, CacheWarmer, ResponseCacheEngine } from './cache/index.js';
+// ── v1.1.0 Track 4 P53: distributed + dual-mode caches ──
+export { DistributedCache, ObjectStoreCache, DualModeCache } from './cache/distributed.js';
+export type { ObjectStore, DualCacheOptions } from './cache/distributed.js';
+// ── v1.1.0 Track 4 P48/P49: tool approvals + argument repair ──
+export { ToolApprovalManager, canExecute } from './tool-calling/approvals.js';
+export type {
+  ApprovalDecision,
+  SessionDefault,
+  PendingToolCall,
+  ApprovalRequest,
+  ToolApprovalManagerOptions,
+} from './tool-calling/approvals.js';
+export {
+  parseToolArguments,
+  repairToolCallArguments,
+  isRetryableRepair,
+} from './tool-calling/repair.js';
+export type { ToolArgSchema, RepairResult } from './tool-calling/repair.js';
 /** Type definitions for response cache options, warm sources, and stats counters. */
 export type {
   CacheEntry,

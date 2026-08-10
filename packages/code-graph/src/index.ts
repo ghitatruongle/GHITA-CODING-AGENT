@@ -30,12 +30,10 @@ export { SearchEngine } from './search.js';
 // --- SQLite Store ---
 export { SQLiteGraphStore } from './store.js';
 
-// --- MCP Server Protocol ---
-export {
-  CodeGraphMCPServer,
-  type MCPToolCallRequest,
-  type MCPToolCallResponse,
-} from './mcp-server.js';
+// --- MCP Server (standard @ghita/mcp) ---
+export { CodeGraphMCPServer } from './mcp-server.js';
+export { IndexBudgetTracker, estimateNodeBytes, estimateEdgeBytes } from './budget.js';
+export type { IndexBudgetOptions, IndexBudgetState } from './budget.js';
 
 // --- v0.4.9 A8: Repo-map ranking (PageRank) ---
 export {

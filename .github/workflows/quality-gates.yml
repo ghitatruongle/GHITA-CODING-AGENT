@@ -1,0 +1,113 @@
+name: quality-gates
+
+on:
+  schedule:
+    - cron: '0 2 * * *' # nightly
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'packages/**'
+      - 'apps/**'
+      - 'crates/**'
+      - 'scripts/check-bug-tests.mjs'
+      - 'scripts/e2e-smoke.mjs'
+      - 'scripts/bench-*.mjs'
+      - 'docs/coverage-tiers.json'
+      - 'docs/code-review-findings.md'
+
+permissions:
+  contents: read
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.5.2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: G1 — Bug→test mapping gate
+        run: node scripts/check-bug-tests.mjs
+
+      - name: G2 — Property/unit tests (fast-check + regression)
+        run: |
+          pnpm --filter @ghita/ingest test
+          pnpm --filter @ghita/ai-engine test
+          pnpm --filter @ghita/security test
+
+      - name: G3 — E2E integration smoke
+        run: |
+          pnpm --filter @ghita/ingest --filter @ghita/evals --filter @ghita/security --filter @ghita/mcp build
+          node scripts/e2e-smoke.mjs
+
+      - name: G4 — Coverage floor gate (T0/T1/T2 strict)
+        run: |
+          pnpm --filter @ghita/security test --coverage
+          pnpm --filter @ghita/agents test --coverage
+          pnpm --filter @ghita/communication test --coverage
+          pnpm --filter @ghita/ai-engine test --coverage
+          pnpm --filter @ghita/memory test --coverage
+          pnpm --filter @ghita/skills test --coverage
+          node scripts/check-coverage-tiers.mjs --allow-missing
+
+      - name: Bench regression gates (CPU + RAM)
+        run: |
+          node scripts/bench-cpu.mjs --baseline
+          node scripts/bench-ram.mjs --baseline
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-gates
+          path: |
+            .ghita/e2e-smoke/**
+            docs/coverage-summary-*.json
+
+  desktop-smoke:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.5.2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build desktop-critical packages
+        run: |
+          pnpm --filter @ghita/ai-engine --filter @ghita/skills build
+          pnpm --filter @ghita/agents --filter @ghita/memory build
+          pnpm --filter @ghita/security --filter @ghita/native-bridge --filter @ghita/shared --filter @ghita/terminal-session build
+          pnpm --filter @ghita/desktop build
+
+      - name: G3 — Desktop E2E smoke (startup <2s, chat stream, edit review gate, terminal)
+        run: node --import tsx scripts/desktop-smoke.mjs
+
+      - name: Upload desktop smoke report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-smoke
+          path: scripts/desktop-smoke.mjs

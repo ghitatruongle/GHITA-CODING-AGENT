@@ -1,0 +1,64 @@
+{
+  "passed": true,
+  "score": 56,
+  "evidence": [
+    {
+      "dimension": "change-validation",
+      "level": "artifact",
+      "label": "1/2 expected markers matched"
+    },
+    {
+      "dimension": "change-validation",
+      "level": "observed",
+      "label": "no artifacts produced — output only"
+    },
+    {
+      "dimension": "controlled-execution",
+      "level": "artifact",
+      "label": "1 tool steps executed"
+    },
+    {
+      "dimension": "reliable-delivery",
+      "level": "outcome-supported",
+      "label": "task completed"
+    },
+    {
+      "dimension": "learning-capture",
+      "level": "missing",
+      "label": "output unstructured"
+    },
+    {
+      "dimension": "task-understanding",
+      "level": "observed",
+      "label": "agent produced a final output"
+    }
+  ],
+  "passReasons": [
+    "expected markers matched in output",
+    "steps executed",
+    "task completed (adapter verdict)"
+  ],
+  "failReasons": [],
+  "status": "passed",
+  "runId": "e0b60da9-bad1-4f2b-aca7-dcb7f346de78",
+  "suite": "internal-v1.1.0",
+  "task": {
+    "id": "terminal-git-status",
+    "title": "Git status report",
+    "prompt": "Run git status and summarize changed files.",
+    "expected": ["modified", "changes"],
+    "fixture": "git status: 2 modified files."
+  },
+  "version": "1.1.0",
+  "startedAt": "2026-08-09T23:56:45.299Z",
+  "durationMs": 1,
+  "steps": [
+    {
+      "tool": "fixture.answer",
+      "args": {
+        "taskId": "terminal-git-status"
+      }
+    }
+  ],
+  "trajectoryFingerprint": "383deaa7"
+}

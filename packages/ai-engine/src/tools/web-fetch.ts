@@ -15,7 +15,7 @@ export interface FetchResponse {
 // services, private LAN hosts, or cloud metadata endpoints. Hostnames are
 // resolved and every A/AAAA record is checked; DNS rebinding is mitigated by
 // pinning the resolved IP with a Host header.
-function isPrivateIpv4(host: string): boolean {
+export function isPrivateIpv4(host: string): boolean {
   const parts = host.split('.').map(Number);
   const p0 = parts[0] ?? -1;
   const p1 = parts[1] ?? -1;
@@ -30,7 +30,7 @@ function isPrivateIpv4(host: string): boolean {
   return false;
 }
 
-async function assertSafeFetchUrl(rawUrl: string): Promise<{ url: URL; ip: string }> {
+export async function assertSafeFetchUrl(rawUrl: string): Promise<{ url: URL; ip: string }> {
   const url = new URL(rawUrl);
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
     throw new Error('Only http:// and https:// URLs are allowed.');

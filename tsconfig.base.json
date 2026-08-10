@@ -63,7 +63,19 @@
       "@ghita/mobile-companion": ["packages/mobile-companion/src/index.ts"],
       "@ghita/mobile-companion/*": ["packages/mobile-companion/src/*"],
       "@ghita/integration": ["packages/integration/src/index.ts"],
-      "@ghita/integration/*": ["packages/integration/src/*"]
+      "@ghita/integration/*": ["packages/integration/src/*"],
+      "@ghita/mcp": ["packages/mcp/src/index.ts"],
+      "@ghita/mcp/*": ["packages/mcp/src/*"],
+      "@ghita/evals": ["packages/evals/src/index.ts"],
+      "@ghita/evals/*": ["packages/evals/src/*"],
+      "@ghita/ingest": ["packages/ingest/src/index.ts"],
+      "@ghita/ingest/*": ["packages/ingest/src/*"],
+      "@ghita/terminal-session": ["packages/terminal-session/src/index.ts"],
+      "@ghita/terminal-session/*": ["packages/terminal-session/src/*"],
+      "@ghita/native-bridge": ["packages/native-bridge/src/index.ts"],
+      "@ghita/resource-budget": ["packages/resource-budget/src/index.ts"],
+      "@ghita/resource-budget/*": ["packages/resource-budget/src/*"],
+      "@ghita/native-bridge/*": ["packages/native-bridge/src/*"]
     }
   },
   "exclude": ["node_modules", "dist", "build", "target"]
