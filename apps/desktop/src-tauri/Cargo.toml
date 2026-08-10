@@ -33,7 +33,7 @@ futures-util = "0.3"
 screenshots = "0.8"
 enigo = "0.2"
 image = "0.24"
-base64 = "0.22"
+base64 = "0.23"
 
 # Phase 2: Native PTY terminal (replaces node-pty sidecar)
 portable-pty = "0.8"
