@@ -18,7 +18,6 @@ on:
 jobs:
   build-ios:
     runs-on: macos-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -46,7 +45,20 @@ jobs:
 
       - name: Install Pods
         working-directory: apps/mobile/ios
-        run: pod install
+        # pod install intermittently fails with "pathname contains null byte"
+        # on GitHub runners for pnpm monorepos (CocoaPods #12798, #12866);
+        # retry a few times before giving up.
+        # (The fmt Xcode 26 compile workaround lives in the Podfile's
+        # post_install hook — see apps/mobile/ios/Podfile.)
+        run: |
+          for attempt in 1 2 3; do
+            echo "pod install attempt ${attempt}/3"
+            if pod install; then
+              exit 0
+            fi
+            sleep 10
+          done
+          exit 1
 
       - name: Typecheck mobile
         run: pnpm --filter @ghita/mobile typecheck
@@ -62,20 +74,32 @@ jobs:
 
       - name: Build iOS (${{ github.event.inputs.build_type || 'debug' }})
         working-directory: apps/mobile/ios
+        # Same CI hardening as release.yml: Xcode script phases need Node on
+        # PATH, a generic destination makes arch selection deterministic, and
+        # script sandboxing is disabled for the RN build phases. x86_64 is
+        # excluded from the simulator build because Xcode 26's toolchain no
+        # longer ships the swiftCompatibility56 shim for the x86_64 slice
+        # (link fails with "Undefined symbols: __swift_FORCE_LOAD_$_swiftCompatibility56").
         run: |
+          export PATH="$(dirname "$(command -v node)"):$PATH"
           if [ "${{ github.event.inputs.build_type || 'debug' }}" = "release" ]; then
             xcodebuild -workspace GhitaMobile.xcworkspace \
               -scheme GhitaMobile \
               -configuration Release \
               -sdk iphoneos \
+              -destination 'generic/platform=iOS' \
               -derivedDataPath build \
-              CODE_SIGNING_ALLOWED=NO
+              CODE_SIGNING_ALLOWED=NO \
+              ENABLE_USER_SCRIPT_SANDBOXING=NO
           else
             xcodebuild -workspace GhitaMobile.xcworkspace \
               -scheme GhitaMobile \
               -configuration Debug \
               -sdk iphonesimulator \
-              -derivedDataPath build
+              -destination 'generic/platform=iOS Simulator' \
+              -derivedDataPath build \
+              EXCLUDED_ARCHS=x86_64 \
+              ENABLE_USER_SCRIPT_SANDBOXING=NO
           fi
 
       - name: Upload iOS build

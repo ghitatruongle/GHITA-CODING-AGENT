@@ -268,6 +268,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @ghita/shared build
       - name: Decode release keystore
+        # The `secrets` context is not available in `if:` expressions — expose
+        # it through the step env first, then gate on the env value.
+        if: env.ANDROID_KEYSTORE_BASE64 != ''
         run: |
           test -n "${ANDROID_KEYSTORE_BASE64}"
           test -n "${ANDROID_KEYSTORE_PASSWORD}"
@@ -280,13 +283,41 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
       - name: Build signed Android APK
+        if: env.ANDROID_KEYSTORE_BASE64 != ''
         run: pnpm --filter @ghita/mobile build:release
         env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           GHITA_RELEASE_KEYSTORE_PATH: ${{ runner.temp }}/ghita-release.keystore
           GHITA_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           GHITA_RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           GHITA_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      - name: Generate debug keystore for unsigned build
+        # debug.keystore is gitignored (see root .gitignore), so CI must
+        # create it on the fly for the unsigned release build fallback.
+        if: env.ANDROID_KEYSTORE_BASE64 == ''
+        working-directory: apps/mobile/android
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          "$JAVA_HOME/bin/keytool" -genkeypair -v \
+            -keystore app/debug.keystore \
+            -storepass android -keypass android -alias androiddebugkey \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+      - name: Build unsigned Android APK (no signing secrets configured)
+        # ANDROID_KEYSTORE_* secrets are not set in this repository yet, so the
+        # release pipeline is verified with a debug-signed APK (explicit opt-in
+        # via GHITA_CI_UNSIGNED, see app/build.gradle). Once the secrets exist
+        # the two steps above take over automatically and sign the APK.
+        if: env.ANDROID_KEYSTORE_BASE64 == ''
+        run: pnpm --filter @ghita/mobile build:release
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          GHITA_CI_UNSIGNED: "true"
       - uses: softprops/action-gh-release@v2
+        if: env.ANDROID_KEYSTORE_BASE64 != ''
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         with:
           fail_on_unmatched_files: true
           files: apps/mobile/android/app/build/outputs/apk/release/*.apk
@@ -305,17 +336,39 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @ghita/shared build
-      - run: pod install
+      - name: Install Pods
         working-directory: apps/mobile/ios
+        # pod install intermittently fails with "pathname contains null byte"
+        # on GitHub runners for pnpm monorepos (CocoaPods #12798, #12866);
+        # retry a few times before giving up.
+        # (The fmt Xcode 26 compile workaround lives in the Podfile's
+        # post_install hook — see apps/mobile/ios/Podfile.)
+        run: |
+          for attempt in 1 2 3; do
+            echo "pod install attempt ${attempt}/3"
+            if pod install; then
+              exit 0
+            fi
+            sleep 10
+          done
+          exit 1
       - name: Build unsigned iOS CI artifact
         working-directory: apps/mobile/ios
+        # Xcode script phases (e.g. "Bundle React Native code and images") run
+        # with a sanitized PATH that does not include the runner's Node — expose
+        # it explicitly or the bundle step dies with exit 65 on CI. A generic
+        # destination also makes the arch selection deterministic and script
+        # sandboxing is disabled so the RN phases can write outside the sandbox.
         run: |
+          export PATH="$(dirname "$(command -v node)"):$PATH"
           xcodebuild -workspace GhitaMobile.xcworkspace \
             -scheme GhitaMobile \
             -configuration Release \
             -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
             -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            ENABLE_USER_SCRIPT_SANDBOXING=NO
       - uses: actions/upload-artifact@v4
         with:
           name: ios-release-build

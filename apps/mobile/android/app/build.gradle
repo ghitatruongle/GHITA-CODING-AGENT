@@ -83,11 +83,16 @@ android {
                 storePassword releaseKeystorePassword
                 keyAlias releaseKeyAlias
                 keyPassword releaseKeyPassword
-            } else if (isReleaseTaskRequested && System.getenv("CI")?.toBoolean()) {
+            } else if (isReleaseTaskRequested && System.getenv("CI")?.toBoolean() && !System.getenv("GHITA_CI_UNSIGNED")?.toBoolean()) {
+                // CI must fail by default when signing secrets are missing so a release is
+                // never published unsigned by accident. Workflows that explicitly opt in
+                // (GHITA_CI_UNSIGNED=true, e.g. verification builds while ANDROID_KEYSTORE_*
+                // secrets are not configured yet) fall through to the debug-keystore path.
                 throw new GradleException("Release signing secrets are required in CI")
             } else if (isReleaseTaskRequested) {
-                // Local-only fallback: proves the release pipeline compiles without exposing
-                // production signing material. CI is forbidden from taking this branch.
+                // Local-only / explicitly-unsigned fallback: proves the release pipeline
+                // compiles without exposing production signing material. CI may only take
+                // this branch when GHITA_CI_UNSIGNED=true was set on purpose.
                 storeFile file('debug.keystore')
                 storePassword 'android'
                 keyAlias 'androiddebugkey'
