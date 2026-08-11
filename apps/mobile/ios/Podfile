@@ -28,13 +28,39 @@ target 'GhitaMobile' do
     # Pods for testing
   end
 
-  post_install do |installer|
-    # https://github.com/facebook/react-native/blob/main/packages/react-native/scripts/react_native_pods.rb#L197-L202
+post_install do |installer|
+    # https://github.com/facebook/react-native/blob/main/packages/react-native/scripts/cocoapods/react_native_pods.rb#L197-L202
     react_native_post_install(
       installer,
       config[:reactNativePath],
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # fmt 11.0.2 (RN 0.76 default) fails to compile on the clang shipped with
+    # Xcode 26: "call to consteval function ... FMT_COMPILE_STRING ... is not a
+    # constant expression" inside Pods/fmt/src/format.cc. RN's post_install
+    # forces CLANG_CXX_LANGUAGE_STANDARD=c++20 on every pod target, which makes
+    # fmt's base.h re-enable consteval regardless of podspec settings; C++17
+    # keeps FMT_USE_CONSTEVAL=0 so the pod compiles.
+    installer.pods_project.targets.each do |target|
+      if target.name == 'fmt'
+        target.build_configurations.each do |config|
+          config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17'
+        end
+      end
+
+      # react-native-bluetooth-classic pins Swift 4.1 and iOS 9.0, so the
+      # modern toolchain emits __swift_FORCE_LOAD_$_swiftCompatibility56,
+      # which Xcode 26 no longer ships ("Undefined symbols: ... swiftCompatibility56").
+      # Bump its deployment target to iOS 16+ (no back-deployment shim needed)
+      # while keeping Swift 4.1 — its source does not compile in Swift 5 mode
+      # (e.g. RunLoop `.commonModes` was removed).
+      if target.name == 'react-native-bluetooth-classic'
+        target.build_configurations.each do |config|
+          config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
+        end
+      end
+    end
   end
 end
