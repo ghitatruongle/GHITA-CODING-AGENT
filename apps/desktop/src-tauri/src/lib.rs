@@ -18,6 +18,9 @@ use computer_use::ComputerUseState;
 mod terminal;
 use terminal::TerminalManager;
 
+// v1.1.1 Track 8: native LCS diff-stat (UI no longer stalls on big AI edits)
+mod diff;
+
 // --- Server sidecar state ---
 struct ServerState {
     child: Option<std::process::Child>,
@@ -1531,6 +1534,8 @@ pub fn run(headless: bool) {
             terminal::terminal_list,
             // DocsGriller
             run_grill_session,
+            // v1.1.1 Track 8: native LCS diff-stat (async, off main thread)
+            diff::line_diff_stat_command,
             // Native filesystem commands (editor — full access, no fs-scope)
             fs_read_dir,
             fs_read_text,

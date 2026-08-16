@@ -9,7 +9,63 @@
 import ts from 'typescript';
 import fs from 'node:fs';
 import path from 'node:path';
+import { loadNative } from '@ghita/native-bridge';
 import type { CodeNode, CodeEdge, ImportInfo, CodeNodeKind, ParseOptions } from './types.js';
+
+// ---------------------------------------------------------------------------
+// v1.1.1 Track 8 A10: native tree-sitter parse (codegraph addon, via
+// @ghita/native-bridge). Native-first with TS-compiler-API fallback — the
+// addon only speaks ts/tsx/js/mjs/cjs/py; anything else takes the JS path.
+// ---------------------------------------------------------------------------
+
+/** Native addon surface (camelCase — napi renames snake_case fields). */
+interface CodegraphNative {
+  parseFiles(files: { filePath: string; content: string }[]): NativeFileResult[];
+}
+
+interface NativeSymbol {
+  kind: string;
+  name: string;
+  qualifiedName: string;
+  startLine: number;
+  endLine: number;
+  excerpt: string;
+  exported: boolean;
+  parameters: string[];
+  returnType?: string | null;
+  parent?: string | null;
+}
+
+interface NativeImport {
+  moduleSpecifier: string;
+  namedImports: string[];
+  defaultImport?: string | null;
+  namespaceImport?: string | null;
+  isTypeOnly: boolean;
+  line: number;
+}
+
+interface NativeEdge {
+  from: string;
+  to: string;
+  kind: string;
+  weight: number;
+  line: number;
+}
+
+interface NativeFileResult {
+  filePath: string;
+  symbols: NativeSymbol[];
+  imports: NativeImport[];
+  edges: NativeEdge[];
+}
+
+/** Bridge cho codegraph addon — load một lần (native-first, JS fallback). */
+const codegraphBridge = () =>
+  loadNative<CodegraphNative>('codegraph', undefined as unknown as CodegraphNative);
+
+/** Extensions the native grammar bundle understands. */
+const NATIVE_EXTS = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.py']);
 
 // ---------------------------------------------------------------------------
 // Default parse options
@@ -20,6 +76,7 @@ const DEFAULT_OPTIONS: Required<ParseOptions> = {
   exclude: ['node_modules', 'dist', 'build', '.git', '.turbo'],
   maxFileSize: 512_000, // 500 KB
   extractDocs: true,
+  forceJs: false,
 };
 
 // ---------------------------------------------------------------------------
@@ -138,6 +195,9 @@ export interface ParseResult {
  * - Import declarations
  * - Call references (basic heuristic)
  * - Contains edges (class → method)
+ *
+ * v1.1.1: native tree-sitter path first (ts/tsx/js/mjs/cjs/py), TS Compiler
+ * API fallback otherwise (`options.forceJs` disables the addon for tests).
  */
 export function parseFile(filePath: string, options?: ParseOptions): ParseResult {
   const opts = { ...DEFAULT_OPTIONS, ...options };
@@ -154,12 +214,213 @@ export function parseFile(filePath: string, options?: ParseOptions): ParseResult
     return { nodes: [], edges: [], imports: [] };
   }
 
+  if (!opts.forceJs && NATIVE_EXTS.has(path.extname(absolutePath))) {
+    const bridge = codegraphBridge();
+    if (bridge.native && typeof bridge.impl.parseFiles === 'function') {
+      const [result] = bridge.impl.parseFiles([{ filePath: absolutePath, content }]);
+      if (result) {
+        return nativeToParseResult(absolutePath, result, content);
+      }
+    }
+  }
+
+  return parseFileWithTs(absolutePath, content, opts);
+}
+
+/**
+ * Parse multiple files and merge results. Native path parses the whole batch
+ * in parallel (rayon inside the addon); files outside the grammar set fall
+ * back to the TS Compiler API individually.
+ */
+export function parseFiles(filePaths: string[], options?: ParseOptions): ParseResult {
+  const opts = { ...DEFAULT_OPTIONS, ...options };
+  const bridge = codegraphBridge();
+  const nativeReady =
+    !opts.forceJs && bridge.native && typeof bridge.impl.parseFiles === 'function';
+
+  const jsPaths: string[] = [];
+  const specs: { filePath: string; content: string }[] = [];
+
+  for (const fp of filePaths) {
+    const absolutePath = path.resolve(fp);
+    if (!nativeReady || !NATIVE_EXTS.has(path.extname(absolutePath))) {
+      jsPaths.push(absolutePath);
+      continue;
+    }
+    let content: string;
+    try {
+      content = fs.readFileSync(absolutePath, 'utf-8');
+    } catch {
+      continue;
+    }
+    if (content.length > opts.maxFileSize) continue;
+    specs.push({ filePath: absolutePath, content });
+  }
+
+  if (specs.length > 0) {
+    const allNodes: CodeNode[] = [];
+    const allEdges: CodeEdge[] = [];
+    const allImports: ImportInfo[] = [];
+    // content lookup for module-node endLine (JS parity: full file line count)
+    const contentByPath = new Map(specs.map((s) => [s.filePath, s.content]));
+    for (const result of bridge.impl.parseFiles(specs)) {
+      const parsed = nativeToParseResult(
+        result.filePath,
+        result,
+        contentByPath.get(result.filePath) ?? '',
+      );
+      allNodes.push(...parsed.nodes);
+      allEdges.push(...parsed.edges);
+      allImports.push(...parsed.imports);
+    }
+    // Non-native files (e.g. .vue, .json) → per-file TS fallback.
+    for (const fp of jsPaths) {
+      const result = parseFile(fp, { ...opts, forceJs: true });
+      allNodes.push(...result.nodes);
+      allEdges.push(...result.edges);
+      allImports.push(...result.imports);
+    }
+    return { nodes: allNodes, edges: allEdges, imports: allImports };
+  }
+
+  const allNodes: CodeNode[] = [];
+  const allEdges: CodeEdge[] = [];
+  const allImports: ImportInfo[] = [];
+
+  for (const fp of filePaths) {
+    const result = parseFile(fp, options);
+    allNodes.push(...result.nodes);
+    allEdges.push(...result.edges);
+    allImports.push(...result.imports);
+  }
+
+  return { nodes: allNodes, edges: allEdges, imports: allImports };
+}
+
+/**
+ * Map a native addon file result onto the same CodeNode/CodeEdge/ImportInfo
+ * contract the TS walker produces: module node, node ids, tags, contains /
+ * exports / extends / implements edges. `docComment` is not extracted by the
+ * native grammar pass (tree-sitter has no JSDoc binding) — undefined.
+ */
+function nativeToParseResult(
+  absolutePath: string,
+  result: NativeFileResult,
+  content: string,
+): ParseResult {
+  const nodes: CodeNode[] = [];
+  const edges: CodeEdge[] = [];
+  const imports: ImportInfo[] = [];
+  const now = Date.now();
+
+  // --- Module node (same shape as the TS path) ---
+  const moduleName = path.basename(absolutePath, path.extname(absolutePath));
+  const moduleId = makeNodeId(absolutePath, moduleName);
+  // JS: endLine = line of sourceFile.getEnd() — the FULL file line count
+  // (content.split('\n').length matches TS line semantics exactly), not the
+  // last symbol line.
+  const endLine = content.split('\n').length;
+  nodes.push({
+    id: moduleId,
+    kind: 'module',
+    name: moduleName,
+    qualifiedName: moduleName,
+    filePath: absolutePath,
+    startLine: 1,
+    endLine,
+    excerpt: '',
+    exported: false,
+    tags: [moduleName.toLowerCase(), path.basename(absolutePath).toLowerCase()],
+    indexedAt: now,
+  });
+
+  const kindOf = (k: string): CodeNodeKind => {
+    switch (k) {
+      case 'function':
+      case 'class':
+      case 'method':
+      case 'interface':
+      case 'type':
+      case 'enum':
+      case 'variable':
+      case 'property':
+        return k;
+      default:
+        return 'function';
+    }
+  };
+
+  for (const s of result.symbols) {
+    const kind = kindOf(s.kind);
+    const qualifiedName = s.qualifiedName;
+    const nodeId = makeNodeId(absolutePath, qualifiedName);
+    nodes.push({
+      id: nodeId,
+      kind,
+      name: s.name,
+      qualifiedName,
+      filePath: absolutePath,
+      startLine: s.startLine,
+      endLine: s.endLine,
+      excerpt: s.excerpt,
+      exported: s.exported,
+      parameters: s.parameters.length > 0 ? s.parameters : undefined,
+      returnType: s.returnType ?? undefined,
+      parentId: s.parent ? makeNodeId(absolutePath, s.parent) : undefined,
+      tags: buildTags(s.name, qualifiedName, kind),
+      indexedAt: now,
+    });
+  }
+
+  for (const e of result.edges) {
+    const from = e.from === '' ? moduleId : makeNodeId(absolutePath, e.from);
+    if (e.kind === 'extends' || e.kind === 'implements') {
+      // Target stays raw identifier text — same as the TS walker.
+      edges.push({ from, to: e.to, kind: e.kind, weight: e.weight, line: e.line });
+    } else if (e.kind === 'exports') {
+      edges.push({ from, to: makeNodeId(absolutePath, e.to), kind: 'exports', weight: e.weight });
+    } else if (e.kind === 'contains') {
+      edges.push({
+        from,
+        to: makeNodeId(absolutePath, e.to),
+        kind: 'contains',
+        weight: e.weight,
+      });
+    }
+  }
+
+  for (const i of result.imports) {
+    imports.push({
+      moduleSpecifier: i.moduleSpecifier,
+      namedImports: i.namedImports,
+      defaultImport: i.defaultImport ?? undefined,
+      namespaceImport: i.namespaceImport ?? undefined,
+      isTypeOnly: i.isTypeOnly,
+      sourceFile: absolutePath,
+      line: i.line,
+    });
+  }
+
+  return { nodes, edges, imports };
+}
+
+/**
+ * TS Compiler API walk (the JS fallback — and the only path for non-native
+ * extensions). `content` is already read and size-checked by the caller.
+ */
+function parseFileWithTs(
+  absolutePath: string,
+  content: string,
+  opts: Required<ParseOptions>,
+): ParseResult {
   const sourceFile = ts.createSourceFile(
     absolutePath,
     content,
     ts.ScriptTarget.Latest,
     true,
-    filePath.endsWith('.tsx') || filePath.endsWith('.jsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+    absolutePath.endsWith('.tsx') || absolutePath.endsWith('.jsx')
+      ? ts.ScriptKind.TSX
+      : ts.ScriptKind.TS,
   );
 
   const nodes: CodeNode[] = [];
@@ -498,24 +759,6 @@ export function parseFile(filePath: string, options?: ParseOptions): ParseResult
   ts.forEachChild(sourceFile, (child) => visit(child));
 
   return { nodes, edges, imports };
-}
-
-/**
- * Parse multiple files and merge results.
- */
-export function parseFiles(filePaths: string[], options?: ParseOptions): ParseResult {
-  const allNodes: CodeNode[] = [];
-  const allEdges: CodeEdge[] = [];
-  const allImports: ImportInfo[] = [];
-
-  for (const fp of filePaths) {
-    const result = parseFile(fp, options);
-    allNodes.push(...result.nodes);
-    allEdges.push(...result.edges);
-    allImports.push(...result.imports);
-  }
-
-  return { nodes: allNodes, edges: allEdges, imports: allImports };
 }
 
 // ---------------------------------------------------------------------------

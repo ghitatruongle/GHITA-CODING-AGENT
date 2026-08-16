@@ -12,7 +12,7 @@ import { readFileSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadNative } from '../packages/native-bridge/dist/index.js';
-import { genCode, makeChunks, makeEdges } from './bench-cpu.mjs';
+import { genCode, makeChunks, makeEdges, ensureTsCorpus } from './bench-cpu.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const BASELINE = JSON.parse(readFileSync(join(root, 'docs', 'perf-baseline.json'), 'utf-8'));
@@ -72,6 +72,35 @@ export async function runNative() {
     results['pagerank.native.ms'] = prMs;
   }
 
+  // [D] AST parse native (tree-sitter + rayon) — same 1000-file corpus as the
+  // JS probe in bench-cpu.mjs, plus a 10k-file run for the <5s target.
+  if (codegraph.native && typeof codegraph.impl.parseFiles === 'function') {
+    const corpusDir = join(root, '.bench-tmp', 'corpus');
+    const corpus = ensureTsCorpus(corpusDir, 1000);
+    const specs = corpus.map((fp) => ({ filePath: fp, content: readFileSync(fp, 'utf-8') }));
+    let astMs = Infinity;
+    let astNodes = 0;
+    for (let run = 0; run < 3; run++) {
+      const t0 = performance.now();
+      const out = codegraph.impl.parseFiles(specs);
+      astMs = Math.min(astMs, performance.now() - t0);
+      astNodes = out.reduce((a, f) => a + f.symbols.length, 0);
+    }
+    results['ast-parse.native.ms'] = astMs;
+    results['ast-parse.native.nodes'] = astNodes;
+    results['ast-parse.native.files'] = specs.length;
+
+    // 10k-file target probe (single run).
+    const bigCorpus = ensureTsCorpus(corpusDir, 10000);
+    const bigSpecs = bigCorpus.map((fp) => ({
+      filePath: fp,
+      content: readFileSync(fp, 'utf-8'),
+    }));
+    const tBig = performance.now();
+    codegraph.impl.parseFiles(bigSpecs);
+    results['ast-parse.native.10k.ms'] = performance.now() - tBig;
+  }
+
   return results;
 }
 
@@ -90,6 +119,11 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1].rep
     }
     if (results['pagerank.native.ms'] !== undefined) {
       lines.push(`[C] pagerank native: ${results['pagerank.native.ms'].toFixed(1)} ms (JS baseline ${BASELINE['pagerank.typed.ms'].toFixed(1)} ms) — ${(BASELINE['pagerank.typed.ms'] / results['pagerank.native.ms']).toFixed(1)}x`);
+    }
+    if (results['ast-parse.native.ms'] !== undefined) {
+      const jsBase = BASELINE['ast-parse.js.ms'];
+      const ratio = jsBase ? (jsBase / results['ast-parse.native.ms']).toFixed(1) : 'n/a';
+      lines.push(`[D] ast-parse native: ${results['ast-parse.native.ms'].toFixed(1)} ms / ${results['ast-parse.native.files']} files (JS baseline ${jsBase ? jsBase.toFixed(1) : 'n/a'} ms) — ${ratio}x · 10k files: ${results['ast-parse.native.10k.ms'].toFixed(1)} ms`);
     }
     if (lines.length === 0) lines.push('No native addons built — run `napi build` for secscan/retrieval/codegraph first.');
     process.stdout.write(lines.join('\n') + '\n');
