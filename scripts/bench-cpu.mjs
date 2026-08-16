@@ -13,7 +13,7 @@
 // ==============================================================================
 
 import { performance } from 'node:perf_hooks';
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -185,6 +185,91 @@ export function makeEdges(n) {
   return edges;
 }
 
+// ---------------------------------------------------------------------------
+// [D] AST parse + [E] diff-stat probes (v1.1.1 Track 8)
+// ---------------------------------------------------------------------------
+
+/** Small but realistic TS sample — ~20 symbols per file. */
+export function genTsSample() {
+  return [
+    "import { useState, useEffect } from 'react';",
+    "import fs from 'node:fs';",
+    '',
+    '/** Sample module for AST parsing benchmarks */',
+    'export function compute(a: number, b: number): number {',
+    '  return a + b;',
+    '}',
+    '',
+    'export interface Config {',
+    '  enabled: boolean;',
+    '  retries: number;',
+    '}',
+    '',
+    'export class Worker {',
+    '  private results: number[] = [];',
+    '  constructor(private readonly name: string) {}',
+    '  run(input: Config): number {',
+    '    for (let i = 0; i < input.retries; i++) {',
+    '      this.results.push(compute(i, 1));',
+    '    }',
+    '    return this.results.length;',
+    '  }',
+    '}',
+    '',
+    'const cache = new Map<string, number>();',
+    'export const helper = (x: number) => x * 2;',
+    'export default Worker;',
+  ].join('\n');
+}
+
+/**
+ * Ensure a shared TS corpus exists on disk (used by both the JS (bench-cpu)
+ * and native (bench-native) AST probes so they parse identical inputs).
+ * Returns the file paths.
+ */
+export function ensureTsCorpus(dir, count) {
+  mkdirSync(dir, { recursive: true });
+  const content = genTsSample();
+  const paths = [];
+  for (let i = 0; i < count; i++) {
+    const p = join(dir, `f${i}.ts`);
+    if (!existsSync(p)) writeFileSync(p, content);
+    paths.push(p);
+  }
+  return paths;
+}
+
+/** JS lineDiffStat (same algorithm as apps/desktop/src/utils/editProposal.ts). */
+export function lineDiffStatJS(original, proposed) {
+  if (original === proposed) return { added: 0, removed: 0, unchanged: true };
+  const a = original.split('\n');
+  const b = proposed.split('\n');
+  const m = b.length;
+  let prev = new Array(m + 1).fill(0);
+  let curr = new Array(m + 1).fill(0);
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= m; j++) {
+      curr[j] = a[i - 1] === b[j - 1] ? (prev[j - 1] ?? 0) + 1 : Math.max(prev[j] ?? 0, curr[j - 1] ?? 0);
+    }
+    [prev, curr] = [curr, prev];
+    curr.fill(0);
+  }
+  const lcs = prev[m] ?? 0;
+  return { added: b.length - lcs, removed: a.length - lcs, unchanged: false };
+}
+
+/** [E] Diff-stat over two ~5k-line texts with a small edit (UI burst case). */
+export function benchDiffStat(lines = 5000) {
+  const a = Array.from({ length: lines }, (_, i) => `line ${i} = value ${i};`);
+  const b = a.slice();
+  b[Math.floor(lines / 2)] = `line ${Math.floor(lines / 2)} = EDITED;`;
+  const original = a.join('\n');
+  const proposed = b.join('\n');
+  const t0 = performance.now();
+  const stat = lineDiffStatJS(original, proposed);
+  return { ms: performance.now() - t0, added: stat.added, removed: stat.removed };
+}
+
 export async function runAll() {
   const code = genCode(5);
   const chunks = makeChunks(10000);
@@ -206,6 +291,15 @@ export async function runAll() {
     prMs = Math.min(prMs, pagerankTyped(20000, edges).ms);
   }
 
+  // [D] AST parse (JS — TS Compiler API) over 1000 files, [E] diff-stat 5k lines.
+  const corpusDir = join(root, '.bench-tmp', 'corpus');
+  const corpus = ensureTsCorpus(corpusDir, 1000);
+  const { parseFiles } = await import('../packages/code-graph/dist/ast-parser.js');
+  const astT0 = performance.now();
+  const astResult = parseFiles(corpus, { forceJs: true });
+  const astMs = performance.now() - astT0;
+  const diffProbe = benchDiffStat(5000);
+
   return {
     'scanner.naive.ms': scanNaive.ms,
     'scanner.stream.ms': scanStream.ms,
@@ -215,6 +309,11 @@ export async function runAll() {
     'bm25.chunks': chunks.length,
     'pagerank.typed.ms': prMs,
     'pagerank.nodes': 20000,
+    'ast-parse.js.ms': astMs,
+    'ast-parse.files': corpus.length,
+    'ast-parse.nodes': astResult.nodes.length,
+    'diffstat.js.ms': diffProbe.ms,
+    'diffstat.lines': 5000,
   };
 }
 
@@ -225,6 +324,8 @@ export function fmtResults(results) {
     `[A] scanner fast    : ${results['scanner.fast.ms'].toFixed(1)} ms`,
     `[B] bm25 (10k chunks): ${results['bm25.index+query.ms'].toFixed(1)} ms`,
     `[C] pagerank typed  : ${results['pagerank.typed.ms'].toFixed(1)} ms`,
+    `[D] ast-parse JS (${results['ast-parse.files']} files): ${results['ast-parse.js.ms'].toFixed(1)} ms (${results['ast-parse.nodes']} nodes)`,
+    `[E] diff-stat JS (5k lines): ${results['diffstat.js.ms'].toFixed(1)} ms`,
   ].join('\n');
 }
 

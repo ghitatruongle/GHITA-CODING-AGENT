@@ -182,4 +182,9 @@ export interface ParseOptions {
   maxFileSize?: number;
   /** Whether to extract JSDoc comments (default: true) */
   extractDocs?: boolean;
+  /**
+   * v1.1.1: force the TS Compiler API walk even when the native tree-sitter
+   * addon is available (test parity / debug).
+   */
+  forceJs?: boolean;
 }

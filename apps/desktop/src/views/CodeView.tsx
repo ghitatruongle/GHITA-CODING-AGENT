@@ -13,7 +13,7 @@ import toast from 'react-hot-toast';
 import { useTranslation } from '../i18n';
 import { useAppStore, fileContentCache } from '../stores/appStore';
 import { useAiEditProposal } from '../hooks/useAiEditProposal';
-import { lineDiffStat } from '../utils/editProposal';
+import { DiffStatBadge } from '../components/DiffStatBadge';
 
 const CodeEditor = lazy(() =>
   import('../components/CodeEditor').then((m) => ({ default: m.CodeEditor })),
@@ -656,15 +656,11 @@ export function CodeView() {
               </span>
             )}
             {(() => {
-              const stat = lineDiffStat(
-                activeProposal.originalContent,
-                activeProposal.proposedContent,
-              );
               return (
-                <span style={{ fontSize: '11px', fontFamily: 'monospace' }}>
-                  <span style={{ color: 'var(--success)' }}>+{stat.added}</span>{' '}
-                  <span style={{ color: 'var(--error)' }}>-{stat.removed}</span>
-                </span>
+                <DiffStatBadge
+                  original={activeProposal.originalContent}
+                  proposed={activeProposal.proposedContent}
+                />
               );
             })()}
             <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>

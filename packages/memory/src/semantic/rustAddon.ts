@@ -130,8 +130,16 @@ type RustBindingsLike = {
 };
 
 declare const require: ((id: string) => unknown) | undefined;
-const runtimeRequire: ((id: string) => unknown) | null =
-  typeof require !== 'undefined' ? require : null;
+import { createRequire } from 'node:module';
+// v1.1.1: ESM-safe require. `typeof require` is undefined inside ESM modules,
+// so build the require function from the module URL (same pattern as
+// @ghita/native-bridge) and fall back to a real `require` in CJS builds.
+let runtimeRequire: ((id: string) => unknown) | null = null;
+try {
+  runtimeRequire = createRequire(import.meta.url);
+} catch {
+  runtimeRequire = typeof require !== 'undefined' ? require : null;
+}
 
 // ---------------------------------------------------------------------------
 // Shared cosine similarity (standalone, usable by all modules)
@@ -274,7 +282,28 @@ export class RustMemoryAddon {
         this.rustBindings = null;
         return;
       }
-      this.rustBindings = runtimeRequire('./rust/index.node') as RustBindingsLike;
+      // v1.1.1: the addon is built from packages/memory/rust-napi/
+      // (ghita-memory-napi crate). Both src/ and dist/ place this file under
+      // semantic/, so `../../rust-napi/index.node` resolves to the crate dir;
+      // the legacy `./rust/index.node` path is kept for older builds.
+      const candidates = [
+        '../../rust-napi/index.node',
+        '../../rust-napi/index.win32-x64-gnu.node',
+        '../rust-napi/index.node',
+        './rust/index.node',
+      ];
+      for (const candidate of candidates) {
+        try {
+          const mod = runtimeRequire(candidate) as RustBindingsLike;
+          if (mod && typeof mod === 'object' && Object.keys(mod).length > 0) {
+            this.rustBindings = mod;
+            return;
+          }
+        } catch {
+          // try the next candidate
+        }
+      }
+      this.rustBindings = null;
     } catch {
       this.rustBindings = null;
     }

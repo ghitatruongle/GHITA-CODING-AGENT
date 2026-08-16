@@ -13,8 +13,9 @@ import { useTranslation } from '../i18n';
 import { fileContentCache, useAppStore } from '../stores/appStore';
 import { useEditProposalStore } from '../stores/editProposalStore';
 import { respondRemote } from '../hooks/useAiEditProposal';
-import { lineDiffStat, type EditProposal } from '../utils/editProposal';
+import { type EditProposal } from '../utils/editProposal';
 import { fsWriteText } from '../lib/native-fs';
+import { DiffStatBadge } from './DiffStatBadge';
 
 interface EditProposalTrayProps {
   /** Path currently shown in the editor (its proposal renders inline there). */
@@ -224,7 +225,6 @@ export function EditProposalTray({ activePath, onJumpTo }: EditProposalTrayProps
       {!collapsed && (
         <div style={{ maxHeight: '180px', overflow: 'auto' }} className="custom-scrollbar">
           {pending.map((p) => {
-            const stat = lineDiffStat(p.originalContent, p.proposedContent);
             const isActive = p.path === activePath;
             return (
               <div
@@ -264,10 +264,7 @@ export function EditProposalTray({ activePath, onJumpTo }: EditProposalTrayProps
                 >
                   {p.fileName}
                 </button>
-                <span style={{ fontFamily: 'monospace', fontSize: '11px' }}>
-                  <span style={{ color: 'var(--success)' }}>+{stat.added}</span>{' '}
-                  <span style={{ color: 'var(--error)' }}>-{stat.removed}</span>
-                </span>
+                <DiffStatBadge original={p.originalContent} proposed={p.proposedContent} />
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
                   {!isActive && (
                     <button

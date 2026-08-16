@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.1.1] - WIP (local, chưa release)
+
+### Track 8 hoàn tất — Native Acceleration (v1.1.1)
+
+- **Tree-sitter AST native** (`crates/codegraph/src/ast.rs` + `parseFiles` napi/rayon): parse TS/TSX/JS/MJS/CJS/Python; symbol/import/edge extraction **parity 420=420 nodes** với TS Compiler API (A/B trên repo thật, 0 lệch). **1 000 file TS: 817 → 55.6 ms (14.7×)**; 10 000 file: 624 ms (<5 s target). JS fallback giữ nguyên (`forceJs` option).
+- **LCS diff-stat native** (`apps/desktop/src-tauri/src/diff.rs`): `line_diff_stat_command` async trên thread pool — hết giật UI khi AI edit file lớn (JS baseline 5k dòng **~1 453 ms** main-thread → native **300 ms** off-thread, 4.8×). Renderer: `nativeDiff.ts` → `useLineDiffStat` → `DiffStatBadge` (fallback JS).
+- **Memory addon dựng được + load được**: `packages/memory/rust-napi` chuyển `dyn-symbols` (hết lỗi libnode.dll); loader `rustAddon.ts` ESM-safe (`createRequire`) + probe `../../rust-napi/index.node`; e2e HNSW/cosine/batch/decay OK, 215 tests pass.
+- **Build matrix + scripts**: `scripts/build-native.mjs` (+ npm script `build:native`) build 4 addon; `.github/workflows/build-native.yml` (win/linux/mac) — tạo local, chưa activate; bench `[D] ast-parse` + `[E] diff-stat` trong `bench-cpu.mjs`/`bench-native.mjs`.
+- ⚠️ Toàn bộ thay đổi **local** — chưa commit/push/tag/release (release-please sẽ bump khi có commit `fix:`).
+
 ## [1.1.0] - 2026-08-10
 
 ### Release & Installer — Track 13/14 (2026-08-10)

@@ -1,7 +1,0 @@
-{
-  "scanner.native.ms": 8.1207,
-  "scanner.native.findings": 266,
-  "bm25.native.build.ms": 63.7329,
-  "bm25.native.query.ms": 0.12959999999998217,
-  "pagerank.native.ms": 1.4159999999999968
-}

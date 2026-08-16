@@ -1,0 +1,85 @@
+# ==============================================================================
+# GHITA CODING AGENT - Native addon build matrix (v1.1.1 Track 8)
+# ------------------------------------------------------------------------------
+# Builds the napi-rs addons (secscan / retrieval / codegraph / memory-napi) on
+# win/linux/mac, runs the Rust test suites and the native benchmarks, and fails
+# on a >10% regression vs docs/perf-baseline.json (CPU probes).
+# NOTE: created locally for the v1.1.1 program — not yet pushed/activated.
+# ==============================================================================
+name: build-native
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'crates/**'
+      - 'packages/memory/rust-napi/**'
+      - 'packages/native-bridge/**'
+      - 'scripts/bench-*.mjs'
+      - 'scripts/build-native.mjs'
+      - 'docs/perf-baseline.json'
+      - 'docs/perf-native.json'
+  pull_request:
+    paths:
+      - 'crates/**'
+      - 'packages/memory/rust-napi/**'
+      - 'packages/native-bridge/**'
+      - 'scripts/bench-*.mjs'
+      - 'scripts/build-native.mjs'
+      - 'docs/perf-baseline.json'
+
+concurrency:
+  group: build-native-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  addons:
+    name: addons (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        # Reads `packageManager` from package.json (pnpm@11.x) — do not pin
+        # here or it drifts from the repo's own lockfile tooling.
+        with:
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install pnpm deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Build JS packages
+        run: pnpm build:packages
+
+      # cargo test --workspace (crates/) + memory addon crate
+      - name: Cargo tests (workspace)
+        working-directory: crates
+        run: cargo test --workspace
+        env:
+          RUST_MIN_STACK: 134217728
+          CARGO_BUILD_JOBS: 1
+
+      - name: Cargo tests (memory addon)
+        working-directory: packages/memory/rust-napi
+        run: cargo test
+
+      - name: Build native addons
+        run: node scripts/build-native.mjs --skip-tests
+
+      - name: Native benchmarks
+        run: node scripts/bench-native.mjs --json
+
+      # CPU regression gate (JS probes vs docs/perf-baseline.json, >10% fails).
+      - name: CPU regression gate
+        run: node scripts/bench-cpu.mjs --baseline

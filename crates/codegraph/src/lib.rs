@@ -1,11 +1,14 @@
 // ==============================================================================
-// ghita-codegraph — PageRank over CSR graphs (v1.1.0 Track 8 A10/A11)
+// ghita-codegraph — PageRank over CSR graphs + tree-sitter AST (v1.1.1)
 // ==============================================================================
-// The JS hot path (repo-map computePageRank) built object Maps per iteration.
-// This core runs the same algorithm on CSR (flat Vec<u32> from/to + Vec<f32>
-// weights) and TypedArray-friendly output. Std-only; tree-sitter parsing lands
-// in the addon layer (grammar bundle + rayon).
+// The JS hot paths (repo-map computePageRank, TS-compiler-API ast-parser) are
+// rebuilt native: CSR PageRank on flat TypedArrays, and tree-sitter symbol/
+// import extraction (see `ast`). Both keep a JS fallback through
+// @ghita/native-bridge. The core is std-only (offline cargo test); the napi
+// bindings (and rayon for parallel parse) live behind the `addon` feature.
 // ==============================================================================
+
+pub mod ast;
 
 #[cfg(feature = "addon")]
 mod napi;

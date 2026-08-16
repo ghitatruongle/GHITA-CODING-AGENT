@@ -270,4 +270,4 @@ export class ScreenPreviewBudget {
   }
 }
 
-export const RESOURCE_BUDGET_VERSION = '1.1.0';
+export const RESOURCE_BUDGET_VERSION = '1.1.1';
