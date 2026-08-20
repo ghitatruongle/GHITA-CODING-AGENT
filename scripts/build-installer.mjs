@@ -1,21 +1,3 @@
-#!/usr/bin/env node
-// ==============================================================================
-// GHITA CODING AGENT — Single-file installer builder (v1.0.0)
-// ==============================================================================
-// Builds the desktop app and produces exactly ONE distributable installer
-// file with a fixed, predictable name (Cursor/Antigravity-style release):
-//
-//     release/GHITA-Coding-Agent-Setup-v1.0.0.exe     (Windows, NSIS)
-//
-// Every build overwrites the same fixed path, so CI/release tooling always
-// knows where the artifact is. A SHA-256 checksum file is written next to it.
-//
-// Usage:
-//     pnpm build:installer          (from the repo root)
-//     pnpm build:installer --debug  (skip the release build, repackage an
-//                                    existing tauri build output)
-// ==============================================================================
-
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs';
@@ -54,7 +36,13 @@ const INSTALLER_PATH = join(RELEASE_DIR, INSTALLER_NAME);
 
 function run(cmd, args, opts = {}) {
   console.log(`\n▶ ${cmd} ${args.join(' ')}`);
-  execFileSync(cmd, args, { stdio: 'inherit', shell: IS_WIN, ...opts });
+  let finalCmd = cmd;
+  let finalArgs = args;
+  if (cmd === 'pnpm') {
+    finalCmd = 'npx';
+    finalArgs = ['pnpm', ...args];
+  }
+  execFileSync(finalCmd, finalArgs, { stdio: 'inherit', shell: IS_WIN, ...opts });
 }
 
 function sha256(filePath) {

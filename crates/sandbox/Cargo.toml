@@ -1,0 +1,20 @@
+[package]
+name = "ghita-sandbox"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "GHITA sandboxed process execution (Track 1.1) — profiles, deny globs, per-OS enforcement (landlock / seatbelt / supervised)"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+# Production addon: napi bindings for the TS/native-bridge layer.
+# dyn-symbols: napi-sys resolves Node API symbols dynamically (GetProcAddress)
+# → không cần libnode.dll khi link trên windows-gnu (matches crates/* addons).
+addon = ["dep:napi", "dep:napi-derive"]
+
+[dependencies]
+napi = { version = "2", default-features = false, features = ["compat-mode", "napi4", "dyn-symbols"], optional = true }
+napi-derive = { version = "2", optional = true }

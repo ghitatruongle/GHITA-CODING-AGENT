@@ -6,6 +6,8 @@ import type { BaseMessage } from '../messages/message.js';
 import type { MessageData } from '../messages/types.js';
 import type { AgentMiddleware } from '../middleware/types.js';
 import type { RunnableConfig } from '../pipeline/types.js';
+import type { HookDispatcher } from '../hooks/types.js';
+import type { InterjectionBuffer } from '../interjection/buffer.js';
 
 export type AgentAction = {
   tool: string;
@@ -94,6 +96,8 @@ export interface ReActAgentConfig {
   maxTokens?: number;
   /** Maximum iterations before forced stop */
   maxIterations?: number;
+  /** v1.1.5-beta1 T2.5: max steps for subagent — when reached, agent summarizes instead of continuing. */
+  maxSteps?: number;
   /** Tools available to the agent */
   tools?: ReActTool[];
   /** Middleware to apply */
@@ -108,6 +112,20 @@ export interface ReActAgentConfig {
    * tool and feeds the reason back to the model as the observation.
    */
   policyGuard?: PolicyGuard;
+  /**
+   * v1.1.5-beta1 Track 1.2: declarative hook dispatcher evaluated at every
+   * tool boundary (PreToolUse / PostToolUse / PostToolUseFailure) plus
+   * SessionStart / Stop. A 'block' outcome stops the tool like a policy deny.
+   */
+  hooks?: HookDispatcher;
+  /**
+   * v1.1.5-beta1 Track 1.4: wrap tool output in <tool_output data-source=
+   * "untrusted"> envelopes before it enters the LLM context (default true).
+   * The step journal keeps the raw observation; only messages are wrapped.
+   */
+  untrustedOutput?: boolean;
+  /** v1.1.5-beta1 Track 2.4: buffer for injecting user commands at safe points between turns. */
+  interjection?: InterjectionBuffer;
   /** Stable ID used by durable run journals. Generated when omitted. */
   runId?: string;
   /** Resume a previously persisted run snapshot. */

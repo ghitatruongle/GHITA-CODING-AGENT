@@ -4,7 +4,7 @@
 # Builds the napi-rs addons (secscan / retrieval / codegraph / memory-napi) on
 # win/linux/mac, runs the Rust test suites and the native benchmarks, and fails
 # on a >10% regression vs docs/perf-baseline.json (CPU probes).
-# NOTE: created locally for the v1.1.1 program — not yet pushed/activated.
+# Activated on push to main and PRs (paths: crates/**, packages/memory/rust-napi/**, etc.).
 # ==============================================================================
 name: build-native
 

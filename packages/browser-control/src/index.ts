@@ -5,7 +5,7 @@
 import type { SkillDefinition } from '@ghita/skills';
 import type { BrowserAction, BrowserResult } from '@ghita/shared';
 
-export const BROWSER_CONTROL_VERSION = '1.1.1';
+export const BROWSER_CONTROL_VERSION = '1.1.5-beta1';
 
 export type BrowserSessionStatus = 'idle' | 'launching' | 'ready' | 'closed' | 'error';
 
@@ -255,3 +255,21 @@ export type { BrowserLike, BrowserMCPServerConfig } from './mcp-server.js';
 
 // ── v1.1.0 Track 7: action registry, cache, verifier, network, trace ──
 export * from './track7/index.js';
+
+// ── v1.1.5-beta1 Track 9: Browser Safety + Stealth v2 ──
+export {
+  isUrlAllowed,
+  evaluatePopup,
+  redactSensitiveData,
+  redactHarEntry,
+  DEFAULT_DOMAIN_POLICY,
+} from './browser-safety.js';
+export type { DomainPolicy, PopupDecision, RedactionResult } from './browser-safety.js';
+export {
+  runStealthPreflight,
+  checkTimezoneConsistency,
+  checkLocaleConsistency,
+  checkWebRtcConsistency,
+  humanizeScrollSteps,
+} from './stealth-v2.js';
+export type { ConsistencyCheck, PreflightReport, ScrollStep } from './stealth-v2.js';

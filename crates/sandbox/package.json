@@ -1,0 +1,10 @@
+{
+  "name": "@ghita/sandbox-native",
+  "version": "1.1.1",
+  "private": true,
+  "description": "ghita-sandbox napi addon (v1.1.5-beta1 Track 1.1)",
+  "napi": {
+    "name": "sandbox",
+    "triples": {}
+  }
+}

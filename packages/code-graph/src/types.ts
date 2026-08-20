@@ -188,3 +188,85 @@ export interface ParseOptions {
    */
   forceJs?: boolean;
 }
+
+// ---------------------------------------------------------------------------
+// Track 3 (v1.1.5-beta1): Code-graph v2 Types
+// ---------------------------------------------------------------------------
+
+/**
+ * Impact report (blast-radius analysis) when changing a symbol.
+ */
+export interface ImpactReport {
+  /** Target node or identifier analyzed */
+  target: CodeNode | { id: string; name: string; filePath?: string };
+  /** Maximum traversal depth evaluated */
+  depth: number;
+  /** All nodes that depend on or call the target (transitively) */
+  impactedNodes: CodeNode[];
+  /** Distinct file paths affected by changes to the target */
+  impactedFiles: string[];
+  /** Calculated risk score (0.0 – 1.0) based on blast radius & centrality */
+  riskScore: number;
+  /** Sample dependency paths from upstream dependents to target */
+  paths: string[][];
+}
+
+/**
+ * Neighborhood exploration result around a symbol or file.
+ */
+export interface ExploreResult {
+  /** The focal point of the exploration */
+  center: CodeNode | { filePath: string; name: string };
+  /** Subgraph nodes in the neighborhood */
+  nodes: CodeNode[];
+  /** Subgraph edges in the neighborhood */
+  edges: CodeEdge[];
+  /** Number of incoming connections */
+  inwardCount: number;
+  /** Number of outgoing connections */
+  outwardCount: number;
+}
+
+/**
+ * Comprehensive status of the code graph.
+ */
+export interface GraphStatus {
+  /** Total number of indexed nodes */
+  nodesCount: number;
+  /** Total number of indexed edges */
+  edgesCount: number;
+  /** Total number of indexed files */
+  filesCount: number;
+  /** Breakdown of nodes by kind */
+  nodesByKind: Record<string, number>;
+  /** Breakdown of edges by kind */
+  edgesByKind: Record<string, number>;
+  /** Is SQLite persistence store active? */
+  storeActive: boolean;
+  /** Optional cache stats */
+  cacheStats?: {
+    hits: number;
+    misses: number;
+    cachedFiles: number;
+  };
+}
+
+/**
+ * Content-addressed index entry caching AST parse results by SHA-256 hash.
+ */
+export interface ContentCacheEntry {
+  contentHash: string;
+  filePath: string;
+  nodes: CodeNode[];
+  edges: CodeEdge[];
+  imports: ImportInfo[];
+  createdAt: number;
+}
+
+/**
+ * Branch/checkpoint tag metadata for content-addressed catalog.
+ */
+export interface BranchTagInfo {
+  filePath: string;
+  tags: string[];
+}

@@ -5,7 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [1.1.1] - WIP (local, chưa release)
+## [1.1.5-beta1] - WIP
+
+### Track 1 — Sandbox & Hooks & Headless (an toàn thực thi)
+
+- **`crates/sandbox` (T1.1)**: sandboxed spawn zero-dependency với 3 profile (`workspace`/`read-only`/`strict`), deny-glob matching (`**`/`*`/`?`), env scrub allowlist, write-target policy cho redirect, WSL1 detection. Enforcement theo OS tự degrade: **Landlock** (Linux, raw syscalls + `NO_NEW_PRIVS` trong `pre_exec`) · **Seatbelt** (macOS `sandbox-exec` SBPL sinh động) · **Supervised** (Windows: Job Object kill-on-close FFI + policy precheck; AppContainer là tier kế tiếp). Napi addon `spawnSandboxed` (feature `addon`, dyn-symbols) build + load qua `@ghita/native-bridge` OK; smoke: lệnh lành chạy exit 0, `**/*.pem` deny-glob chặn trước spawn. 7 cargo tests + landlock test trên Linux CI. Docs `docs/sandbox.md`.
+- **Hooks system (T1.2)**: `HookManager` + schema `.ghita/hooks.json` v1 — 6 sự kiện (SessionStart/PreToolUse/PostToolUse/PostToolUseFailure/Stop/PreCompact), action `shell` (exit 2 hoặc JSON decision chặn — đúng contract Claude Code) / `http` webhook / `block`; depth-guard chống đệ quy (max 2), per-rule cooldown, dedup window, fail-open. Wire vào ReAct runtime ở cả 2 path `run`/`runDurable` cạnh PolicyEngine; `PreToolUse` block cho observation `Hook blocked tool …` như policy deny. Docs `docs/hooks.md`. 14 tests.
+- **Headless/CI mode (T1.3)**: `runHeadless` (packages/agents) + CLI `scripts/headless.mjs` — streaming-json event stream ổn định (`session_start`→`message`/`tool_call`/`tool_result`→`turn_end`→`done`), `--tools` allowlist, `--max-turns`, `--fork-session`, `--session-id`; exit codes ngữ nghĩa **0 ok / 1 lỗi / 2 exhausted** (durable runId → `ReActIterationLimitError`). CLI dry-run scripted LLM chạy được e2e không network/API key. 5 tests.
+- **Untrusted-data discipline (T1.4)**: `wrapUntrusted`/`OPERATOR_CHARTER` (`@ghita/shared`) — mọi ToolMessage vào LLM context bọc `<tool_output data-source="untrusted" origin="…">` với **anti-breakout** (escape close/open tag phía trong payload); journal `steps[]` giữ observation thô. Charter tự prepend vào system prompt (opt-out `untrustedOutput: false`). Áp ở cả `run` + `runDurable` (kể cả observation policy-deny/hook-block).
+- **Exec policy (T1.5)**: `checkCommand` (`@ghita/security` governance) — parse compound command (split `&&`/`||`/`;`/`|` ngoài quote, tokenize respecting quote, binary normalize Windows path/.exe, family match `mkfs`→`mkfs.ext4`) → verdict `allow/deny/ask` với deny thắng. Default rules: **deny `git push --force`/`-f`**, ask `--force-with-lease`, deny `rm -rf`, `dd of=/dev/…`, `mkfs*`, `shutdown`, `reboot`. 12 tests.
+- Gates: cargo test workspace 29/29 (thêm ghita-sandbox 7) · clippy/fmt sạch · vitest agents 149 · security 147 · shared 229 · typecheck 0 lỗi · eslint 0 lỗi mới.
+
+## [1.1.1] - 2026-08-16
 
 ### Track 8 hoàn tất — Native Acceleration (v1.1.1)
 
@@ -13,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **LCS diff-stat native** (`apps/desktop/src-tauri/src/diff.rs`): `line_diff_stat_command` async trên thread pool — hết giật UI khi AI edit file lớn (JS baseline 5k dòng **~1 453 ms** main-thread → native **300 ms** off-thread, 4.8×). Renderer: `nativeDiff.ts` → `useLineDiffStat` → `DiffStatBadge` (fallback JS).
 - **Memory addon dựng được + load được**: `packages/memory/rust-napi` chuyển `dyn-symbols` (hết lỗi libnode.dll); loader `rustAddon.ts` ESM-safe (`createRequire`) + probe `../../rust-napi/index.node`; e2e HNSW/cosine/batch/decay OK, 215 tests pass.
 - **Build matrix + scripts**: `scripts/build-native.mjs` (+ npm script `build:native`) build 4 addon; `.github/workflows/build-native.yml` (win/linux/mac) — tạo local, chưa activate; bench `[D] ast-parse` + `[E] diff-stat` trong `bench-cpu.mjs`/`bench-native.mjs`.
-- ⚠️ Toàn bộ thay đổi **local** — chưa commit/push/tag/release (release-please sẽ bump khi có commit `fix:`).
+- Thay đổi đã commit/push (cd5184d); gộp vào release v1.1.5-beta1.
 
 ## [1.1.0] - 2026-08-10
 

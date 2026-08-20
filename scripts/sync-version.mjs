@@ -124,6 +124,13 @@ if (existsSync(tauriConfigPath)) {
 const [major, minor, patch] = TARGET.split(/[.-]/).slice(0, 3).map(Number);
 const nativeBuildNumber = major * 1_000_000 + minor * 1_000 + patch;
 
+updateTextVersion('crates/Cargo.toml', [
+  {
+    pattern: /^version\s*=\s*"([^"]+)"/m,
+    replacement: TARGET,
+    label: 'workspace.package version',
+  },
+]);
 updateTextVersion('apps/desktop/src-tauri/Cargo.toml', [
   {
     pattern: /^version\s*=\s*"([^"]+)"/m,

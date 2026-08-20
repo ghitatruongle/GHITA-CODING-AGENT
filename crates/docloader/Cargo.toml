@@ -1,0 +1,18 @@
+[package]
+name = "ghita-docloader"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "GHITA document loader — pdf/docx/html-readability + mime detect (v1.1.5-beta1 Track 6.4/8.1)"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+addon = ["dep:napi", "dep:napi-derive"]
+
+[dependencies]
+napi = { version = "2", default-features = false, features = ["compat-mode", "napi4", "dyn-symbols"], optional = true }
+napi-derive = { version = "2", optional = true }
+

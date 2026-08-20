@@ -8,15 +8,21 @@ import { CodeKnowledgeGraph } from './index.js';
 import { CodeGraphMCPServer } from './mcp-server.js';
 
 describe('CodeGraphMCPServer', () => {
-  it('lists the three standard tools', () => {
+  it('lists the standard tools including Track 3 tools', () => {
     const kg = new CodeKnowledgeGraph();
     const mcpServer = new CodeGraphMCPServer(kg);
 
     const tools = mcpServer.listTools();
-    expect(tools).toHaveLength(3);
-    expect(tools.map((t) => t.name)).toContain('search_code_symbols');
-    expect(tools.map((t) => t.name)).toContain('get_symbol_dependencies');
-    expect(tools.map((t) => t.name)).toContain('get_graph_stats');
+    expect(tools).toHaveLength(8);
+    const names = tools.map((t) => t.name);
+    expect(names).toContain('codegraph_callers');
+    expect(names).toContain('codegraph_callees');
+    expect(names).toContain('codegraph_impact');
+    expect(names).toContain('codegraph_explore');
+    expect(names).toContain('codegraph_status');
+    expect(names).toContain('search_code_symbols');
+    expect(names).toContain('get_symbol_dependencies');
+    expect(names).toContain('get_graph_stats');
   });
 
   it('serves tools via a standard MCP session (in-memory transport)', async () => {
@@ -33,19 +39,61 @@ describe('CodeGraphMCPServer', () => {
     await client.connect();
 
     const names = client.tools.map((t) => t.name);
-    expect(names).toEqual(['search_code_symbols', 'get_symbol_dependencies', 'get_graph_stats']);
+    expect(names).toContain('codegraph_callers');
+    expect(names).toContain('codegraph_impact');
+    expect(names).toContain('codegraph_explore');
+    expect(names).toContain('codegraph_status');
 
-    const stats = await client.callTool('get_graph_stats', {});
+    const stats = await client.callTool('codegraph_status', {});
     expect(stats.isError).toBe(false);
-    expect(stats.content[0]?.text).toContain('nodes');
+    expect(stats.content[0]?.text).toContain('nodesCount');
 
     await client.close();
   });
 
-  it('calls search_code_symbols with a pattern on an empty graph', async () => {
+  it('executes codegraph_callers and codegraph_impact over MCP', async () => {
     const kg = new CodeKnowledgeGraph();
-    const mcpServer = new CodeGraphMCPServer(kg);
+    const g = kg.getGraph();
 
+    // Populate graph with test nodes
+    g.addNodes([
+      {
+        id: 'fileA.ts::helperFunc',
+        name: 'helperFunc',
+        qualifiedName: 'helperFunc',
+        kind: 'function',
+        filePath: '/src/fileA.ts',
+        startLine: 10,
+        endLine: 20,
+        excerpt: 'function helperFunc() {}',
+        exported: true,
+        tags: [],
+        indexedAt: Date.now(),
+      },
+      {
+        id: 'fileB.ts::mainFunc',
+        name: 'mainFunc',
+        qualifiedName: 'mainFunc',
+        kind: 'function',
+        filePath: '/src/fileB.ts',
+        startLine: 5,
+        endLine: 15,
+        excerpt: 'function mainFunc() { helperFunc(); }',
+        exported: true,
+        tags: [],
+        indexedAt: Date.now(),
+      },
+    ]);
+
+    g.addEdge({
+      from: 'fileB.ts::mainFunc',
+      to: 'fileA.ts::helperFunc',
+      kind: 'call',
+      weight: 1.0,
+      line: 8,
+    });
+
+    const mcpServer = new CodeGraphMCPServer(kg);
     const [clientTransport, serverTransport] = createLinkedPair();
     await mcpServer.createServer().connect(serverTransport);
 
@@ -55,9 +103,25 @@ describe('CodeGraphMCPServer', () => {
     });
     await client.connect();
 
-    const res = await client.callTool('search_code_symbols', { pattern: 'foo' });
-    // Empty graph either returns an empty result set or a graceful error text.
-    expect(res.content[0]?.text).toBeDefined();
+    // 1. Test callers
+    const callersRes = await client.callTool('codegraph_callers', { symbol: 'helperFunc' });
+    expect(callersRes.isError).toBe(false);
+    const callersData = JSON.parse(callersRes.content[0]?.text ?? '{}');
+    expect(callersData.count).toBe(1);
+    expect(callersData.callers[0].name).toBe('mainFunc');
+
+    // 2. Test impact
+    const impactRes = await client.callTool('codegraph_impact', { symbol: 'helperFunc' });
+    expect(impactRes.isError).toBe(false);
+    const impactData = JSON.parse(impactRes.content[0]?.text ?? '{}');
+    expect(impactData.impactedFiles).toContain('/src/fileB.ts');
+    expect(impactData.riskScore).toBeGreaterThan(0);
+
+    // 3. Test explore
+    const exploreRes = await client.callTool('codegraph_explore', { target: 'helperFunc' });
+    expect(exploreRes.isError).toBe(false);
+    const exploreData = JSON.parse(exploreRes.content[0]?.text ?? '{}');
+    expect(exploreData.nodesCount).toBe(2);
 
     await client.close();
   });

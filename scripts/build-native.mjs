@@ -21,6 +21,10 @@ const ADDON_CRATES = [
   { name: 'secscan', dir: 'crates/secscan', args: ['--features', 'addon'] },
   { name: 'retrieval', dir: 'crates/retrieval', args: ['--features', 'addon'] },
   { name: 'codegraph', dir: 'crates/codegraph', args: ['--features', 'addon'] },
+  { name: 'sandbox', dir: 'crates/sandbox', args: ['--features', 'addon'] },
+  { name: 'tokenizer', dir: 'crates/tokenizer', args: ['--features', 'addon'] },
+  { name: 'docloader', dir: 'crates/docloader', args: ['--features', 'addon'] },
+  { name: 'store', dir: 'crates/store', args: ['--features', 'addon'] },
   // memory addon lives in the package tree (its own Cargo.lock, no features)
   { name: 'memory-napi', dir: 'packages/memory/rust-napi', args: [] },
 ];

@@ -6,6 +6,8 @@ import { HumanMessage, SystemMessage, ToolMessage, messageFromData } from '../me
 import type { BaseMessage } from '../messages/message.js';
 import { MiddlewarePipeline } from '../middleware/pipeline.js';
 import type { MiddlewareContext } from '../middleware/types.js';
+import { OPERATOR_CHARTER, wrapUntrusted } from '@ghita/shared';
+import type { HookDispatchContext, HookEventName, HookOutcome } from '../hooks/types.js';
 import type {
   ReActAgentConfig,
   ReActTool,
@@ -144,17 +146,32 @@ export class ReActAgent {
 
     const startTime = Date.now();
     const maxIterations = this.config.maxIterations ?? 10;
+    // v1.1.5-beta1 T2.5: maxSteps limits subagent turns; when reached, agent produces a summary.
+    const maxSteps = this.config.maxSteps;
     const steps: AgentStep[] = [];
     const messages: BaseMessage[] = [];
     const agentId = generateId();
 
-    // Build initial messages
+    // v1.1.5-beta1 T1.2: SessionStart hook fires before the first turn.
+    await this.fireHooks('SessionStart', { tool: this.name, sessionId: agentId, agentId });
+
+    // Build initial messages. T1.4: the Operator Charter is prepended unless
+    // untrusted wrapping is explicitly disabled.
     if (this.config.systemPrompt) {
-      messages.push(new SystemMessage(this.config.systemPrompt));
+      messages.push(new SystemMessage(this.buildSystemPrompt()));
+    } else if (this.config.untrustedOutput !== false) {
+      messages.push(new SystemMessage(OPERATOR_CHARTER));
     }
     messages.push(new HumanMessage(userMessage));
 
     for (let i = 0; i < maxIterations; i++) {
+      // v1.1.5-beta1 T2.4: drain interjections at safe point between turns.
+      if (this.config.interjection?.hasPending()) {
+        const batch = this.config.interjection.drain();
+        for (const inj of batch) {
+          messages.push(new HumanMessage(`[user interjection] ${inj.text}`));
+        }
+      }
       const middlewareCtx: MiddlewareContext = {
         agent: {
           id: agentId,
@@ -181,6 +198,7 @@ export class ReActAgent {
       const { context: ctx, shortCircuit } = await this.pipeline.runPreModel(middlewareCtx);
       if (shortCircuit) {
         messages.push(shortCircuit);
+        await this.fireHooks('Stop', { tool: this.name, agentId });
         return this.buildResult(shortCircuit.getText(), steps, messages, i + 1, startTime);
       }
 
@@ -252,6 +270,7 @@ export class ReActAgent {
         };
         callbacks?.onFinish?.(finish);
         await this.pipeline.runOnComplete(ctx, response);
+        await this.fireHooks('Stop', { tool: this.name, agentId });
         return this.buildResult(response.getText(), steps, messages, i + 1, startTime);
       }
 
@@ -264,7 +283,9 @@ export class ReActAgent {
         if (!tool) {
           const obs = `Error: Tool "${action.tool}" not found.`;
           steps.push({ action, observation: obs });
-          messages.push(new ToolMessage(obs, action.toolCallId, action.tool));
+          messages.push(
+            new ToolMessage(this.wrapObservation(action.tool, obs), action.toolCallId, action.tool),
+          );
           continue;
         }
 
@@ -281,11 +302,34 @@ export class ReActAgent {
           if (verdict.decision === 'deny') {
             const obs = `Policy denied tool "${action.tool}": ${verdict.reason ?? 'blocked by governance policy.'}`;
             steps.push({ action, observation: obs });
-            messages.push(new ToolMessage(obs, action.toolCallId, action.tool));
+            messages.push(
+              new ToolMessage(
+                this.wrapObservation(action.tool, obs),
+                action.toolCallId,
+                action.tool,
+              ),
+            );
             callbacks?.onStepEnd?.(i, obs);
             callbacks?.onToolResult?.(action.tool, obs);
             continue;
           }
+        }
+
+        // v1.1.5-beta1 T1.2: PreToolUse hooks can block like a policy deny.
+        const preHook = await this.fireHooks('PreToolUse', {
+          tool: action.tool,
+          input: action.input,
+          agentId,
+        });
+        if (preHook?.decision === 'block') {
+          const obs = `Hook blocked tool "${action.tool}": ${preHook.reason ?? `rule ${preHook.blockedBy ?? 'unknown'}`}`;
+          steps.push({ action, observation: obs });
+          messages.push(
+            new ToolMessage(this.wrapObservation(action.tool, obs), action.toolCallId, action.tool),
+          );
+          callbacks?.onStepEnd?.(i, obs);
+          callbacks?.onToolResult?.(action.tool, obs);
+          continue;
         }
 
         // Pre-tool middleware
@@ -293,7 +337,9 @@ export class ReActAgent {
         if (!toolCheck.proceed) {
           const obs = toolCheck.reason || `Tool "${action.tool}" blocked by middleware.`;
           steps.push({ action, observation: obs });
-          messages.push(new ToolMessage(obs, action.toolCallId, action.tool));
+          messages.push(
+            new ToolMessage(this.wrapObservation(action.tool, obs), action.toolCallId, action.tool),
+          );
           continue;
         }
 
@@ -301,15 +347,35 @@ export class ReActAgent {
         let observation: string;
         try {
           observation = await tool.execute(toolCheck.args);
+          // T1.2: PostToolUse hooks observe successful output (non-blocking).
+          await this.fireHooks('PostToolUse', {
+            tool: action.tool,
+            input: toolCheck.args,
+            output: observation,
+            agentId,
+          });
         } catch (err) {
           observation = `Error executing tool "${action.tool}": ${err instanceof Error ? err.message : String(err)}`;
+          await this.fireHooks('PostToolUseFailure', {
+            tool: action.tool,
+            input: toolCheck.args,
+            error: observation,
+            agentId,
+          });
         }
 
         // Post-tool middleware
         observation = await this.pipeline.runPostTool(action.tool, observation, ctx);
 
         steps.push({ action, observation });
-        messages.push(new ToolMessage(observation, action.toolCallId, action.tool));
+        // T1.4: the LLM sees the observation inside an untrusted envelope.
+        messages.push(
+          new ToolMessage(
+            this.wrapObservation(action.tool, observation),
+            action.toolCallId,
+            action.tool,
+          ),
+        );
         callbacks?.onStepEnd?.(i, observation);
         callbacks?.onToolResult?.(action.tool, observation);
       }
@@ -318,13 +384,35 @@ export class ReActAgent {
       if (this.config.stopCondition?.(steps)) {
         const lastMsg = messages[messages.length - 1];
         const output = lastMsg?.getText() ?? '';
+        await this.fireHooks('Stop', { tool: this.name, agentId });
         return this.buildResult(output, steps, messages, i + 1, startTime);
+      }
+    }
+
+    // v1.1.5-beta1 T2.5: if maxSteps was set and reached, produce a summary directive
+    if (maxSteps !== undefined && steps.length >= maxSteps) {
+      const summaryMsg = new HumanMessage(
+        `[system] You have reached your maximum step limit (${maxSteps}). Please provide a concise summary of what you accomplished and any remaining work.`,
+      );
+      messages.push(summaryMsg);
+      // One final LLM call to get the summary
+      try {
+        const summaryResponse = await this.llmCall(messages, {
+          name: this.name,
+          metadata: { iteration: maxSteps },
+        });
+        messages.push(summaryResponse);
+        await this.fireHooks('Stop', { tool: this.name, agentId });
+        return this.buildResult(summaryResponse.getText(), steps, messages, maxSteps, startTime);
+      } catch {
+        // Fall through to default max-iterations output
       }
     }
 
     // Max iterations reached
     const lastMsg = messages[messages.length - 1];
     const output = lastMsg?.getText() ?? 'Agent reached maximum iterations.';
+    await this.fireHooks('Stop', { tool: this.name, agentId });
     return this.buildResult(output, steps, messages, maxIterations, startTime);
   }
 
@@ -352,8 +440,12 @@ export class ReActAgent {
     let output: string | undefined = resume?.output;
 
     if (!resume) {
+      // T1.2: SessionStart hook + T1.4 charter (mirrors the non-durable path).
+      await this.fireHooks('SessionStart', { tool: this.name, sessionId: runId, agentId });
       if (this.config.systemPrompt) {
-        messages.push(new SystemMessage(this.config.systemPrompt));
+        messages.push(new SystemMessage(this.buildSystemPrompt()));
+      } else if (this.config.untrustedOutput !== false) {
+        messages.push(new SystemMessage(OPERATOR_CHARTER));
       }
       messages.push(new HumanMessage(userMessage));
     }
@@ -431,7 +523,14 @@ export class ReActAgent {
       observation: string,
     ): Promise<void> => {
       steps.push({ action, observation });
-      messages.push(new ToolMessage(observation, action.toolCallId, action.tool));
+      // T1.4: the LLM-visible message is wrapped; the journal keeps raw output.
+      messages.push(
+        new ToolMessage(
+          this.wrapObservation(action.tool, observation),
+          action.toolCallId,
+          action.tool,
+        ),
+      );
       pendingActions = pendingActions.slice(1);
       await persist('running');
       callbacks?.onStepEnd?.(iteration, observation);
@@ -481,6 +580,22 @@ export class ReActAgent {
           }
         }
 
+        // T1.2: PreToolUse hooks (durable path).
+        const preHook = await this.fireHooks('PreToolUse', {
+          tool: action.tool,
+          input: action.input,
+          agentId,
+          sessionId: runId,
+        });
+        if (preHook?.decision === 'block') {
+          await recordObservation(
+            iteration,
+            action,
+            `Hook blocked tool "${action.tool}": ${preHook.reason ?? `rule ${preHook.blockedBy ?? 'unknown'}`}`,
+          );
+          continue;
+        }
+
         const toolCheck = await this.pipeline.runPreTool(action.tool, action.input, ctx);
         if (!toolCheck.proceed) {
           await recordObservation(
@@ -494,10 +609,24 @@ export class ReActAgent {
         let observation: string;
         try {
           observation = await tool.execute(toolCheck.args);
+          await this.fireHooks('PostToolUse', {
+            tool: action.tool,
+            input: toolCheck.args,
+            output: observation,
+            agentId,
+            sessionId: runId,
+          });
         } catch (err) {
           observation = `Error executing tool "${action.tool}": ${
             err instanceof Error ? err.message : String(err)
           }`;
+          await this.fireHooks('PostToolUseFailure', {
+            tool: action.tool,
+            input: toolCheck.args,
+            error: observation,
+            agentId,
+            sessionId: runId,
+          });
         }
         observation = await this.pipeline.runPostTool(action.tool, observation, ctx);
         await recordObservation(iteration, action, observation);
@@ -584,6 +713,7 @@ export class ReActAgent {
           output = response.getText();
           await this.pipeline.runOnComplete(ctx, response);
           await persist('completed');
+          await this.fireHooks('Stop', { tool: this.name, agentId, sessionId: runId });
           callbacks?.onFinish?.(buildResult(nextIteration).finish);
           return buildResult(nextIteration);
         }
@@ -685,6 +815,36 @@ export class ReActAgent {
   }
 
   // ---- Private Helpers ----
+
+  /**
+   * v1.1.5-beta1 T1.2: dispatch a hook event through the configured
+   * dispatcher. Hook infrastructure errors are swallowed (fail-open) so a
+   * broken hook config can never wedge the agent loop.
+   */
+  private async fireHooks(
+    event: HookEventName,
+    base: Omit<HookDispatchContext, 'event'>,
+  ): Promise<HookOutcome | undefined> {
+    if (!this.config.hooks) return undefined;
+    try {
+      return await this.config.hooks({ event, ...base });
+    } catch {
+      return undefined;
+    }
+  }
+
+  /** T1.4: wrap an observation for LLM consumption unless opted out. */
+  private wrapObservation(tool: string, observation: string): string {
+    if (this.config.untrustedOutput === false) return observation;
+    return wrapUntrusted(observation, tool);
+  }
+
+  /** T1.4: system prompt with the Operator Charter prepended. */
+  private buildSystemPrompt(): string {
+    const prompt = this.config.systemPrompt ?? '';
+    if (this.config.untrustedOutput === false) return prompt;
+    return `${OPERATOR_CHARTER}\n\n${prompt}`;
+  }
 
   private defaultParseToolCalls(message: BaseMessage): AgentAction[] {
     // Providers may expose native tool calls directly on AIMessage, while

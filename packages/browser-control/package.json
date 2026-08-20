@@ -1,6 +1,6 @@
 {
   "name": "@ghita/browser-control",
-  "version": "1.1.1",
+  "version": "1.1.5-beta1",
   "private": true,
   "sideEffects": false,
   "description": "Browser automation (Playwright + CloakBrowser) cho GHITA CODING AGENT",
@@ -33,7 +33,7 @@
     "@ghita/shared": "workspace:*",
     "@ghita/skills": "workspace:*",
     "better-sqlite3": "^12.10.0",
-    "playwright": "^1.60.0"
+    "playwright": "^1.62.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",

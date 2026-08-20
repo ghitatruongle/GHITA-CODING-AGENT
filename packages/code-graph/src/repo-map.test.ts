@@ -3,7 +3,15 @@
 // ==============================================================================
 
 import { describe, it, expect } from 'vitest';
-import { computePageRank, getRepoMap, renderRepoMap, estimateTokens } from './repo-map.js';
+import {
+  computePageRank,
+  getRepoMap,
+  renderRepoMap,
+  renderTreeRepoMap,
+  RepoMapSessionService,
+  injectRepoMapContext,
+  estimateTokens,
+} from './repo-map.js';
 import type { CodeNode, CodeEdge } from './types.js';
 
 function node(id: string, over: Partial<CodeNode> = {}): CodeNode {
@@ -105,6 +113,59 @@ describe('renderRepoMap', () => {
     const md = renderRepoMap(getRepoMap(nodes, [], 1000));
     expect(md).toContain('# Repo map');
     expect(md).toContain('## main');
+  });
+});
+
+describe('renderTreeRepoMap', () => {
+  it('renders hierarchical file and symbol tree view', () => {
+    const nodes = [
+      node('login', { filePath: '/workspace/src/auth.ts', kind: 'function', startLine: 10 }),
+      node('verify', { filePath: '/workspace/src/auth.ts', kind: 'function', startLine: 30 }),
+      node('User', { filePath: '/workspace/src/models/user.ts', kind: 'class', startLine: 5 }),
+    ];
+    const map = getRepoMap(nodes, [], 2000);
+    const tree = renderTreeRepoMap(map, { rootDir: '/workspace' });
+
+    expect(tree).toContain('# Repository Map');
+    expect(tree).toContain('src/auth.ts:');
+    expect(tree).toContain('function login (L10)');
+    expect(tree).toContain('function verify (L30)');
+    expect(tree).toContain('src/models/user.ts:');
+    expect(tree).toContain('class User (L5)');
+  });
+});
+
+describe('RepoMapSessionService', () => {
+  it('generates session repo map with caching and respects <2000 token budget', () => {
+    const service = new RepoMapSessionService();
+    const nodes: CodeNode[] = [];
+    for (let i = 0; i < 50; i++) {
+      nodes.push(
+        node(`symbol_${i}`, {
+          filePath: `/workspace/src/module_${Math.floor(i / 5)}.ts`,
+          kind: i % 2 === 0 ? 'function' : 'class',
+          startLine: i * 10,
+          indexedAt: 1000,
+        }),
+      );
+    }
+
+    // 1. Initial generation
+    const res1 = service.generateSessionRepoMap(nodes, [], 2000, { rootDir: '/workspace' });
+    expect(res1.fromCache).toBe(false);
+    expect(res1.tokensEstimate).toBeLessThanOrEqual(2000);
+    expect(res1.renderedText).toContain('# Repository Map');
+
+    // 2. Cached retrieval
+    const res2 = service.generateSessionRepoMap(nodes, [], 2000, { rootDir: '/workspace' });
+    expect(res2.fromCache).toBe(true);
+    expect(res2.renderedText).toBe(res1.renderedText);
+
+    // 3. Context prompt injection
+    const prompt = injectRepoMapContext(res1.renderedText);
+    expect(prompt.role).toBe('system');
+    expect(prompt.content).toContain('<repository_map>');
+    expect(prompt.content).toContain('</repository_map>');
   });
 });
 

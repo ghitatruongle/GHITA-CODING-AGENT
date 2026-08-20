@@ -110,9 +110,6 @@ export default defineConfig({
       '@tauri-apps/api/event',
       '@tauri-apps/api/window',
       '@tauri-apps/plugin-dialog',
-      // P2-2 (deep review pass #2): pre-bundle the wrapped monaco-editor
-      // module so the first dev-server cold start doesn't stall on Vite
-      // walking the entire ESM graph on-the-fly.
       '@monaco-editor/react',
       'monaco-editor',
       'socket.io-client',
@@ -144,6 +141,13 @@ export default defineConfig({
         'zlib',
         'node:zlib',
         'module',
+        'timers',
+        'timers/promises',
+        'node:timers',
+        'node:timers/promises',
+        'node:dns',
+        'node:dns/promises',
+        'node:process',
       ],
       output: {
         manualChunks: {

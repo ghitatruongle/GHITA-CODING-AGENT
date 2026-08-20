@@ -1526,6 +1526,11 @@ pub fn run(headless: bool) {
             computer_use::computer_type_text,
             computer_use::computer_press_key,
             computer_use::computer_health_check,
+            // T9.7: Window operations (move/focus/minimize/waitFor)
+            computer_use::computer_window_move,
+            computer_use::computer_window_focus,
+            computer_use::computer_window_minimize,
+            computer_use::computer_window_wait_for,
             // Phase 2: Native PTY terminal (Rust)
             terminal::terminal_create,
             terminal::terminal_write,

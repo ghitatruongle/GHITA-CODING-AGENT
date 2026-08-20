@@ -11,6 +11,11 @@
 #[cfg(feature = "addon")]
 mod napi;
 
+/// SARIF 2.1.0 output with sticky partialFingerprints (Track 5.2 / 8.2).
+pub mod sarif;
+/// Extended secret-detection rules (Track 8.2).
+pub mod secrets;
+
 /// One scanner rule: an id + a literal pattern + optional negative literal.
 #[derive(Debug, Clone)]
 pub struct Rule {
