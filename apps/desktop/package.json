@@ -1,6 +1,6 @@
 {
   "name": "@ghita/desktop",
-  "version": "1.1.1",
+  "version": "1.1.5-beta1",
   "private": true,
   "description": "GHITA CODING AGENT — Desktop App (Tauri + React)",
   "type": "module",
@@ -30,7 +30,7 @@
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-dialog": "^2.7.1",
     "@xterm/addon-fit": "^0.10.0",
-    "@xterm/xterm": "^5.5.0",
+    "@xterm/xterm": "^6.0.0",
     "framer-motion": "^12.42.2",
     "lucide-react": "^1.18.0",
     "screenshot-desktop": "^1.15.4",
@@ -46,7 +46,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.5.0",
+    "@tauri-apps/cli": "^2.11.4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/react": "^18.3.18",
@@ -54,7 +54,7 @@
     "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "^10.5.0",
     "happy-dom": "^20.9.0",
-    "node-pty": "^1.1.0",
+    "node-pty": "^1.2.0-beta.15",
     "postcss": "^8.5.15",
     "tailwindcss": "^3.4.19",
     "typescript": "^5.6.0",

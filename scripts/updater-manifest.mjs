@@ -66,6 +66,7 @@ function createManifest(args) {
   const version = requireArg(args, 'version');
   const repository = requireArg(args, 'repository');
   const tag = requireArg(args, 'tag');
+  const channel = args.channel || 'stable';
   const requiredPlatforms = ['windows-x86_64', 'linux-x86_64', 'darwin-x86_64', 'darwin-aarch64'];
   const platforms = {};
 
@@ -91,12 +92,16 @@ function createManifest(args) {
     throw new Error('No updater records found — nothing to publish');
   }
 
-  writeJson(output, {
+  const manifest = {
     version,
     notes: `See https://github.com/${repository}/releases/tag/${tag}`,
     pub_date: new Date().toISOString(),
     platforms,
-  });
+  };
+  if (channel !== 'stable') {
+    manifest.channel = channel;
+  }
+  writeJson(output, manifest);
 }
 
 const [command, ...values] = process.argv.slice(2);
@@ -105,6 +110,6 @@ const args = parseArgs(values);
 if (command === 'record') createRecord(args);
 else if (command === 'manifest') createManifest(args);
 else {
-  console.error('Usage: updater-manifest.mjs <record|manifest> [options]');
+  console.error('Usage: updater-manifest.mjs <record|manifest> [options] [--channel stable|beta]');
   process.exit(2);
 }

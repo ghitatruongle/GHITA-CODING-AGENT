@@ -6,7 +6,14 @@
 // ==============================================================================
 
 import Database from 'better-sqlite3';
-import type { CodeNode, CodeEdge, GraphStore, SearchQuery, SearchResult } from './types.js';
+import type {
+  CodeNode,
+  CodeEdge,
+  GraphStore,
+  SearchQuery,
+  SearchResult,
+  ContentCacheEntry,
+} from './types.js';
 
 /**
  * SQLite-backed persistent store for the code knowledge graph.
@@ -63,6 +70,26 @@ export class SQLiteGraphStore implements GraphStore {
       CREATE INDEX IF NOT EXISTS idx_edges_from ON edges(from_id);
       CREATE INDEX IF NOT EXISTS idx_edges_to ON edges(to_id);
       CREATE INDEX IF NOT EXISTS idx_edges_kind ON edges(kind);
+
+      -- Track 3 (3.2): Content-addressed index cache
+      CREATE TABLE IF NOT EXISTS content_cache (
+        content_hash TEXT PRIMARY KEY,
+        file_path TEXT NOT NULL,
+        nodes_json TEXT NOT NULL,
+        edges_json TEXT NOT NULL,
+        imports_json TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_content_cache_file ON content_cache(file_path);
+
+      -- Track 3 (3.2): Branch & checkpoint tags catalog
+      CREATE TABLE IF NOT EXISTS file_tags (
+        file_path TEXT NOT NULL,
+        tag TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        PRIMARY KEY(file_path, tag)
+      );
+      CREATE INDEX IF NOT EXISTS idx_file_tags_tag ON file_tags(tag);
     `);
 
     // FTS5 for full-text search (if available)
@@ -296,6 +323,81 @@ export class SQLiteGraphStore implements GraphStore {
       | { cnt: number }
       | undefined;
     return { nodes: nodeRow?.cnt ?? 0, edges: edgeRow?.cnt ?? 0, files: fileRow?.cnt ?? 0 };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Track 3 (3.2): Content-Addressed Index & Branch Tags
+  // ---------------------------------------------------------------------------
+
+  getCachedParseResult(contentHash: string): ContentCacheEntry | null {
+    const row = this.db
+      .prepare('SELECT * FROM content_cache WHERE content_hash = ?')
+      .get(contentHash) as
+      | {
+          content_hash: string;
+          file_path: string;
+          nodes_json: string;
+          edges_json: string;
+          imports_json: string;
+          created_at: number;
+        }
+      | undefined;
+
+    if (!row) return null;
+    return {
+      contentHash: row.content_hash,
+      filePath: row.file_path,
+      nodes: JSON.parse(row.nodes_json) as CodeNode[],
+      edges: JSON.parse(row.edges_json) as CodeEdge[],
+      imports: JSON.parse(row.imports_json),
+      createdAt: row.created_at,
+    };
+  }
+
+  setCachedParseResult(entry: ContentCacheEntry): void {
+    const stmt = this.db.prepare(`
+      INSERT OR REPLACE INTO content_cache
+        (content_hash, file_path, nodes_json, edges_json, imports_json, created_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(
+      entry.contentHash,
+      entry.filePath,
+      JSON.stringify(entry.nodes),
+      JSON.stringify(entry.edges),
+      JSON.stringify(entry.imports),
+      entry.createdAt,
+    );
+  }
+
+  addFileTag(filePath: string, tag: string): void {
+    const stmt = this.db.prepare(`
+      INSERT OR REPLACE INTO file_tags (file_path, tag, created_at)
+      VALUES (?, ?, ?)
+    `);
+    stmt.run(filePath, tag, Date.now());
+  }
+
+  removeFileTag(filePath: string, tag: string): void {
+    this.db.prepare('DELETE FROM file_tags WHERE file_path = ? AND tag = ?').run(filePath, tag);
+  }
+
+  getFileTags(filePath: string): string[] {
+    const rows = this.db
+      .prepare('SELECT tag FROM file_tags WHERE file_path = ?')
+      .all(filePath) as Array<{ tag: string }>;
+    return rows.map((r) => r.tag);
+  }
+
+  getFilesByTag(tag: string): string[] {
+    const rows = this.db
+      .prepare('SELECT file_path FROM file_tags WHERE tag = ?')
+      .all(tag) as Array<{ file_path: string }>;
+    return rows.map((r) => r.file_path);
+  }
+
+  removeTagFromAll(tag: string): void {
+    this.db.prepare('DELETE FROM file_tags WHERE tag = ?').run(tag);
   }
 
   close(): void {

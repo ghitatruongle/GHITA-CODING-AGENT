@@ -4,7 +4,15 @@
 // In-memory graph structure with adjacency lists, traversal, and cycle detection.
 // ==============================================================================
 
-import type { CodeNode, CodeEdge, DependencyGraph, ImportInfo } from './types.js';
+import type {
+  CodeNode,
+  CodeEdge,
+  DependencyGraph,
+  ImportInfo,
+  ImpactReport,
+  ExploreResult,
+  GraphStatus,
+} from './types.js';
 
 /**
  * In-memory knowledge graph for code entities.
@@ -147,6 +155,20 @@ export class KnowledgeGraph {
     return this.graph.nodes.get(id);
   }
 
+  /** Find a node by ID, qualifiedName, or simple name */
+  findNode(idOrName: string): CodeNode | undefined {
+    if (this.graph.nodes.has(idOrName)) {
+      return this.graph.nodes.get(idOrName);
+    }
+    const lower = idOrName.toLowerCase();
+    for (const node of this.graph.nodes.values()) {
+      if (node.qualifiedName.toLowerCase() === lower || node.name.toLowerCase() === lower) {
+        return node;
+      }
+    }
+    return undefined;
+  }
+
   /** Get all nodes */
   getAllNodes(): CodeNode[] {
     return [...this.graph.nodes.values()];
@@ -174,7 +196,7 @@ export class KnowledgeGraph {
   /** Get all nodes that a given node imports/references */
   getDependencies(nodeId: string): CodeNode[] {
     const edges = this.getEdgesFrom(nodeId).filter(
-      (e) => e.kind === 'import' || e.kind === 'references',
+      (e) => e.kind === 'import' || e.kind === 'references' || e.kind === 'call',
     );
     return edges
       .map((e) => this.graph.nodes.get(e.to))
@@ -184,11 +206,263 @@ export class KnowledgeGraph {
   /** Get all nodes that depend on a given node */
   getDependents(nodeId: string): CodeNode[] {
     const edges = this.getEdgesTo(nodeId).filter(
-      (e) => e.kind === 'import' || e.kind === 'references',
+      (e) => e.kind === 'import' || e.kind === 'references' || e.kind === 'call',
     );
     return edges
       .map((e) => this.graph.nodes.get(e.from))
       .filter((n): n is CodeNode => n !== undefined);
+  }
+
+  /**
+   * Track 3 (3.1): Get callers of a function/method/symbol.
+   * Traverses incoming edges with kind 'call' or 'references'.
+   */
+  getCallers(symbolIdOrName: string): CodeNode[] {
+    const target = this.findNode(symbolIdOrName);
+    if (!target) return [];
+
+    const incoming = this.getEdgesTo(target.id).filter(
+      (e) => e.kind === 'call' || e.kind === 'references',
+    );
+
+    const callerIds = new Set<string>();
+    const callers: CodeNode[] = [];
+    for (const edge of incoming) {
+      if (!callerIds.has(edge.from)) {
+        callerIds.add(edge.from);
+        const node = this.graph.nodes.get(edge.from);
+        if (node) callers.push(node);
+      }
+    }
+    return callers;
+  }
+
+  /**
+   * Track 3 (3.1): Get callees of a function/method/symbol.
+   * Traverses outgoing edges with kind 'call' or 'references'.
+   */
+  getCallees(symbolIdOrName: string): CodeNode[] {
+    const target = this.findNode(symbolIdOrName);
+    if (!target) return [];
+
+    const outgoing = this.getEdgesFrom(target.id).filter(
+      (e) => e.kind === 'call' || e.kind === 'references',
+    );
+
+    const calleeIds = new Set<string>();
+    const callees: CodeNode[] = [];
+    for (const edge of outgoing) {
+      if (!calleeIds.has(edge.to)) {
+        calleeIds.add(edge.to);
+        const node = this.graph.nodes.get(edge.to);
+        if (node) callees.push(node);
+      }
+    }
+    return callees;
+  }
+
+  /**
+   * Track 3 (3.1): Calculate blast radius (impact report) when a symbol changes.
+   * Traverses upstream reverse-dependencies up to maxDepth.
+   */
+  getImpact(symbolIdOrName: string, maxDepth = 3): ImpactReport {
+    const target = this.findNode(symbolIdOrName);
+    const targetInfo = target ?? { id: symbolIdOrName, name: symbolIdOrName };
+
+    if (!target) {
+      return {
+        target: targetInfo,
+        depth: maxDepth,
+        impactedNodes: [],
+        impactedFiles: [],
+        riskScore: 0,
+        paths: [],
+      };
+    }
+
+    const visited = new Set<string>([target.id]);
+    const impactedNodes: CodeNode[] = [];
+    const impactedFilesSet = new Set<string>();
+    const queue: Array<{ id: string; depth: number; path: string[] }> = [
+      { id: target.id, depth: 0, path: [target.name || target.id] },
+    ];
+    const samplePaths: string[][] = [];
+
+    while (queue.length > 0) {
+      const current = queue.shift();
+      if (!current) break;
+
+      if (current.depth >= maxDepth) continue;
+
+      // Follow incoming edges (who depends on / calls current)
+      const incomingEdges = this.getEdgesTo(current.id);
+      for (const edge of incomingEdges) {
+        if (edge.kind === 'contains') continue; // Skip parent-contains edges for reverse callers
+
+        const callerNode = this.graph.nodes.get(edge.from);
+        if (!callerNode) continue;
+
+        const nextPath = [callerNode.name || callerNode.id, ...current.path];
+
+        if (!visited.has(callerNode.id)) {
+          visited.add(callerNode.id);
+          impactedNodes.push(callerNode);
+          if (callerNode.filePath && callerNode.filePath !== target.filePath) {
+            impactedFilesSet.add(callerNode.filePath);
+          }
+          if (samplePaths.length < 10) {
+            samplePaths.push(nextPath);
+          }
+          queue.push({
+            id: callerNode.id,
+            depth: current.depth + 1,
+            path: nextPath,
+          });
+        }
+      }
+    }
+
+    const totalNodes = Math.max(1, this.graph.nodes.size);
+    const totalFiles = Math.max(1, this.stats().files);
+    const nodeRatio = impactedNodes.length / totalNodes;
+    const fileRatio = impactedFilesSet.size / totalFiles;
+    // Risk score combines impacted node and file fractions, clamped 0.0 – 1.0
+    const rawScore = Math.min(
+      1.0,
+      nodeRatio * 0.4 + fileRatio * 0.6 + (impactedNodes.length > 0 ? 0.1 : 0),
+    );
+    const riskScore = Math.round(rawScore * 100) / 100;
+
+    return {
+      target,
+      depth: maxDepth,
+      impactedNodes,
+      impactedFiles: [...impactedFilesSet],
+      riskScore,
+      paths: samplePaths,
+    };
+  }
+
+  /**
+   * Track 3 (3.1): Explore neighborhood subgraph around a symbol or file.
+   */
+  explore(
+    startSymbolOrFile: string,
+    options: { depth?: number; kinds?: CodeNode['kind'][] } = {},
+  ): ExploreResult {
+    const depth = options.depth ?? 1;
+    const kindsFilter = options.kinds ? new Set(options.kinds) : null;
+
+    const targetNode = this.findNode(startSymbolOrFile);
+    let center: ExploreResult['center'];
+
+    const subNodes = new Map<string, CodeNode>();
+    const subEdges: CodeEdge[] = [];
+    const visitedEdges = new Set<string>();
+
+    if (targetNode) {
+      center = targetNode;
+      subNodes.set(targetNode.id, targetNode);
+    } else {
+      // Check if it's a file path
+      const fileNodes = this.getAllNodes().filter((n) => n.filePath.includes(startSymbolOrFile));
+      center = { filePath: startSymbolOrFile, name: startSymbolOrFile };
+      for (const n of fileNodes) {
+        subNodes.set(n.id, n);
+      }
+    }
+
+    // Traverse neighborhood
+    const nodeQueue: Array<{ id: string; d: number }> = [...subNodes.keys()].map((id) => ({
+      id,
+      d: 0,
+    }));
+    const visitedNodes = new Set<string>(subNodes.keys());
+
+    while (nodeQueue.length > 0) {
+      const item = nodeQueue.shift();
+      if (!item) break;
+      if (item.d >= depth) continue;
+
+      // Outgoing edges
+      for (const edge of this.getEdgesFrom(item.id)) {
+        const edgeKey = `${edge.from}->${edge.to}:${edge.kind}`;
+        if (!visitedEdges.has(edgeKey)) {
+          visitedEdges.add(edgeKey);
+          subEdges.push(edge);
+        }
+        if (!visitedNodes.has(edge.to)) {
+          const target = this.graph.nodes.get(edge.to);
+          if (target && (!kindsFilter || kindsFilter.has(target.kind))) {
+            visitedNodes.add(edge.to);
+            subNodes.set(edge.to, target);
+            nodeQueue.push({ id: edge.to, d: item.d + 1 });
+          }
+        }
+      }
+
+      // Incoming edges
+      for (const edge of this.getEdgesTo(item.id)) {
+        const edgeKey = `${edge.from}->${edge.to}:${edge.kind}`;
+        if (!visitedEdges.has(edgeKey)) {
+          visitedEdges.add(edgeKey);
+          subEdges.push(edge);
+        }
+        if (!visitedNodes.has(edge.from)) {
+          const source = this.graph.nodes.get(edge.from);
+          if (source && (!kindsFilter || kindsFilter.has(source.kind))) {
+            visitedNodes.add(edge.from);
+            subNodes.set(edge.from, source);
+            nodeQueue.push({ id: edge.from, d: item.d + 1 });
+          }
+        }
+      }
+    }
+
+    let inwardCount = 0;
+    let outwardCount = 0;
+    const centerId = targetNode?.id;
+    if (centerId) {
+      inwardCount = this.getEdgesTo(centerId).length;
+      outwardCount = this.getEdgesFrom(centerId).length;
+    }
+
+    return {
+      center,
+      nodes: [...subNodes.values()],
+      edges: subEdges,
+      inwardCount,
+      outwardCount,
+    };
+  }
+
+  /**
+   * Track 3 (3.1): Detailed graph status.
+   */
+  status(): GraphStatus {
+    const nodes = [...this.graph.nodes.values()];
+    const edges = this.graph.edges;
+    const files = new Set<string>();
+    const nodesByKind: Record<string, number> = {};
+    const edgesByKind: Record<string, number> = {};
+
+    for (const node of nodes) {
+      files.add(node.filePath);
+      nodesByKind[node.kind] = (nodesByKind[node.kind] ?? 0) + 1;
+    }
+
+    for (const edge of edges) {
+      edgesByKind[edge.kind] = (edgesByKind[edge.kind] ?? 0) + 1;
+    }
+
+    return {
+      nodesCount: nodes.length,
+      edgesCount: edges.length,
+      filesCount: files.size,
+      nodesByKind,
+      edgesByKind,
+      storeActive: false,
+    };
   }
 
   /** Get child nodes (contained within, e.g. methods of a class) */
@@ -204,7 +478,7 @@ export class KnowledgeGraph {
     return this.getAllNodes().filter((n) => n.kind === kind);
   }
 
-  /** Get statistics */
+  /** Get statistics (summary) */
   stats(): { nodes: number; edges: number; files: number } {
     const files = new Set<string>();
     for (const node of this.graph.nodes.values()) {

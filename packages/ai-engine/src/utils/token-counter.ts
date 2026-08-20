@@ -1,8 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Token Counter Utility
-// Phase 3.2: Estimate and count tokens for context management
-// ==============================================================================
-
 import type { ChatMessage } from '../types.js';
 
 /** Rough chars-per-token ratios by model family */
@@ -15,6 +10,42 @@ const CHARS_PER_TOKEN: Record<string, number> = {
   mistral: 4,
   default: 4,
 };
+
+// v1.1.5-beta1 Track 4.1: Native tokenizer bridge (tiktoken-rs via napi)
+interface TokenizerNative {
+  countTokensJs(text: string, family?: string): number;
+  countMessagesTokensJs(
+    messages: Array<{ role: string; content: string }>,
+    family?: string,
+  ): number;
+  detectEncodingFamily(model: string): string;
+}
+
+let _tokenizerBridge: { native: boolean; impl: TokenizerNative } | null = null;
+function getTokenizerBridge() {
+  if (_tokenizerBridge === null) {
+    try {
+      const req = typeof require !== 'undefined' ? require : null;
+      if (req) {
+        const mod = req('@ghita/native-bridge') as {
+          loadNative?: (
+            name: string,
+            fallback: unknown,
+          ) => { native: boolean; impl: TokenizerNative };
+        };
+        if (mod.loadNative) {
+          _tokenizerBridge = mod.loadNative('tokenizer', undefined);
+        }
+      }
+    } catch {
+      // Fall through to JS fallback
+    }
+    if (_tokenizerBridge === null) {
+      _tokenizerBridge = { native: false, impl: undefined as unknown as TokenizerNative };
+    }
+  }
+  return _tokenizerBridge;
+}
 
 export interface TokenUsage {
   promptTokens: number;
@@ -35,6 +66,16 @@ export interface ContextWindow {
  */
 export function estimateTokens(text: string, model?: string): number {
   if (!text) return 0;
+  // v1.1.5-beta1 T4.1: use native BPE when available
+  const bridge = getTokenizerBridge();
+  if (bridge && bridge.native && typeof bridge.impl?.countTokensJs === 'function') {
+    try {
+      const family = bridge.impl.detectEncodingFamily(model ?? '');
+      return bridge.impl.countTokensJs(text, family);
+    } catch {
+      /* fall through to heuristic */
+    }
+  }
   const ratio = getModelRatio(model);
   return Math.ceil(text.length / ratio);
 }

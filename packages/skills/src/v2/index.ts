@@ -72,3 +72,58 @@ export type {
 
 export { toSkillListView } from './view.js';
 export type { SkillViewRow, LockLookup } from './view.js';
+
+// ── v1.1.5-beta1 Track 7: Skills & Marketplace v3 ──
+export {
+  ENGINEERING_SKILL_CHAIN,
+  DEFAULT_SKILL_PACK_CONFIG,
+  checkGateSatisfied,
+  getNextPhase,
+  renderPhasePrompt,
+  loadContextMd,
+  createSkillPackSession,
+  advanceSession,
+} from '../engineering/skill-pack.js';
+export type {
+  SkillPackPhase,
+  SkillPackStep,
+  SkillPackConfig,
+  SkillPackSession,
+} from '../engineering/skill-pack.js';
+export {
+  SkillUsageTracker,
+  lintSkillContent,
+  createQuarantinedSkill,
+  promoteFromQuarantine,
+} from './self-improve.js';
+export type {
+  SkillUsageRecord,
+  SkillUsageStats,
+  SkillTier,
+  QuarantinedSkill,
+  LintIssue,
+} from './self-improve.js';
+export {
+  scoreDescription,
+  suggestImprovements,
+  runDescriptionBenchmark,
+} from './description-optimizer.js';
+export type { DescriptionCandidate, BenchmarkResult } from './description-optimizer.js';
+export {
+  renderSkillForUse,
+  detectTreeShaChange,
+  normalizePluginManifest,
+  validateMarketplaceManifest,
+  lintSkillSubmission,
+  ScanCache,
+  runCapabilityDoctor,
+} from './capability-doctor.js';
+export type {
+  SkillUseResult,
+  PluginManifest,
+  MarketplaceManifest,
+  SkillLintResult,
+  CapabilityStatus,
+  CapabilityCheck,
+  CapabilityReport,
+} from './capability-doctor.js';

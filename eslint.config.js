@@ -92,4 +92,13 @@ export default tseslint.config(
       complexity: 'off',
     },
   },
+  // Test files: allow assertions and mocks without strict production constraints
+  {
+    files: ['**/*.test.{ts,tsx}', '**/tests/**/*.{ts,tsx}', '**/__tests__/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-non-null-assertion': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
 );

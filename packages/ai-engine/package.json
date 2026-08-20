@@ -1,6 +1,6 @@
 {
   "name": "@ghita/ai-engine",
-  "version": "1.1.1",
+  "version": "1.1.5-beta1",
   "private": true,
   "sideEffects": false,
   "description": "AI multi-provider engine cho GHITA CODING AGENT",
@@ -24,6 +24,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@ghita/agents": "workspace:*",
     "@ghita/shared": "workspace:*",
     "@grpc/grpc-js": "^1.14.4",
     "@grpc/proto-loader": "^0.8.1",
@@ -32,7 +33,6 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@ghita/agents": "workspace:*",
     "@types/better-sqlite3": "^7.6.12",
     "@types/ws": "^8.5.12",
     "cross-env": "^10.1.0",

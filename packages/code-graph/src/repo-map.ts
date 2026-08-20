@@ -6,6 +6,7 @@
 // a "repo map" of high-signal context for an LLM.
 // ==============================================================================
 
+import path from 'node:path';
 import { loadNative } from '@ghita/native-bridge';
 import type { CodeEdge, CodeNode } from './types.js';
 
@@ -232,4 +233,142 @@ export function renderRepoMap(map: RepoMap): string {
     if (e.excerpt) lines.push(e.excerpt);
   }
   return lines.join('\n');
+}
+
+// ---------------------------------------------------------------------------
+// Track 3 (3.4): Repo-Map Session Injection & Tree Rendering
+// ---------------------------------------------------------------------------
+
+export interface TreeRepoMapOptions {
+  /** Root directory to compute relative paths from */
+  rootDir?: string;
+  /** Maximum token budget (default: 2000) */
+  maxTokens?: number;
+  /** Include one-line excerpt/signature preview? (default: true) */
+  includePreview?: boolean;
+}
+
+/**
+ * Render a hierarchical tree-structured repo map (aider / openclaude style).
+ * Groups ranked symbols by file and directory for maximum LLM readability and token efficiency.
+ */
+export function renderTreeRepoMap(map: RepoMap, options: TreeRepoMapOptions = {}): string {
+  const rootDir = options.rootDir ? path.resolve(options.rootDir) : undefined;
+  const includePreview = options.includePreview ?? true;
+
+  // Group entries by file path
+  const filesMap = new Map<string, RepoMapEntry[]>();
+  for (const entry of map.entries) {
+    let displayPath = entry.filePath;
+    if (rootDir && displayPath.startsWith(rootDir)) {
+      displayPath = path.relative(rootDir, displayPath).replace(/\\/g, '/');
+    } else {
+      displayPath = displayPath.replace(/\\/g, '/');
+    }
+    let list = filesMap.get(displayPath);
+    if (!list) {
+      list = [];
+      filesMap.set(displayPath, list);
+    }
+    list.push(entry);
+  }
+
+  const lines: string[] = [
+    `# Repository Map (${map.entries.length}/${map.totalSymbols} symbols, ~${map.usedTokens} tokens)`,
+  ];
+
+  for (const [filePath, entries] of filesMap) {
+    lines.push(`\n${filePath}:`);
+    for (const e of entries) {
+      const lineTag = `L${e.startLine}`;
+      const kindTag = e.kind;
+      let symbolLine = `  ${kindTag} ${e.name} (${lineTag})`;
+      if (includePreview && e.excerpt) {
+        // First non-empty line of excerpt cleaned up
+        const firstLine = e.excerpt.split('\n')[0]?.trim();
+        if (firstLine && firstLine !== e.name && firstLine.length < 80) {
+          symbolLine += `  # ${firstLine}`;
+        }
+      }
+      lines.push(symbolLine);
+    }
+  }
+
+  return lines.join('\n');
+}
+
+export interface RepoMapSessionResult {
+  repoMap: RepoMap;
+  renderedText: string;
+  tokensEstimate: number;
+  fromCache: boolean;
+}
+
+/**
+ * Session injector service for repo maps.
+ * Maintains an mtime/fingerprint-based cache to inject repo maps in <1ms at session startup.
+ */
+export class RepoMapSessionService {
+  private cachedFingerprint: string | null = null;
+  private cachedResult: { repoMap: RepoMap; text: string } | null = null;
+
+  /**
+   * Generate or retrieve cached repo map for session context injection (<2k tokens).
+   */
+  generateSessionRepoMap(
+    nodes: CodeNode[],
+    edges: CodeEdge[],
+    budgetTokens = 2000,
+    options: PageRankOptions & TreeRepoMapOptions = {},
+  ): RepoMapSessionResult {
+    // Fingerprint based on node count, edge count, and newest indexedAt
+    let maxIndexedAt = 0;
+    for (const n of nodes) {
+      if (n.indexedAt > maxIndexedAt) maxIndexedAt = n.indexedAt;
+    }
+    const fingerprint = `${nodes.length}:${edges.length}:${maxIndexedAt}:${budgetTokens}`;
+
+    if (this.cachedFingerprint === fingerprint && this.cachedResult) {
+      return {
+        repoMap: this.cachedResult.repoMap,
+        renderedText: this.cachedResult.text,
+        tokensEstimate: estimateTokens(this.cachedResult.text),
+        fromCache: true,
+      };
+    }
+
+    const repoMap = getRepoMap(nodes, edges, budgetTokens, options);
+    const text = renderTreeRepoMap(repoMap, options);
+
+    this.cachedFingerprint = fingerprint;
+    this.cachedResult = { repoMap, text };
+
+    return {
+      repoMap,
+      renderedText: text,
+      tokensEstimate: estimateTokens(text),
+      fromCache: false,
+    };
+  }
+
+  /**
+   * Invalidate cache.
+   */
+  invalidate(): void {
+    this.cachedFingerprint = null;
+    this.cachedResult = null;
+  }
+}
+
+/**
+ * Helper to format repo map as a system context prompt.
+ */
+export function injectRepoMapContext(repoMapText: string): {
+  role: 'system';
+  content: string;
+} {
+  return {
+    role: 'system',
+    content: `<repository_map>\n${repoMapText}\n</repository_map>`,
+  };
 }

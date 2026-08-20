@@ -94,6 +94,17 @@ export type {
 
 /** Pipeline executing interceptors sequentially before and after agent model actions. */
 export { MiddlewarePipeline } from './middleware/pipeline.js';
+
+// v1.1.5-beta1 Track 2.2: history processors pipeline (swe-agent pattern)
+export {
+  lastNObservations,
+  tagToolCalls,
+  cacheControl,
+  truncateByTokens,
+  applyHistoryProcessors,
+} from './middleware/history-processors.js';
+export type { HistoryProcessor, ProcessorContext } from './middleware/history-processors.js';
+export { createHistoryProcessorMiddleware } from './middleware/history-processor-middleware.js';
 /** Types representing agent execution middleware, metrics, and approval states. */
 export type {
   AgentMiddleware,
@@ -184,7 +195,7 @@ export type {
 
 // --- Original exports below ---
 
-export const AGENTS_VERSION = '1.1.1';
+export const AGENTS_VERSION = '1.1.5-beta1';
 
 export type AgentStatus = 'idle' | 'working' | 'completed' | 'error';
 
@@ -614,3 +625,34 @@ export type {
 
 // ── v1.1.0 Track 5: HITL, lifecycle, worktrees, review, declarative agents ──
 export * from './track5/index.js';
+
+// v1.1.5-beta1 Track 1.2: declarative hook system
+export * from './hooks/index.js';
+
+// v1.1.5-beta1 Track 1.3: headless / CI mode
+export * from './headless/index.js';
+
+// v1.1.5-beta1 Track 2.1: Mailbox orchestration
+export * from './mailbox/index.js';
+
+// v1.1.5-beta1 Track 2.3: Context middleware stack
+export {
+  createSummarizationMiddleware,
+  createContextEditingMiddleware,
+  createToolErrorRecoveryMiddleware,
+  createPiiRedactionMiddleware,
+} from './middleware/context-middleware.js';
+
+// v1.1.5-beta1 Track 2.4: Interjection buffer
+export * from './interjection/index.js';
+
+// v1.1.5-beta1 Track 2.5: Smart per-turn router
+export * from './routing/index.js';
+
+// v1.1.5-beta1 Track 2.6: RetryAgent + reviewer-on-submit
+export { runWithRetry, createHeuristicReviewer, createLlmReviewer } from './retry-agent.js';
+export type { ReviewerVerdict, ReviewerFn, RetryAgentConfig } from './retry-agent.js';
+
+// v1.1.5-beta1 Track 2.7: Stateless reducer
+export { createInitialState, agentRunReducer, replayEvents } from './reducer.js';
+export type { AgentRunEvent, AgentRunState } from './reducer.js';

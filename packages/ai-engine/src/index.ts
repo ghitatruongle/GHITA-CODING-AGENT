@@ -102,6 +102,36 @@ export {
   MODEL_ROLES,
   qualifyModelId,
 } from './routing/model-roles.js';
+// v1.1.5-beta1 Track 4.3: Model Catalog + Failover
+export { ModelCatalog, createDefaultCatalog } from './routing/model-catalog.js';
+export type { ModelEntry, FailoverGroup } from './routing/model-catalog.js';
+// v1.1.5-beta1 Track 4.4: Router v2
+export {
+  classifyTier,
+  tierToBuckets,
+  PersistentBanditRouter,
+  RouterV2,
+} from './routing/router-v2.js';
+export type {
+  TurnTier,
+  ComplexityClassifierOptions,
+  RouterV2Options,
+} from './routing/router-v2.js';
+// v1.1.5-beta1 Track 4.5: Model Middleware
+export {
+  createExtractReasoningMiddleware,
+  createSimulateStreamingMiddleware,
+  createRepairedParseMiddleware,
+} from './middleware/model-middleware.js';
+
+// v1.1.5-beta1 Track 4.6: Progressive Tool Disclosure
+export {
+  shouldUseProgressiveDisclosure,
+  createBridgeTools,
+  resolveToolsForContext,
+  estimateToolDefinitionsTokens,
+} from './tools/progressive-disclosure.js';
+export type { ProgressiveDisclosureConfig } from './tools/progressive-disclosure.js';
 export type {
   ModelRole,
   RoleConfig,
@@ -253,6 +283,45 @@ export type {
  * Supports 'auto', 'confirm', and 'deny' permission levels per tool.
  */
 export { PermissionManager } from './security/permissions.js';
+
+// v1.1.5-beta1 Track 5: Security & Quality Loop
+export {
+  createReceipt,
+  attachReceipt,
+  filterReportable,
+  partitionFindings,
+  validateStatic,
+} from './security/validation-ladder.js';
+export type {
+  ValidationReceipt,
+  ValidatedFinding,
+  ValidationMethod,
+  FindingDisposition,
+} from './security/validation-ladder.js';
+export {
+  buildSarifLog,
+  computeClassHash,
+  safeFence,
+  renderFindingMarkdown,
+} from './security/sarif.js';
+export type { SarifLog, SarifResult, FindingForSarif } from './security/sarif.js';
+export { verifyFix } from './security/fix-rescan.js';
+export type { RescanResult, RescanStatus, FixRescanOptions } from './security/fix-rescan.js';
+export {
+  InstinctRegistry,
+  scoreCommand,
+  shouldBlockCommand,
+  createScanManifest,
+  validateManifest,
+} from './security/security-quality.js';
+export type {
+  TaxonomyEntry,
+  CommandScore,
+  RiskLevel,
+  ScanManifest,
+  ScanFindingsArtifact,
+  ScanCoverageArtifact,
+} from './security/security-quality.js';
 /** Types representing tool execution permission levels. */
 export type { PermissionLevel, ToolPermission } from './security/permissions.js';
 

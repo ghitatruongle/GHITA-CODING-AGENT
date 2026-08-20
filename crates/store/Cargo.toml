@@ -1,0 +1,19 @@
+[package]
+name = "ghita-store"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "GHITA native SQLite store — rusqlite backend for act-cache, index catalog, terminal snapshots (v1.1.5-beta1 Track 8.4)"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+addon = ["dep:napi", "dep:napi-derive", "dep:rusqlite"]
+
+[dependencies]
+rusqlite = { version = "0.32", features = ["bundled"], optional = true }
+napi = { version = "2", default-features = false, features = ["compat-mode", "napi4", "dyn-symbols"], optional = true }
+napi-derive = { version = "2", optional = true }
+

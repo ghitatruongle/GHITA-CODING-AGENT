@@ -1,6 +1,6 @@
 [package]
 name = "ghita-coding-agent"
-version = "1.1.1"
+version = "1.1.5-beta1"
 description = "GHITA CODING AGENT Desktop"
 authors = ["ghitatruongle"]
 edition = "2021"
@@ -51,7 +51,7 @@ keyring = { version = "3.6.3", default-features = false, features = ["windows-na
 # Sidecar death-sentence: the child node process is placed in a JobObject with
 # KILL_ON_JOB_CLOSE so that killing the app (close/crash/force-kill) always
 # reaps the sidecar instead of leaving an orphan holding the HTTP/gRPC ports.
-windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_Security", "Win32_System_JobObjects", "Win32_System_Threading"] }
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_Security", "Win32_System_JobObjects", "Win32_System_Threading", "Win32_UI_WindowsAndMessaging"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 keyring = { version = "3.6.3", default-features = false, features = ["apple-native"] }

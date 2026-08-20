@@ -395,6 +395,203 @@ pub fn computer_health_check(
 }
 
 // ===========================================================================
+// Window operations (T9.7 — nut.js v4 pattern)
+// ===========================================================================
+
+/// Find a top-level window by title substring (case-insensitive).
+/// Returns the HWND as an isize for cross-platform serialization.
+#[cfg(target_os = "windows")]
+fn find_window_by_title(title_substring: &str) -> Result<isize, String> {
+    use windows_sys::Win32::Foundation::HWND;
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        EnumWindows, GetWindowTextLengthW, GetWindowTextW, IsWindowVisible,
+    };
+
+    struct EnumState {
+        needle: String,
+        found: Option<isize>,
+    }
+
+    unsafe extern "system" fn enum_callback(hwnd: HWND, lparam: isize) -> i32 {
+        let state_ptr = lparam as *mut EnumState;
+        if state_ptr.is_null() {
+            return 1;
+        }
+        let state = &mut *state_ptr;
+
+        if IsWindowVisible(hwnd) == 0 {
+            return 1;
+        }
+
+        let len = GetWindowTextLengthW(hwnd);
+        if len == 0 {
+            return 1;
+        }
+
+        let mut buf = vec![0u16; (len + 1) as usize];
+        GetWindowTextW(hwnd, buf.as_mut_ptr(), buf.len() as i32);
+        let title = String::from_utf16_lossy(&buf[..len as usize]).to_lowercase();
+
+        if title.contains(&state.needle) {
+            state.found = Some(hwnd as isize);
+            return 0;
+        }
+        1
+    }
+
+    let needle_lower = title_substring.to_lowercase();
+    let mut state = EnumState {
+        needle: needle_lower,
+        found: None,
+    };
+
+    unsafe {
+        EnumWindows(
+            Some(enum_callback),
+            &mut state as *mut EnumState as isize,
+        )
+    };
+
+    state.found.ok_or_else(|| {
+        format!(
+            "No visible window found with title containing '{}'",
+            title_substring
+        )
+    })
+}
+
+/// Move a window to the specified screen coordinates.
+#[tauri::command]
+pub fn computer_window_move(
+    title: String,
+    x: i32,
+    y: i32,
+    width: Option<i32>,
+    height: Option<i32>,
+) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{GetWindowRect, SetWindowPos, SWP_NOACTIVATE, SWP_NOZORDER};
+
+        let hwnd = find_window_by_title(&title)?;
+
+        let (w, h) = if width.is_some() || height.is_some() {
+            let mut rect = unsafe { std::mem::zeroed() };
+            unsafe { GetWindowRect(hwnd as _, &mut rect) };
+            let cur_w = (rect.right - rect.left) as i32;
+            let cur_h = (rect.bottom - rect.top) as i32;
+            (width.unwrap_or(cur_w), height.unwrap_or(cur_h))
+        } else {
+            let mut rect = unsafe { std::mem::zeroed() };
+            unsafe { GetWindowRect(hwnd as _, &mut rect) };
+            ((rect.right - rect.left) as i32, (rect.bottom - rect.top) as i32)
+        };
+
+        let ok = unsafe {
+            SetWindowPos(
+                hwnd as _,
+                std::ptr::null_mut(),
+                x,
+                y,
+                w,
+                h,
+                SWP_NOZORDER | SWP_NOACTIVATE,
+            )
+        };
+        if ok == 0 {
+            return Err("SetWindowPos failed".to_string());
+        }
+        Ok(())
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = (title, x, y, width, height);
+        Err("computer_window_move is only supported on Windows".to_string())
+    }
+}
+
+/// Bring a window to the foreground (focus it).
+#[tauri::command]
+pub fn computer_window_focus(title: String) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{SetForegroundWindow, ShowWindow, SW_RESTORE};
+
+        let hwnd = find_window_by_title(&title)?;
+        unsafe {
+            ShowWindow(hwnd as _, SW_RESTORE);
+        }
+        let ok = unsafe { SetForegroundWindow(hwnd as _) };
+        if ok == 0 {
+            return Err("SetForegroundWindow failed".to_string());
+        }
+        Ok(())
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = title;
+        Err("computer_window_focus is only supported on Windows".to_string())
+    }
+}
+
+/// Minimize a window.
+#[tauri::command]
+pub fn computer_window_minimize(title: String) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{ShowWindow, SW_MINIMIZE};
+
+        let hwnd = find_window_by_title(&title)?;
+        unsafe {
+            ShowWindow(hwnd as _, SW_MINIMIZE);
+        }
+        Ok(())
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = title;
+        Err("computer_window_minimize is only supported on Windows".to_string())
+    }
+}
+
+/// Wait until a window with the given title appears, polling at intervals.
+#[tauri::command]
+pub async fn computer_window_wait_for(
+    title: String,
+    timeout_ms: Option<u64>,
+    interval_ms: Option<u64>,
+) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        let timeout = timeout_ms.unwrap_or(10_000);
+        let interval = interval_ms.unwrap_or(250);
+        let start = std::time::Instant::now();
+
+        loop {
+            if find_window_by_title(&title).is_ok() {
+                return Ok(());
+            }
+            if start.elapsed().as_millis() as u64 >= timeout {
+                return Err(format!(
+                    "Timed out after {}ms waiting for window '{}'",
+                    timeout, title
+                ));
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(interval)).await;
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = (title, timeout_ms, interval_ms);
+        Err("computer_window_wait_for is only supported on Windows".to_string())
+    }
+}
+
+// ===========================================================================
 // Unit tests (run with `cargo test` inside src-tauri/)
 // ===========================================================================
 
