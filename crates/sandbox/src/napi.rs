@@ -1,12 +1,10 @@
 // ==============================================================================
-// GHITA CODING AGENT — Sandbox NAPI addon (v1.1.5-beta1 Track 1.1)
+// GHITA CODING AGENT — Sandbox NAPI addon (v1.1.5-beta2 Track 2)
 // ------------------------------------------------------------------------------
 // napi surface behind the `addon` feature — loaded by @ghita/native-bridge
 // under the name `sandbox`. Mirrors the secscan/retrieval/codegraph addon
 // pattern (dyn-symbols, no libnode.dll at link time).
-// Exports here are N-API ABI entry points consumed by the JS addon loader at
-// runtime (see @ghita/native-bridge). Within the crate they are unreferenced,
-// so treat dead-code as expected for this module.
+// ==============================================================================
 #![expect(dead_code)]
 
 use crate::{spawn_sandboxed as spawn_core, SandboxOptions, SandboxProfile};
@@ -26,6 +24,10 @@ pub struct SandboxOptionsInput {
     pub env_allow: Option<Vec<String>>,
     /// Hard timeout in milliseconds (default 120_000).
     pub timeout_ms: Option<f64>,
+    /// Memory limit in MB per process tree (Windows Job Object Tier 2).
+    pub memory_limit_mb: Option<u32>,
+    /// Active process limit (max child processes in job).
+    pub process_limit: Option<u32>,
 }
 
 #[napi(object)]
@@ -61,6 +63,8 @@ pub fn spawn_sandboxed(
         deny_globs: None,
         env_allow: None,
         timeout_ms: None,
+        memory_limit_mb: None,
+        process_limit: None,
     });
     let profile = match input.profile.as_deref() {
         None => SandboxProfile::Workspace,
@@ -83,6 +87,8 @@ pub fn spawn_sandboxed(
     opts.timeout = Some(Duration::from_millis(
         input.timeout_ms.unwrap_or(120_000.0) as u64
     ));
+    opts.memory_limit_mb = input.memory_limit_mb;
+    opts.process_limit = input.process_limit.or(Some(64));
 
     let result = spawn_core(&command, &args, &opts)
         .map_err(|err| Error::new(Status::GenericFailure, err.to_string()))?;

@@ -23,4 +23,4 @@ export type {
   A11yCheckerConfig,
 } from './types.js';
 
-export const A11Y_VERSION = '1.1.5-beta1';
+export const A11Y_VERSION = '1.1.5-beta2';

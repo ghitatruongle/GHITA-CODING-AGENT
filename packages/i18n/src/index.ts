@@ -9,4 +9,4 @@ export { LocaleDetector } from './detector.js';
 export { formatNumber, formatDate, formatCurrency, formatPlural } from './formatter.js';
 export type { Locale, TranslationMessages, I18nConfig, FormatMessageOptions } from './types.js';
 
-export const I18N_VERSION = '1.1.5-beta1';
+export const I18N_VERSION = '1.1.5-beta2';

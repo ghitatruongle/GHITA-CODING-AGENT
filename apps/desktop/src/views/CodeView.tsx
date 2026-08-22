@@ -14,6 +14,7 @@ import { useTranslation } from '../i18n';
 import { useAppStore, fileContentCache } from '../stores/appStore';
 import { useAiEditProposal } from '../hooks/useAiEditProposal';
 import { DiffStatBadge } from '../components/DiffStatBadge';
+import { SymbolOutline } from '../components/SymbolOutline';
 
 const CodeEditor = lazy(() =>
   import('../components/CodeEditor').then((m) => ({ default: m.CodeEditor })),
@@ -37,6 +38,26 @@ export function CodeView() {
   const autoSavePathRef = useRef<string | null>(null);
 
   const [explorerWidth, setExplorerWidth] = useState(240);
+  const [sidebarTab, setSidebarTab] = useState<'explorer' | 'outline'>('explorer');
+  const [showProblems, setShowProblems] = useState(true);
+  const editorInstanceRef = useRef<{
+    revealPositionInCenter: (pos: { lineNumber: number; column: number }) => void;
+    setPosition: (pos: { lineNumber: number; column: number }) => void;
+    focus: () => void;
+  } | null>(null);
+
+  const handleEditorMount = useCallback((editor: unknown) => {
+    editorInstanceRef.current = editor as typeof editorInstanceRef.current;
+  }, []);
+
+  const handleSelectSymbol = useCallback((line: number, column: number) => {
+    if (editorInstanceRef.current) {
+      editorInstanceRef.current.revealPositionInCenter({ lineNumber: line, column });
+      editorInstanceRef.current.setPosition({ lineNumber: line, column });
+      editorInstanceRef.current.focus();
+    }
+  }, []);
+
   const isDragging = useRef(false);
   const startX = useRef(0);
   const startWidth = useRef(0);
@@ -444,8 +465,13 @@ export function CodeView() {
       sql: 'SQL',
       shell: 'SH',
       powershell: 'PS',
+      plaintext: 'TXT',
+      ignore: 'IGN',
+      dockerfile: 'DOCKER',
+      xml: 'XML',
+      ini: 'INI',
     };
-    return map[lang] || lang.slice(0, 3).toUpperCase();
+    return map[lang] || (lang.length > 4 ? lang.slice(0, 3).toUpperCase() : lang.toUpperCase());
   };
 
   // File icon color
@@ -469,10 +495,91 @@ export function CodeView() {
   };
 
   return (
-    <div style={{ display: 'flex', height: '100%' }}>
-      {/* File Explorer sidebar */}
-      <div style={{ width: explorerWidth, flexShrink: 0, overflow: 'hidden' }}>
-        <FileExplorer onFileOpen={handleFileOpen} />
+    <div style={{ display: 'flex', height: '100%', width: '100%', overflow: 'hidden' }}>
+      {/* File Explorer / Outline sidebar */}
+      <div
+        style={{
+          width: explorerWidth,
+          maxWidth: '40%',
+          minWidth: '180px',
+          flexShrink: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          background: 'var(--bg-secondary)',
+        }}
+      >
+        {/* Sidebar Header Tabs */}
+        <div
+          style={{
+            display: 'flex',
+            borderBottom: '1px solid var(--border-subtle)',
+            background: 'var(--bg-primary)',
+          }}
+        >
+          <button
+            onClick={() => setSidebarTab('explorer')}
+            style={{
+              flex: 1,
+              padding: '6px 8px',
+              fontSize: '11px',
+              fontWeight: 600,
+              color: sidebarTab === 'explorer' ? 'var(--text-primary)' : 'var(--text-muted)',
+              borderBottom:
+                sidebarTab === 'explorer'
+                  ? '2px solid var(--accent-primary)'
+                  : '2px solid transparent',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px',
+            }}
+          >
+            <span>📁</span>
+            <span>{t('codeView.files')}</span>
+          </button>
+          <button
+            onClick={() => setSidebarTab('outline')}
+            style={{
+              flex: 1,
+              padding: '6px 8px',
+              fontSize: '11px',
+              fontWeight: 600,
+              color: sidebarTab === 'outline' ? 'var(--text-primary)' : 'var(--text-muted)',
+              borderBottom:
+                sidebarTab === 'outline'
+                  ? '2px solid var(--accent-primary)'
+                  : '2px solid transparent',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px',
+            }}
+          >
+            <span>🌲</span>
+            <span>{t('codeView.outline')}</span>
+          </button>
+        </div>
+
+        {/* Sidebar Body */}
+        <div style={{ flex: 1, overflow: 'hidden' }}>
+          {sidebarTab === 'explorer' ? (
+            <FileExplorer onFileOpen={handleFileOpen} />
+          ) : (
+            <SymbolOutline
+              filePath={activeFile?.path}
+              content={fileContentCache.get(activeFile?.path || '')?.content || ''}
+              language={activeFile?.language}
+              onSelectSymbol={handleSelectSymbol}
+            />
+          )}
+        </div>
       </div>
 
       {/* Resize handle */}
@@ -532,10 +639,17 @@ export function CodeView() {
             >
               <span
                 style={{
-                  fontSize: '10px',
+                  fontSize: '9px',
                   fontWeight: 700,
                   color: langColor(f.language),
-                  minWidth: '20px',
+                  background: `${langColor(f.language)}1a`,
+                  border: `1px solid ${langColor(f.language)}33`,
+                  padding: '1px 5px',
+                  borderRadius: '3px',
+                  lineHeight: 1.2,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
               >
                 {langLabel(f.language)}
@@ -583,7 +697,7 @@ export function CodeView() {
         {activeFile && (
           <div
             style={{
-              padding: '4px 12px',
+              padding: '6px 12px',
               fontSize: '11px',
               color: 'var(--text-muted)',
               background: 'var(--bg-secondary)',
@@ -591,6 +705,10 @@ export function CodeView() {
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
+              flexShrink: 0,
+              minHeight: '28px',
+              position: 'relative',
+              zIndex: 2,
             }}
           >
             {activeFile.path.split(/[/\\]/).map((part, i, arr) => (
@@ -619,9 +737,24 @@ export function CodeView() {
                 {t('codeView.modified')}
               </span>
             )}
-            <span style={{ marginLeft: 'auto', fontSize: '10px', opacity: 0.5 }}>
-              {t('codeView.shortcuts')}
-            </span>
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                onClick={() => setShowProblems((prev) => !prev)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: showProblems ? 'var(--accent-primary)' : 'var(--text-muted)',
+                  fontSize: '10px',
+                  cursor: 'pointer',
+                  padding: '1px 6px',
+                  borderRadius: '3px',
+                }}
+                title={showProblems ? 'Hide Problems Panel' : 'Show Problems Panel'}
+              >
+                {showProblems ? '⚠️ Problems' : '⚠️ Problems (Hidden)'}
+              </button>
+              <span style={{ fontSize: '10px', opacity: 0.5 }}>{t('codeView.shortcuts')}</span>
+            </div>
           </div>
         )}
 
@@ -698,7 +831,15 @@ export function CodeView() {
         )}
 
         {/* Editor content */}
-        <div style={{ flex: 1, minHeight: 0 }}>
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            position: 'relative',
+            overflow: 'hidden',
+            height: '100%',
+          }}
+        >
           {activeFile ? (
             <Suspense
               fallback={
@@ -727,6 +868,8 @@ export function CodeView() {
                 onChange={handleContentChange}
                 onSave={handleSave}
                 onSaveAll={handleSaveAll}
+                onEditorMount={handleEditorMount}
+                showProblems={showProblems}
               />
             </Suspense>
           ) : (

@@ -22,10 +22,6 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import '@xterm/xterm/css/xterm.css';
 
-// ---------------------------------------------------------------------------
-// Eager xterm.js loader — resolves at module evaluation so `TerminalImpl`/
-// `FitAddonImpl` are available immediately on first render (no Suspense gate).
-// ---------------------------------------------------------------------------
 let TerminalImpl: typeof TerminalType | null = null;
 let FitAddonImpl: typeof FitAddonType | null = null;
 let xtermLoadDone = false;
@@ -120,17 +116,17 @@ function XtermPane({
   // Re-fit xterm when visibility becomes active
   useEffect(() => {
     if (visible && fitRef.current) {
-      try {
-        setTimeout(() => {
-          try {
-            fitRef.current?.fit();
-          } catch {
-            /* Ignore fit errors during visibility transition */
+      const handle = setTimeout(() => {
+        try {
+          fitRef.current?.fit();
+          if (termRef.current) {
+            termRef.current.refresh(0, Math.max(0, termRef.current.rows - 1));
           }
-        }, 50);
-      } catch {
-        /* Ignore timeout scheduling errors */
-      }
+        } catch {
+          /* Ignore fit errors during visibility transition */
+        }
+      }, 30);
+      return () => clearTimeout(handle);
     }
   }, [visible]);
 
@@ -142,6 +138,9 @@ function XtermPane({
     let unlistenData: (() => void) | null = null;
     let unlistenExit: (() => void) | null = null;
     const currentTabId = tabId;
+
+    // Clean existing DOM children to prevent duplicate stacked terminals
+    containerRef.current.innerHTML = '';
 
     const TerminalCtor = TerminalImpl as unknown as typeof TerminalType;
     const term = new TerminalCtor({
@@ -340,6 +339,7 @@ function TerminalInner() {
   );
 
   const switchShellInTab = useCallback((tabId: string) => {
+    const newId = generateTabId();
     setTabs((prev) =>
       prev.map((tab) => {
         if (tab.id !== tabId) return tab;
@@ -349,9 +349,10 @@ function TerminalInner() {
         } else {
           nextShell = tab.shell === 'bash' ? 'sh' : 'bash';
         }
-        return { ...tab, shell: nextShell };
+        return { ...tab, id: newId, shell: nextShell };
       }),
     );
+    setActiveTabId(newId);
   }, []);
 
   const activeTab = tabs.find((t) => t.id === activeTabId);

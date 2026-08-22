@@ -1,8 +1,15 @@
 # ──────────────────────────────────────────────────────────────────────────────
+# GHITA CODING AGENT - MASTER .GITIGNORE
+# ──────────────────────────────────────────────────────────────────────────────
+
+# ──────────────────────────────────────────────────────────────────────────────
 # 1. SECURITY, SECRETS & KEYS (CRITICAL FOR OPEN-SOURCE RELEASE)
 # ──────────────────────────────────────────────────────────────────────────────
 .env
 .env.local
+.env.development.local
+.env.test.local
+.env.production.local
 .env.*.local
 *.env
 *.pem
@@ -15,6 +22,12 @@
 *.keystore
 *.jks
 *.mobileprovision
+*.kdbx
+*.tfvars
+*.tfvars.json
+*.htpasswd
+id_rsa*
+id_ed25519*
 secrets.json
 credentials.json
 
@@ -22,34 +35,49 @@ credentials.json
 # 2. MONOREPO & NODE DEPENDENCIES
 # ──────────────────────────────────────────────────────────────────────────────
 node_modules/
+**/node_modules/
 .pnp
 .pnp.js
 .pnp.cjs
 .pnp.mjs
 .pnpm-store/
+**/.pnpm-store/
 .turbo/
-packages/*/.turbo/
-apps/*/.turbo/
+**/.turbo/
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 3. BUILD OUTPUTS & COMPILATION ARTIFACTS
 # ──────────────────────────────────────────────────────────────────────────────
 dist/
+**/dist/
 build/
+**/build/
 out/
+**/out/
 target/
+**/target/
 .next/
 *.tsbuildinfo
+**/*.tsbuildinfo
 *.vsix
-packages/*/dist/
-apps/*/dist/
-docs/
+
+# Docusaurus & Docs Tooling (Do NOT ignore docs/ package itself)
+docs/.docusaurus/
+docs/build/
+docs/.cache-loader/
+docs/.turbo/
+docs/docs/api/
+docs/superpowers/
 
 # Compiled JS/D.TS inside TS source directories
 packages/*/src/**/*.js
 packages/*/src/**/*.d.ts
 packages/*/src/**/*.js.map
 packages/*/src/**/*.d.ts.map
+apps/*/src/**/*.js
+apps/*/src/**/*.d.ts
+apps/*/src/**/*.js.map
+apps/*/src/**/*.d.ts.map
 
 # Native C / C++ / Rust Object Files & Binaries
 *.o
@@ -63,20 +91,27 @@ packages/*/src/**/*.d.ts.map
 *.exp
 *.pdb
 *.ilk
+*.node
+*.rmeta
+*.rlib
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 4. TAURI & RUST (DESKTOP APP)
 # ──────────────────────────────────────────────────────────────────────────────
 apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/target-check/
+**/src-tauri/target/
+**/src-tauri/target-check/
+crates/target/
+**/target-check/
 apps/desktop/src-tauri/sidecar/server.bundle.mjs
 apps/desktop/src-tauri/sidecar/node.exe
 apps/desktop/src-tauri/sidecar/meta.json
-# Tauri CLI regenerates these ACL/schema files on every build — not source
 apps/desktop/src-tauri/gen/schemas/
 
-# Pre-built installer artifacts (produced by scripts/build-installer.mjs).
-# Installers are released via GitHub Releases, not committed to the repo.
+# Pre-built installer artifacts
 /release/
+release/
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 5. MOBILE CLIENTS (ANDROID & IOS)
@@ -91,6 +126,9 @@ apps/mobile/android/local.properties
 apps/mobile/android/captures/
 apps/mobile/android/app/debug.keystore
 apps/mobile/android/app/src/main/assets/index.android.bundle
+apps/mobile/android/app/src/main/res/**/__node_modules_pnpm_*
+**/.cxx/
+**/.gradle/
 *.apk
 *.aab
 *.dex
@@ -103,14 +141,19 @@ apps/mobile/ios/DerivedData/
 apps/mobile/ios/*.xcworkspace
 apps/mobile/ios/*.xcodeproj/project.xcworkspace
 apps/mobile/ios/*.xcodeproj/xcuserdata
+*.ipa
+*.xcarchive
 
 # Metro & Bundler Caches
 .metro-health-check*
+.expo/
+.expo-shared/
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 6. PYTHON & VIRTUAL ENVS
 # ──────────────────────────────────────────────────────────────────────────────
 __pycache__/
+**/__pycache__/
 *.pyc
 *.pyo
 *.pyd
@@ -118,24 +161,31 @@ __pycache__/
 .venv/
 venv/
 ENV/
+.env/
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 7. TESTING, LOGS & DIAGNOSTICS
+# 7. TESTING, COVERAGE, DATABASES & DIAGNOSTICS
 # ──────────────────────────────────────────────────────────────────────────────
 coverage/
+**/coverage/
 .nyc_output/
-packages/*/coverage/
-apps/*/coverage/
 test-results/
 playwright-report/
 blob-report/
 .vscode-test/
+
+# Databases & SQLite
 *.sqlite
+*.sqlite3
+*.db
+*.db-shm
+*.db-wal
 **/test-ledger.sqlite
 test-ledger.sqlite
 
 # Logs & Diagnostics
 *.log
+**/*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -144,18 +194,36 @@ debug.log
 test-output.log
 typedoc_error.log
 build_output.txt
+turbo-*.log
+
+# .ghita test runs and evals outputs
+.ghita/evals/runs/
+.ghita/evals/*.db*
+.ghita/e2e-smoke/
+.ghita/*.log
+**/.ghita/**/*.log
+**/.ghita/evals/runs/
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 8. OS & IDE ARTIFACTS
 # ──────────────────────────────────────────────────────────────────────────────
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
 Thumbs.db
 desktop.ini
+ehthumbs.db
+$RECYCLE.BIN/
 *.swp
 *.swo
+*.swn
 *~
 *.orig
 *.rej
+*.bak
+*.tmp
+**/*.tmp
 /nul
 nul
 
@@ -166,17 +234,43 @@ nul
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+.zed/
+.cursor/
+cursor/
+
+# Frontend tooling caches
+.eslintcache
+.cache/
+**/.cache/
+.vite/
+**/.vite/
+.parcel-cache/
+.husky/_
+
+# Local overrides
+*.local
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 9. LOCAL AGENT WORKSPACES & REFER PROJECTS (LOCAL ONLY)
+# 9. LOCAL AGENT WORKSPACES, BENCHMARKS & TEMPORARY SCRIPTS
 # ──────────────────────────────────────────────────────────────────────────────
 refer_project/
+mock-project/
+group/
 .openclaude/
 .agents/
 .kimchi/
 .zcode/
+.freebuff/
 Plan/
 agents/**/handoff.md
+
+# Benchmarks & test corpuses
+.bench-tmp/
+**/.bench-tmp/
+**/test-ast-temp/
+tests/quality-loop/trends.jsonl
+tests/benchmark/history.jsonl
+tests/benchmark/results.json
 
 # Internal & Temp Scripts
 scripts/*.tmp
@@ -184,50 +278,11 @@ scripts/*.log
 scripts/clone-refer.sh
 scripts/inspect_*.py
 scripts/verify_doc.py
-scripts/sync_m1_doc.py
-untracked_*.txt
-%TEMP%*.txt
-window_dump.xml
-test_write.tmp
-/*.png
-
-# Test data & benchmarks
-tests/quality-loop/trends.jsonl
-tests/benchmark/history.jsonl
-tests/benchmark/results.json
-
-# ──────────────────────────────────────────────────────────────────────────────
-# 10. ADDITIONAL BUILD ARTIFACTS & CACHES (v1.0.0 final pass)
-# ──────────────────────────────────────────────────────────────────────────────
-
-# Native addons (NAPI/Rust) — platform-specific binaries, rebuilt per OS.
-# Source lives alongside (e.g. packages/memory/src/semantic/rust/), never
-# commit the compiled binary.
-*.node
-
-# Frontend tooling caches
-.eslintcache
-.cache/
-.vite/
-.parcel-cache/
-
-# Android — assets auto-copied from node_modules by asset linking during
-# builds (name pattern `__node_modules_pnpm_*`). Regenerated on build.
-apps/mobile/android/app/src/main/res/**/__node_modules_pnpm_*
-
-# Husky v9 hooks runtime (installed by `prepare` script)
-.husky/_
-
-# Local-only overrides (e.g. settings.local.json, vite.config.local.ts)
-*.local
-
-# Editor per-project state that should never be shared
-.zed/
-cursor/
-
-
-# v1.1.1 bench corpus (generated by scripts/bench-cpu.mjs)
-.bench-tmp/
-.freebuff/
-**/test-ast-temp/
-
+# Databases & Local state
+*.sqlite
+*.sqlite3
+*.db
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+test-ledger.sqlite

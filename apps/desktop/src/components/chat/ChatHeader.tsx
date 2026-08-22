@@ -4,6 +4,8 @@
 // ==============================================================================
 
 import React from 'react';
+import { useAppStore } from '../../stores/appStore';
+import toast from 'react-hot-toast';
 import { type DynamicModelOption } from '../../utils/buildModelOptions';
 import { type ProviderId, PROVIDER_LABELS } from '../../types/providers';
 import type { ChatMessage } from '../../hooks/useChatSessions';
@@ -201,19 +203,26 @@ export function ChatHeader({
             if (modelOptions.length > 0) {
               setModelDropdownOpen(!modelDropdownOpen);
               setModelSearch('');
+            } else {
+              useAppStore.getState().setActiveTab('api');
+              toast(t('chat.noProviderHint') || 'Vui lòng cấu hình API Key để bắt đầu', {
+                icon: '⚙️',
+                duration: 3500,
+              });
             }
           }}
+          title={modelOptions.length === 0 ? 'Click để mở Quản lý API Key' : 'Chọn AI Model'}
           style={{
             padding: '4px 10px',
             fontSize: '11px',
             background: 'rgba(15, 23, 42, 0.6)',
             border:
               modelOptions.length === 0
-                ? '1px solid rgba(239, 68, 68, 0.3)'
+                ? '1px solid rgba(239, 68, 68, 0.5)'
                 : '1px solid rgba(255, 255, 255, 0.1)',
             borderRadius: '6px',
             color: modelOptions.length === 0 ? '#f87171' : '#cbd5e1',
-            cursor: modelOptions.length === 0 ? 'not-allowed' : 'pointer',
+            cursor: 'pointer',
             maxWidth: '220px',
             display: 'flex',
             alignItems: 'center',

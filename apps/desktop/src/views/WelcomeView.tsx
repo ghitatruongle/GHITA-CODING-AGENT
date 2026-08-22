@@ -91,18 +91,31 @@ export function WelcomeView() {
         </p>
       </div>
 
-      {/* Primary action */}
-      <motion.button
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2, duration: 0.4 }}
-        onClick={handleOpenFolder}
-        disabled={isOpening}
-        className="flex items-center gap-3 px-6 py-3 bg-indigo-500/10 border border-indigo-500/30 text-indigo-200 rounded-lg hover:bg-indigo-500/20 transition-colors font-semibold text-sm mb-8"
-      >
-        <FolderOpen size={20} />
-        {isOpening ? t('common.loading') : t('welcome.openFolder')}
-      </motion.button>
+      {/* Primary actions */}
+      <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
+        <motion.button
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.4 }}
+          onClick={handleOpenFolder}
+          disabled={isOpening}
+          className="flex items-center gap-2.5 px-6 py-3 bg-indigo-500/15 border border-indigo-500/30 text-indigo-200 rounded-lg hover:bg-indigo-500/25 transition-colors font-semibold text-sm shadow-md"
+        >
+          <FolderOpen size={18} />
+          {isOpening ? t('common.loading') : t('welcome.openFolder')}
+        </motion.button>
+
+        <motion.button
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25, duration: 0.4 }}
+          onClick={handleOpenSettings}
+          className="flex items-center gap-2.5 px-6 py-3 bg-bg-surface border border-border-default text-text-primary rounded-lg hover:bg-bg-hover transition-colors font-semibold text-sm"
+        >
+          <Settings size={18} className="text-accent-primary" />
+          {t('settings.title')}
+        </motion.button>
+      </div>
 
       {/* Recent workspaces */}
       {recentWorkspaces.length > 0 ? (

@@ -1,3 +1,4 @@
+import { createRequire } from 'node:module';
 import type { ChatMessage } from '../types.js';
 
 /** Rough chars-per-token ratios by model family */
@@ -11,7 +12,7 @@ const CHARS_PER_TOKEN: Record<string, number> = {
   default: 4,
 };
 
-// v1.1.5-beta1 Track 4.1: Native tokenizer bridge (tiktoken-rs via napi)
+// v1.1.5-beta2 Track 1.4: Native tokenizer bridge (tiktoken-rs via napi)
 interface TokenizerNative {
   countTokensJs(text: string, family?: string): number;
   countMessagesTokensJs(
@@ -25,17 +26,15 @@ let _tokenizerBridge: { native: boolean; impl: TokenizerNative } | null = null;
 function getTokenizerBridge() {
   if (_tokenizerBridge === null) {
     try {
-      const req = typeof require !== 'undefined' ? require : null;
-      if (req) {
-        const mod = req('@ghita/native-bridge') as {
-          loadNative?: (
-            name: string,
-            fallback: unknown,
-          ) => { native: boolean; impl: TokenizerNative };
-        };
-        if (mod.loadNative) {
-          _tokenizerBridge = mod.loadNative('tokenizer', undefined);
-        }
+      const requireAt = createRequire(import.meta.url);
+      const mod = requireAt('@ghita/native-bridge') as {
+        loadNative?: (
+          name: string,
+          fallback: unknown,
+        ) => { native: boolean; impl: TokenizerNative };
+      };
+      if (mod.loadNative) {
+        _tokenizerBridge = mod.loadNative('tokenizer', undefined);
       }
     } catch {
       // Fall through to JS fallback
@@ -61,12 +60,11 @@ export interface ContextWindow {
 }
 
 /**
- * Estimate token count from text using character-based heuristic.
- * More accurate than word-based; within ~10 percent of tiktoken for English.
+ * Estimate token count from text using character-based heuristic or native BPE.
  */
 export function estimateTokens(text: string, model?: string): number {
   if (!text) return 0;
-  // v1.1.5-beta1 T4.1: use native BPE when available
+  // v1.1.5-beta2 T1.4: use native BPE when available
   const bridge = getTokenizerBridge();
   if (bridge && bridge.native && typeof bridge.impl?.countTokensJs === 'function') {
     try {
@@ -85,12 +83,21 @@ export function estimateTokens(text: string, model?: string): number {
  */
 export function estimateMessagesTokens(messages: ChatMessage[], model?: string): number {
   let total = 0;
+  const bridge = getTokenizerBridge();
+  if (bridge && bridge.native && typeof bridge.impl?.countMessagesTokensJs === 'function') {
+    try {
+      const family = bridge.impl.detectEncodingFamily(model ?? '');
+      const pairs = messages.map((m) => ({ role: m.role || 'user', content: m.content || '' }));
+      return bridge.impl.countMessagesTokensJs(pairs, family);
+    } catch {
+      /* fall through to heuristic */
+    }
+  }
+
   for (const msg of messages) {
-    // Each message has ~4 tokens overhead (role, formatting)
     total += 4;
     total += estimateTokens(msg.content ?? '', model);
   }
-  // Add reply priming tokens
   total += 2;
   return total;
 }
@@ -98,76 +105,200 @@ export function estimateMessagesTokens(messages: ChatMessage[], model?: string):
 /**
  * Check if messages fit within a context window.
  */
-export function fitsInContext(
+export function fitsContextWindow(
   messages: ChatMessage[],
-  maxContextTokens: number,
-  reservedOutputTokens = 1024,
+  maxTokens: number,
+  reservedForCompletion = 1000,
   model?: string,
-): { fits: boolean; estimatedTokens: number; available: number } {
-  const estimatedTokens = estimateMessagesTokens(messages, model);
-  const available = maxContextTokens - reservedOutputTokens;
+): { fits: boolean; usedTokens: number; remainingTokens: number } {
+  const usedTokens = estimateMessagesTokens(messages, model);
+  const remainingTokens = maxTokens - usedTokens - reservedForCompletion;
   return {
-    fits: estimatedTokens <= available,
-    estimatedTokens,
-    available,
+    fits: remainingTokens >= 0,
+    usedTokens,
+    remainingTokens: Math.max(0, remainingTokens),
   };
 }
 
 /**
- * Truncate messages to fit within context window, keeping system + recent messages.
+ * Alias for fitsContextWindow with available field.
  */
-export function truncateToFit(
+export function fitsInContext(
   messages: ChatMessage[],
-  maxContextTokens: number,
-  reservedOutputTokens = 1024,
+  maxTokens: number,
+  reservedForCompletion = 0,
   model?: string,
-): ChatMessage[] {
-  const available = maxContextTokens - reservedOutputTokens;
-  const systemMessages = messages.filter((m) => m.role === 'system');
-  const nonSystemMessages = messages.filter((m) => m.role !== 'system');
-
-  // Always keep system messages
-  const systemTokens = estimateMessagesTokens(systemMessages, model);
-  let remaining = available - systemTokens;
-
-  if (remaining <= 0) return systemMessages;
-
-  // Keep messages from the end (most recent first)
-  const kept: ChatMessage[] = [];
-  for (let i = nonSystemMessages.length - 1; i >= 0; i--) {
-    const msg = nonSystemMessages[i];
-    if (!msg) break;
-    const msgTokens = 4 + estimateTokens(msg.content ?? '', model);
-    if (msgTokens > remaining) break;
-    kept.unshift(msg);
-    remaining -= msgTokens;
-  }
-
-  return [...systemMessages, ...kept];
+): { fits: boolean; available: number; used: number } {
+  const used = estimateMessagesTokens(messages, model);
+  const available = maxTokens - used - reservedForCompletion;
+  return {
+    fits: available >= 0,
+    available: Math.max(0, available),
+    used,
+  };
 }
 
 /**
- * Get context window info for display.
+ * Calculate token usage statistics for a context window.
  */
-export function getContextInfo(
+export function getContextWindow(
   messages: ChatMessage[],
-  maxContextTokens: number,
+  maxTokens: number,
   model?: string,
 ): ContextWindow {
   const usedTokens = estimateMessagesTokens(messages, model);
+  const remainingTokens = Math.max(0, maxTokens - usedTokens);
+  const usagePercent = Math.min(100, Math.round((usedTokens / maxTokens) * 100));
+
   return {
-    maxTokens: maxContextTokens,
+    maxTokens,
     usedTokens,
-    remainingTokens: Math.max(0, maxContextTokens - usedTokens),
-    usagePercent: Math.min(100, (usedTokens / maxContextTokens) * 100),
+    remainingTokens,
+    usagePercent,
   };
 }
 
+/**
+ * Alias for getContextWindow.
+ */
+export function getContextInfo(
+  messages: ChatMessage[],
+  maxTokens: number,
+  model?: string,
+): ContextWindow {
+  return getContextWindow(messages, maxTokens, model);
+}
+
+/**
+ * Truncate message history to fit within a token limit, prioritizing keeping system messages and newest turns.
+ */
+export function truncateToFit(
+  messages: ChatMessage[],
+  maxTokens: number,
+  model?: string,
+): ChatMessage[] {
+  if (messages.length === 0) return [];
+  const system = messages.filter((m) => m.role === 'system');
+  const nonSystem = messages.filter((m) => m.role !== 'system');
+
+  let currentTokens = estimateMessagesTokens(system, model);
+  if (currentTokens > maxTokens) {
+    return system.slice(0, 1);
+  }
+
+  const kept: ChatMessage[] = [];
+  for (let i = nonSystem.length - 1; i >= 0; i--) {
+    const msg = nonSystem[i];
+    if (!msg) continue;
+    const msgTokens = estimateTokens(msg.content ?? '', model) + 4;
+    if (currentTokens + msgTokens <= maxTokens) {
+      kept.unshift(msg);
+      currentTokens += msgTokens;
+    } else {
+      break;
+    }
+  }
+
+  return [...system, ...kept];
+}
+
+/**
+ * Truncate text to approximately fit within a token limit.
+ */
+export function truncateToTokenLimit(
+  text: string,
+  maxTokens: number,
+  model?: string,
+): { text: string; truncated: boolean; estimatedTokens: number } {
+  const currentTokens = estimateTokens(text, model);
+  if (currentTokens <= maxTokens) {
+    return { text, truncated: false, estimatedTokens: currentTokens };
+  }
+
+  const ratio = getModelRatio(model);
+  const maxChars = Math.floor(maxTokens * ratio);
+  const truncatedText = `${text.slice(0, maxChars)}...`;
+
+  return {
+    text: truncatedText,
+    truncated: true,
+    estimatedTokens: estimateTokens(truncatedText, model),
+  };
+}
+
+/**
+ * Split text into chunks that each fit within a maximum token limit.
+ * Tries to split on sentence/paragraph boundaries where possible.
+ */
+export function chunkByTokens(
+  text: string,
+  maxTokensPerChunk: number,
+  overlapTokens = 50,
+  model?: string,
+): string[] {
+  if (!text) return [];
+
+  const ratio = getModelRatio(model);
+  const maxChars = Math.floor(maxTokensPerChunk * ratio);
+  const overlapChars = Math.floor(overlapTokens * ratio);
+
+  if (text.length <= maxChars) {
+    return [text];
+  }
+
+  const chunks: string[] = [];
+  let start = 0;
+
+  while (start < text.length) {
+    let end = start + maxChars;
+
+    if (end >= text.length) {
+      chunks.push(text.slice(start));
+      break;
+    }
+
+    const lookbackStart = Math.max(start, end - Math.floor(maxChars * 0.2));
+    const slice = text.slice(lookbackStart, end);
+
+    let splitIndex = slice.lastIndexOf('\n\n');
+    if (splitIndex !== -1) {
+      end = lookbackStart + splitIndex + 2;
+    } else {
+      splitIndex = slice.lastIndexOf('\n');
+      if (splitIndex !== -1) {
+        end = lookbackStart + splitIndex + 1;
+      } else {
+        const sentenceMatch = slice.match(/[.!?]\s+(?=[A-Z])/);
+        if (sentenceMatch && sentenceMatch.index !== undefined) {
+          end = lookbackStart + sentenceMatch.index + 2;
+        } else {
+          splitIndex = slice.lastIndexOf(' ');
+          if (splitIndex !== -1) {
+            end = lookbackStart + splitIndex + 1;
+          }
+        }
+      }
+    }
+
+    chunks.push(text.slice(start, end).trim());
+    start = Math.max(start + 1, end - overlapChars);
+  }
+
+  return chunks.filter((c) => c.length > 0);
+}
+
+/**
+ * Get the chars-per-token ratio for a given model family.
+ */
 function getModelRatio(model?: string): number {
   if (!model) return CHARS_PER_TOKEN['default'] ?? 4;
   const lower = model.toLowerCase();
+
   for (const [key, ratio] of Object.entries(CHARS_PER_TOKEN)) {
-    if (lower.includes(key)) return ratio;
+    if (key !== 'default' && lower.includes(key)) {
+      return ratio ?? 4;
+    }
   }
+
   return CHARS_PER_TOKEN['default'] ?? 4;
 }

@@ -227,7 +227,7 @@ fn field_name(node: Node, name: &str, content: &str) -> Option<String> {
 fn return_type_text(node: Node, content: &str) -> Option<String> {
     node.child_by_field_name("return_type").and_then(|n| {
         let text = if n.kind() == "type_annotation" {
-            n.named_children(&mut n.walk()).into_iter().next()
+            n.named_children(&mut n.walk()).next()
                 .map(|t| node_text(t, content).trim().to_string())
                 .unwrap_or_default()
         } else {

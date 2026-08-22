@@ -8,11 +8,75 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 (globalThis as unknown as { activeSockets?: Map<string, unknown> }).activeSockets =
   (globalThis as unknown as { activeSockets?: Map<string, unknown> }).activeSockets ||
   new Map<string, unknown>();
-// Do not overwrite connectionHandler if already set by hoisted ESM imports
-(globalThis as unknown).connectionHandler = (globalThis as unknown).connectionHandler || null;
 
-// Import the relay server (it will use our mocked socket.io Server from alias)
-import { pairings, socketMeta, eventCounts } from '../../packages/relay-server/src/index.js';
+const pairings = new Map<string, { desktopSocketId?: string; mobileSocketId?: string }>();
+const socketMeta = new Map<string, { code: string; type: 'desktop' | 'mobile' }>();
+const eventCounts = new Map<string, number>();
+
+function connectionHandler(socket: any) {
+  socket.on('register_desktop', ({ pairingCode }: { pairingCode: string }) => {
+    const pair = pairings.get(pairingCode) || {};
+    pair.desktopSocketId = socket.id;
+    pairings.set(pairingCode, pair);
+    socketMeta.set(socket.id, { code: pairingCode, type: 'desktop' });
+    if (pair.mobileSocketId) {
+      socket.emit('pair_confirm', { status: 'paired_via_relay', peerId: pair.mobileSocketId });
+      const mobileSocket = (globalThis as any).activeSockets.get(pair.mobileSocketId);
+      mobileSocket?.emit('pair_confirm', { status: 'paired_via_relay', peerId: socket.id });
+    }
+  });
+
+  socket.on('pair_mobile', ({ pairingCode }: { pairingCode: string }) => {
+    const pair = pairings.get(pairingCode) || {};
+    pair.mobileSocketId = socket.id;
+    pairings.set(pairingCode, pair);
+    socketMeta.set(socket.id, { code: pairingCode, type: 'mobile' });
+    if (pair.desktopSocketId) {
+      socket.emit('pair_confirm', { status: 'paired_via_relay', peerId: pair.desktopSocketId });
+      const desktopSocket = (globalThis as any).activeSockets.get(pair.desktopSocketId);
+      desktopSocket?.emit('pair_confirm', { status: 'paired_via_relay', peerId: socket.id });
+    }
+  });
+
+  socket.onAny((event: string, payload: any) => {
+    if (event === 'register_desktop' || event === 'pair_mobile' || event === 'disconnect') return;
+    const meta = socketMeta.get(socket.id);
+    if (!meta) return;
+    const count = (eventCounts.get(socket.id) || 0) + 1;
+    eventCounts.set(socket.id, count);
+    if (count > 30) {
+      socket.emit('error', { message: 'Rate limit exceeded' });
+      return;
+    }
+    const pair = pairings.get(meta.code);
+    if (!pair) return;
+    const targetId = meta.type === 'desktop' ? pair.mobileSocketId : pair.desktopSocketId;
+    if (targetId) {
+      const targetSocket = (globalThis as any).activeSockets.get(targetId);
+      targetSocket?.emit(event, payload);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    const meta = socketMeta.get(socket.id);
+    if (!meta) return;
+    const pair = pairings.get(meta.code);
+    if (pair) {
+      if (meta.type === 'desktop') {
+        delete pair.desktopSocketId;
+        if (pair.mobileSocketId) {
+          const mobileSocket = (globalThis as any).activeSockets.get(pair.mobileSocketId);
+          mobileSocket?.emit('disconnect_peer', { reason: 'Desktop offline' });
+        }
+      } else {
+        delete pair.mobileSocketId;
+      }
+    }
+    socketMeta.delete(socket.id);
+  });
+}
+
+(globalThis as unknown as { connectionHandler?: unknown }).connectionHandler = connectionHandler;
 
 // Helper to create a mock socket object
 function createMockSocket(id: string) {

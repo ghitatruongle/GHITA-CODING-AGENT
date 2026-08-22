@@ -32,6 +32,8 @@ export interface ConsolidationConfig {
   autoSchedule: boolean;
   /** Interval in ms between automatic consolidation runs (default: 3600000 = 1h). */
   intervalMs: number;
+  /** Base stability in days for Ebbinghaus decay (default: 7 days). */
+  baseStabilityDays?: number;
 }
 
 export const DEFAULT_CONSOLIDATION_CONFIG: ConsolidationConfig = {
@@ -41,7 +43,23 @@ export const DEFAULT_CONSOLIDATION_CONFIG: ConsolidationConfig = {
   minPatternFrequency: 2,
   autoSchedule: false,
   intervalMs: 3600000,
+  baseStabilityDays: 7,
 };
+
+/**
+ * Calculate Ebbinghaus memory retention score: R = e^(-Δt / S)
+ * where Δt is elapsed time in days, S is memory stability (scaled by frequency).
+ */
+export function calculateEbbinghausRetention(
+  lastObserved: number,
+  frequency: number,
+  baseStabilityDays = 7,
+): number {
+  const elapsedMs = Math.max(0, Date.now() - lastObserved);
+  const elapsedDays = elapsedMs / (24 * 60 * 60 * 1000);
+  const stability = baseStabilityDays * (1 + Math.log2(Math.max(1, frequency)));
+  return Math.exp(-elapsedDays / stability);
+}
 
 // ---------------------------------------------------------------------------
 // DreamLock: prevents concurrent consolidation runs
@@ -148,34 +166,45 @@ export class ConsolidationEngine {
     this.proceduralStore.set(entry.id, entry);
   }
 
-  /** Query episodic entries by keyword. */
+  /** Query episodic entries by keyword, scored by relevance and Ebbinghaus decay. */
   queryEpisodic(keyword: string): EpisodicEntry[] {
     const lower = keyword.toLowerCase();
-    const results: EpisodicEntry[] = [];
+    const results: Array<{ entry: EpisodicEntry; score: number }> = [];
     for (const entry of this.episodicStore.values()) {
-      if (
-        entry.summary.toLowerCase().includes(lower) ||
-        entry.keyFacts.some((f) => f.toLowerCase().includes(lower))
-      ) {
-        results.push(entry);
+      const matchesSummary = entry.summary.toLowerCase().includes(lower);
+      const matchesFacts = entry.keyFacts.some((f) => f.toLowerCase().includes(lower));
+      if (matchesSummary || matchesFacts) {
+        const retention = calculateEbbinghausRetention(
+          entry.timestamp,
+          1,
+          this.config.baseStabilityDays,
+        );
+        const matchStrength = matchesSummary && matchesFacts ? 1.0 : 0.7;
+        results.push({ entry, score: matchStrength * retention });
       }
     }
-    return results.sort((a, b) => b.timestamp - a.timestamp);
+    return results.sort((a, b) => b.score - a.score).map((r) => r.entry);
   }
 
-  /** Query procedural entries by pattern keyword. */
+  /** Query procedural entries by pattern keyword, scored by frequency, confidence and decay. */
   queryProcedural(keyword: string): ProceduralEntry[] {
     const lower = keyword.toLowerCase();
-    const results: ProceduralEntry[] = [];
+    const results: Array<{ entry: ProceduralEntry; score: number }> = [];
     for (const entry of this.proceduralStore.values()) {
       if (
         entry.pattern.toLowerCase().includes(lower) ||
         entry.description.toLowerCase().includes(lower)
       ) {
-        results.push(entry);
+        const retention = calculateEbbinghausRetention(
+          entry.lastObserved,
+          entry.frequency,
+          this.config.baseStabilityDays,
+        );
+        const score = entry.confidence * (1 + Math.log10(entry.frequency)) * retention;
+        results.push({ entry, score });
       }
     }
-    return results.sort((a, b) => b.frequency - a.frequency);
+    return results.sort((a, b) => b.score - a.score).map((r) => r.entry);
   }
 
   listEpisodic(): EpisodicEntry[] {
@@ -206,7 +235,6 @@ export class ConsolidationEngine {
     }
 
     try {
-      // Check stale lock (5 minute timeout)
       if (this.lock.isStale(5 * 60 * 1000)) {
         this.lock.forceRelease();
         this.lock.tryAcquire(holderId);
@@ -217,7 +245,6 @@ export class ConsolidationEngine {
       let proceduralCreated = 0;
       let proceduralUpdated = 0;
 
-      // Group entries by session
       const bySession = new Map<string, typeof entries>();
       for (const entry of entries) {
         const sid = entry.sessionId ?? 'default';
@@ -229,13 +256,11 @@ export class ConsolidationEngine {
         }
       }
 
-      // Create episodic summaries for each session group
       for (const [sessionId, sessionEntries] of bySession) {
         if (sessionEntries.length < 2) continue;
 
         const existingEpisodic = this.findEpisodicBySession(sessionId);
         if (existingEpisodic) {
-          // Merge: append new facts
           const newFacts = sessionEntries
             .map((e) => e.content.slice(0, 100))
             .filter((f) => !existingEpisodic.keyFacts.includes(f));
@@ -258,7 +283,6 @@ export class ConsolidationEngine {
         }
       }
 
-      // Extract procedural patterns from repeated content
       const patternCounts = new Map<string, number>();
       for (const entry of entries) {
         const pattern = this.extractPattern(entry.content);
@@ -308,7 +332,6 @@ export class ConsolidationEngine {
     }
   }
 
-  /** Start automatic consolidation scheduling. */
   startAutoSchedule(
     entryProvider: () => Array<{
       id: string;
@@ -325,7 +348,6 @@ export class ConsolidationEngine {
     }, this.config.intervalMs);
   }
 
-  /** Stop automatic scheduling. */
   stopAutoSchedule(): void {
     if (this.timerHandle) {
       clearInterval(this.timerHandle);

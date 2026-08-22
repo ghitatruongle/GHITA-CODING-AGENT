@@ -1,28 +1,68 @@
-/* eslint-disable */
-// Shims for Node.js modules in the browser/WebView environment
-
 class MockClass {}
 
+// inspector / diagnostics_channel / worker_threads / zlib / timers shims
+export const Session = MockClass;
+export const open = () => {};
+export const close = () => {};
+export const url = () => '';
+export const waitForDebugger = () => {};
+export const channel = () => ({
+  hasSubscribers: false,
+  publish: () => {},
+  subscribe: () => {},
+  unsubscribe: () => {},
+});
+export const hasSubscribers = () => false;
+export const Worker = MockClass;
+export const isMainThread = true;
+export const parentPort = null;
+export const threadId = 0;
+export const workerData = null;
+export const deflate = () => {};
+export const inflate = () => {};
+export const gzip = () => {};
+export const gunzip = () => {};
+export const setTimeout = globalThis.setTimeout;
+export const clearTimeout = globalThis.clearTimeout;
+export const setInterval = globalThis.setInterval;
+export const clearInterval = globalThis.clearInterval;
+export const setImmediate = (fn: (...args: unknown[]) => void, ...args: unknown[]) =>
+  globalThis.setTimeout(fn, 0, ...args);
+export const clearImmediate = (id: Parameters<typeof globalThis.clearTimeout>[0]) =>
+  globalThis.clearTimeout(id);
+
+// native-bridge shims
+export const loadNative = <T = unknown>(_name: string, fallback?: () => T) => ({
+  native: false,
+  impl: fallback ? fallback() : ({} as T),
+  fallbackReason: 'browser environment',
+});
+export const registerNative = () => {};
+export const unregisterNative = () => {};
+export const addonCandidates = () => [];
+
+type Listener = (...args: unknown[]) => void;
+
 export class EventEmitter {
-  private listeners: Record<string, Function[]> = {};
-  on(event: string, fn: Function) {
+  private listeners: Record<string, Listener[]> = {};
+  on(event: string, fn: Listener) {
     if (!this.listeners[event]) this.listeners[event] = [];
     this.listeners[event].push(fn);
     return this;
   }
-  once(event: string, fn: Function) {
-    const wrapped = (...args: any[]) => {
+  once(event: string, fn: Listener) {
+    const wrapped: Listener = (...args: unknown[]) => {
       this.off(event, wrapped);
       fn(...args);
     };
     return this.on(event, wrapped);
   }
-  off(event: string, fn: Function) {
+  off(event: string, fn: Listener) {
     if (!this.listeners[event]) return this;
     this.listeners[event] = this.listeners[event].filter((f) => f !== fn);
     return this;
   }
-  emit(event: string, ...args: any[]) {
+  emit(event: string, ...args: unknown[]) {
     if (!this.listeners[event]) return false;
     this.listeners[event].forEach((f) => f(...args));
     return true;
@@ -90,14 +130,14 @@ export const dirname = (p: string) => {
     return p.slice(0, 3); // e.g. 'C:\\'
   }
   if (hasWinSep && /^[a-zA-Z]:$/.test(p)) {
-    return p + '\\'; // e.g. 'C:\\'
+    return `${p}\\`; // e.g. 'C:\\'
   }
   const parts = p.split(sep).filter(Boolean);
   if (parts.length <= 1) return sep;
   parts.pop();
   const result = parts.join(sep);
   // Preserve Windows drive letter root
-  if (hasWinSep && /^[a-zA-Z]:$/.test(result)) return result + '\\';
+  if (hasWinSep && /^[a-zA-Z]:$/.test(result)) return `${result}\\`;
   return result;
 };
 export const resolve = (...args: string[]) => {
@@ -207,9 +247,9 @@ export const randomUUID = () =>
         } else {
           for (let i = 0; i < bytes.length; i++) bytes[i] = (Math.random() * 256) | 0;
         }
-        bytes[6] = (bytes[6]! & 0x0f) | 0x40;
-        bytes[8] = (bytes[8]! & 0x3f) | 0x80;
-        const hex = Array.from(bytes, (b) => b!.toString(16).padStart(2, '0')).join('');
+        bytes[6] = ((bytes[6] ?? 0) & 0x0f) | 0x40;
+        bytes[8] = ((bytes[8] ?? 0) & 0x3f) | 0x80;
+        const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
         return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
       })();
 export const randomBytes = (size: number) => {
@@ -233,13 +273,13 @@ export const randomBytes = (size: number) => {
     },
   };
 };
-export const timingSafeEqual = (a: any, b: any) => {
+export const timingSafeEqual = (a: Uint8Array | number[], b: Uint8Array | number[]) => {
   // Always iterate the full length to avoid timing leaks
   const len = Math.max(a.length ?? 0, b.length ?? 0);
   let result = (a.length ?? 0) !== (b.length ?? 0) ? 1 : 0;
   for (let i = 0; i < len; i++) {
-    const av = i < (a.length ?? 0) ? a[i] : 0;
-    const bv = i < (b.length ?? 0) ? b[i] : 0;
+    const av = i < (a.length ?? 0) ? (a[i] ?? 0) : 0;
+    const bv = i < (b.length ?? 0) ? (b[i] ?? 0) : 0;
     result |= av ^ bv;
   }
   return result === 0;
@@ -368,6 +408,32 @@ const defaultMock = {
   credentials,
   status,
   Metadata,
+  Session,
+  open,
+  close,
+  url,
+  waitForDebugger,
+  channel,
+  hasSubscribers,
+  Worker,
+  isMainThread,
+  parentPort,
+  threadId,
+  workerData,
+  deflate,
+  inflate,
+  gzip,
+  gunzip,
+  setTimeout,
+  clearTimeout,
+  setInterval,
+  clearInterval,
+  setImmediate,
+  clearImmediate,
+  loadNative,
+  registerNative,
+  unregisterNative,
+  addonCandidates,
 };
 
 export default defaultMock;

@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
+import { OpenAIProvider, AnthropicProvider, OllamaProvider, GroqProvider } from '@ghita/ai-engine';
 
 describe('AI Engine - Providers', () => {
   describe('OpenAIProvider', () => {
-    it('should construct with valid config', async () => {
-      const { OpenAIProvider } = await import('@ghita/ai-engine');
+    it('should construct with valid config', () => {
       const provider = new OpenAIProvider({
         apiKey: 'sk-test-123',
         model: 'gpt-4o',
@@ -12,8 +12,7 @@ describe('AI Engine - Providers', () => {
       expect(provider.defaultModel).toBe('gpt-4o');
     });
 
-    it('should return correct models list', async () => {
-      const { OpenAIProvider } = await import('@ghita/ai-engine');
+    it('should return correct models list', () => {
       const provider = new OpenAIProvider({
         apiKey: 'sk-test-123',
         model: 'gpt-4o',
@@ -23,7 +22,6 @@ describe('AI Engine - Providers', () => {
     });
 
     it('should report not ready without healthy keys', async () => {
-      const { OpenAIProvider } = await import('@ghita/ai-engine');
       const provider = new OpenAIProvider({
         apiKey: 'sk-test-bad',
         model: 'gpt-4o',
@@ -34,7 +32,6 @@ describe('AI Engine - Providers', () => {
     });
 
     it('should report ready with healthy keys', async () => {
-      const { OpenAIProvider } = await import('@ghita/ai-engine');
       const provider = new OpenAIProvider({
         apiKey: 'sk-test-good',
         model: 'gpt-4o',
@@ -46,8 +43,7 @@ describe('AI Engine - Providers', () => {
   });
 
   describe('AnthropicProvider', () => {
-    it('should construct with valid config', async () => {
-      const { AnthropicProvider } = await import('@ghita/ai-engine');
+    it('should construct with valid config', () => {
       const provider = new AnthropicProvider({
         apiKey: 'sk-ant-test',
         model: 'claude-sonnet-4',
@@ -57,20 +53,18 @@ describe('AI Engine - Providers', () => {
   });
 
   describe('OllamaProvider', () => {
-    it('should use base URL from config', async () => {
-      const { OllamaProvider } = await import('@ghita/ai-engine');
+    it('should use base URL from config', () => {
       const provider = new OllamaProvider({
         baseUrl: 'http://localhost:11434',
         model: 'llama3',
       });
       expect(provider.type).toBe('ollama');
-      expect(provider['baseUrl']).toContain('localhost');
+      expect(provider.config.baseUrl).toContain('localhost');
     });
   });
 
   describe('GroqProvider', () => {
-    it('should construct with valid config', async () => {
-      const { GroqProvider } = await import('@ghita/ai-engine');
+    it('should construct with valid config', () => {
       const provider = new GroqProvider({
         apiKey: 'gsk-test',
         model: 'mixtral-8x7b',

@@ -4,7 +4,7 @@ import * as net from 'node:net';
 
 describe('18: Omnichannel Live Telepresence Portal Unit Tests', () => {
   let portal: TelepresencePortal;
-  let currentPort = 8200;
+  let currentPort = 18000 + Math.floor(Math.random() * 10000);
 
   beforeEach(() => {
     vi.restoreAllMocks();

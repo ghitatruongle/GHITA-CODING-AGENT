@@ -76,15 +76,13 @@ describe('E2E: Mobile-Desktop Sync & Consent Gate', () => {
 
   beforeEach(() => {
     server = new MockWebSocketServer();
-    desktopClient = server.addClient('desktop');
-    mobileClient = server.addClient('mobile');
 
     // Simple routing logic to simulate sidecar server behavior
     server.on('connection', (socket: MockWebSocket) => {
       socket.on(SOCKET_EVENTS.REQUIRE_APPROVAL, (data) => {
         // Desktop agent requests approval -> Broadcast to mobile
         for (const [id, client] of server.clients.entries()) {
-          if (id.startsWith('mobile')) {
+          if (id.startsWith('mobile') && client !== socket) {
             client.receive(SOCKET_EVENTS.REQUIRE_APPROVAL, data);
           }
         }
@@ -93,17 +91,20 @@ describe('E2E: Mobile-Desktop Sync & Consent Gate', () => {
       socket.on(SOCKET_EVENTS.APPROVAL_RESPONSE, (data) => {
         // Mobile sends approval response -> Route to desktop
         for (const [id, client] of server.clients.entries()) {
-          if (id.startsWith('desktop')) {
+          if (id.startsWith('desktop') && client !== socket) {
             client.receive(SOCKET_EVENTS.APPROVAL_RESPONSE, data);
           }
         }
       });
-      
-      socket.on(SOCKET_EVENTS.PAIR, (data) => {
-         // Simulate pairing process
-         socket.receive(SOCKET_EVENTS.STATUS, { status: 'paired', deviceId: socket.id });
+
+      socket.on(SOCKET_EVENTS.PAIR, (_data) => {
+        // Simulate pairing process
+        socket.receive(SOCKET_EVENTS.STATUS, { status: 'paired', deviceId: socket.id });
       });
     });
+
+    desktopClient = server.addClient('desktop');
+    mobileClient = server.addClient('mobile');
   });
 
   it('should pair successfully when providing correct PIN', () => {
@@ -113,9 +114,11 @@ describe('E2E: Mobile-Desktop Sync & Consent Gate', () => {
     // Client emits to server
     mobileClient.emit(SOCKET_EVENTS.PAIR, { code: '123456', deviceName: 'Samsung S24' });
 
-    expect(statusHandler).toHaveBeenCalledWith(expect.objectContaining({
-      status: 'paired'
-    }));
+    expect(statusHandler).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'paired',
+      }),
+    );
   });
 
   it('should successfully route consent gate requests from Desktop to Mobile', () => {
@@ -124,7 +127,7 @@ describe('E2E: Mobile-Desktop Sync & Consent Gate', () => {
 
     const payload = {
       id: 'req_123',
-      command: 'rm -rf /'
+      command: 'rm -rf /',
     };
 
     // Desktop emits to server
@@ -140,7 +143,7 @@ describe('E2E: Mobile-Desktop Sync & Consent Gate', () => {
 
     const responsePayload = {
       id: 'req_123',
-      approved: true
+      approved: true,
     };
 
     // Mobile emits to server
@@ -149,14 +152,14 @@ describe('E2E: Mobile-Desktop Sync & Consent Gate', () => {
     // Desktop should receive the response
     expect(desktopResponseHandler).toHaveBeenCalledWith(responsePayload);
   });
-  
+
   it('should successfully route consent response (Reject) back to Desktop', () => {
     const desktopResponseHandler = vi.fn();
     desktopClient.on(SOCKET_EVENTS.APPROVAL_RESPONSE, desktopResponseHandler);
 
     const responsePayload = {
       id: 'req_123',
-      approved: false
+      approved: false,
     };
 
     // Mobile emits to server

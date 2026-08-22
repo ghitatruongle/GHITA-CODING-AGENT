@@ -76,13 +76,11 @@ jest.mock('../navigation/types', () => ({}));
 describe('PairingScreen module', () => {
   it('loads without throwing', () => {
     expect(() => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       void require('../screens/PairingScreen');
     }).not.toThrow();
   });
 
   it('exports a PairingScreen component', () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const mod = require('../screens/PairingScreen');
     expect(typeof mod.PairingScreen).toBe('function');
   });

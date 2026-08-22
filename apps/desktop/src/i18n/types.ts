@@ -176,6 +176,11 @@ export interface TranslationKeys {
     quickFileSelect: string;
     quickFileClose: string;
     quickFileOpen: string;
+    files: string;
+    outline: string;
+    words: string;
+    lines: string;
+    plainText: string;
   };
   devices: {
     title: string;

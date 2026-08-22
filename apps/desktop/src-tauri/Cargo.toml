@@ -1,13 +1,13 @@
 [package]
 name = "ghita-coding-agent"
-version = "1.1.5-beta1"
+version = "1.1.5-beta2"
 description = "GHITA CODING AGENT Desktop"
 authors = ["ghitatruongle"]
 edition = "2021"
 
 [lib]
 name = "ghita_coding_agent_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
+crate-type = ["staticlib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

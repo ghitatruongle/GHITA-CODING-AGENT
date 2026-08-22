@@ -19,6 +19,9 @@ pub struct Chunk {
 
 /// Split markdown by headings (## level). Each chunk starts at a heading.
 pub fn split_markdown(text: &str, max_chunk_size: usize) -> Vec<Chunk> {
+    if text.is_empty() {
+        return Vec::new();
+    }
     let mut chunks = Vec::new();
     let mut current_start = 0usize;
     let mut current_text = String::new();
@@ -30,15 +33,16 @@ pub fn split_markdown(text: &str, max_chunk_size: usize) -> Vec<Chunk> {
         if is_heading && !current_text.is_empty() {
             // Flush previous chunk
             if current_text.len() > max_chunk_size {
-                // Split oversized chunk further
                 for sub in fixed_split(&current_text, max_chunk_size) {
+                    let sub_len = sub.len();
                     chunks.push(Chunk {
                         id,
                         text: sub,
                         start_offset: current_start,
-                        end_offset: current_start + current_text.len(),
+                        end_offset: current_start + sub_len,
                     });
                     id += 1;
+                    current_start += sub_len;
                 }
             } else {
                 chunks.push(Chunk {
@@ -48,8 +52,8 @@ pub fn split_markdown(text: &str, max_chunk_size: usize) -> Vec<Chunk> {
                     end_offset: current_start + current_text.len(),
                 });
                 id += 1;
+                current_start += current_text.len();
             }
-            current_start += current_text.len();
             current_text.clear();
         }
 
@@ -63,13 +67,15 @@ pub fn split_markdown(text: &str, max_chunk_size: usize) -> Vec<Chunk> {
     if !current_text.is_empty() {
         if current_text.len() > max_chunk_size {
             for sub in fixed_split(&current_text, max_chunk_size) {
+                let sub_len = sub.len();
                 chunks.push(Chunk {
                     id,
                     text: sub,
                     start_offset: current_start,
-                    end_offset: current_start + current_text.len(),
+                    end_offset: current_start + sub_len,
                 });
                 id += 1;
+                current_start += sub_len;
             }
         } else {
             chunks.push(Chunk {
@@ -87,6 +93,9 @@ pub fn split_markdown(text: &str, max_chunk_size: usize) -> Vec<Chunk> {
 /// Split code by function/class boundaries (heuristic: lines starting with
 /// common declaration keywords or closing braces followed by blank lines).
 pub fn split_code(text: &str, max_chunk_size: usize) -> Vec<Chunk> {
+    if text.is_empty() {
+        return Vec::new();
+    }
     let mut chunks = Vec::new();
     let mut current_start = 0usize;
     let mut current_text = String::new();
@@ -103,7 +112,7 @@ pub fn split_code(text: &str, max_chunk_size: usize) -> Vec<Chunk> {
             || trimmed.starts_with("async fn ")
             || trimmed.starts_with("impl ");
 
-        if is_boundary && !current_text.is_empty() && current_text.len() >= max_chunk_size / 2 {
+        if is_boundary && !current_text.is_empty() {
             chunks.push(Chunk {
                 id,
                 text: current_text.clone(),
@@ -146,8 +155,11 @@ pub fn split_code(text: &str, max_chunk_size: usize) -> Vec<Chunk> {
     chunks
 }
 
-/// Fixed-size splitting with overlap for plain text.
+/// Split text into fixed-size chunks with configurable overlap.
 pub fn split_fixed(text: &str, chunk_size: usize, overlap: usize) -> Vec<Chunk> {
+    if text.is_empty() || chunk_size == 0 {
+        return Vec::new();
+    }
     let mut chunks = Vec::new();
     let mut id = 0u32;
     let mut start = 0usize;
@@ -162,7 +174,8 @@ pub fn split_fixed(text: &str, chunk_size: usize, overlap: usize) -> Vec<Chunk> 
             end_offset: end,
         });
         id += 1;
-        start += chunk_size - overlap.min(chunk_size);
+        let step = if chunk_size > overlap { chunk_size - overlap } else { 1 };
+        start += step;
         if start >= text.len() { break; }
     }
 
@@ -212,9 +225,9 @@ mod tests {
     fn fixed_split_with_overlap() {
         let text = "abcdefghij";
         let chunks = split_fixed(text, 5, 2);
-        assert_eq!(chunks.len(), 4); // [abcde, cdefg, efghi, ghij]
+        assert_eq!(chunks.len(), 4); // [abcde, defgh, ghi, j]
         assert_eq!(chunks[0].text, "abcde");
-        assert_eq!(chunks[1].text, "cdefg");
+        assert_eq!(chunks[1].text, "defgh");
     }
 
     #[test]
@@ -231,8 +244,8 @@ mod tests {
         assert_eq!(chunks[0].start_offset, 0);
         assert_eq!(chunks[0].end_offset, 5);
         assert_eq!(chunks[1].start_offset, 5);
-        assert_eq!(chunks[1].end_offset, 11);
+        assert_eq!(chunks[1].end_offset, 10);
+        assert_eq!(chunks[2].start_offset, 10);
+        assert_eq!(chunks[2].end_offset, 11);
     }
 }
-
-</parameter>

@@ -1,10 +1,9 @@
 // ==============================================================================
-// GHITA CODING AGENT - Native addon bridge (v1.1.0 Track 8 A2)
+// GHITA CODING AGENT - Native addon bridge (v1.1.5-beta2)
 // ==============================================================================
 // Native-first with JS fallback: `loadNative(name)` resolves a compiled napi
-// addon (crates/<name>/target/release/index.node, or a caller-registered
-// addon), returning the JS fallback when the addon is not built. Mirrors the
-// `memory/semantic/rustAddon.ts` pattern across all Track 8 modules.
+// addon (crates/<name>/target/release/index.node, production resource paths,
+// or a caller-registered addon), returning the JS fallback when unavailable.
 // ==============================================================================
 
 import { existsSync, readdirSync } from 'node:fs';
@@ -50,21 +49,36 @@ export function unregisterNative(name: string): void {
   registered.delete(name);
 }
 
-/** Candidate addon paths for a crate (incl. platform-named *.node outputs). */
+/** Candidate addon paths for a crate (incl. platform-named *.node outputs and production resources). */
 export function addonCandidates(name: string): string[] {
   const candidates = [
     join(repoRoot, 'crates', name, 'target', 'release', 'index.node'),
     join(repoRoot, 'crates', name, 'index.node'),
     join(repoRoot, 'crates', name, 'target', 'debug', 'index.node'),
+    join(repoRoot, 'apps', 'desktop', 'src-tauri', 'binaries', `${name}.node`),
+    join(repoRoot, 'dist', 'binaries', `${name}.node`),
   ];
+
+  // In packaged Tauri / Electron environments
+  if (
+    typeof process !== 'undefined' &&
+    (process as unknown as { resourcesPath?: string }).resourcesPath
+  ) {
+    const resPath = (process as unknown as { resourcesPath: string }).resourcesPath;
+    candidates.push(join(resPath, 'binaries', `${name}.node`));
+    candidates.push(join(resPath, `${name}.node`));
+  }
+
   // Any *.node emitted directly in the crate dir (e.g. secscan.win32-x64-gnu.node).
   for (const dir of [
     join(repoRoot, 'crates', name),
     join(repoRoot, 'crates', name, 'target', 'release'),
   ]) {
     try {
-      for (const file of readdirSync(dir)) {
-        if (file.endsWith('.node')) candidates.push(join(dir, file));
+      if (existsSync(dir)) {
+        for (const file of readdirSync(dir)) {
+          if (file.endsWith('.node')) candidates.push(join(dir, file));
+        }
       }
     } catch {
       // dir missing — skip
@@ -104,4 +118,4 @@ export function isAddonBuilt(name: string): boolean {
   return addonCandidates(name).some((c) => existsSync(c));
 }
 
-export const NATIVE_BRIDGE_VERSION = '1.1.5-beta1';
+export const NATIVE_BRIDGE_VERSION = '1.1.5-beta2';

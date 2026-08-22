@@ -1,9 +1,11 @@
 // ==============================================================================
-// GHITA CODING AGENT - @ghita/ingest splitters (P66)
+// GHITA CODING AGENT - @ghita/ingest splitters (v1.1.5-beta2)
 // ==============================================================================
 // Fixed-size, markdown-heading, code-line and recursive splitters with overlap.
+// Uses native Rust addon (crates/retrieval) when available, falls back to JS.
 // ==============================================================================
 
+import { loadNative } from '@ghita/native-bridge';
 import type { Chunk, ChunkingOptions, IngestDocument } from './types.js';
 import { contentHash } from './loaders.js';
 
@@ -11,6 +13,19 @@ export interface ChunkMeta {
   heading?: string;
   language?: string;
 }
+
+interface RetrievalNative {
+  splitMarkdownNative(text: string, maxChunkSize?: number): Array<{ id: number; text: string }>;
+  splitCodeNative(text: string, maxChunkSize?: number): Array<{ id: number; text: string }>;
+  splitFixedNative(
+    text: string,
+    chunkSize?: number,
+    overlap?: number,
+  ): Array<{ id: number; text: string }>;
+}
+
+const retrievalBridge = () =>
+  loadNative<RetrievalNative>('retrieval', undefined as unknown as RetrievalNative);
 
 function estimateTokens(text: string): number {
   return Math.max(1, Math.round(text.length / 4));
@@ -22,6 +37,20 @@ function chunkId(docPath: string, index: number): string {
 
 /** Split text into fixed-size windows with overlap. */
 export function splitFixed(text: string, options: ChunkingOptions = {}): string[] {
+  const bridge = retrievalBridge();
+  if (bridge.native && typeof bridge.impl?.splitFixedNative === 'function') {
+    try {
+      const nativeChunks = bridge.impl.splitFixedNative(
+        text,
+        options.chunkSize ?? 1200,
+        options.overlap ?? 100,
+      );
+      return nativeChunks.map((c) => c.text).filter((p) => p.trim().length > 0);
+    } catch {
+      // fallback
+    }
+  }
+
   const chunkSize = options.chunkSize ?? 1200;
   const overlap = Math.min(options.overlap ?? 100, Math.floor(chunkSize / 2));
   const parts: string[] = [];
@@ -37,6 +66,18 @@ export function splitFixed(text: string, options: ChunkingOptions = {}): string[
 
 /** Split markdown by headings (H1-H3), falling back to fixed windows. */
 export function splitMarkdown(text: string, options: ChunkingOptions = {}): string[] {
+  const bridge = retrievalBridge();
+  if (bridge.native && typeof bridge.impl?.splitMarkdownNative === 'function') {
+    try {
+      const nativeChunks = bridge.impl.splitMarkdownNative(text, options.chunkSize ?? 1200);
+      if (nativeChunks.length > 0) {
+        return nativeChunks.map((c) => c.text).filter((p) => p.trim().length > 0);
+      }
+    } catch {
+      // fallback
+    }
+  }
+
   const lines = text.split('\n');
   const sections: Array<{ heading?: string; body: string[] }> = [];
   let current: { heading?: string; body: string[] } = { body: [] };

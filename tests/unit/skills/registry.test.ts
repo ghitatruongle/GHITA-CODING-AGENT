@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
+import { SkillRegistry } from '@ghita/skills';
 
 describe('Skills - Registry', () => {
-  it('should register and retrieve a skill', async () => {
-    const { SkillRegistry } = await import('@ghita/skills');
+  it('should register and retrieve a skill', () => {
     const registry = new SkillRegistry();
     const testSkill = {
       id: 'test-skill',
@@ -18,8 +18,7 @@ describe('Skills - Registry', () => {
     expect(registry.list()).toHaveLength(1);
   });
 
-  it('should not register duplicate skills', async () => {
-    const { SkillRegistry } = await import('@ghita/skills');
+  it('should not register duplicate skills', () => {
     const registry = new SkillRegistry();
     const skill = {
       id: 'dup',
@@ -34,8 +33,7 @@ describe('Skills - Registry', () => {
     expect(() => registry.register(skill)).toThrow('already registered');
   });
 
-  it('should create session-scoped fork', async () => {
-    const { SkillRegistry } = await import('@ghita/skills');
+  it('should create session-scoped fork', () => {
     const registry = new SkillRegistry();
     registry.register({
       id: 'skill-a',
@@ -54,8 +52,7 @@ describe('Skills - Registry', () => {
     expect(registry.get('skill-a')?.enabled).toBe(true);
   });
 
-  it('should list skills sorted by category order', async () => {
-    const { SkillRegistry } = await import('@ghita/skills');
+  it('should list skills sorted by category order', () => {
     const registry = new SkillRegistry();
     registry.register({
       id: 'screenshot-skill',
@@ -83,7 +80,6 @@ describe('Skills - Registry', () => {
   });
 
   it('should run a skill and return result', async () => {
-    const { SkillRegistry } = await import('@ghita/skills');
     const registry = new SkillRegistry();
     registry.register({
       id: 'hello',
@@ -100,7 +96,6 @@ describe('Skills - Registry', () => {
   });
 
   it('should not run disabled skills', async () => {
-    const { SkillRegistry } = await import('@ghita/skills');
     const registry = new SkillRegistry();
     registry.register({
       id: 'disabled-skill',
@@ -117,7 +112,6 @@ describe('Skills - Registry', () => {
   });
 
   it('should return error for unknown skill', async () => {
-    const { SkillRegistry } = await import('@ghita/skills');
     const registry = new SkillRegistry();
     const result = await registry.run('nonexistent');
     expect(result.success).toBe(false);
@@ -125,10 +119,9 @@ describe('Skills - Registry', () => {
   });
 
   it('should call onSkillComplete adapter after run', async () => {
-    const { SkillRegistry } = await import('@ghita/skills');
     let called = false;
     const registry = new SkillRegistry({
-      onSkillComplete: async (id) => {
+      onSkillComplete: async () => {
         called = true;
       },
     });
@@ -145,8 +138,7 @@ describe('Skills - Registry', () => {
     expect(called).toBe(true);
   });
 
-  it('should subscribe to registry changes', async () => {
-    const { SkillRegistry } = await import('@ghita/skills');
+  it('should subscribe to registry changes', () => {
     const registry = new SkillRegistry();
     let snapshotCount = 0;
     registry.subscribe(() => {
@@ -165,8 +157,7 @@ describe('Skills - Registry', () => {
     expect(snapshotCount).toBeGreaterThanOrEqual(1);
   });
 
-  it('should unregister a skill', async () => {
-    const { SkillRegistry } = await import('@ghita/skills');
+  it('should unregister a skill', () => {
     const registry = new SkillRegistry();
     registry.register({
       id: 'to-remove',
@@ -182,8 +173,7 @@ describe('Skills - Registry', () => {
     expect(registry.list()).toHaveLength(0);
   });
 
-  it('should provide snapshot stats', async () => {
-    const { SkillRegistry } = await import('@ghita/skills');
+  it('should provide snapshot stats', () => {
     const registry = new SkillRegistry();
     const snap = registry.snapshot();
     expect(snap.total).toBe(0);

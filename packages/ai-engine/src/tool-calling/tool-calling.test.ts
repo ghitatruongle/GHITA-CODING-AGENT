@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { parseToolArguments, repairToolCallArguments, isRetryableRepair } from './repair.js';
+import {
+  parseToolArguments,
+  repairToolCallArguments,
+  isRetryableRepair,
+  repairIncompleteJson,
+  accumulateToolStream,
+} from './repair.js';
 import { ToolApprovalManager, canExecute } from './approvals.js';
 
 describe('parseToolArguments', () => {
@@ -122,5 +128,45 @@ describe('ToolApprovalManager', () => {
     setTimeout(() => manager.approve(req.call.id, 'test'), 20);
     const decided = await manager.awaitDecision(req.call.id);
     expect(decided.state).toBe('approved');
+  });
+});
+
+describe('repairIncompleteJson & accumulateToolStream', () => {
+  it('repairs truncated and unclosed json strings and objects', () => {
+    const broken = '{"targetFile": "/src/main.ts", "instruction": "Add logger';
+    const fixed = repairIncompleteJson(broken);
+    const parsed = JSON.parse(fixed);
+    expect(parsed.targetFile).toBe('/src/main.ts');
+    expect(parsed.instruction).toBe('Add logger');
+  });
+
+  it('repairs nested arrays and objects with trailing commas', () => {
+    const broken = '{"items": [{"id": 1}, {"id": 2,';
+    const fixed = repairIncompleteJson(broken);
+    const parsed = JSON.parse(fixed);
+    expect(parsed.items).toHaveLength(2);
+    expect(parsed.items[0].id).toBe(1);
+    expect(parsed.items[1].id).toBe(2);
+  });
+
+  it('accumulates stream chunks and returns valid repair result', async () => {
+    async function* makeStream() {
+      yield '{"path":';
+      yield ' "index.ts", "content": "console.log';
+      yield "('hello')\";}";
+    }
+
+    const schema = {
+      type: 'object' as const,
+      properties: {
+        path: { type: 'string' },
+        content: { type: 'string' },
+      },
+      required: ['path'],
+    };
+
+    const res = await accumulateToolStream(makeStream(), schema);
+    expect(res.args.path).toBe('index.ts');
+    expect(res.args.content).toContain('hello');
   });
 });

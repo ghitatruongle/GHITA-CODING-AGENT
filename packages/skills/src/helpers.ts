@@ -9,7 +9,7 @@ import type { SkillResult } from '@ghita/shared';
 
 /** Create a successful skill result. */
 export function ok(output: string, data?: unknown): SkillResult {
-  return { success: true, output, data };
+  return { success: true, output, data: data !== undefined ? data : output };
 }
 
 /** Create a failed skill result. */
@@ -32,7 +32,12 @@ export function readNumber(
   key: string,
 ): number | undefined {
   const value = input?.[key];
-  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim().length > 0) {
+    const num = Number(value);
+    if (Number.isFinite(num)) return num;
+  }
+  return undefined;
 }
 
 /** Read a string array from a parameter map. */
@@ -52,33 +57,27 @@ export function readBoolean(
   key: string,
 ): boolean | undefined {
   const value = input?.[key];
-  return typeof value === 'boolean' ? value : undefined;
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    const lower = value.trim().toLowerCase();
+    if (lower === 'true' || lower === '1') return true;
+    if (lower === 'false' || lower === '0') return false;
+  }
+  return undefined;
 }
 
 /** Escape a shell argument for safe command-line usage. */
 export function escapeShellArg(arg: string): string {
-  if (process.platform === 'win32') {
-    // Windows CMD: escape special characters & | ^ % ( ) < > ! and double quotes
-    // Also escape backslashes before quotes
-    const escaped = arg
-      .replace(/\\/g, '\\\\') // Backslashes first
-      .replace(/"/g, '""') // Double quotes
-      .replace(/&/g, '^&') // Ampersand
-      .replace(/\|/g, '^|') // Pipe
-      .replace(/\^/g, '^^') // Caret (must be before other escapes)
-      .replace(/%/g, '%%') // Percent
-      .replace(/\(/g, '^(') // Open paren
-      .replace(/\)/g, '^)') // Close paren
-      .replace(/</g, '^<') // Less than
-      .replace(/>/g, '^>') // Greater than
-      .replace(/!/g, '^!'); // Exclamation (for delayed expansion)
-    return `"${escaped}"`;
-  }
-  return `'${arg.replace(/'/g, "'\\''")}'`;
+  if (!arg) return "''";
+  // Strip backtick subcommands and $() subcommands for safety
+  const sanitized = arg.replace(/`[^`]*`/g, '').replace(/\$\([^)]*\)/g, '');
+  // Wrap in single quotes, escaping any internal single quotes
+  return `'${sanitized.replace(/'/g, "'\\''")}'`;
 }
 
 /** Escape a string for safe usage in PowerShell commands. */
 export function escapePowerShellString(arg: string): string {
+  if (!arg) return "''";
   return `'${arg.replace(/'/g, "''")}'`;
 }
 

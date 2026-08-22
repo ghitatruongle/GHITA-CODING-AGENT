@@ -1,0 +1,107 @@
+{
+  "$schema_comment": "Bootstrap floors for v0.1.5 landing. Raise only after measured coverage exceeds the new floor.",
+  "version": "1.1.0",
+  "shipTargets": {
+    "packages/security": 80,
+    "packages/agents": 58,
+    "packages/communication": 51,
+    "packages/ai-engine": 60,
+    "packages/memory": 50,
+    "packages/skills": 55
+  },
+  "tiers": {
+    "T0": {
+      "description": "Critical security and orchestration surface",
+      "packages": {
+        "packages/security": {
+          "lines": 80,
+          "branches": 75
+        },
+        "packages/agents": {
+          "lines": 58,
+          "branches": 65
+        },
+        "packages/communication": {
+          "lines": 51,
+          "branches": 65
+        }
+      }
+    },
+    "T1": {
+      "description": "Core product brain",
+      "packages": {
+        "packages/ai-engine": {
+          "lines": 60,
+          "branches": 70
+        },
+        "packages/memory": {
+          "lines": 50,
+          "branches": 60
+        },
+        "packages/skills": {
+          "lines": 55,
+          "branches": 60
+        }
+      }
+    },
+    "T2": {
+      "description": "Product runtime",
+      "packages": {
+        "packages/computer-use": {
+          "lines": 35
+        },
+        "packages/browser-control": {
+          "lines": 40
+        },
+        "packages/shared": {
+          "lines": 30
+        }
+      }
+    },
+    "T3": {
+      "description": "Satellite / incubating packages",
+      "defaultLines": 30,
+      "packages": {
+        "packages/a11y": {
+          "lines": 30
+        },
+        "packages/code-graph": {
+          "lines": 30
+        },
+        "packages/gui": {
+          "lines": 30
+        },
+        "packages/i18n": {
+          "lines": 30
+        },
+        "packages/integration": {
+          "lines": 30
+        },
+        "packages/marketplace": {
+          "lines": 30
+        },
+        "packages/migration": {
+          "lines": 30
+        },
+        "packages/mobile-companion": {
+          "lines": 30
+        },
+        "packages/monitoring": {
+          "lines": 30
+        },
+        "packages/notification": {
+          "lines": 30
+        },
+        "packages/quotas": {
+          "lines": 30
+        },
+        "packages/relay-server": {
+          "lines": 30
+        },
+        "packages/voice": {
+          "lines": 30
+        }
+      }
+    }
+  }
+}

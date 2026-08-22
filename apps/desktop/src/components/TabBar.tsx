@@ -35,15 +35,13 @@ export function TabBar() {
       style={{
         display: 'flex',
         alignItems: 'center',
-        height: 'var(--tabbar-height)',
-        background: 'var(--bg-secondary)',
-        borderBottom: '1px solid var(--border-subtle)',
+        height: 'var(--tabbar-height, 40px)',
         paddingLeft: '8px',
+        paddingRight: '8px',
         gap: '2px',
-        flexShrink: 0,
         userSelect: 'none',
-        overflowX: 'auto',
-        overflowY: 'hidden',
+        width: 'max-content',
+        minWidth: '100%',
       }}
     >
       {TABS.map((tab) => {

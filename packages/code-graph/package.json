@@ -1,6 +1,6 @@
 {
   "name": "@ghita/code-graph",
-  "version": "1.1.5-beta1",
+  "version": "1.1.5-beta2",
   "private": true,
   "sideEffects": false,
   "description": "Code Knowledge Graph — AST parsing, dependency graph, symbol search",

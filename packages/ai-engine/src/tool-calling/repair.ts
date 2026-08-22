@@ -48,10 +48,11 @@ export function parseToolArguments(raw: unknown): {
     issues.push('invalid JSON');
   }
 
-  // 2. Lightweight fixes: strip markdown fences, trailing commas, unquoted keys.
+  // 2. Lightweight fixes: strip markdown fences, trailing commas/semicolons, unquoted keys.
   const fixed = text
     .replace(/^```(?:json)?\s*|\s*```$/g, '')
-    .replace(/,(\s*[}\]])/g, '$1')
+    .replace(/[;,](\s*[}\]])/g, '$1')
+    .replace(/;\s*(?=")/g, ',')
     .replace(/([{,]\s*)([A-Za-z_$][\w$]*)(\s*:)/g, '$1"$2"$3');
   try {
     const parsed = JSON.parse(fixed) as unknown;
@@ -132,4 +133,74 @@ export function isRetryableRepair(result: RepairResult): boolean {
   return !result.issues.some(
     (i) => i.startsWith('repair JSON still invalid') || i.startsWith('arguments parsed but not'),
   );
+}
+
+/**
+ * Auto-closes unclosed JSON strings, arrays, and objects for partial streaming responses.
+ */
+export function repairIncompleteJson(jsonStr: string): string {
+  let s = jsonStr.trim();
+  if (!s) return '{}';
+
+  // Strip leading/trailing markdown fences
+  s = s.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+
+  let inString = false;
+  let escape = false;
+  const stack: string[] = [];
+
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (ch === '\\') {
+      escape = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (!inString) {
+      if (ch === '{') stack.push('}');
+      else if (ch === '[') stack.push(']');
+      else if (ch === '}' || ch === ']') {
+        if (stack.length > 0 && stack[stack.length - 1] === ch) {
+          stack.pop();
+        }
+      }
+    }
+  }
+
+  // If ended inside a string, close it
+  if (inString) {
+    s += '"';
+  }
+
+  // Remove dangling commas before closing brackets
+  s = s.replace(/,\s*$/, '');
+
+  // Close remaining open brackets
+  while (stack.length > 0) {
+    s += stack.pop();
+  }
+
+  return s;
+}
+
+/**
+ * Accumulate streaming string chunks and parse into safe tool call arguments.
+ */
+export async function accumulateToolStream(
+  stream: AsyncIterable<string>,
+  schema?: ToolArgSchema,
+): Promise<RepairResult> {
+  let buffer = '';
+  for await (const chunk of stream) {
+    buffer += chunk;
+  }
+  const repairedJson = repairIncompleteJson(buffer);
+  return repairToolCallArguments(repairedJson, schema);
 }

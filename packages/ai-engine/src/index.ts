@@ -739,3 +739,17 @@ export {
 } from './compact/query-engine.js';
 export { LiteLLMGateway, type ProviderKeyPair } from './gateway/litellm-gateway.js';
 export { ClaudeCodeTerminalLoop, type TerminalFramingConfig } from './claude-code/terminal-loop.js';
+
+// --- Track 4 (v1.1.5-beta2): Multi-Engine AI Pipeline & Adaptive Reasoning ---
+export {
+  AdaptiveReasoningController,
+  type ReasoningBudgetRequest,
+  type ReasoningBudgetResult,
+} from './context/reasoning-budget.js';
+export {
+  MultiEnginePipeline,
+  type PipelineSelectOptions,
+  type PipelineModelSelection,
+  type DynamicFallbackOptions,
+} from './routing/multi-engine-pipeline.js';
+export { repairIncompleteJson, accumulateToolStream } from './tool-calling/repair.js';

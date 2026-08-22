@@ -35,7 +35,7 @@ export const ko: TranslationKeys = {
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v1.1.5-beta1',
+    version: 'v1.1.5-beta2',
     deviceReconnected: '기기에 다시 연결됨: {{name}}',
     devicePaired: '기기 페어링 성공: {{name}}',
     commandReceived: '기기로부터 명령 수신: {{action}}',
@@ -161,6 +161,11 @@ export const ko: TranslationKeys = {
     quickFileSelect: '열기',
     quickFileClose: '닫기',
     quickFileOpen: '열림',
+    files: '파일',
+    outline: '코드 구조',
+    words: '단어 수',
+    lines: '줄',
+    plainText: '일반 텍스트',
   },
   devices: {
     title: '연결된 기기',

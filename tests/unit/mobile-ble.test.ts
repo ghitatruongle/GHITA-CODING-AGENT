@@ -3,8 +3,26 @@ import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import mockBluetoothClassic from './react-native-bluetooth-classic-mock.ts';
 
 // Expose mock for bluetoothService to consume in tests without triggering runtime require
-// @ts-ignore
+// @ts-expect-error Mock bluetooth object attached to globalThis for test env
 globalThis.mockBluetoothClassic = mockBluetoothClassic;
+
+vi.mock('react-native', () => ({
+  Platform: { OS: 'android', select: (objs: any) => objs.android || objs.default },
+  PermissionsAndroid: {
+    PERMISSIONS: {
+      ACCESS_FINE_LOCATION: 'ACCESS_FINE_LOCATION',
+      BLUETOOTH_SCAN: 'BLUETOOTH_SCAN',
+      BLUETOOTH_CONNECT: 'BLUETOOTH_CONNECT',
+    },
+    RESULTS: { GRANTED: 'granted' },
+    request: vi.fn().mockResolvedValue('granted'),
+    requestMultiple: vi.fn().mockResolvedValue({
+      ACCESS_FINE_LOCATION: 'granted',
+      BLUETOOTH_SCAN: 'granted',
+      BLUETOOTH_CONNECT: 'granted',
+    }),
+  },
+}));
 
 vi.mock('socket.io-client', () => {
   return {
@@ -58,7 +76,6 @@ describe('20: Mobile BLE & Socket Transport', () => {
     });
 
     it('should check if bluetooth is available and enabled', async () => {
-      console.log('BLUETOOTH SERVICE MODULE OBJECT:', bluetoothService);
       mockBluetoothClassic.isBluetoothAvailable.mockResolvedValue(true);
       mockBluetoothClassic.isBluetoothEnabled.mockResolvedValue(false);
       expect(await bluetoothService.isAvailable()).toBe(false);

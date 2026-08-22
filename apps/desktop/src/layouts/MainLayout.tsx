@@ -229,7 +229,9 @@ export function MainLayout() {
     const onMouseMove = (e: MouseEvent) => {
       if (!isDragging.current) return;
       const delta = startY.current - e.clientY;
-      setTerminalHeight(startHeight.current + delta);
+      const maxHeight = Math.max(200, Math.floor(window.innerHeight * 0.7));
+      const minHeight = 100;
+      setTerminalHeight(Math.max(minHeight, Math.min(maxHeight, startHeight.current + delta)));
     };
     const onMouseUp = () => {
       isDragging.current = false;
@@ -245,17 +247,17 @@ export function MainLayout() {
   }, [setTerminalHeight]);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-background text-text-primary">
+    <div className="flex flex-col h-screen overflow-hidden bg-background text-text-primary min-w-[320px]">
       {/* Top bar — App title + actions */}
       <motion.div
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
-        className="flex items-center justify-between px-4 h-10 bg-bg-tertiary border-b border-border-subtle shrink-0 shadow-sm z-10"
+        className="flex items-center justify-between px-3 h-10 bg-bg-tertiary border-b border-border-subtle shrink-0 shadow-sm z-10 min-w-0 overflow-hidden"
       >
         {/* Left spacer for Activity Bar alignment */}
         <div className="w-[48px] shrink-0" />
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-2 min-w-0 overflow-hidden">
           <Bot size={18} className="text-accent-primary shrink-0" />
           <span
             style={{
@@ -271,7 +273,7 @@ export function MainLayout() {
             <>
               <span className="text-text-muted text-[10px] select-none shrink-0">/</span>
               <span
-                className="text-xs text-text-muted font-medium truncate max-w-[180px]"
+                className="text-xs text-text-muted font-medium truncate max-w-[160px]"
                 title={terminalCwd}
               >
                 {terminalCwd.split(/[/\\]/).pop()}
@@ -282,13 +284,13 @@ export function MainLayout() {
             {t('app.version')}
           </span>
         </div>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex gap-2 shrink-0 ml-auto pl-2">
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={toggleTerminal}
             title={t('mainLayout.terminal')}
-            className={`flex items-center gap-1.5 px-3 py-1 text-xs rounded-md transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-1 text-xs rounded-md transition-colors shrink-0 ${
               isTerminalOpen
                 ? 'bg-bg-active text-accent-primary'
                 : 'hover:bg-bg-hover text-text-muted'
@@ -301,7 +303,7 @@ export function MainLayout() {
             whileTap={{ scale: 0.95 }}
             onClick={toggleChat}
             title={t('mainLayout.chat')}
-            className={`flex items-center gap-1.5 px-3 py-1 text-xs rounded-md transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-1 text-xs rounded-md transition-colors shrink-0 ${
               isChatOpen ? 'bg-bg-active text-accent-primary' : 'hover:bg-bg-hover text-text-muted'
             }`}
           >
@@ -312,33 +314,53 @@ export function MainLayout() {
 
       {/* Tab Bar + Notification Tray */}
       <div
-        style={{ display: 'flex', alignItems: 'center', minHeight: 'var(--tabbar-height, 40px)' }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          minHeight: 'var(--tabbar-height, 40px)',
+          background: 'var(--bg-secondary)',
+          borderBottom: '1px solid var(--border-subtle)',
+          minWidth: 0,
+          width: '100%',
+          overflow: 'hidden',
+        }}
       >
-        <TabBar />
         <div
-          style={{ marginLeft: 'auto', padding: '0 12px', display: 'flex', alignItems: 'center' }}
+          style={{ flex: 1, minWidth: 0, overflowX: 'auto', overflowY: 'hidden' }}
+          className="custom-scrollbar"
+        >
+          <TabBar />
+        </div>
+        <div
+          style={{
+            marginLeft: 'auto',
+            padding: '0 10px',
+            display: 'flex',
+            alignItems: 'center',
+            flexShrink: 0,
+          }}
         >
           <NotificationTray />
         </div>
       </div>
 
       {/* Main area */}
-      <div className="flex flex-1 min-h-0 relative">
+      <div className="flex flex-1 min-h-0 min-w-0 relative overflow-hidden">
         {/* Activity Bar (left) */}
         <ActivityBar />
 
         {/* Content Area */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
           {/* Active view */}
           <div className="flex-1 min-h-0 overflow-hidden relative">
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-                className="absolute inset-0"
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.15 }}
+                className="absolute inset-0 overflow-hidden"
               >
                 <ActiveView />
               </motion.div>
@@ -352,8 +374,8 @@ export function MainLayout() {
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: terminalHeight, opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                transition={{ type: 'spring', bounce: 0, duration: 0.3 }}
-                className="flex flex-col shrink-0 border-t border-border-subtle bg-bg-secondary"
+                transition={{ type: 'spring', bounce: 0, duration: 0.25 }}
+                className="flex flex-col shrink-0 border-t border-border-subtle bg-bg-secondary min-h-[80px]"
               >
                 {/* Drag handle */}
                 <div

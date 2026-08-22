@@ -1,0 +1,30 @@
+{
+  "GHSA-mh99-v99m-4gvg": {
+    "expires": "2026-09-01",
+    "severity": "high",
+    "reason": "Build-time glob traversal inherited from screenshot-desktop and React Native 0.76 tooling. Inputs are repository-controlled; migrate those parents before expiry.",
+    "allowedPaths": [
+      "apps__desktop>screenshot-desktop>",
+      "apps__mobile>",
+      "packages__communication>screenshot-desktop>"
+    ]
+  },
+  "GHSA-5p4m-2wfm-xmqj": {
+    "expires": "2026-12-31",
+    "severity": "high",
+    "reason": "Build-time / CI-only js-yaml (3.x/4.x) reached via Docusaurus (docs) and React Native CLI tooling (metro, cosmiconfig, babel-plugin-istanbul). Not shipped to end users at runtime; upstream has not backported the CVE-2026-59870 fix for these majors. Revisit when upstream releases a patched 3.x/4.x.",
+    "allowedPaths": ["apps__mobile>", "docs>"]
+  },
+  "GHSA-w3rx-r6r6-pgpr": {
+    "expires": "2026-12-31",
+    "severity": "high",
+    "reason": "Build-time / CI-only image-size ICNS parser (infinite-loop DoS) reached via metro/React Native CLI tooling (apps__mobile) and Docusaurus mdx-loader (docs). Not shipped to end users at runtime; upstream has NOT yet released a patched version (latest 2.0.2 still affected, per GitHub advisory 2026-08-10). Revisit when upstream releases a patched release.",
+    "allowedPaths": ["apps__mobile>", "docs>"]
+  },
+  "GHSA-5p2g-fcmc-qvqq": {
+    "expires": "2026-12-31",
+    "severity": "high",
+    "reason": "Build-time / CI-only image-size JXL/HEIF parser (infinite-loop DoS) reached via metro/React Native CLI tooling (apps__mobile) and Docusaurus mdx-loader (docs). Not shipped to end users at runtime; upstream has NOT yet released a patched version (latest 2.0.2 still affected, per GitHub advisory 2026-08-10). Revisit when upstream releases a patched release.",
+    "allowedPaths": ["apps__mobile>", "docs>"]
+  }
+}

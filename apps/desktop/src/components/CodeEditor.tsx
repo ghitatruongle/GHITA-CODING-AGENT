@@ -12,6 +12,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Editor, { DiffEditor, type OnMount, type DiffOnMount } from '@monaco-editor/react';
 import { useTranslation } from '../i18n';
 import { useAppStore } from '../stores/appStore';
+import { MonacoLspBridge, type Monaco } from '../lib/monacoLsp';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -108,6 +109,8 @@ interface CodeEditorProps {
   showMinimap?: boolean;
   /** Callback when a diagnostic is clicked */
   onDiagnosticClick?: (diagnostic: Diagnostic) => void;
+  /** Callback when editor and monaco instance are ready */
+  onEditorMount?: (editor: unknown, monaco: unknown) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -252,13 +255,13 @@ function CodeEditorInner({
   showProblems = true,
   showMinimap = false,
   onDiagnosticClick,
+  onEditorMount,
 }: CodeEditorProps) {
   const { t } = useTranslation();
 
   const editorRef = useRef<unknown>(null);
   const monacoRef = useRef<unknown>(null);
 
-  // Apply diagnostics as Monaco model markers
   useEffect(() => {
     const monaco = monacoRef.current as {
       editor?: { setModelMarkers: (model: unknown, owner: string, markers: unknown[]) => void };
@@ -283,33 +286,31 @@ function CodeEditorInner({
     }));
 
     monaco.editor.setModelMarkers(model, 'ghita', markers);
-    // P2-4 (deep review pass #2): markers attach to the Monaco model, not to
-    // the `value` prop. Removing `value` from the deps avoids re-running
-    // setModelMarkers on every keystroke.
   }, [diagnostics]);
 
   // Standard editor mount handler
-  const handleMount: OnMount = useCallback((editor, monaco) => {
-    editorRef.current = editor;
-    monacoRef.current = monaco;
-    // P2-3 (deep review pass #2): registers the theme on the first mount,
-    // then setTheme on every mount. See ensureGhitaDarkTheme above.
-    ensureGhitaDarkTheme(monaco);
-
-    // NOTE: Ctrl+S / Ctrl+Shift+S are intentionally NOT registered here.
-    // CodeView owns a single window-level keydown handler for save/save-all;
-    // adding a second Monaco-level binding fired the same handler twice,
-    // producing duplicate toasts and double writes.
-
-    editor.focus();
-  }, []);
+  const handleMount: OnMount = useCallback(
+    (editor, monaco) => {
+      editorRef.current = editor;
+      monacoRef.current = monaco;
+      ensureGhitaDarkTheme(monaco);
+      MonacoLspBridge.registerProviders(monaco as unknown as Monaco);
+      onEditorMount?.(editor, monaco);
+      editor.focus();
+    },
+    [onEditorMount],
+  );
 
   // Diff editor mount handler
-  const handleDiffMount: DiffOnMount = useCallback((diffEditor, monaco) => {
-    editorRef.current = diffEditor;
-    monacoRef.current = monaco;
-    ensureGhitaDarkTheme(monaco);
-  }, []);
+  const handleDiffMount: DiffOnMount = useCallback(
+    (diffEditor, monaco) => {
+      editorRef.current = diffEditor;
+      monacoRef.current = monaco;
+      ensureGhitaDarkTheme(monaco);
+      onEditorMount?.(diffEditor, monaco);
+    },
+    [onEditorMount],
+  );
 
   const isLoading = (
     <div
@@ -401,10 +402,36 @@ function CodeEditorInner({
     };
   }, []);
 
+  const rootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!rootRef.current) return;
+    const ro = new ResizeObserver(() => {
+      if (editorRef.current) {
+        try {
+          (editorRef.current as { layout?: () => void }).layout?.();
+        } catch {
+          // ignore layout errors during unmount/dispose
+        }
+      }
+    });
+    ro.observe(rootRef.current);
+    return () => ro.disconnect();
+  }, []);
+
   // --- Diff View Mode ---
   if (originalValue !== undefined) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div
+        ref={rootRef}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          width: '100%',
+          minHeight: 0,
+          overflow: 'hidden',
+        }}
+      >
         {/* Diff header */}
         <div
           style={{
@@ -416,6 +443,7 @@ function CodeEditorInner({
             borderBottom: '1px solid var(--border-subtle)',
             fontSize: '12px',
             color: 'var(--text-muted)',
+            flexShrink: 0,
           }}
         >
           <span style={{ color: '#ef4444' }}>◀ Original</span>
@@ -426,9 +454,10 @@ function CodeEditorInner({
           </span>
         </div>
 
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minHeight: 0, position: 'relative', overflow: 'hidden' }}>
           <DiffEditor
             height="100%"
+            width="100%"
             language={language}
             original={originalValue}
             modified={value}
@@ -455,10 +484,21 @@ function CodeEditorInner({
 
   // --- Standard Editor Mode ---
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{ flex: 1 }}>
+    <div
+      ref={rootRef}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        width: '100%',
+        minHeight: 0,
+        overflow: 'hidden',
+      }}
+    >
+      <div style={{ flex: 1, minHeight: 0, position: 'relative', overflow: 'hidden' }}>
         <Editor
           height="100%"
+          width="100%"
           language={language}
           value={value}
           onChange={(v) => onChange?.(v ?? '')}
@@ -482,6 +522,8 @@ function CodeEditorInner({
           color: 'var(--text-muted)',
           fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
           userSelect: 'none',
+          flexShrink: 0,
+          height: '22px',
         }}
       >
         <span>
@@ -491,7 +533,7 @@ function CodeEditorInner({
           <span style={{ color: 'var(--accent-primary)' }}>(Sel {cursor.selected})</span>
         )}
         <span style={{ marginLeft: 'auto' }}>
-          {t('codeView.words') || 'Words'}: {wordCount(value)}
+          {t('codeView.words')}: {wordCount(value)}
         </span>
       </div>
 

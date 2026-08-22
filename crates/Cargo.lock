@@ -170,7 +170,7 @@ checksum = "26b73573e6edcd2af0cdf47bd6cb58f0b3839491263c314eaad1ccf24430e1de"
 
 [[package]]
 name = "ghita-codegraph"
-version = "1.1.5-beta1"
+version = "1.1.5-beta2"
 dependencies = [
  "napi",
  "napi-derive",
@@ -183,7 +183,7 @@ dependencies = [
 
 [[package]]
 name = "ghita-docloader"
-version = "1.1.5-beta1"
+version = "1.1.5-beta2"
 dependencies = [
  "napi",
  "napi-derive",
@@ -191,7 +191,7 @@ dependencies = [
 
 [[package]]
 name = "ghita-retrieval"
-version = "1.1.5-beta1"
+version = "1.1.5-beta2"
 dependencies = [
  "napi",
  "napi-derive",
@@ -199,7 +199,7 @@ dependencies = [
 
 [[package]]
 name = "ghita-sandbox"
-version = "1.1.5-beta1"
+version = "1.1.5-beta2"
 dependencies = [
  "napi",
  "napi-derive",
@@ -207,7 +207,7 @@ dependencies = [
 
 [[package]]
 name = "ghita-secscan"
-version = "1.1.5-beta1"
+version = "1.1.5-beta2"
 dependencies = [
  "memchr",
  "napi",
@@ -218,7 +218,7 @@ dependencies = [
 
 [[package]]
 name = "ghita-store"
-version = "1.1.5-beta1"
+version = "1.1.5-beta2"
 dependencies = [
  "napi",
  "napi-derive",
@@ -227,7 +227,7 @@ dependencies = [
 
 [[package]]
 name = "ghita-tokenizer"
-version = "1.1.5-beta1"
+version = "1.1.5-beta2"
 dependencies = [
  "napi",
  "napi-derive",

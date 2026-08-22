@@ -1,13 +1,9 @@
 // ==============================================================================
-// ghita-codegraph — napi bindings (v1.1.0 Track 8 A11; v1.1.1 tree-sitter)
+// ghita-codegraph — napi bindings (v1.1.5-beta2)
 // ==============================================================================
-// PageRank over CSR arrays passed from JS (zero copy into Vec), result as
-// Float32Array; plus `parse_files` — parallel tree-sitter AST extraction
-// mirroring the JS ast-parser.ts contract (symbols/imports/edges).
+// PageRank over CSR arrays, AST extraction, Callers/Callees traversal,
+// Blast Radius computation, and Tarjan Cycle Detection.
 // ==============================================================================
-// Exports here are N-API ABI entry points consumed by the JS addon loader at
-// runtime (see @ghita/native-bridge). Within the crate they are unreferenced,
-// so treat dead-code as expected for this module.
 #![expect(dead_code)]
 
 use napi::bindgen_prelude::*;
@@ -15,7 +11,14 @@ use napi_derive::napi;
 use rayon::prelude::*;
 
 use crate::ast::{parse_file as core_parse_file, FileParse, SymbolInfo};
-use crate::{pagerank as core_pagerank, CsrGraph};
+use crate::{
+  pagerank as core_pagerank,
+  callers as core_callers,
+  callees as core_callees,
+  blast_radius as core_blast_radius,
+  find_cycles as core_find_cycles,
+  CsrGraph,
+};
 
 /// PageRank over CSR edge arrays. `from`/`to` are index-aligned.
 #[napi]
@@ -45,6 +48,91 @@ pub fn pagerank(
   .into()
 }
 
+/// Find callers of a node in CSR graph.
+#[napi]
+pub fn callers(
+  target: u32,
+  from: Uint32Array,
+  to: Uint32Array,
+  max_depth: Option<u32>,
+) -> Uint32Array {
+  let graph = CsrGraph {
+    from: from.to_vec(),
+    to: to.to_vec(),
+    weight: Vec::new(),
+  };
+  let res = core_callers(target, &graph, max_depth.unwrap_or(10) as usize);
+  res.into()
+}
+
+/// Find callees of a node in CSR graph.
+#[napi]
+pub fn callees(
+  source: u32,
+  from: Uint32Array,
+  to: Uint32Array,
+  max_depth: Option<u32>,
+) -> Uint32Array {
+  let graph = CsrGraph {
+    from: from.to_vec(),
+    to: to.to_vec(),
+    weight: Vec::new(),
+  };
+  let res = core_callees(source, &graph, max_depth.unwrap_or(10) as usize);
+  res.into()
+}
+
+#[napi(object)]
+pub struct NapiBlastRadiusResult {
+  pub direct_dependents: Vec<u32>,
+  pub transitive_dependents: Vec<u32>,
+  pub total_impacted_count: u32,
+  pub impact_score: f64,
+}
+
+/// Compute blast radius of modified nodes.
+#[napi]
+pub fn blast_radius(
+  modified: Vec<u32>,
+  from: Uint32Array,
+  to: Uint32Array,
+  total_nodes: u32,
+  max_depth: Option<u32>,
+) -> NapiBlastRadiusResult {
+  let graph = CsrGraph {
+    from: from.to_vec(),
+    to: to.to_vec(),
+    weight: Vec::new(),
+  };
+  let res = core_blast_radius(
+    &modified,
+    &graph,
+    total_nodes as usize,
+    max_depth.unwrap_or(10) as usize,
+  );
+  NapiBlastRadiusResult {
+    direct_dependents: res.direct_dependents,
+    transitive_dependents: res.transitive_dependents,
+    total_impacted_count: res.total_impacted_count as u32,
+    impact_score: res.impact_score as f64,
+  }
+}
+
+/// Find dependency cycles in graph (Tarjan SCC).
+#[napi]
+pub fn find_cycles(
+  n: u32,
+  from: Uint32Array,
+  to: Uint32Array,
+) -> Vec<Vec<u32>> {
+  let graph = CsrGraph {
+    from: from.to_vec(),
+    to: to.to_vec(),
+    weight: Vec::new(),
+  };
+  core_find_cycles(n as usize, &graph)
+}
+
 // ---------------------------------------------------------------------------
 // tree-sitter AST extraction (v1.1.1)
 // ---------------------------------------------------------------------------
@@ -60,7 +148,6 @@ pub struct SymbolSpec {
   pub exported: bool,
   pub parameters: Vec<String>,
   pub return_type: Option<String>,
-  /// Qualified name of the containing class (methods/properties only).
   pub parent: Option<String>,
 }
 
@@ -85,7 +172,6 @@ pub struct EdgeSpecRecord {
 
 #[napi(object)]
 pub struct FileSpec {
-  /// Absolute file path — extension selects the grammar (ts/tsx/js/py).
   pub file_path: String,
   pub content: String,
 }
@@ -152,8 +238,7 @@ fn parse_one(spec: &FileSpec) -> FileParseResult {
   }
 }
 
-/// Parse many files in parallel (rayon). Unsupported extensions yield empty
-/// results — the JS wrapper keeps its TS-API fallback for those.
+/// Parse many files in parallel (rayon).
 #[napi]
 pub fn parse_files(files: Vec<FileSpec>) -> Vec<FileParseResult> {
   files.par_iter().map(parse_one).collect()

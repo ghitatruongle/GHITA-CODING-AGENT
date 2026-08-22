@@ -62,12 +62,19 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       };
 
       let result = resolveKey(dict);
+      if (result === undefined && language !== 'en') {
+        result = resolveKey(en);
+      }
       if (result === undefined && language !== 'vi') {
         result = resolveKey(vi);
       }
 
       if (result === undefined) {
-        return key;
+        if (!params) return key;
+        return key.replace(/\{\{(\w+)\}\}/g, (match, name: string) => {
+          const value = params[name];
+          return value === undefined || value === null ? match : String(value);
+        });
       }
 
       // Support pluralization when { count: number } is passed

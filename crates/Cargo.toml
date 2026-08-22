@@ -3,6 +3,6 @@ resolver = "2"
 members = ["secscan", "retrieval", "codegraph", "sandbox", "tokenizer", "docloader", "store"]
 
 [workspace.package]
-version = "1.1.5-beta1"
+version = "1.1.5-beta2"
 edition = "2021"
 license = "MIT"

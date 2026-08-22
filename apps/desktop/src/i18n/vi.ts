@@ -35,7 +35,7 @@ export const vi: TranslationKeys = {
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v1.1.5-beta1',
+    version: 'v1.1.5-beta2',
     deviceReconnected: 'Khôi phục kết nối với thiết bị: {{name}}',
     devicePaired: 'Đã ghép đôi thành công thiết bị: {{name}}',
     commandReceived: 'Đã nhận lệnh từ thiết bị: {{action}}',
@@ -163,6 +163,11 @@ export const vi: TranslationKeys = {
     quickFileSelect: 'mở',
     quickFileClose: 'đóng',
     quickFileOpen: 'mở',
+    files: 'Tệp tin',
+    outline: 'Cấu trúc mã',
+    words: 'Số từ',
+    lines: 'Dòng',
+    plainText: 'Văn bản thuần',
   },
   devices: {
     title: 'Thiết bị kết nối',

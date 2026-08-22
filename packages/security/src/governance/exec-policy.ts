@@ -1,5 +1,5 @@
 // ==============================================================================
-// GHITA CODING AGENT - v1.1.5-beta1 Track 1.5: Exec Policy (pre-exec check)
+// GHITA CODING AGENT - v1.1.5-beta2 Track 2: Exec Policy (pre-exec check)
 // ------------------------------------------------------------------------------
 // Parse a shell command the agent is about to run and evaluate it against a
 // policy rule set BEFORE spawning (pattern: codex-rs `execpolicy` — the
@@ -23,7 +23,7 @@ export type ExecPolicyEffect = 'allow' | 'deny' | 'ask';
 export interface ExecPolicyRule {
   id: string;
   effect: ExecPolicyEffect;
-  /** Binary the rule applies to (e.g. 'git', 'rm', 'curl'). */
+  /** Binary the rule applies to (e.g. 'git', 'rm', 'curl', 'format'). */
   binary: string;
   /**
    * Subcommand sequence that must appear right after the binary
@@ -97,6 +97,38 @@ export const DEFAULT_EXEC_RULES: ExecPolicyRule[] = [
     effect: 'deny',
     binary: 'reboot',
     reason: 'host reboot is outside the agent sandbox.',
+  },
+  {
+    id: 'win-format',
+    effect: 'deny',
+    binary: 'format',
+    reason: 'disk format command is destructive.',
+  },
+  {
+    id: 'win-diskpart',
+    effect: 'deny',
+    binary: 'diskpart',
+    reason: 'diskpart partition editing is outside agent permissions.',
+  },
+  {
+    id: 'win-bcdedit',
+    effect: 'deny',
+    binary: 'bcdedit',
+    reason: 'boot configuration editing is blocked.',
+  },
+  {
+    id: 'win-vssadmin',
+    effect: 'deny',
+    binary: 'vssadmin',
+    argPattern: /delete\s+shadows/i,
+    reason: 'shadow copy deletion is blocked.',
+  },
+  {
+    id: 'win-wevtutil',
+    effect: 'deny',
+    binary: 'wevtutil',
+    argPattern: /\bcl\b/i,
+    reason: 'event log clearing is blocked.',
   },
 ];
 

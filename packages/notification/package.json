@@ -1,6 +1,6 @@
 {
   "name": "@ghita/notification",
-  "version": "1.1.5-beta1",
+  "version": "1.1.5-beta2",
   "private": true,
   "sideEffects": false,
   "description": "Notification system: priority levels, channel routing, DND scheduling, history cho GHITA Coding Agent",

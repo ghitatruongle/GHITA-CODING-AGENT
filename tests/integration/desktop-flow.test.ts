@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
+import { createDefaultSkillRegistry, runSkillSequence } from '@ghita/skills';
 
 describe('Integration - Desktop Flow', () => {
-  it('should create a default skill registry with built-in skills', async () => {
-    const { createDefaultSkillRegistry } = await import('@ghita/skills');
+  it('should create a default skill registry with built-in skills', () => {
     const registry = createDefaultSkillRegistry();
     const snapshot = registry.snapshot();
     expect(snapshot.total).toBeGreaterThan(0);
@@ -11,7 +11,6 @@ describe('Integration - Desktop Flow', () => {
   });
 
   it('should execute a read-file skill and fail gracefully without adapter', async () => {
-    const { createDefaultSkillRegistry, runSkillSequence } = await import('@ghita/skills');
     const registry = createDefaultSkillRegistry();
     // Without file adapter, file.read should return an error, not throw
     const results = await runSkillSequence(registry, [
@@ -21,11 +20,10 @@ describe('Integration - Desktop Flow', () => {
     expect(results[0]).toBeDefined();
   });
 
-  it('should have 20 built-in skills across all categories', async () => {
-    const { createDefaultSkillRegistry } = await import('@ghita/skills');
+  it('should have 20+ built-in skills across all categories', () => {
     const registry = createDefaultSkillRegistry();
     const snapshot = registry.snapshot();
-    expect(snapshot.total).toBe(20);
+    expect(snapshot.total).toBeGreaterThanOrEqual(20);
     // All categories should have at least one skill
     const categories = Object.values(snapshot.byCategory);
     expect(categories.some((c) => c > 0)).toBe(true);

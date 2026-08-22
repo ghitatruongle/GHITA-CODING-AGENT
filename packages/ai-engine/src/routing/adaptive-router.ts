@@ -152,6 +152,10 @@ export class AdaptiveBanditRouter {
     return this.arms.get(armId);
   }
 
+  getArm(armId: string): BanditArm | undefined {
+    return this.get(armId);
+  }
+
   armsCount(): number {
     return this.arms.size;
   }

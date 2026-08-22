@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { z } from 'zod';
-import { sleep } from '@ghita/shared';
+import { sleep } from '../../packages/shared/src/index.js';
 
 // Import Custom Errors
 import {
@@ -9,8 +9,6 @@ import {
   AIValidationError,
   AITimeoutError,
   AIRateLimitError,
-  AIInvalidConfigError,
-  AINoProviderError,
   AIToolCallRepairError,
   AIPermissionDeniedError,
   AISecurityGuardrailError,
@@ -701,7 +699,7 @@ describe('1 Core AI Engine Features Test Suite', () => {
         const chatMW1 = async (params: any, next: any) => {
           params.messages.push({ role: 'system', content: 'MW Inject' });
           const res = await next(params.messages, params.options);
-          res.content = '[MW1] ' + res.content;
+          res.content = `[MW1] ${res.content}`;
           return res;
         };
 

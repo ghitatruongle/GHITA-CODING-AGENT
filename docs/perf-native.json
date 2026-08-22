@@ -1,0 +1,11 @@
+{
+  "scanner.native.ms": 17.7179,
+  "scanner.native.findings": 266,
+  "bm25.native.build.ms": 69.1203,
+  "bm25.native.query.ms": 0.1467,
+  "pagerank.native.ms": 1.552,
+  "ast-parse.native.ms": 59.5501,
+  "ast-parse.native.nodes": 7000,
+  "ast-parse.native.files": 1000,
+  "ast-parse.native.10k.ms": 694.16
+}

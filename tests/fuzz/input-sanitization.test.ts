@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { escapeShellArg, readString } from '@ghita/skills';
 
 describe('Fuzz - Input Sanitization', () => {
   const dangerousInputs = [
@@ -23,8 +24,7 @@ describe('Fuzz - Input Sanitization', () => {
   ];
 
   dangerousInputs.forEach((input) => {
-    it(`escapeShellArg should handle: "${input.substring(0, 30)}"`, async () => {
-      const { escapeShellArg } = await import('@ghita/skills');
+    it(`escapeShellArg should handle: "${input.substring(0, 30)}"`, () => {
       const escaped = escapeShellArg(input);
       expect(escaped).toBeDefined();
       expect(typeof escaped).toBe('string');
@@ -34,38 +34,35 @@ describe('Fuzz - Input Sanitization', () => {
       }
     });
 
-    it(`readString should handle: "${input.substring(0, 30)}"`, async () => {
-      const { readString } = await import('@ghita/skills');
+    it(`readString should handle: "${input.substring(0, 30)}"`, () => {
       const result = readString({ input }, 'input');
       expect(result).toBe(input); // readString is passthrough, sanitization is downstream
     });
   });
 
-  it('should handle very long input strings', async () => {
-    const { escapeShellArg } = await import('@ghita/skills');
-    const longInput = 'A'.repeat(100000) + '; rm -rf /';
+  it('should handle very long input strings', () => {
+    const longInput = `${'A'.repeat(100000)  }; rm -rf /`;
     const result = escapeShellArg(longInput);
     expect(result).toBeDefined();
     expect(result.length).toBeGreaterThanOrEqual(100000);
-    // The dangerous part should be escaped
-    expect(result).not.toContain('; rm');
+    // The dangerous part is safely wrapped inside single quotes
+    expect(result.startsWith("'")).toBe(true);
+    expect(result.endsWith("'")).toBe(true);
   });
 
-  it('should handle empty strings', async () => {
-    const { escapeShellArg } = await import('@ghita/skills');
-    expect(escapeShellArg('')).toBe('');
+  it('should handle empty strings', () => {
+    expect(escapeShellArg('')).toBe("''");
   });
 
-  it('should handle unicode and special characters', async () => {
-    const { escapeShellArg } = await import('@ghita/skills');
+  it('should handle unicode and special characters', () => {
     const unicodeInputs = [
       'hello 世界',
       'café au lait',
       '𝕞𝕒𝕥𝕙𝕤',
       '♻️🔒🚀',
       'null\x00byte',
-      "tab\there",
-      "newline\nhere",
+      'tab\there',
+      'newline\nhere',
     ];
     for (const input of unicodeInputs) {
       const result = escapeShellArg(input);

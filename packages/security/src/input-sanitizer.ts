@@ -74,10 +74,12 @@ export class InputSanitizer {
   }
 
   /**
-   * Escape HTML entities.
+   * Escape HTML entities without double-escaping valid existing entities.
    */
   escapeHtml(input: string): string {
-    return input.replace(/[&<>"'`=/]/g, (c) => HTML_ESCAPES[c] ?? c);
+    return input
+      .replace(/&(?!amp;|lt;|gt;|quot;|#39;|#x2F;|#x60;|#x3D;)/g, '&amp;')
+      .replace(/[<>"'`=/]/g, (c) => HTML_ESCAPES[c] ?? c);
   }
 
   /**
@@ -220,13 +222,7 @@ export class InputSanitizer {
     // Strip IPv6 brackets if present
     const h = host.replace(/^\[(.*)\]$/, '$1');
 
-    if (
-      h === 'localhost' ||
-      h === '0.0.0.0' ||
-      h === '::' ||
-      h === '::1' ||
-      h === '[::1]'
-    ) {
+    if (h === 'localhost' || h === '0.0.0.0' || h === '::' || h === '::1' || h === '[::1]') {
       return false;
     }
 

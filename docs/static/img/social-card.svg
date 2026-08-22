@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0a18"/>
+      <stop offset="100%" stop-color="#1a0a2e"/>
+    </linearGradient>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8b5cf6"/>
+      <stop offset="50%" stop-color="#06b6d4"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="100" cy="100" r="200" fill="#8b5cf6" opacity="0.1"/>
+  <circle cx="1100" cy="530" r="250" fill="#ec4899" opacity="0.08"/>
+  <rect x="80" y="80" width="120" height="120" rx="24" fill="url(#g)"/>
+  <text x="140" y="160" text-anchor="middle" font-family="Outfit, system-ui, sans-serif" font-weight="800" font-size="72" fill="#fff">G</text>
+  <text x="80" y="320" font-family="Outfit, system-ui, sans-serif" font-weight="800" font-size="80" fill="#fff">GHITA</text>
+  <text x="80" y="380" font-family="Outfit, system-ui, sans-serif" font-weight="700" font-size="36" fill="#a78bfa">Coding Agent</text>
+  <text x="80" y="460" font-family="Inter, system-ui, sans-serif" font-weight="400" font-size="22" fill="#cbd5e1">Multi-provider · Skills · Computer Use</text>
+  <text x="80" y="560" font-family="Fira Code, monospace" font-weight="400" font-size="18" fill="#64748b">ghita.dev/docs</text>
+</svg>

@@ -190,25 +190,15 @@ export interface ParseResult {
 }
 
 /**
- * Parse a single source file and extract:
- * - Functions, classes, methods, interfaces, types, enums, variables
- * - Import declarations
- * - Call references (basic heuristic)
- * - Contains edges (class → method)
- *
- * v1.1.1: native tree-sitter path first (ts/tsx/js/mjs/cjs/py), TS Compiler
- * API fallback otherwise (`options.forceJs` disables the addon for tests).
+ * Parse in-memory source content directly without reading from disk.
  */
-export function parseFile(filePath: string, options?: ParseOptions): ParseResult {
+export function parseSource(
+  filePath: string,
+  content: string,
+  options?: ParseOptions,
+): ParseResult {
   const opts = { ...DEFAULT_OPTIONS, ...options };
   const absolutePath = path.resolve(filePath);
-
-  let content: string;
-  try {
-    content = fs.readFileSync(absolutePath, 'utf-8');
-  } catch {
-    return { nodes: [], edges: [], imports: [] };
-  }
 
   if (content.length > opts.maxFileSize) {
     return { nodes: [], edges: [], imports: [] };
@@ -225,6 +215,29 @@ export function parseFile(filePath: string, options?: ParseOptions): ParseResult
   }
 
   return parseFileWithTs(absolutePath, content, opts);
+}
+
+/**
+ * Parse a single source file and extract:
+ * - Functions, classes, methods, interfaces, types, enums, variables
+ * - Import declarations
+ * - Call references (basic heuristic)
+ * - Contains edges (class → method)
+ *
+ * v1.1.1: native tree-sitter path first (ts/tsx/js/mjs/cjs/py), TS Compiler
+ * API fallback otherwise (`options.forceJs` disables the addon for tests).
+ */
+export function parseFile(filePath: string, options?: ParseOptions): ParseResult {
+  const absolutePath = path.resolve(filePath);
+
+  let content: string;
+  try {
+    content = fs.readFileSync(absolutePath, 'utf-8');
+  } catch {
+    return { nodes: [], edges: [], imports: [] };
+  }
+
+  return parseSource(absolutePath, content, options);
 }
 
 /**

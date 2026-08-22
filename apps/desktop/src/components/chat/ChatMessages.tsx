@@ -6,6 +6,7 @@
 import { memo, useRef, useCallback, useEffect, useState } from 'react';
 import { ComputerUsePreviewComponent, MarkdownMessage } from '../ChatMessageContent';
 import type { ChatMessage } from '../../hooks/useChatSessions';
+import { useAppStore } from '../../stores/appStore';
 
 // ----------------------------------------------------------------------------
 // MessageBubble — memoized per message so a streaming update to one message
@@ -237,9 +238,109 @@ export function ChatMessages({ messages, lang }: ChatMessagesProps) {
       }}
       className="custom-scrollbar"
     >
-      {messages.map((msg) => (
-        <MessageBubble key={msg.id} msg={msg} lang={lang} />
-      ))}
+      {messages.length === 0 ? (
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '32px 16px',
+            textAlign: 'center',
+            userSelect: 'none',
+          }}
+        >
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 16,
+              background:
+                'linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2))',
+              border: '1px solid rgba(129, 140, 248, 0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 28,
+              marginBottom: 16,
+              boxShadow: '0 8px 24px rgba(99, 102, 241, 0.15)',
+            }}
+          >
+            ⚡
+          </div>
+          <h3
+            style={{
+              fontSize: 16,
+              fontWeight: 700,
+              margin: '0 0 6px 0',
+              background: 'linear-gradient(135deg, #818cf8, #a78bfa, #c084fc)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
+          >
+            GHITA CODING AGENT v1.1.5-beta2
+          </h3>
+          <p
+            style={{
+              fontSize: 12,
+              color: 'var(--text-muted)',
+              maxWidth: 380,
+              lineHeight: 1.5,
+              margin: '0 0 20px 0',
+            }}
+          >
+            {lang === 'vi'
+              ? 'Trợ lý AI lập trình toàn diện: Hỗ trợ 13 nhà cung cấp mô hình, Terminal PTY, sửa mã trực tiếp và điều khiển máy tính.'
+              : 'Full-stack AI Coding Assistant: Multi-provider AI, real PTY terminal, AST code editing & computer use.'}
+          </p>
+
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+              width: '100%',
+              maxWidth: 340,
+            }}
+          >
+            <button
+              onClick={() => useAppStore.getState().setActiveTab('api')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '10px 14px',
+                background: 'rgba(99, 102, 241, 0.1)',
+                border: '1px solid rgba(99, 102, 241, 0.3)',
+                borderRadius: 10,
+                color: 'var(--text-primary)',
+                fontSize: 12,
+                cursor: 'pointer',
+                textAlign: 'left',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--accent-primary)')}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.3)')}
+            >
+              <span style={{ fontSize: 16 }}>⚙️</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, color: 'var(--accent-primary)' }}>
+                  {lang === 'vi' ? 'Quản lý API Key & Models' : 'Manage API Keys & Models'}
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                  {lang === 'vi'
+                    ? 'Kích hoạt OpenAI, Claude, Gemini, DeepSeek, Ollama'
+                    : 'Configure OpenAI, Claude, Gemini, DeepSeek, Ollama'}
+                </div>
+              </div>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>→</span>
+            </button>
+          </div>
+        </div>
+      ) : (
+        messages.map((msg) => <MessageBubble key={msg.id} msg={msg} lang={lang} />)
+      )}
       {showScrollBottom && (
         <button
           onClick={() => {

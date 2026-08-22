@@ -1,5 +1,5 @@
 // ==============================================================================
-// Phase 34: Security Audit — Public API
+// GHITA CODING AGENT — Security Audit, Governance & Sandbox — Public API (v1.1.5-beta2)
 // ==============================================================================
 
 export { InputSanitizer } from './input-sanitizer.js';
@@ -30,12 +30,17 @@ export type {
   ScanSummary,
 } from './scanner/index.js';
 
-// v0.4.9 A2: Agent governance (PolicyEngine + OWASP Agentic Top 10)
+// v0.4.9 A2 & v1.1.5-beta2 Track 2: Agent governance (PolicyEngine + OWASP Agentic Top 10 + ExecPolicy)
 export {
   PolicyEngine,
   PolicyViolationError,
   DEFAULT_POLICY_RULES,
   checkOwaspAgentic,
+  checkCommand,
+  splitCompound,
+  tokenize,
+  parseSegment,
+  DEFAULT_EXEC_RULES,
 } from './governance/index.js';
 export type {
   PolicyEngineOptions,
@@ -48,7 +53,20 @@ export type {
   OwaspAgenticRiskId,
   GovernanceFinding,
   AgentActionContext,
+  CommandSegment,
+  ExecPolicyEffect,
+  ExecPolicyRule,
+  ExecPolicyVerdict,
 } from './governance/index.js';
+
+// v1.1.5-beta2 Track 2: Sandbox Process Runner
+export {
+  SandboxRunner,
+  type SandboxProfileType,
+  type SandboxRunnerOptions,
+  type SandboxViolationInfo,
+  type SandboxExecutionResult,
+} from './sandbox/index.js';
 
 export type {
   SecurityIssue,
@@ -61,4 +79,4 @@ export type {
   RotationEvent,
 } from './types.js';
 
-export const SECURITY_VERSION = '1.1.5-beta1';
+export const SECURITY_VERSION = '1.1.5-beta2';

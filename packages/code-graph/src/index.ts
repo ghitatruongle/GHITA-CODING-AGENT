@@ -23,7 +23,7 @@ export type {
 } from './types.js';
 
 // --- AST Parser ---
-export { parseFile, parseFiles, discoverFiles } from './ast-parser.js';
+export { parseFile, parseSource, parseFiles, discoverFiles } from './ast-parser.js';
 export type { ParseResult } from './ast-parser.js';
 
 // --- Knowledge Graph ---

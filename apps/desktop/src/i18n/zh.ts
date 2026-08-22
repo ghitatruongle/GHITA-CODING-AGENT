@@ -35,7 +35,7 @@ export const zh: TranslationKeys = {
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v1.1.5-beta1',
+    version: 'v1.1.5-beta2',
     deviceReconnected: '已重新连接设备: {{name}}',
     devicePaired: '成功配对设备: {{name}}',
     commandReceived: '从设备收到命令: {{action}}',
@@ -158,6 +158,11 @@ export const zh: TranslationKeys = {
     quickFileSelect: '打开',
     quickFileClose: '关闭',
     quickFileOpen: '打开',
+    files: '文件',
+    outline: '代码结构',
+    words: '字数',
+    lines: '行数',
+    plainText: '纯文本',
   },
   devices: {
     title: '关联设备',

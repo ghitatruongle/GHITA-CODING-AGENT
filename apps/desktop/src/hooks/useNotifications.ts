@@ -29,8 +29,25 @@ export function useNotifications() {
 
   useEffect(() => {
     refresh();
-    const id = setInterval(refresh, 5_000);
-    return () => clearInterval(id);
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        refresh();
+      }
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibility);
+    }
+    const id = setInterval(() => {
+      if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+        refresh();
+      }
+    }, 15_000);
+    return () => {
+      clearInterval(id);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibility);
+      }
+    };
   }, [refresh]);
 
   // C3: make unreadCount reactive to items

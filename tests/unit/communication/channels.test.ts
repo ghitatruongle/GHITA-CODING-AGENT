@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
+import * as comm from '@ghita/communication';
 
 describe('Communication - Channels', () => {
-  it('Multiplexer should subscribe and publish to topics', async () => {
-    const mod = await import('@ghita/communication');
-    const Multiplexer = (mod as any).Multiplexer;
+  it('Multiplexer should subscribe and publish to topics', () => {
+    const Multiplexer = (comm as any).Multiplexer;
     if (!Multiplexer) return; // skip if not exported
     const mux = new Multiplexer();
     const handler = vi.fn();
@@ -12,9 +12,8 @@ describe('Communication - Channels', () => {
     expect(handler).toHaveBeenCalledWith({ data: 'hello' });
   });
 
-  it('Multiplexer should unsubscribe handlers', async () => {
-    const mod = await import('@ghita/communication');
-    const Multiplexer = (mod as any).Multiplexer;
+  it('Multiplexer should unsubscribe handlers', () => {
+    const Multiplexer = (comm as any).Multiplexer;
     if (!Multiplexer) return;
     const mux = new Multiplexer();
     const handler = vi.fn();
@@ -24,9 +23,8 @@ describe('Communication - Channels', () => {
     expect(handler).not.toHaveBeenCalled();
   });
 
-  it('Multiplexer should handle multiple subscribers', async () => {
-    const mod = await import('@ghita/communication');
-    const Multiplexer = (mod as any).Multiplexer;
+  it('Multiplexer should handle multiple subscribers', () => {
+    const Multiplexer = (comm as any).Multiplexer;
     if (!Multiplexer) return;
     const mux = new Multiplexer();
     const h1 = vi.fn();
