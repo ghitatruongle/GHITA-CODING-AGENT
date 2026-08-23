@@ -36,7 +36,7 @@ It analyzes task complexity and routes to the most appropriate model — simple 
 
 ### How do I create a custom skill?
 
-See the [Custom Skill Tutorial](./tutorial-custom-skill.md). You create a SKILL.md manifest and implement the skill interface.
+See the [Custom Skill Tutorial](./tutorials/custom-skill.md). You create a SKILL.md manifest and implement the skill interface.
 
 ### How do I add a new AI provider?
 

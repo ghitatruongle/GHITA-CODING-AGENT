@@ -12,6 +12,8 @@
 .env.production.local
 .env.*.local
 *.env
+# React Native iOS template config — tracked source, not a secret
+!**/.xcode.env
 *.pem
 *.key
 *.p12
@@ -78,6 +80,9 @@ apps/*/src/**/*.js
 apps/*/src/**/*.d.ts
 apps/*/src/**/*.js.map
 apps/*/src/**/*.d.ts.map
+# Ambient .d.ts declarations under src are hand-written source, not build output
+!packages/*/src/**/*.d.ts
+!apps/*/src/**/*.d.ts
 
 # Native C / C++ / Rust Object Files & Binaries
 *.o
@@ -109,9 +114,18 @@ apps/desktop/src-tauri/sidecar/node.exe
 apps/desktop/src-tauri/sidecar/meta.json
 apps/desktop/src-tauri/gen/schemas/
 
-# Pre-built installer artifacts
+# Pre-built installer artifacts & distributable binaries (never commit)
 /release/
 release/
+*.msi
+*.msix
+*.appx
+*.dmg
+*.deb
+*.rpm
+*.AppImage
+*.appimage
+*.snap
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 5. MOBILE CLIENTS (ANDROID & IOS)
@@ -198,6 +212,7 @@ turbo-*.log
 
 # .ghita test runs and evals outputs
 .ghita/evals/runs/
+.ghita/evals/report.md
 .ghita/evals/*.db*
 .ghita/e2e-smoke/
 .ghita/*.log
@@ -263,6 +278,16 @@ group/
 .freebuff/
 Plan/
 agents/**/handoff.md
+
+# AI assistant local state & session notes (never leak internal planning)
+.claude/
+.aider*
+.continue/
+.windsurf/
+.copilot/
+CLAUDE.local.md
+**/*handoff*.md
+**/HANDOFF.md
 
 # Benchmarks & test corpuses
 .bench-tmp/
