@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 1: Groq Provider
-// ==============================================================================
 // Dedicated Groq provider with ultra-fast inference via LPU.
 // Uses OpenAI-compatible API format with Groq-specific models & optimizations.
-// ==============================================================================
 
 import type { AIStreamChunk } from '@ghita/shared';
 import type { ChatMessage, ChatOptions, ChatResponse, ProviderConfig } from '../types.js';

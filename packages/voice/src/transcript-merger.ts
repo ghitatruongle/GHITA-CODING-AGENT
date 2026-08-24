@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Transcript Merger (Phase 34)
 // Merge partial STT results into a final transcript
-// ==============================================================================
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion --
    segment array length is checked before each index access below */

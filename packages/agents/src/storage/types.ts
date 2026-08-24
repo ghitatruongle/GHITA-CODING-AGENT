@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Storage Backend Types
-// ==============================================================================
-
 export interface StorageBackend<T = unknown> {
   /** Retrieve a value by key */
   get(key: string): Promise<T | undefined>;

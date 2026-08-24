@@ -1,13 +1,9 @@
-// ==============================================================================
-// GHITA CODING AGENT - v1.1.5-beta1 Track 7.1: Engineering + Superpowers Skill Pack
-// ------------------------------------------------------------------------------
 // A curated chain of engineering process skills following the superpowers
 // methodology: brainstorming HARD-GATE, systematic-debugging 4-phase,
 // verification-before-completion, TDD, writing-plans, subagent-driven dev.
 // All skills read CONTEXT.md for ubiquitous-language alignment before execution.
 //
 // Pattern: superpowers + obra engineering skill chain.
-// ==============================================================================
 
 export type SkillPackPhase =
   | 'brainstorm'

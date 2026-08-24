@@ -1,11 +1,7 @@
-// ==============================================================================
-// GHITA CODING AGENT - v1.1.5-beta1 Track 2.2: History Processor Middleware
-// ------------------------------------------------------------------------------
 // Adapter that plugs a HistoryProcessor pipeline into the existing
 // AgentMiddleware.preModel hook. The processors run synchronously on the
 // message list before it reaches the LLM; the original messages array is not
 // mutated (processors return a new list).
-// ==============================================================================
 
 import type { AgentMiddleware, MiddlewareContext, PreModelResult } from './types.js';
 import type { HistoryProcessor, ProcessorContext } from './history-processors.js';

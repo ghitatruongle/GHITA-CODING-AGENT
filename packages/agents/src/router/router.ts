@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Dynamic Prompt Complexity & Cost LLM Router
-// ==============================================================================
-
 export type ComplexityLevel = 'simple' | 'medium' | 'high';
 
 export interface RouteResolution {

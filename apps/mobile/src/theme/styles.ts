@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Mobile Shared Styles
-// ==============================================================================
-
 import { StyleSheet } from 'react-native';
 import { Colors } from './colors';
 

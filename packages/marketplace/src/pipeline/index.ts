@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Publishing Pipeline Module Barrel Export (Phase 37)
-// ==============================================================================
-
 // --- Types ---
 export type {
   SemverVersion,

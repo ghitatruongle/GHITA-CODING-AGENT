@@ -1,8 +1,3 @@
-// =============================================================================
-// GHITA CODING AGENT - Week 4: Sandbox Validation Reporter
-// Nghiệm thu & Phản hồi kết quả sandbox nội bộ cho DevOps/Rust Engineer
-// =============================================================================
-
 import { DSOOrchestrator } from './sandbox/dsoOrchestrator.js';
 import { SandboxSecurityFilter } from './guardrails/sandboxFilter.js';
 import { HeadlessSearchScanner } from './scanner/headlessSearch.js';

@@ -1,4 +1,3 @@
-// ==============================================================================
 // v0.4.9 A6: AI Page API (act / extract / observe)
 //
 // A three-verb high-level API on top of the existing BrowserController + AI
@@ -6,7 +5,6 @@
 //   • observe()  — enumerate actionable elements (accessibility-ish snapshot)
 //   • act()      — perform a natural-language action with selector self-heal
 //   • extract()  — schema-driven extraction validated by a zod-compatible schema
-// ==============================================================================
 
 import type { BrowserController } from './index.js';
 import {
@@ -52,7 +50,7 @@ const FILL_INTENT = /\b(type|fill|enter|input|write|search for|paste)\b/i;
 /**
  * AIPageController — high-level AI actions bound to one BrowserController + page.
  *
- * Sử dụng:
+
  *   const page = new AIPageController(controller, rawPage, { llm });
  *   await page.observe('the login button');
  *   await page.act('click the login button');

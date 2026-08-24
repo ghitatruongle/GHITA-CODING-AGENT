@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Context Window Manager
-// ==============================================================================
-
 import type { ChatMessage } from '../types.js';
 import { TrajectoryCompressor } from './compressor.js';
 
@@ -28,7 +24,6 @@ export class ContextManager {
     });
   }
 
-  /** Ước tính token count (rough: 1 token ≈ 4 chars tiếng Anh, 2 chars tiếng Việt) */
   estimateTokens(messages: ChatMessage[]): number {
     let total = 0;
     for (const msg of messages) {
@@ -39,7 +34,6 @@ export class ContextManager {
     return total;
   }
 
-  /** Kiểm tra có cần compact không */
   needsCompact(messages: ChatMessage[]): boolean {
     const tokens = this.estimateTokens(messages);
     return tokens > this.config.maxTokens * this.config.compactThreshold;
@@ -60,13 +54,11 @@ export class ContextManager {
     }
   }
 
-  /** Giữ lại messages gần nhất trong budget token */
   private compactSlidingWindow(messages: ChatMessage[]): ChatMessage[] {
-    const budget = Math.floor(this.config.maxTokens * 0.6); // 60% cho messages cũ
+    const budget = Math.floor(this.config.maxTokens * 0.6); 
     const result: ChatMessage[] = [];
     let tokens = 0;
 
-    // Duyệt từ cuối lên đầu
     for (let i = messages.length - 1; i >= 0; i--) {
       const msg = messages[i];
       if (!msg) continue;
@@ -76,7 +68,6 @@ export class ContextManager {
       tokens += msgTokens;
     }
 
-    // Thêm system summary ở đầu nếu đã cắt bớt
     if (result.length < messages.length) {
       result.unshift({
         role: 'system',
@@ -87,7 +78,6 @@ export class ContextManager {
     return result;
   }
 
-  /** Compact bằng cách tóm tắt — trích xuất thông tin quan trọng từ messages cũ */
   private compactWithSummary(messages: ChatMessage[]): ChatMessage[] {
     // Keep system messages and recent messages
     const systemMessages = messages.filter((m) => m.role === 'system');
@@ -128,7 +118,6 @@ export class ContextManager {
     return [...systemMessages, { role: 'system', content: summaryContent }, ...recentMessages];
   }
 
-  /** Lấy usage info */
   getUsage(messages: ChatMessage[]): { used: number; max: number; percentage: number } {
     const used = this.estimateTokens(messages);
     return {
@@ -138,12 +127,10 @@ export class ContextManager {
     };
   }
 
-  /** Cập nhật config */
   updateConfig(config: Partial<ContextConfig>): void {
     this.config = { ...this.config, ...config };
   }
 
-  /** Lấy config hiện tại */
   getConfig(): ContextConfig {
     return { ...this.config };
   }

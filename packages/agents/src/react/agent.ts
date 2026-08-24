@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - ReAct Agent Implementation
-// ==============================================================================
-
 import { HumanMessage, SystemMessage, ToolMessage, messageFromData } from '../messages/message.js';
 import type { BaseMessage } from '../messages/message.js';
 import { MiddlewarePipeline } from '../middleware/pipeline.js';

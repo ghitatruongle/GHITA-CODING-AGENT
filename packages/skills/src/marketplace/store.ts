@@ -1,14 +1,7 @@
-// ==============================================================================
-// GHITA CODING AGENT - Marketplace Store
-// Phase 9 (Update 0.0.3 beta2): Search index, tag-based ranking, persistence
-// ==============================================================================
-
 import type { SkillManifest, CatalogFilters } from './types.js';
 import { SkillCatalogClient } from './catalog.js';
 
-// ----------------------------------------------------------------------------
 // Store types
-// ----------------------------------------------------------------------------
 
 export interface StoreEntry {
   manifest: SkillManifest;
@@ -31,9 +24,7 @@ export interface PersistAdapter {
   save: (data: PersistedStore) => Promise<void>;
 }
 
-// ----------------------------------------------------------------------------
 // Scoring
-// ----------------------------------------------------------------------------
 
 const DOWNLOAD_WEIGHT = 1.0;
 const RATING_WEIGHT = 500;
@@ -46,9 +37,7 @@ export function scoreManifest(manifest: SkillManifest): number {
   return downloads * DOWNLOAD_WEIGHT + rating * RATING_WEIGHT + ratingCount * RATING_COUNT_WEIGHT;
 }
 
-// ----------------------------------------------------------------------------
 // Store
-// ----------------------------------------------------------------------------
 
 export class MarketplaceStore {
   private readonly byId = new Map<string, StoreEntry>();
@@ -183,10 +172,8 @@ export class MarketplaceStore {
     if (this.persist) await this.persistNow();
   }
 
-  // ------------------------------------------------------------------------
   // Internals
-  // ------------------------------------------------------------------------
-
+  
   private reindex(manifests: SkillManifest[]): void {
     for (const m of manifests) {
       const tagSet = new Set((m.tags ?? []).map((t) => t.toLowerCase()));
@@ -214,9 +201,7 @@ export class MarketplaceStore {
   }
 }
 
-// ----------------------------------------------------------------------------
 // Default file-system persistence adapter
-// ----------------------------------------------------------------------------
 
 import { join } from 'node:path';
 import { homedir } from 'node:os';

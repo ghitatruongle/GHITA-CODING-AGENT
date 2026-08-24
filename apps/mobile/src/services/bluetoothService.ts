@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — Bluetooth Service
 // Device discovery and connection via Bluetooth Classic
-// ==============================================================================
 
 import { Platform, PermissionsAndroid } from 'react-native';
 
@@ -34,7 +31,7 @@ if (globalMock) {
   RNBluetoothClassic = globalMock as RNBluetoothClassicModule;
 } else {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- native module resolved at runtime so absence stays recoverable
     RNBluetoothClassic = require('react-native-bluetooth-classic').default;
   } catch {
     // Module not available

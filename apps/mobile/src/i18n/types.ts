@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — i18n Types for Mobile App
-// ==============================================================================
-
 export interface TranslationKeys {
   common: {
     cancel: string;

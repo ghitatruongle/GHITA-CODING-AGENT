@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Hybrid Browser Controller (DOM + Vision)
-// ==============================================================================
-
 import { GuiGrounder } from '@ghita/computer-use';
 import {
   extractInteractiveElements,
@@ -43,9 +39,6 @@ export class HybridBrowserController {
     }
   }
 
-  /**
-   * Navigate to a URL (http/https only — deep-review fix L8).
-   */
   async navigate(url: string): Promise<void> {
     if (!this.page) throw new Error('Browser not launched. Call launch() first.');
     let parsed: URL;

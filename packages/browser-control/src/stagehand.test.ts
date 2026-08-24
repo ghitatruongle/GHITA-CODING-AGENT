@@ -1,10 +1,8 @@
-// ==============================================================================
 // v0.4.9 A6: AIPageController Unit Tests
 //
 // Uses a fake playwright-like page ($$eval) and a stubbed BrowserController
 // adapter to verify observe/act/extract, selector self-heal, and zod-style
 // schema validation without a real browser.
-// ==============================================================================
 
 import { describe, it, expect, vi } from 'vitest';
 import { BrowserController } from './index.js';

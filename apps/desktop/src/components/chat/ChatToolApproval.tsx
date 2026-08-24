@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — Chat Tool & File Approval Modals
 // Human-in-the-loop approval dialogs with glassmorphism styling.
-// ==============================================================================
 
 import React from 'react';
 import type {

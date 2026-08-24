@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Browser v1.1.0 Track 7 P78: action cache (ActCache)
-// ==============================================================================
 // Caches resolved browser actions keyed by (intent + URL + DOM signature) so
 // repeated runs replay the cached selector without calling the LLM
 // (Stagehand ActCache pattern). SQLite-backed with TTL + invalidation.
-// ==============================================================================
 
 import Database from 'better-sqlite3';
 import { createHash } from 'node:crypto';

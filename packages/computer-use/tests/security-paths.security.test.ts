@@ -1,6 +1,4 @@
-// ==============================================================================
 // Security-path tests for dangerous surfaces (v0.1.5 P1.2)
-// ==============================================================================
 
 import { describe, it, expect } from 'vitest';
 import { SandboxSecurityFilter } from '../src/guardrails/index.js';

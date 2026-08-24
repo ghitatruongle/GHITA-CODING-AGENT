@@ -1,11 +1,7 @@
-// ==============================================================================
-// GHITA CODING AGENT - Marketplace v1.1.0 Track 3 P38: plugin installer
-// ==============================================================================
 // Install flow: `plugins install <user>/<repo>[@tag]` — resolve source, parse
 // the Claude plugin manifest, record into the LockfileManager.
 // Fetching is injectable so CI/tests run offline; the default implementation
 // uses git clone --depth 1.
-// ==============================================================================
 
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, cpSync, statSync } from 'node:fs';

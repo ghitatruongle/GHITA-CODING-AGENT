@@ -1,8 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Smart Routing Types
-// Phase 1.4
-// ==============================================================================
-
 import type { AIProviderType } from '@ghita/shared';
 
 export type RoutingStrategy = 'cost-first' | 'quality-first' | 'balanced' | 'latency-first';

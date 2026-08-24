@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - LLM Guardrail Types
-// ==============================================================================
-
 export type GuardrailAction = 'allow' | 'block' | 'flag' | 'modify';
 
 export interface GuardrailResult {

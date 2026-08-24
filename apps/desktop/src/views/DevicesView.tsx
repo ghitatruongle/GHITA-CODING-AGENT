@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Devices View (Real Server + IP Display)
-// ==============================================================================
-
 import { ServerControlCard } from './devices/ServerControlCard';
 import { PairingCodeCard } from './devices/PairingCodeCard';
 import { ConnectedDevicesList } from './devices/ConnectedDevicesList';

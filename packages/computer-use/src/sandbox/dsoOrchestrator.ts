@@ -1,9 +1,3 @@
-// =============================================================================
-// GHITA CODING AGENT - DSO: Dynamic Sandbox Orchestrator
-// Tạo và quản lý mạng Docker Bridge Network + nhiều container cô lập
-// Dùng Dockerode để điều phối Docker Engine từ Node.js
-// =============================================================================
-
 import Docker from 'dockerode';
 import type {
   SandboxServiceConfig,
@@ -25,8 +19,7 @@ import { randomBytes } from 'node:crypto';
 /**
  * DSO — Dynamic Sandbox Orchestrator
  *
- * Tự động tạo Docker Bridge Network, khởi chạy nhiều container phụ (DB, Web Server, Playwright)
- * dưới sự giám sát của Agent. Gán nhãn ghita-sandbox-id cho mọi resource để cleanup tự động.
+
  */
 export class DSOOrchestrator {
   private docker: Docker;
@@ -41,19 +34,13 @@ export class DSOOrchestrator {
     this.sandboxId = randomBytes(8).toString('hex');
   }
 
-  // =========================================================================
-  // Tác vụ 1: Tạo Docker Bridge Network
-  // =========================================================================
-
   /**
-   * Tạo mạng cầu ảo (Docker Bridge Network) liên kết các container sandbox
-   * @param name Tên network (sẽ được prefix với ghita-)
+
    * @returns Network ID
    */
   async createNetwork(name: string): Promise<string> {
     const networkName = `ghita-${this.sandboxId}-${name}`;
 
-    // Kiểm tra network đã tồn tại chưa
     const existing = this.networks.get(name);
     if (existing) {
       return existing;
@@ -101,50 +88,38 @@ export class DSOOrchestrator {
     }
   }
 
-  // =========================================================================
-  // Tác vụ 2: Spawn Service Container
-  // =========================================================================
-
   /**
-   * Khởi chạy một container service trong sandbox
-   * @param config Cấu hình service container
+
    * @returns ContainerInfo
    */
   async spawnContainer(config: SandboxServiceConfig): Promise<ContainerInfo> {
     const containerName = `ghita-${this.sandboxId}-${config.name}`;
     const limits = { ...DEFAULT_RESOURCE_LIMITS, ...config.limits };
 
-    // Pull image nếu chưa có (ignore error nếu đã tồn tại)
     await this.pullImage(config.image);
 
-    // Xây dựng HostConfig
     const hostConfig: Docker.HostConfig = {
-      // Tác vụ 9: Resource limits
+      
       NanoCpus: Math.floor(limits.cpuCores * 1e9),
       Memory: limits.memoryMb * 1024 * 1024, // Convert MB → bytes
       MemorySwap: limits.memoryMb * 1024 * 1024, // Không dùng swap
 
-      // Tác vụ 3: Volume mounts cô lập
       Binds: this.buildVolumeBinds(config.volumes),
 
-      // Tác vụ 4: Port mappings
       PortBindings: this.buildPortBindings(config.ports),
 
-      // Auto-remove container khi dừng
       AutoRemove: false, // Giữ lại để inspect logs
 
-      // Giới hạn restart
       RestartPolicy: { Name: 'no', MaximumRetryCount: 0 },
     };
 
-    // Tạo container
     const container = await this.docker.createContainer({
       Image: config.image,
       name: containerName,
       Env: this.buildEnvVars(config.env),
       Cmd: config.command,
       Labels: {
-        // Tác vụ 5: Gán nhãn ghita-sandbox-id
+        
         [GHITA_SANDBOX_LABEL]: this.sandboxId,
         'ghita-service-name': config.name,
         'ghita-created-at': new Date().toISOString(),
@@ -158,7 +133,6 @@ export class DSOOrchestrator {
     // Start container
     await container.start();
 
-    // Connect vào network nếu có
     if (this.networks.size > 0) {
       const networkName = Array.from(this.networks.keys())[0];
       const networkId = networkName ? this.networks.get(networkName) || '' : '';
@@ -199,34 +173,21 @@ export class DSOOrchestrator {
       timestamp: new Date(),
     });
 
-    // Tác vụ 6: Chờ health check (nếu có)
     if (config.healthCheck) {
       await this.waitForHealthy(container.id, config);
     } else if (config.startupTimeoutMs) {
-      // Đợi một khoảng thời gian để container khởi động
+      
       await this.sleep(Math.min(config.startupTimeoutMs, 5000));
     }
 
     return info;
   }
 
-  // =========================================================================
-  // Tác vụ 3: Setup Volume Mounts
-  // =========================================================================
-
-  /**
-   * Thêm volume mount vào container đang chạy (cần recreate)
-   * Nếu cần mount động, nên cấu hình từ đầu trong spawnContainer
-   */
   private buildVolumeBinds(volumes?: VolumeMount[]): string[] {
     if (!volumes || volumes.length === 0) return [];
 
     return volumes.map((v) => `${v.hostPath}:${v.containerPath}${v.readOnly ? ':ro' : ''}`);
   }
-
-  // =========================================================================
-  // Tác vụ 4: Port Mappings
-  // =========================================================================
 
   private buildPortBindings(ports?: PortMapping[]): Docker.PortMap {
     if (!ports || ports.length === 0) return {};
@@ -244,15 +205,6 @@ export class DSOOrchestrator {
     return bindings;
   }
 
-  // =========================================================================
-  // Tác vụ 6: Cleanup Orphan Containers
-  // =========================================================================
-
-  /**
-   * Quét và dọn sạch tất cả container có nhãn ghita-sandbox-id
-   * Được gọi khi app GHITA khởi động để dọn container mồ côi từ lần trước
-   * @returns Số container đã dọn
-   */
   async cleanupOrphans(): Promise<number> {
     try {
       const containers = await this.docker.listContainers({
@@ -264,7 +216,7 @@ export class DSOOrchestrator {
 
       let cleaned = 0;
       for (const containerInfo of containers) {
-        // Bỏ qua container của sandbox hiện tại
+        
         if (containerInfo.Labels[GHITA_SANDBOX_LABEL] === this.sandboxId) {
           continue;
         }
@@ -272,12 +224,10 @@ export class DSOOrchestrator {
         try {
           const container = this.docker.getContainer(containerInfo.Id);
 
-          // Stop nếu đang chạy
           if (containerInfo.State === 'running') {
             await container.stop({ t: 5 }); // Grace timeout 5s
           }
 
-          // Xóa container
           await container.remove({ force: true, v: true });
           cleaned++;
 
@@ -317,9 +267,6 @@ export class DSOOrchestrator {
     }
   }
 
-  /**
-   * Dọn sạch các network mồ côi có nhãn ghita-sandbox-id
-   */
   private async cleanupOrphanNetworks(): Promise<void> {
     try {
       const networks = await this.docker.listNetworks({
@@ -343,14 +290,6 @@ export class DSOOrchestrator {
     }
   }
 
-  // =========================================================================
-  // Tác vụ 9: Resource Limits
-  // =========================================================================
-
-  /**
-   * Lấy resource limits hiện tại của container
-   * (Không thể thay đổi resource limits trên container đang chạy — cần recreate)
-   */
   async getResourceLimits(containerId: string): Promise<ResourceLimits> {
     const container = this.docker.getContainer(containerId);
     const inspect = await container.inspect();
@@ -361,13 +300,8 @@ export class DSOOrchestrator {
     };
   }
 
-  // =========================================================================
   // Stats & Monitoring
-  // =========================================================================
-
-  /**
-   * Lấy thống kê tài nguyên của container đang chạy
-   */
+  
   async getStats(containerId: string): Promise<ContainerStats> {
     const container = this.docker.getContainer(containerId);
     const stats = await container.stats({ stream: false });
@@ -403,16 +337,10 @@ export class DSOOrchestrator {
     };
   }
 
-  /**
-   * Lấy sandbox ID hiện tại
-   */
   getSandboxId(): string {
     return this.sandboxId;
   }
 
-  /**
-   * Lấy thống kê tổng hợp của toàn bộ sandbox
-   */
   async getSandboxStats(): Promise<{
     sandboxId: string;
     networkCount: number;
@@ -432,9 +360,6 @@ export class DSOOrchestrator {
     };
   }
 
-  /**
-   * Liệt kê tất cả containers (bao gồm cả container đã dừng)
-   */
   async listContainers(): Promise<unknown[]> {
     try {
       const containers = await this.docker.listContainers({
@@ -449,16 +374,10 @@ export class DSOOrchestrator {
     }
   }
 
-  /**
-   * Lấy danh sách tất cả container đang quản lý
-   */
   getContainers(): ContainerInfo[] {
     return Array.from(this.containers.values());
   }
 
-  /**
-   * Lấy thông tin container theo tên service
-   */
   getContainerByName(serviceName: string): ContainerInfo | undefined {
     for (const info of this.containers.values()) {
       if (info.labels['ghita-service-name'] === serviceName) {
@@ -468,13 +387,8 @@ export class DSOOrchestrator {
     return undefined;
   }
 
-  // =========================================================================
   // Destroy & Cleanup
-  // =========================================================================
-
-  /**
-   * Stop và remove một container
-   */
+  
   async destroy(containerId: string): Promise<void> {
     const info = this.containers.get(containerId);
     if (!info) return;
@@ -482,7 +396,6 @@ export class DSOOrchestrator {
     try {
       const container = this.docker.getContainer(containerId);
 
-      // Stop nếu đang chạy
       if (info.status === 'running') {
         await container.stop({ t: 5 }).catch(() => {});
       }
@@ -511,11 +424,8 @@ export class DSOOrchestrator {
     }
   }
 
-  /**
-   * Destroy tất cả container và network trong sandbox
-   */
   async destroyAll(): Promise<void> {
-    // Destroy containers trước
+    
     const containerIds = Array.from(this.containers.keys());
     for (const id of containerIds) {
       await this.destroy(id);
@@ -542,10 +452,8 @@ export class DSOOrchestrator {
     this.containers.clear();
   }
 
-  // =========================================================================
   // Helpers
-  // =========================================================================
-
+  
   private buildEnvVars(env?: Record<string, string>): string[] {
     if (!env) return [];
     return Object.entries(env).map(([key, value]) => `${key}=${value}`);
@@ -553,7 +461,7 @@ export class DSOOrchestrator {
 
   private async pullImage(image: string): Promise<void> {
     try {
-      // Kiểm tra image đã có chưa
+      
       const images = await this.docker.listImages({
         filters: { reference: [image] },
       });
@@ -584,7 +492,7 @@ export class DSOOrchestrator {
 
     for (let i = 0; i < maxRetries; i++) {
       try {
-        // deep-review fix (L11): bound the health check request — a hung
+        
         // container endpoint previously blocked spawnContainer forever.
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), 5000);

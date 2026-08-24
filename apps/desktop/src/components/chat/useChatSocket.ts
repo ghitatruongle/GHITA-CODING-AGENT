@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — Chat Socket Hook
 // Manages Socket.IO connection, event listeners, and stream buffering.
-// ==============================================================================
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Socket } from 'socket.io-client';
@@ -66,7 +63,7 @@ interface UseChatSocketConfig {
 // v1.0.0 RAM optimization (O02): cap the in-memory chat history so a long
 // session cannot grow without bound. Older messages live on in the session
 // store (useChatSessions) and reload when the session is reopened.
-// deep-review fix (BUG-5): defined at module scope so the callback below
+
 // cannot reference a temporal-dead-zone binding.
 const CHAT_MESSAGE_LIMIT = 200;
 
@@ -163,6 +160,9 @@ export function useChatSocket({
   useEffect(() => {
     let active = true;
 
+    // Handlers registered by THIS hook instance on the SHARED singleton —
+    // cleanup removes only ours so other consumers keep their listeners.
+    const tracked: Array<[string, (...args: never[]) => void]> = [];
     const initSocket = async () => {
       try {
         setConnectionStatus('connecting');
@@ -174,6 +174,11 @@ export function useChatSocket({
 
         socketRef.current = socket;
 
+        const addTracked = (ev: string, handler: (...args: never[]) => void): void => {
+          socket.on(ev, handler as never);
+          tracked.push([ev, handler]);
+        };
+
         if (socket.connected) {
           if (active) setConnectionStatus('connected');
           const cwd = useAppStore.getState().terminalCwd;
@@ -182,7 +187,7 @@ export function useChatSocket({
           socket.emit('list_agent_runs', { limit: 30 });
         }
 
-        socket.on('connect', () => {
+        addTracked('connect', () => {
           if (active) setConnectionStatus('connected');
           const cwd = useAppStore.getState().terminalCwd;
           socket.emit('set_workspace', { path: cwd || null });
@@ -190,7 +195,7 @@ export function useChatSocket({
           socket.emit('list_agent_runs', { limit: 30 });
         });
 
-        socket.on('disconnect', () => {
+        addTracked('disconnect', () => {
           if (active) {
             setConnectionStatus('disconnected');
             setIsSending(false);
@@ -204,7 +209,7 @@ export function useChatSocket({
           }
         });
 
-        socket.on('connect_error', (err) => {
+        addTracked('connect_error', (err) => {
           console.warn('[ChatPanel] Socket connection error:', err);
           if (active) {
             setConnectionStatus('disconnected');
@@ -218,7 +223,7 @@ export function useChatSocket({
         });
 
         // AI Streaming Event Listeners
-        socket.on('chat_start', (data: { text: string; senderId: string; senderName: string }) => {
+        addTracked('chat_start', (data: { text: string; senderId: string; senderName: string }) => {
           if (!active) return;
           setIsSending(true);
 
@@ -250,13 +255,13 @@ export function useChatSocket({
           });
         });
 
-        socket.on('chat_chunk', (data: { text: string }) => {
+        addTracked('chat_chunk', (data: { text: string }) => {
           if (!active) return;
           streamBufferRef.current += data.text;
           startStreamFlush();
         });
 
-        socket.on(
+        addTracked(
           'chat_done',
           (data: {
             text: string;
@@ -270,7 +275,7 @@ export function useChatSocket({
           }) => {
             if (!active) return;
             stopStreamFlush();
-            // deep-review fix (BUG-A): agent runs that failed/short-circuited
+            
             // may not emit `agent_run_done` — clean stale proposals here too.
             if (data.runId) {
               useEditProposalStore.getState().removeForRun(data.runId);
@@ -305,10 +310,10 @@ export function useChatSocket({
           },
         );
 
-        socket.on('chat_error', (data: { message: string; runId?: string }) => {
+        addTracked('chat_error', (data: { message: string; runId?: string }) => {
           if (!active) return;
           stopStreamFlush();
-          // deep-review fix (BUG-A): same stale-proposal cleanup as chat_done.
+          
           if (data.runId) {
             useEditProposalStore.getState().removeForRun(data.runId);
           }
@@ -342,7 +347,7 @@ export function useChatSocket({
         });
 
         // Human-in-the-loop: Request tool execution approval
-        socket.on('action_required', (data: ToolApprovalRequest) => {
+        addTracked('action_required', (data: ToolApprovalRequest) => {
           if (active) {
             setApprovalRequest({ ...data, approvalKind: 'tool' });
             setIsSending(false);
@@ -350,7 +355,7 @@ export function useChatSocket({
           }
         });
 
-        socket.on(
+        addTracked(
           'require_approval',
           (data: { id: string; command: string; warningMessage?: string }) => {
             if (active) {
@@ -365,7 +370,7 @@ export function useChatSocket({
           },
         );
 
-        socket.on(
+        addTracked(
           'require_file_approval',
           (data: { id: string; operation: string; filePath: string }) => {
             if (active) {
@@ -374,7 +379,7 @@ export function useChatSocket({
           },
         );
 
-        socket.on('agent_resume_confirmation_required', (data: ResumeApprovalRequest) => {
+        addTracked('agent_resume_confirmation_required', (data: ResumeApprovalRequest) => {
           if (active) {
             setResumeApprovalRequest(data);
             setIsSending(false);
@@ -382,15 +387,15 @@ export function useChatSocket({
           }
         });
 
-        socket.on('agent_runs', (data: { runs?: AgentRunSummary[] }) => {
+        addTracked('agent_runs', (data: { runs?: AgentRunSummary[] }) => {
           if (active && Array.isArray(data.runs)) {
             setAgentRuns(data.runs);
           }
         });
 
-        socket.on('agent_run_done', (data: { runId?: string }) => {
+        addTracked('agent_run_done', (data: { runId?: string }) => {
           socket.emit('list_agent_runs', { limit: 30 });
-          // deep-review fix (BUG-A): drop any edit proposals still awaiting
+          
           // review from this run — the sidecar has drained them too, so
           // accepting one now would report a write that never happens.
           if (data?.runId) {
@@ -398,8 +403,7 @@ export function useChatSocket({
           }
         });
 
-        // Phase 3: Listen to live agent runtime events
-        socket.on('agent_event', (event: AgentEvent) => {
+        addTracked('agent_event', (event: AgentEvent) => {
           if (active) {
             setAgentEvents((prev) => {
               const next = [...prev, event];
@@ -421,18 +425,18 @@ export function useChatSocket({
           }
         });
 
-        socket.on(
+        addTracked(
           'ralph_loop_progress',
           (data: { iteration: number; cost: number; message: string; code?: string }) => {
             if (active) setRalphProgress(data);
           },
         );
 
-        socket.on('ralph_loop_done', () => {
+        addTracked('ralph_loop_done', () => {
           if (active) setRalphProgress(null);
         });
 
-        socket.on(
+        addTracked(
           'computer_use_step',
           (data: {
             action?: string;
@@ -463,14 +467,14 @@ export function useChatSocket({
 
         // v1.0.0 — Antigravity edit review: the agent proposes a file edit and
         // pauses until the user accepts/rejects the diff in the editor.
-        socket.on('edit_proposal', (payload: RemoteEditProposalPayload) => {
+        addTracked('edit_proposal', (payload: RemoteEditProposalPayload) => {
           if (!active) return;
           useEditProposalStore.getState().proposeRemote(payload);
         });
 
         // The sidecar finished writing an accepted edit — refresh any open tab
         // so the editor shows the applied content (not the stale pre-edit copy).
-        socket.on('edit_applied', (data: { path: string; relPath?: string; runId?: string }) => {
+        addTracked('edit_applied', (data: { path: string; relPath?: string; runId?: string }) => {
           if (!active) return;
           void (async () => {
             try {
@@ -502,31 +506,14 @@ export function useChatSocket({
     };
 
     initSocket();
-
     return () => {
       active = false;
       stopStreamFlush();
       const sock = socketRef.current;
       if (sock) {
-        sock.off('connect');
-        sock.off('disconnect');
-        sock.off('connect_error');
-        sock.off('chat_start');
-        sock.off('chat_chunk');
-        sock.off('chat_done');
-        sock.off('chat_error');
-        sock.off('action_required');
-        sock.off('require_approval');
-        sock.off('require_file_approval');
-        sock.off('agent_resume_confirmation_required');
-        sock.off('agent_runs');
-        sock.off('agent_run_done');
-        sock.off('agent_event');
-        sock.off('ralph_loop_progress');
-        sock.off('ralph_loop_done');
-        sock.off('computer_use_step');
-        sock.off('edit_proposal');
-        sock.off('edit_applied');
+        for (const [ev, handler] of tracked) {
+          sock.off(ev, handler as never);
+        }
       }
     };
     // setMessages/startStreamFlush/tRef are stable useCallbacks/refs — listed

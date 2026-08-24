@@ -1,12 +1,8 @@
-// ==============================================================================
-// GHITA CODING AGENT - Reducer Pattern Tests (Phase 5 — Update 0.0.3)
-// ==============================================================================
 // Tests cover:
 // 1. Idempotency: same eventId processed twice yields identical state
 // 2. Replay: events replayed in order reconstruct prior state
 // 3. Resume handler: POST /threads/:id/resume reconstructs thread
 // 4. Event types: message, tool_call, error all processed correctly
-// ==============================================================================
 
 import {
   processEvent,

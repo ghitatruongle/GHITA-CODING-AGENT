@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — RemoteActionBar Component
 // Quick actions, approval panel, and skills list for remote control
-// ==============================================================================
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';

@@ -1,8 +1,6 @@
 // @vitest-environment happy-dom
-// ==============================================================================
-// GHITA CODING AGENT — SkillManager Unit Tests
+
 // Covers: rendering, category grouping, toggle, run, result display, socket sync
-// ==============================================================================
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';

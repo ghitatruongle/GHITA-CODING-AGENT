@@ -3,7 +3,7 @@ export interface BrowserTab {
   id: string;
   title: string;
   url: string;
-  displayUrl: string; // URL hiển thị trong thanh địa chỉ
+  displayUrl: string; 
   isLoading: boolean;
   faviconUrl: string;
 }
@@ -25,18 +25,18 @@ export const DEFAULT_TAB = (): BrowserTab => ({
 export function normalizeUrl(raw: string): string {
   const trimmed = raw.trim();
   if (!trimmed) return '';
-  // Nếu là search query chứ không phải URL
+  
   if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
     try {
-      // Thử parse xem có phải domain không
+      
       const withHttps = `https://${trimmed}`;
       new URL(withHttps);
-      // Phải có dấu chấm thì mới là domain
+      
       if (trimmed.includes('.') && !trimmed.includes(' ')) {
         return withHttps;
       }
     } catch {}
-    // Không phải URL → search Google
+    
     return `https://www.google.com/search?q=${encodeURIComponent(trimmed)}`;
   }
   return trimmed;

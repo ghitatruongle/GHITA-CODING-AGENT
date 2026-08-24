@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Unit Tests for Phase 6 Relay Server (In-Memory Mocking)
-// ==============================================================================
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Initialize global registries on globalThis to share across Vitest module boundaries

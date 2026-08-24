@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — File Explorer Utilities & Constants
-// ==============================================================================
-
 export interface FileEntry {
   name: string;
   path: string;
@@ -189,7 +185,7 @@ export function normalizePath(p: string): string {
  */
 export function renamePath(oldPath: string, newName: string): string | null {
   const trimmed = newName.trim();
-  // deep-review fix (L4): also reject `.` and `..` — renaming an entry to `..`
+  
   // would silently "rename" it to its parent directory.
   if (trimmed.length === 0 || /[/\\]/.test(trimmed) || trimmed === '.' || trimmed === '..') {
     return null;

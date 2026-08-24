@@ -1,6 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 14: Cross-Session Memory Search (Enhanced)
-// ==============================================================================
 // Provides cross-session search with:
 // - Inverted index for fast keyword lookup
 // - TF-IDF scoring with time-decay
@@ -8,11 +5,8 @@
 // - Merged hybrid results (keyword + vector)
 // - Session metadata filtering
 // - Configurable scoring weights
-// ==============================================================================
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 export interface SessionMessage {
   role: 'user' | 'assistant' | 'system';
@@ -89,11 +83,9 @@ export interface SessionSearchOptions {
 
 const TOKEN_PATTERN = /[\p{L}\p{N}_-]+/gu;
 
-// ---------------------------------------------------------------------------
 // Optional Rust NAPI cosine similarity (lazy-loaded once)
-// ---------------------------------------------------------------------------
 
-import { cosineSimilarityJS } from './semantic/rustAddon.js';
+import { cosineSimilarityJS, getNativeCosine } from './semantic/rustAddon.js';
 
 export class CrossSessionSearch {
   private readonly sessions = new Map<string, SessionRecord>();
@@ -117,9 +109,6 @@ export class CrossSessionSearch {
     };
   }
 
-  /**
-   * Đưa một session vào cơ sở dữ liệu in-memory inverted index
-   */
   indexSession(session: SessionRecord): void {
     if (this.sessions.size >= this.config.maxSessions && !this.sessions.has(session.sessionId)) {
       const oldestId = [...this.sessions.values()].sort((a, b) => a.startTime - b.startTime)[0]
@@ -162,9 +151,6 @@ export class CrossSessionSearch {
     this.sessionTokens.set(session.sessionId, tokens);
   }
 
-  /**
-   * Loại bỏ session khỏi index
-   */
   removeSession(sessionId: string): boolean {
     const removed = this.sessions.delete(sessionId);
     if (!removed) return false;
@@ -185,9 +171,6 @@ export class CrossSessionSearch {
     return true;
   }
 
-  /**
-   * Tìm kiếm các message liên quan xuyên suốt tất cả sessions đã lưu
-   */
   searchAcrossSessions(query: string, options: SessionSearchOptions = {}): CrossSessionResult[] {
     const queryTokens = this.tokenize(query);
     const limit = options.limit ?? this.config.defaultLimit;
@@ -270,9 +253,6 @@ export class CrossSessionSearch {
     return results.sort((a, b) => b.overallScore - a.overallScore).slice(0, limit);
   }
 
-  /**
-   * Đếm tổng số session đã được index
-   */
   /** Enhanced search returning detailed keyword + vector breakdown */
   searchEnhanced(query: string, options: SessionSearchOptions = {}): EnhancedSearchResult[] {
     const queryTokens = this.tokenize(query);
@@ -343,9 +323,6 @@ export class CrossSessionSearch {
     return { ...this.config };
   }
 
-  /**
-   * Tóm tắt các kết quả tìm kiếm thành chuỗi text đẹp mắt để chèn trực tiếp vào context
-   */
   summarizeResults(results: CrossSessionResult[], maxChars = 2000): string {
     if (results.length === 0) return '';
 
@@ -359,7 +336,7 @@ export class CrossSessionSearch {
 
       lines.push('Đoạn hội thoại liên quan:');
       for (const match of res.matches.slice(0, 2)) {
-        // Lấy tối đa 2 matches liên quan nhất
+        
         const roleName = match.message.role === 'user' ? 'Người dùng' : 'AI';
         lines.push(
           `  - ${roleName}: "${match.context}" (Độ trùng khớp: ${Math.round(match.score * 100)}%)`,
@@ -373,21 +350,18 @@ export class CrossSessionSearch {
       : output;
   }
 
-  /**
-   * Xóa toàn bộ dữ liệu index
-   */
   clear(): void {
     this.sessions.clear();
     this.index.clear();
     this.sessionTokens.clear();
   }
 
-  // =========================================================================
   // Private Helpers
-  // =========================================================================
-
+  
   private cosine(a: number[], b: number[]): number {
-    return cosineSimilarityJS(a, b);
+    // Prefer the SIMD native implementation; fall back to pure JS when the
+    // memory addon is unavailable.
+    return getNativeCosine()?.(a, b) ?? cosineSimilarityJS(a, b);
   }
 
   private tokenize(text: string): Set<string> {
@@ -400,7 +374,6 @@ export class CrossSessionSearch {
     let bestIndex = 0;
     let maxMatches = 0;
 
-    // Tìm vị trí đắc địa nhất chứa nhiều keyword trùng khớp nhất
     for (let i = 0; i < content.length; i += 20) {
       const slice = contentLower.slice(i, i + windowChars);
       let matches = 0;

@@ -1,6 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Behavioral & Security Hooks (Phase 12 Enhanced)
-// ==============================================================================
 // Pre/post tool security gate with comprehensive threat detection:
 // - Destructive commands (rm -rf, format, diskpart)
 // - Remote code execution (curl|sh, wget|bash, reverse shells)
@@ -9,13 +6,10 @@
 // - Crypto-mining patterns
 // - Path traversal & environment variable leaks
 // - Per-tool security profiles with allow/deny lists
-// ==============================================================================
 
 import type { HookResult, SecurityAnalysis, SecurityProfile, SecurityRiskLevel } from './types.js';
 
-// ---------------------------------------------------------------------------
 // Threat pattern database
-// ---------------------------------------------------------------------------
 
 interface ThreatPattern {
   regex: RegExp;
@@ -205,9 +199,7 @@ const SECRET_ENV_PATTERNS = [
   /\b(?:ghp_|gho_|github_pat_|sk-[a-zA-Z0-9]{20,}|xoxb-[a-zA-Z0-9-]+)/g,
 ];
 
-// ---------------------------------------------------------------------------
 // SecurityChecker
-// ---------------------------------------------------------------------------
 
 export class SecurityChecker {
   /** Per-tool security profiles */
@@ -221,10 +213,8 @@ export class SecurityChecker {
     warningsIssued: 0,
   };
 
-  // -----------------------------------------------------------------------
   // Profile management
-  // -----------------------------------------------------------------------
-
+  
   /** Register a security profile for a tool */
   setProfile(profile: SecurityProfile): void {
     this.profiles.set(profile.toolPattern, profile);
@@ -243,10 +233,8 @@ export class SecurityChecker {
     return undefined;
   }
 
-  // -----------------------------------------------------------------------
   // Command analysis
-  // -----------------------------------------------------------------------
-
+  
   /** Analyze a shell command for security threats */
   checkCommand(command: string): SecurityAnalysis {
     this.stats.totalChecks += 1;
@@ -275,10 +263,8 @@ export class SecurityChecker {
     };
   }
 
-  // -----------------------------------------------------------------------
   // File write analysis
-  // -----------------------------------------------------------------------
-
+  
   /** Analyze file write content for security threats */
   checkFileWrite(filePath: string, content: string): SecurityAnalysis {
     this.stats.totalChecks += 1;
@@ -335,10 +321,8 @@ export class SecurityChecker {
     };
   }
 
-  // -----------------------------------------------------------------------
   // Profile-gated analysis
-  // -----------------------------------------------------------------------
-
+  
   /** Check an operation against the tool's security profile */
   checkWithProfile(toolName: string, analysis: SecurityAnalysis): SecurityAnalysis {
     const profile = this.getProfile(toolName);
@@ -377,10 +361,8 @@ export class SecurityChecker {
     return analysis;
   }
 
-  // -----------------------------------------------------------------------
   // Batch checking
-  // -----------------------------------------------------------------------
-
+  
   /** Check multiple commands at once */
   checkCommands(commands: string[]): SecurityAnalysis[] {
     return commands.map((cmd) => this.checkCommand(cmd));
@@ -391,10 +373,8 @@ export class SecurityChecker {
     return files.map((f) => this.checkFileWrite(f.path, f.content));
   }
 
-  // -----------------------------------------------------------------------
   // Secret scanning
-  // -----------------------------------------------------------------------
-
+  
   /** Scan a string for leaked secrets */
   scanForSecrets(text: string): Array<{ pattern: string; position: number }> {
     const findings: Array<{ pattern: string; position: number }> = [];
@@ -407,10 +387,8 @@ export class SecurityChecker {
     return findings;
   }
 
-  // -----------------------------------------------------------------------
   // Hook integration
-  // -----------------------------------------------------------------------
-
+  
   /** Create a pre_tool hook that gates all tool calls through this checker */
   createPreToolHook(): {
     id: string;
@@ -553,10 +531,8 @@ export class SecurityChecker {
     };
   }
 
-  // -----------------------------------------------------------------------
   // Statistics
-  // -----------------------------------------------------------------------
-
+  
   /** Get detection statistics */
   getStats(): {
     totalChecks: number;

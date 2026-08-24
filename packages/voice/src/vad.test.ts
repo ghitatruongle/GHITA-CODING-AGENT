@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Voice Activity Detection Tests
-// ==============================================================================
-
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { VoiceActivityDetector, DEFAULT_VAD_CONFIG } from './vad.js';
 import type { AudioChunk } from './types.js';

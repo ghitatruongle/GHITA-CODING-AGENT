@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Multi-Window Manager (Phase 33)
-// ==============================================================================
-
 import { randomUUID } from 'node:crypto';
 import type { WindowRole, WindowSpec, PersistedWindow } from './types.js';
 import { WindowStateStore } from './persistence.js';

@@ -1,8 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Channel Plugin Contract (Phase 8)
-// Kế thừa đặc tả OpenClaw plugin contract
-// ==============================================================================
-
 /** Health check result for a channel adapter */
 export interface ChannelHealthStatus {
   /** Channel ID */
@@ -17,9 +12,6 @@ export interface ChannelHealthStatus {
   checkedAt: number;
 }
 
-/**
- * Adapter cho một channel cụ thể (Telegram, Discord, Slack, etc.)
- */
 export interface ChannelAdapter {
   id: string;
   sendMessage(channelId: string, text: string): Promise<boolean>;
@@ -29,25 +21,16 @@ export interface ChannelAdapter {
   healthCheck?(): Promise<ChannelHealthStatus>;
 }
 
-/**
- * Đặc tả Channel Plugin Entry
- */
 export interface ChannelPluginEntry {
   id: string;
   configSchema: Record<string, unknown>;
   adapters: Record<string, ChannelAdapter>;
 }
 
-/**
- * Định nghĩa channel entry helper (OpenClaw style factory)
- */
 export function defineChannelEntry(entry: ChannelPluginEntry): ChannelPluginEntry {
   return entry;
 }
 
-/**
- * Bộ quản lý các channel plugin được đăng ký
- */
 export class ChannelPluginRegistry {
   private readonly channels = new Map<string, ChannelPluginEntry>();
 
@@ -132,9 +115,6 @@ export class ChannelPluginRegistry {
   }
 }
 
-/**
- * FIFO Queue Runner để bảo đảm xử lý tuần tự cho mỗi session (Per-session FIFO Lane)
- */
 export class FifoQueue {
   private queue: (() => Promise<void>)[] = [];
   private processing = false;
@@ -172,9 +152,6 @@ export class FifoQueue {
   }
 }
 
-/**
- * Quản lý FIFO lanes theo session/channel ID
- */
 export class FifoLaneManager {
   private readonly lanes = new Map<string, FifoQueue>();
 
@@ -192,9 +169,6 @@ export class FifoLaneManager {
   }
 }
 
-/**
- * Unified Plugin API cho bên thứ ba đăng ký Tool, Command và Channel
- */
 export interface PluginApi {
   registerTool(
     name: string,

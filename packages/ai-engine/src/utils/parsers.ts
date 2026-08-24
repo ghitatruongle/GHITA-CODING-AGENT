@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Output Parsers (STT 2.11)
-// ==============================================================================
-
 import type { z } from 'zod';
 import { AIValidationError } from '../errors/index.js';
 import { extractJsonFromText } from './structured.js';

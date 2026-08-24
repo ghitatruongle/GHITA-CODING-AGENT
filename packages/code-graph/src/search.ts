@@ -1,14 +1,8 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 13: Code Search Engine
-// ==============================================================================
 // Fuzzy search by symbol name, function, class, module with relevance scoring.
-// ==============================================================================
 
 import type { CodeNode, SearchQuery, SearchResult, SearchScope } from './types.js';
 
-// ---------------------------------------------------------------------------
 // Scope → kind mapping
-// ---------------------------------------------------------------------------
 
 const SCOPE_KIND_MAP: Record<SearchScope, CodeNode['kind'][] | null> = {
   all: null,
@@ -20,9 +14,7 @@ const SCOPE_KIND_MAP: Record<SearchScope, CodeNode['kind'][] | null> = {
   enum: ['enum'],
 };
 
-// ---------------------------------------------------------------------------
 // Search Engine
-// ---------------------------------------------------------------------------
 
 export class SearchEngine {
   private nodes: CodeNode[] = [];
@@ -100,10 +92,8 @@ export class SearchEngine {
     return scored.slice(0, limit);
   }
 
-  // ---------------------------------------------------------------------------
   // Internal
-  // ---------------------------------------------------------------------------
-
+  
   private addToIndex(key: string, node: CodeNode): void {
     let bucket = this.index.get(key);
     if (!bucket) {

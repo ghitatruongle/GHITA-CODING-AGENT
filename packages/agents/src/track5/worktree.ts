@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Agents v1.1.0 Track 5 P56: git worktree isolation
-// ==============================================================================
 // Git-worktree manager (orca/superpowers pattern): each agent session runs on
 // its own branch + worktree; results merge back on acceptance. Git commands
 // are injectable so CI/tests run without a real repo.
-// ==============================================================================
 
 export interface GitRunner {
   (repoDir: string, args: string[]): { ok: boolean; stdout: string; stderr: string };

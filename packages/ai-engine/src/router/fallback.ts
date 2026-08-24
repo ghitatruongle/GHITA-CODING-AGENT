@@ -1,14 +1,10 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
-// ==============================================================================
-// GHITA CODING AGENT - Dynamic Fallback Router (Phase 2)
+/* eslint-disable @typescript-eslint/no-non-null-assertion -- non-null invariants are guaranteed by construction before access */
+
 // Exponential backoff, circuit breaker, and dynamic chain reordering
-// ==============================================================================
 
 import type { AIProviderType } from '@ghita/shared';
 
-// ---------------------------------------------------------------------------
 // Circuit Breaker
-// ---------------------------------------------------------------------------
 
 /** Circuit breaker state for a single target (provider or model) */
 export type CircuitState = 'closed' | 'open' | 'half-open';
@@ -44,9 +40,7 @@ const DEFAULT_CB_CONFIG: Required<CircuitBreakerConfig> = {
   minimumRequests: 5,
 };
 
-// ---------------------------------------------------------------------------
 // Retry Policy
-// ---------------------------------------------------------------------------
 
 export interface RetryPolicy {
   /** Maximum number of retry attempts (default: 2) */
@@ -69,9 +63,7 @@ const DEFAULT_RETRY: Required<RetryPolicy> = {
   retryableStatuses: [429, 500, 502, 503, 504],
 };
 
-// ---------------------------------------------------------------------------
 // Fallback Target
-// ---------------------------------------------------------------------------
 
 /** A single entry in the fallback chain */
 export interface FallbackTarget {
@@ -84,9 +76,7 @@ export interface FallbackTarget {
   estimatedCostPer1k?: number;
 }
 
-// ---------------------------------------------------------------------------
 // Fallback Execution
-// ---------------------------------------------------------------------------
 
 /** Result of executing through the fallback chain */
 export interface FallbackResult<T> {
@@ -105,9 +95,7 @@ export interface AttemptRecord {
   retryCount: number;
 }
 
-// ---------------------------------------------------------------------------
 // Configuration
-// ---------------------------------------------------------------------------
 
 export interface DynamicFallbackConfig {
   /** Ordered fallback chain (first = primary) */
@@ -128,9 +116,7 @@ export interface DynamicFallbackConfig {
   onCircuitOpen?: (target: string) => void;
 }
 
-// ---------------------------------------------------------------------------
 // Internal: per-target health tracker
-// ---------------------------------------------------------------------------
 
 interface TargetHealth {
   consecutiveFailures: number;
@@ -144,9 +130,7 @@ interface TargetHealth {
   lastSuccessAt: number;
 }
 
-// ---------------------------------------------------------------------------
 // DynamicFallbackRouter
-// ---------------------------------------------------------------------------
 
 export class DynamicFallbackRouter {
   private chain: FallbackTarget[];
@@ -172,10 +156,8 @@ export class DynamicFallbackRouter {
     this.onCircuitOpen = config.onCircuitOpen;
   }
 
-  // -----------------------------------------------------------------------
   // Chain Management
-  // -----------------------------------------------------------------------
-
+  
   /** Set the full fallback chain */
   setChain(chain: FallbackTarget[]): void {
     this.chain = [...chain];
@@ -205,10 +187,8 @@ export class DynamicFallbackRouter {
     this.emergencyTarget = target;
   }
 
-  // -----------------------------------------------------------------------
   // Execution with Fallback
-  // -----------------------------------------------------------------------
-
+  
   /**
    * Execute a function through the fallback chain.
    * Tries each target in order, with retries and circuit breaking.
@@ -280,10 +260,8 @@ export class DynamicFallbackRouter {
     );
   }
 
-  // -----------------------------------------------------------------------
   // Circuit Breaker
-  // -----------------------------------------------------------------------
-
+  
   /** Check if a target's circuit is currently open */
   isCircuitOpen(targetId: string): boolean {
     const h = this.health.get(targetId);
@@ -348,10 +326,8 @@ export class DynamicFallbackRouter {
     }
   }
 
-  // -----------------------------------------------------------------------
   // Health Reporting
-  // -----------------------------------------------------------------------
-
+  
   /** Report a successful request to a target */
   reportSuccess(targetId: string): void {
     const h = this.getOrCreateHealth(targetId);
@@ -406,10 +382,8 @@ export class DynamicFallbackRouter {
     return successes / h.recentResults.length;
   }
 
-  // -----------------------------------------------------------------------
   // Private: retry logic
-  // -----------------------------------------------------------------------
-
+  
   private async executeWithRetry<T>(
     fn: (target: FallbackTarget) => Promise<T>,
     target: FallbackTarget,
@@ -478,10 +452,8 @@ export class DynamicFallbackRouter {
     return capped;
   }
 
-  // -----------------------------------------------------------------------
   // Private: dynamic chain reordering
-  // -----------------------------------------------------------------------
-
+  
   private reorderChain(): FallbackTarget[] {
     const now = Date.now();
     return [...this.chain].sort((a, b) => {
@@ -507,10 +479,8 @@ export class DynamicFallbackRouter {
     return successRate * 0.7 + (weight / 10) * 0.3;
   }
 
-  // -----------------------------------------------------------------------
   // Helpers
-  // -----------------------------------------------------------------------
-
+  
   private getOrCreateHealth(targetId: string): TargetHealth {
     let h = this.health.get(targetId);
     if (!h) {

@@ -1,8 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Skill Catalog Client
-// Phase 2.3: Remote catalog with cache and fallback
-// ==============================================================================
-
 import type { SkillManifest, SkillCatalog, CatalogFilters } from './types.js';
 import { getDefaultCatalog } from './defaultCatalog.js';
 

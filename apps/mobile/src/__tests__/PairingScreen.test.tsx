@@ -1,8 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Mobile PairingScreen Smoke Tests
 // Verifies the screen module loads and exports PairingScreen.
 // Full render tests need real React Native; see TODO in jest.config.js.
-// ==============================================================================
 
 jest.mock('../services/socketService', () => ({
   socketService: {

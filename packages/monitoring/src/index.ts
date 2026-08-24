@@ -1,7 +1,3 @@
-// ==============================================================================
-// Phase 32: Error Monitoring (Sentry) — Public API
-// ==============================================================================
-
 export { ErrorMonitor } from './error-monitor.js';
 export type { ErrorMonitorEvents } from './error-monitor.js';
 export { SentryClient } from './sentry-client.js';
@@ -28,4 +24,4 @@ export type {
   MonitoringStats,
 } from './types.js';
 
-export const MONITORING_VERSION = '1.1.5-beta2';
+export const MONITORING_VERSION = '1.1.5';

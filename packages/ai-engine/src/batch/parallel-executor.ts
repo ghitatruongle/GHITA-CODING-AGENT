@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Parallel Provider Executor (Phase 27)
 // Runs multiple batched provider calls concurrently with concurrency control.
-// ==============================================================================
 
 import type {
   BatchProviderAdapter,
@@ -11,15 +8,11 @@ import type {
 } from './types.js';
 import { splitResponse } from './prompt-concatenator.js';
 
-// ---------------------------------------------------------------------------
 // Provider Resolver
-// ---------------------------------------------------------------------------
 
 export type ProviderResolver = (type: string) => BatchProviderAdapter | undefined;
 
-// ---------------------------------------------------------------------------
 // Concurrency Limiter
-// ---------------------------------------------------------------------------
 
 class Semaphore {
   private active = 0;
@@ -43,9 +36,7 @@ class Semaphore {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Execute a single concatenated batch
-// ---------------------------------------------------------------------------
 
 export async function executeBatch(
   prompt: ConcatenatedPrompt,
@@ -97,9 +88,7 @@ export async function executeBatch(
   });
 }
 
-// ---------------------------------------------------------------------------
 // Execute multiple batches in parallel with concurrency cap
-// ---------------------------------------------------------------------------
 
 export async function executeBatchesParallel(
   prompts: ConcatenatedPrompt[],
@@ -118,9 +107,7 @@ export async function executeBatchesParallel(
   return Promise.all(tasks);
 }
 
-// ---------------------------------------------------------------------------
 // Execute individual (non-batched) requests in parallel
-// ---------------------------------------------------------------------------
 
 export async function executeIndividual(
   requests: BatchRequest[],

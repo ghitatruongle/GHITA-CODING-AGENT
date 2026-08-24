@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Long-Running PTY Pseudo-Terminal Session Pool
-// ==============================================================================
 // Maintains long-running interactive terminal sessions (e.g. dev servers, ssh,
 // docker compose) with real-time stdout/stderr log streaming and crash detection.
-// ==============================================================================
 
 export interface PTYSession {
   id: string;
@@ -37,11 +33,11 @@ export class PTYSessionPool {
     const session = this.sessions.get(id);
     if (session) {
       session.logs.push(logLine);
-      if (
-        logLine.includes('ERR_') ||
-        logLine.includes('SyntaxError') ||
-        logLine.includes('ELIFECYCLE')
-      ) {
+      // Bound the per-session log so long-lived PTYs cannot grow memory.
+      if (session.logs.length > 2000) session.logs.splice(0, session.logs.length - 1000);
+      // Only a real node/npm failure marker at line start flips status —
+      // incidental mentions of ERR_ in normal traffic must not crash-flag.
+      if (/^ERR_|\bSyntaxError:|ELIFECYCLE/.test(logLine.trim())) {
         session.status = 'crashed';
       }
     }

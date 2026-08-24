@@ -3,9 +3,8 @@ export interface ModelPricing {
   outputCostPer1k: number; // Cost in USD per 1,000 output/completion tokens
 }
 
-// ------------------------------------------------------------------------------
 // Pricing Table Configs
-// ------------------------------------------------------------------------------
+
 export const DEFAULT_PRICING_TABLE: Record<string, ModelPricing> = {
   'gpt-4o': { inputCostPer1k: 0.005, outputCostPer1k: 0.015 },
   'gpt-4-turbo': { inputCostPer1k: 0.01, outputCostPer1k: 0.03 },
@@ -39,9 +38,8 @@ export function getModelPricing(
   return FALLBACK_PRICING;
 }
 
-// ------------------------------------------------------------------------------
 // Cost Tracker
-// ------------------------------------------------------------------------------
+
 export class CostTracker {
   private totalCost = 0;
   private pricingTable: Record<string, ModelPricing>;

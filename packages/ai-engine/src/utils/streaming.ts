@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Smooth Streaming & Token Calculator
-// ==============================================================================
-
 import { sleep } from '@ghita/shared';
 import type { AIStreamChunk } from '@ghita/shared';
 import type { ChatMessage } from '../types.js';

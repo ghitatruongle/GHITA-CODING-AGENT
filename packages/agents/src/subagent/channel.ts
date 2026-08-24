@@ -1,13 +1,8 @@
-// ==============================================================================
-// GHITA CODING AGENT - Inter-Agent Communication Channel (Phase 6)
 // Pub/sub messaging system for isolated sub-agent coordination
-// ==============================================================================
 
 import type { ChannelMessage, ChannelSubscription } from './types.js';
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 function generateMsgId(): string {
   return `msg_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -17,9 +12,7 @@ function generateSubId(): string {
   return `sub_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-// ---------------------------------------------------------------------------
 // AgentChannel
-// ---------------------------------------------------------------------------
 
 export class AgentChannel {
   /** All active subscriptions indexed by topic */
@@ -37,10 +30,8 @@ export class AgentChannel {
     this.maxHistory = options.maxHistory ?? 200;
   }
 
-  // -----------------------------------------------------------------------
   // Subscription Management
-  // -----------------------------------------------------------------------
-
+  
   /**
    * Subscribe an agent to a topic.
    * Returns a subscription id that can be used to unsubscribe.
@@ -108,10 +99,8 @@ export class AgentChannel {
     return count;
   }
 
-  // -----------------------------------------------------------------------
   // Messaging
-  // -----------------------------------------------------------------------
-
+  
   /**
    * Publish a message to a topic. Delivered to all subscribers of that topic.
    * Returns the message id.
@@ -239,10 +228,8 @@ export class AgentChannel {
     return this.publish(from, `reply:${originalMessageId}`, payload);
   }
 
-  // -----------------------------------------------------------------------
   // Query & Inspection
-  // -----------------------------------------------------------------------
-
+  
   /** Get all messages in history, optionally filtered by topic */
   getHistory(topic?: string): ChannelMessage[] {
     if (topic) return this.history.filter((m) => m.topic === topic);
@@ -271,10 +258,8 @@ export class AgentChannel {
     return count;
   }
 
-  // -----------------------------------------------------------------------
   // Private Helpers
-  // -----------------------------------------------------------------------
-
+  
   private addToHistory(msg: ChannelMessage): void {
     this.history.push(msg);
     if (this.history.length > this.maxHistory) {

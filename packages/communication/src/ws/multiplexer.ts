@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - WebSocket Multiplexer (Phase 29)
 // Single WS connection for multiple streams with channel demux
-// ==============================================================================
 
 import type {
   WsMultiplexerConfig,
@@ -77,6 +74,17 @@ export class WsMultiplexer {
 
     return new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
+        // Destroy the pending socket and reset state — a black-holed peer
+        // would otherwise leave us stuck in 'connecting' forever, blocking
+        // every future connect() attempt.
+        this._state = 'disconnected';
+        try {
+          this.ws?.close();
+          this.ws = null;
+        } catch {
+          /* ignore close errors on the half-open socket */
+        }
+        clearTimeout(timeout);
         reject(new Error(`Connection timeout after ${this.config.connectionTimeout}ms`));
       }, this.config.connectionTimeout);
 
@@ -193,6 +201,9 @@ export class WsMultiplexer {
         const ws = new WebSocketClass(this.config.url, {
           headers: this.config.headers,
         }) as WsLike;
+        // Track the pending socket immediately so the connect timeout can
+        // destroy it — before 'open' fires there is no other handle to it.
+        this.ws = ws;
 
         ws.on('open', () => {
           clearTimeout(timeout);

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Evals: runner
-// ==============================================================================
-
 import { randomUUID } from 'node:crypto';
 import type { AgentResult, EvalRun, EvalSuite, EvalTask, RunOptions } from './types.js';
 import { EVALS_VERSION } from './types.js';

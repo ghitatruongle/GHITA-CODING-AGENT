@@ -1,8 +1,3 @@
-// =============================================================================
-// GHITA CODING AGENT - Phase 16: API Cost Tracker & Usage Failover Manager
-// Quản lý định tuyến dự phòng, đếm token offline và thống kê chi phí SQLite.
-// =============================================================================
-
 import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
@@ -28,7 +23,6 @@ export interface CostRecord {
   timestamp: Date;
 }
 
-// Bảng giá API (USD per 1,000 tokens)
 export const MODEL_PRICING: Record<string, { input: number; output: number }> = {
   'gpt-4o': { input: 0.0025, output: 0.01 },
   'gpt-4o-mini': { input: 0.00015, output: 0.0006 },
@@ -62,7 +56,6 @@ export class FallbackManager {
     'ollama',
   ];
 
-  // Biến lưu tiktoken encoder nếu được load động thành công
   private tiktokenEncoder: {
     encode: (text: string) => ArrayLike<number>;
     free?: () => void;
@@ -104,9 +97,8 @@ export class FallbackManager {
     this.initTiktoken();
   }
 
-  // =========================================================================
   // SQLite Database Initialization
-  // =========================================================================
+  
   private initDatabase(): void {
     try {
       this.db = new Database(this.dbPath);
@@ -138,9 +130,8 @@ export class FallbackManager {
     }
   }
 
-  // =========================================================================
   // Budget Configuration Loader
-  // =========================================================================
+  
   public loadBudgetConfig(): void {
     const defaultBudget: BudgetConfig = {
       maxCostPerSession: 5.0, // $5.0 USD
@@ -160,7 +151,7 @@ export class FallbackManager {
         };
       } else {
         this.budgetConfig = defaultBudget;
-        // Tự sinh file budget.yaml mẫu nếu chưa có
+        
         this.writeDefaultBudgetFile();
       }
     } catch {
@@ -212,12 +203,11 @@ budget:
     }
   }
 
-  // =========================================================================
   // Tiktoken Encoder Initialization
-  // =========================================================================
+  
   private async initTiktoken(): Promise<void> {
     try {
-      // Hỗ trợ dynamic import cho tiktoken nếu có
+      
       const { get_encoding } = await import('@dqbd/tiktoken' as string);
       this.tiktokenEncoder = get_encoding('cl100k_base');
     } catch {
@@ -225,15 +215,12 @@ budget:
         const { encodingForModel } = await import('js-tiktoken' as string);
         this.tiktokenEncoder = encodingForModel('gpt-4o');
       } catch {
-        // Fallback về custom character length tokenizer offline bên dưới
+        
         this.tiktokenEncoder = null;
       }
     }
   }
 
-  /**
-   * Đếm số lượng token offline tốc độ cao
-   */
   public countTokens(text: string): number {
     if (this.tiktokenEncoder) {
       try {
@@ -251,7 +238,7 @@ budget:
     const words = text.split(/\s+/);
     for (const word of words) {
       if (!word) continue;
-      // Nhận dạng ký tự đặc biệt / tiếng Việt / Code
+      
       const hasUnicode = Array.from(word).some((char) => (char.codePointAt(0) ?? 0) > 127);
       if (hasUnicode) {
         tokens += Math.ceil(word.length / 1.5);
@@ -262,9 +249,6 @@ budget:
     return Math.max(1, tokens);
   }
 
-  /**
-   * Đếm token cho danh sách ChatMessage
-   */
   public countMessagesTokens(messages: ChatMessage[]): number {
     let count = 0;
     for (const msg of messages) {
@@ -274,11 +258,10 @@ budget:
     return count + 3; // system instructions overhead
   }
 
-  // =========================================================================
   // Cost Calculation
-  // =========================================================================
+  
   public calculateCost(model: string, promptTokens: number, completionTokens: number): number {
-    // Lấy pricing theo model name gần nhất (loại bỏ provider prefix)
+    
     const modelKey = model.split('/').pop()?.toLowerCase() || '';
     let pricing = MODEL_PRICING[modelKey];
     if (!pricing) {
@@ -295,9 +278,8 @@ budget:
     return inputCost + outputCost;
   }
 
-  // =========================================================================
   // SQLite Cost Logging
-  // =========================================================================
+  
   public logCost(record: Omit<CostRecord, 'id' | 'timestamp'>): void {
     if (!this.db) return;
 
@@ -323,7 +305,6 @@ budget:
         timestamp,
       );
 
-      // Kiểm tra ngưỡng cảnh báo để thông báo
       this.checkBudgetAlerts();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
@@ -331,9 +312,8 @@ budget:
     }
   }
 
-  // =========================================================================
   // Budget & Alert Checks
-  // =========================================================================
+  
   public getSessionTotalCost(): number {
     if (!this.db) return 0;
     const row = this.db
@@ -372,7 +352,6 @@ budget:
     const dayLimit = this.budgetConfig.maxCostPerDay;
     const alertPercent = this.budgetConfig.alertThresholdPercent / 100;
 
-    // Bắn cảnh báo giả lập nếu vượt ngưỡng alert
     if (sessionCost > sessionLimit * alertPercent) {
       const alertMsg = `⚠️ ALERT: Session cost $${sessionCost.toFixed(4)} has exceeded ${this.budgetConfig.alertThresholdPercent}% of limit ($${sessionLimit.toFixed(2)})!`;
       console.warn(alertMsg);
@@ -387,8 +366,7 @@ budget:
   }
 
   private triggerOltNotification(message: string): void {
-    // Giả lập trigger OLT WebSocket/Feishu notification
-    // Trong thực tế sẽ gửi tới WebSocket server/Zalo/Feishu webhook
+    
     const event = new CustomEvent('ghita-olt-notification', {
       detail: { message, timestamp: new Date() },
     });
@@ -397,9 +375,8 @@ budget:
     }
   }
 
-  // =========================================================================
   // API Call execution with Fallback Manager
-  // =========================================================================
+  
   /**
    * Execute a chat call against a list of fallback models with timeout
    * and circuit-breaker health tracking.
@@ -418,7 +395,7 @@ budget:
     messages: ChatMessage[],
     options?: ChatOptions,
   ): Promise<ChatResponse> {
-    // 1. Kiểm duyệt Budget trước khi gọi API
+    
     const currentSessionCost = this.getSessionTotalCost();
     if (currentSessionCost >= this.budgetConfig.maxCostPerSession) {
       throw new Error(
@@ -433,7 +410,6 @@ budget:
       );
     }
 
-    // 2. Thiết lập chuỗi fallback models
     const requestedModel = options?.model;
     const chain = requestedModel
       ? [requestedModel, ...this.fallbackChain.filter((m) => m !== requestedModel)]
@@ -450,7 +426,6 @@ budget:
     const promptTokens = this.countMessagesTokens(messages);
     let _lastError: Error | null = null;
 
-    // 3. Vòng lặp Failover
     for (let idx = 0; idx < activeChain.length; idx++) {
       const model = activeChain[idx];
       if (!model) continue;
@@ -465,7 +440,7 @@ budget:
       }, timeoutMs);
 
       try {
-        // Thực thi gọi API với cơ chế Timeout Race + AbortSignal
+        
         const callPromise = Promise.race([
           callFn(model, ac.signal),
           new Promise<never>((_, reject) => {
@@ -478,11 +453,9 @@ budget:
         clearTimeout(timeoutHandle);
         ac.abort(); // release resources; the call already resolved
 
-        // Thành công: Reset số lần lỗi liên tiếp và sức khỏe của model
         this.consecutiveModelFailures.set(model, 0);
         this.modelUnhealthyUntil.delete(model);
 
-        // 4. Ước tính/Nhận token chính xác từ kết quả
         const responsePromptTokens = response.usage?.promptTokens ?? promptTokens;
         const responseCompletionTokens =
           response.usage?.completionTokens ?? this.countTokens(response.content);
@@ -491,7 +464,6 @@ budget:
 
         const cost = this.calculateCost(model, responsePromptTokens, responseCompletionTokens);
 
-        // Ghi log SQLite thành công
         this.logCost({
           sessionId: this.sessionId,
           provider: options?.agentRole || 'unknown-provider',
@@ -511,18 +483,16 @@ budget:
         if (!ac.signal.aborted) ac.abort();
         _lastError = err instanceof Error ? err : new Error(String(err));
 
-        // Ghi nhận lỗi cho Circuit Breaker
         const currentFailures = (this.consecutiveModelFailures.get(model) || 0) + 1;
         this.consecutiveModelFailures.set(model, currentFailures);
         if (currentFailures >= 3) {
-          // Trip breaker: tạm ngưng 60s
+          
           this.modelUnhealthyUntil.set(model, Date.now() + 60000);
           console.warn(
             `[CircuitBreaker] Model ${model} has failed ${currentFailures} times consecutively. Marking as unhealthy for 60s.`,
           );
         }
 
-        // Log SQLite thất bại
         this.logCost({
           sessionId: this.sessionId,
           provider: options?.agentRole || 'unknown-provider',
@@ -536,8 +506,7 @@ budget:
         });
 
         // Dynamic Backoff/Failover delay:
-        // - Rate-limited (429): Chờ lâu hơn để hồi phục (500ms)
-        // - Transient (500/502/503/504) hoặc Timeout: Chuyển đổi nhanh chóng (100ms)
+        
         const isRateLimit =
           _lastError.message?.includes('429') || _lastError.message?.includes('rate limit');
         const delayMs = isRateLimit ? 500 : 100;
@@ -555,7 +524,6 @@ budget:
       }
     }
 
-    // Nếu toàn bộ chain bị lỗi -> kích hoạt Local Fallback Ollama cuối cùng
     try {
       const localModel = 'ollama/qwen2.5-coder:1.5b';
       const warnMsg = `🚨 EMERGENCY: Cloud providers exhausted. Falling back to local Ollama!`;
@@ -588,9 +556,6 @@ budget:
     }
   }
 
-  /**
-   * Đóng database connection
-   */
   public close(): void {
     if (this.db) {
       this.db.close();

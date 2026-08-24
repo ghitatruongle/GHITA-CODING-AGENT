@@ -1,14 +1,9 @@
-// ==============================================================================
-// v1.1.5-beta1 Track 5 — Integration Tests (E2E DoD Verification)
-// ==============================================================================
-// These tests verify the full pipeline across Track 5 modules:
 //   INT-1: Scanner findings -> validation receipts -> SARIF output (T5.1+T5.2 DoD)
 //   INT-2: Fix-finding SQLi sample closed loop (T5.3 DoD)
 //   INT-3: Safe-fence with attacker-controlled content (T5.2 DoD)
 //   INT-4: Terminal command scorer blocks dangerous commands (T5.5 DoD)
 //   INT-5: Canonical scan artifacts schema validation (T5.6 DoD)
 //   INT-6: Closed-taxonomy registry (T5.4 DoD)
-// ==============================================================================
 
 import { describe, expect, it } from 'vitest';
 import {
@@ -30,10 +25,8 @@ import {
   validateManifest,
 } from './security-quality.js';
 
-// ---------------------------------------------------------------------------
 // Helper: simulate scanning source code and producing validated findings
 // Uses the same patterns as secscan DEFAULT_RULES but in pure TS for testing
-// ---------------------------------------------------------------------------
 
 const TEST_RULES = [
   { id: 'sk-key', pattern: 'sk-', negative: null },
@@ -72,11 +65,9 @@ function scanAndValidate(sourceCode: string, filePath: string): ValidatedFinding
   return findings;
 }
 
-// ===========================================================================
 // INT-1: Scanner -> Validation Receipt -> SARIF Output E2E
 // DoD T5.1: findings JSON co receipts; finding khong co receipt bi danh dau unvalidated
 // DoD T5.2: SARIF 2.1.0 voi partialFingerprints + class-hash
-// ===========================================================================
 
 describe('INT-1: Scanner -> Validation -> SARIF pipeline', () => {
   const sampleSource = [
@@ -239,10 +230,8 @@ describe('INT-1: Scanner -> Validation -> SARIF pipeline', () => {
   });
 });
 
-// ===========================================================================
 // INT-2: Fix -> Re-scan SQLi Sample Closed Loop
 // DoD T5.3: 1 finding SQLi sample sua-xong-dong tu dong trong evals
-// ===========================================================================
 
 describe('INT-2: Fix -> Re-scan SQLi closed loop', () => {
   it('verifies SQLi finding is closed after fix', async () => {
@@ -346,10 +335,8 @@ describe('INT-2: Fix -> Re-scan SQLi closed loop', () => {
   });
 });
 
-// ===========================================================================
 // INT-3: Safe-Fence with Attacker-Controlled Content
 // DoD T5.2: test fence voi noi dung chua ``` khong thoat fence
-// ===========================================================================
 
 describe('INT-3: Safe-fence against injection', () => {
   it('handles content with triple backticks', () => {
@@ -433,10 +420,8 @@ describe('INT-3: Safe-fence against injection', () => {
   });
 });
 
-// ===========================================================================
 // INT-4: Terminal Command Scorer (T5.5 DoD)
 // DoD: rule dangerous-flag chan curl | sh e2e
-// ===========================================================================
 
 describe('INT-4: Terminal command scorer e2e', () => {
   it('blocks curl pipe to shell', () => {
@@ -463,9 +448,7 @@ describe('INT-4: Terminal command scorer e2e', () => {
   });
 });
 
-// ===========================================================================
 // INT-5: Canonical Scan Artifacts (T5.6 DoD)
-// ===========================================================================
 
 describe('INT-5: Canonical scan artifacts', () => {
   it('creates and validates a well-formed manifest', () => {
@@ -495,9 +478,7 @@ describe('INT-5: Canonical scan artifacts', () => {
   });
 });
 
-// ===========================================================================
 // INT-6: Closed-Taxonomy Registry (T5.4 DoD)
-// ===========================================================================
 
 describe('INT-6: Closed-taxonomy instinct registry', () => {
   it('only returns registered values', () => {

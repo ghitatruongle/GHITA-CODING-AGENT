@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — File Tree Node (single entry in the explorer tree)
-// ==============================================================================
-
 import { type FileEntry, fileIcon } from './file-explorer-utils';
 
 interface FileTreeNodeProps {

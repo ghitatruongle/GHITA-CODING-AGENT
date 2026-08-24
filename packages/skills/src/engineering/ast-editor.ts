@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - AST-Aware Structural Code Editor
-// ==============================================================================
 // Applies precise structural replacements or patch blocks to source code without
 // breaking syntax boundaries, matching curly braces, or corrupting indentation.
-// ==============================================================================
 
 export interface ASTEditChunk {
   startLine: number;

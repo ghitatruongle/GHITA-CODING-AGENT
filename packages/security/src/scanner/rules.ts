@@ -1,18 +1,12 @@
-// ==============================================================================
 // v0.4.9 A1: Security Scanner — Rule Set
 //
 // Local rule-based detection tuned for the GHITA monorepo tech stack
 // (TS/JS, Rust, Kotlin, config). Rules are line-based regex checks.
-// ==============================================================================
 
 import type { ScannerRule } from './models.js';
 
 const CODE_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'];
 
-/**
- * Bộ rule mặc định của scanner. Mỗi rule quét theo dòng — giữ đơn giản,
- * dễ kiểm chứng và không phụ thuộc parser.
- */
 export const DEFAULT_SCANNER_RULES: ScannerRule[] = [
   // ── Secrets ────────────────────────────────────────────────────────────
   {

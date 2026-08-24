@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT — i18n key parity tests
-// ==============================================================================
 // Ensures every locale exports the exact same key tree as the reference (vi).
 // A missing translation would silently fall through to the key string in prod.
-// ==============================================================================
 
 import { describe, it, expect } from '@jest/globals';
 import { vi } from '../i18n/vi';

@@ -1,11 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Gateway Daemon
-// ==============================================================================
-// Long-running background process quản lý communication server, gateway bots
-// (Slack/Discord/Telegram), content guardrail pipeline, và health checks.
-// Có thể chạy standalone (CLI) hoặc được wrap bởi CommunicationServer.
-// ==============================================================================
-
 import { EventEmitter } from 'node:events';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -14,14 +6,12 @@ import { join } from 'node:path';
 import type { CommunicationServer } from './server.js';
 import { PairingManager } from './pairing.js';
 
-// ----------------------------------------------------------------------------
 // Types
-// ----------------------------------------------------------------------------
 
 export type DaemonState = 'stopped' | 'starting' | 'running' | 'degraded' | 'stopping' | 'errored';
 
 export interface DaemonConfig {
-  /** Port chính cho Socket.IO server */
+  
   port: number;
   /** Host bind */
   host: string;
@@ -31,13 +21,13 @@ export interface DaemonConfig {
   healthCheckIntervalMs: number;
   /** Worker auto-restart on crash */
   autoRestartWorkers: boolean;
-  /** Max restart attempts trước khi degraded */
+  
   maxRestartAttempts: number;
-  /** File path lưu daemon state */
+  
   stateFile: string;
   /** Log level */
   logLevel: 'debug' | 'info' | 'warn' | 'error';
-  /** Slack/Discord/Telegram tokens (optional - nếu có sẽ start bot gateway) */
+  
   slackBotToken?: string;
   discordBotToken?: string;
   telegramBotToken?: string;
@@ -83,9 +73,7 @@ const DEFAULT_CONFIG: DaemonConfig = {
   logLevel: 'info',
 };
 
-// ----------------------------------------------------------------------------
 // Gateway Daemon
-// ----------------------------------------------------------------------------
 
 export class GatewayDaemon extends EventEmitter {
   private state: DaemonState = 'stopped';
@@ -113,10 +101,8 @@ export class GatewayDaemon extends EventEmitter {
     this.pairingManager = new PairingManager(this.config.pairingTtlMs);
   }
 
-  // --------------------------------------------------------------------------
   // Lifecycle
-  // --------------------------------------------------------------------------
-
+  
   /** Start daemon (singleton - idem potent) */
   async start(server?: CommunicationServer): Promise<void> {
     if (this.state === 'running' || this.state === 'starting') {
@@ -185,6 +171,13 @@ export class GatewayDaemon extends EventEmitter {
       this.setState('running');
       this.log('info', `Daemon started on ${this.config.host}:${this.config.port}`);
     } catch (err) {
+      // Roll back partially-started workers — callers treating the throw as
+      // "nothing started" must not leave live bots/timers behind.
+      try {
+        await this.stop();
+      } catch (stopErr) {
+        this.log('warn', `Cleanup after failed start also failed: ${String(stopErr)}`);
+      }
       this.setState('errored');
       const error = err instanceof Error ? err : new Error(String(err));
       this.log('error', `Daemon failed to start: ${error.message}`);
@@ -217,9 +210,10 @@ export class GatewayDaemon extends EventEmitter {
     this.log('info', 'Daemon stopped');
   }
 
-  /** Restart specific worker (auto hoặc manual)
+  /**
+   * Restart a specific worker (auto or manual).
    *
-   * RESILIENCE (audit fix 2.18): the previous implementation only
+   * RESILIENCE: the previous implementation only
    * mutated the in-memory `status` object — flipping `state` to
    * `running` again — without actually stopping the underlying
    * worker or re-invoking its `start` hook. Callers therefore believed
@@ -295,7 +289,6 @@ export class GatewayDaemon extends EventEmitter {
     }
   }
 
-  /** Report worker error → auto restart nếu enabled */
   reportWorkerError(workerName: string, err: Error): void {
     const status = this.workers.get(workerName);
     if (!status) {
@@ -314,10 +307,8 @@ export class GatewayDaemon extends EventEmitter {
     }
   }
 
-  // --------------------------------------------------------------------------
   // Health & Status
-  // --------------------------------------------------------------------------
-
+  
   getHealth(): DaemonHealth {
     return {
       state: this.state,
@@ -348,11 +339,8 @@ export class GatewayDaemon extends EventEmitter {
     return Array.from(this.workers.keys());
   }
 
-  // --------------------------------------------------------------------------
   // Gateway message routing
-  // --------------------------------------------------------------------------
-
-  /** Route message từ gateway (Slack/Discord/Telegram) tới guardrail + server */
+  
   private async routeGatewayMessage(
     source: 'slack' | 'discord' | 'telegram',
     message: unknown,
@@ -388,7 +376,6 @@ export class GatewayDaemon extends EventEmitter {
     (this as unknown as { guardrailHook?: typeof hook }).guardrailHook = hook;
   }
 
-  /** Convenience: attach default GuardrailPipeline (lazy import tránh cycle) */
   async attachDefaultGuardrail(): Promise<void> {
     const { GuardrailPipeline, createDaemonGuardrailHook } =
       await import('./guardrail-pipeline.js');
@@ -406,10 +393,8 @@ export class GatewayDaemon extends EventEmitter {
     return (this as unknown as { guardrailPipeline?: unknown }).guardrailPipeline;
   }
 
-  // --------------------------------------------------------------------------
   // Internal
-  // --------------------------------------------------------------------------
-
+  
   /**
    * Register a worker with the daemon. The third (optional) `factory`
    * parameter is used by `restartWorker()` to recreate the worker after
@@ -462,7 +447,7 @@ export class GatewayDaemon extends EventEmitter {
     const msgLevel = order[level as keyof typeof order] ?? 20;
     if (msgLevel < configLevel) return;
     const ts = new Date().toISOString();
-    // eslint-disable-next-line no-console
+    // eslint-disable-next-line no-console -- this function IS the structured logger; direct console write is its purpose
     console[level === 'debug' ? 'log' : (level as 'info')](`[${ts}] [daemon:${level}] ${message}`);
     this.emit('log', level, message);
   }
@@ -495,9 +480,7 @@ export class GatewayDaemon extends EventEmitter {
   }
 }
 
-// ----------------------------------------------------------------------------
 // Singleton
-// ----------------------------------------------------------------------------
 
 let _defaultDaemon: GatewayDaemon | null = null;
 
@@ -513,9 +496,7 @@ export function resetDefaultDaemon(): void {
   _defaultDaemon = null;
 }
 
-// ----------------------------------------------------------------------------
 // CLI entry (for `ghita-daemon` standalone)
-// ----------------------------------------------------------------------------
 
 export async function runDaemonCli(): Promise<void> {
   const args = process.argv.slice(2);

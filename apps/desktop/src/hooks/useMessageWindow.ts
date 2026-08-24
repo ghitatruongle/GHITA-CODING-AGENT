@@ -1,11 +1,9 @@
-// ==============================================================================
 // v0.4.9 B4: Message list windowing (chat virtualization)
 //
 // Chat transcripts can grow to thousands of messages; rendering them all makes
 // ChatPanel sluggish. This module provides pure windowing logic (easily tested)
 // plus a thin React hook so the panel can render only a bounded slice of the
 // list with a "load older" affordance.
-// ==============================================================================
 
 import { useMemo, useState, useCallback } from 'react';
 

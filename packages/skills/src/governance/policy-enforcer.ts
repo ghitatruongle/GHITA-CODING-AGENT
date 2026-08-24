@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - AI Governance & Security Policy Enforcer
-// ==============================================================================
 // Implements OWASP Top 10 for LLM Applications guardrails & policy enforcement
 // inspired by Microsoft Agent Governance Toolkit.
-// ==============================================================================
 
 export type ThreatSeverity = 'low' | 'medium' | 'high' | 'critical';
 
@@ -62,6 +58,23 @@ const DESTRUCTIVE_COMMAND_PATTERNS: {
     reason: 'Reverse shell creation attempt',
     severity: 'critical',
   },
+  {
+    pattern:
+      /\$\(\s*[^)]*(curl|wget|iwr|invoke-webrequest|invoke-expression|iex)\b|`[^`]*(curl|wget)\b[^`]*`/i,
+    reason: 'Command substitution fetching remote content',
+    severity: 'critical',
+  },
+  {
+    pattern:
+      /\b(iex|invoke-expression)\s*\(?\s*(iwr|irm|invoke-restmethod|invoke-webrequest|new-object\s+system\.net)/i,
+    reason: 'PowerShell download-and-execute attempt',
+    severity: 'critical',
+  },
+  {
+    pattern: /\b(base64|openssl)\b[^\n|]*\|\s*(bash|sh|zsh|powershell)\b/i,
+    reason: 'Decoded payload piped into a shell',
+    severity: 'critical',
+  },
 ];
 
 const PROMPT_INJECTION_PATTERNS: { pattern: RegExp; name: string }[] = [
@@ -85,8 +98,17 @@ export class PolicyEnforcer {
       return { allowed: true };
     }
 
+    // De-obfuscation passes so quote-splitting (c'u'rl), backslash escapes and
+    // zero-width characters can no longer slip past the denylist.
+    const variants = [
+      trimmed,
+      trimmed.replace(/['"`]/g, ''),
+      trimmed.replace(/\\(.)/g, '$1').replace(/['"`]/g, ''),
+      trimmed.replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/['"`]/g, ''),
+    ];
+
     for (const rule of DESTRUCTIVE_COMMAND_PATTERNS) {
-      if (rule.pattern.test(trimmed)) {
+      if (variants.some((v) => rule.pattern.test(v))) {
         return {
           allowed: false,
           reason: rule.reason,

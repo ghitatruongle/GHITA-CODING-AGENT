@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — SymbolOutline Component Tests (v1.1.5-beta2 Track 3)
-// ==============================================================================
-
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { SymbolOutline } from './SymbolOutline';

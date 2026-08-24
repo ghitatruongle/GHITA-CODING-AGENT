@@ -1,7 +1,3 @@
-// ==============================================================================
-// Phase 34: Secret Rotator — API key rotation helper
-// ==============================================================================
-
 import type { ApiKeyInfo, RotationEvent } from './types.js';
 
 export interface SecretRotatorOptions {
@@ -9,23 +5,23 @@ export interface SecretRotatorOptions {
   defaultRotationIntervalMs?: number;
   /** Logger */
   logger?: (message: string, level: 'debug' | 'info' | 'warn' | 'error') => void;
-  /** Generator function để tạo key mới (vd: gọi provider API) */
+  
   generateKey?: (provider: string) => Promise<string>;
   /** Revoke function */
   revokeKey?: (provider: string, keyId: string) => Promise<void>;
 }
 
 /**
- * SecretRotator — quản lý vòng đời API key + rotation tự động.
+
  *
- * Sử dụng:
+
  *   const rotator = new SecretRotator({
  *     defaultRotationIntervalMs: 90 * 86400_000,
  *     generateKey: async (provider) => callProviderApiToMint(provider),
  *     revokeKey: async (provider, keyId) => callProviderApiToRevoke(provider, keyId),
  *   });
  *   rotator.register({ id: 'k1', provider: 'openai', maskedKey: 'sk-...abc', ... });
- *   await rotator.tick(); // rotate các key đến hạn
+
  */
 export class SecretRotator {
   private readonly keys = new Map<string, ApiKeyInfo>();
@@ -56,7 +52,7 @@ export class SecretRotator {
   }
 
   /**
-   * Đăng ký 1 key.
+
    *
    * @param info Metadata. Pass `unmaskedKey` alongside `maskedKey` so the
    *              rotator can hand the real credential to consumers via
@@ -81,52 +77,32 @@ export class SecretRotator {
     return full;
   }
 
-  /**
-   * Lấy thông tin key (masked).
-   */
   get(id: string): ApiKeyInfo | undefined {
     return this.keys.get(id);
   }
 
-  /**
-   * Lấy key thật (chưa mask) — chỉ sử dụng khi cần gọi API provider.
-   * Trả về undefined nếu key chưa được cung cấp dưới dạng unmasked
-   * hoặc key không ở trạng thái active.
-   */
   getActiveKey(id: string): string | undefined {
     const k = this.keys.get(id);
     if (!k || k.status !== 'active') return undefined;
     return this.unmasked.get(id);
   }
 
-  /**
-   * Lấy tất cả key của provider.
-   */
   listByProvider(provider: string): ApiKeyInfo[] {
     return Array.from(this.keys.values()).filter((k) => k.provider === provider);
   }
 
-  /**
-   * Lấy tất cả key sắp đến hạn rotation.
-   */
   listDueForRotation(now = Date.now()): ApiKeyInfo[] {
     return Array.from(this.keys.values()).filter(
       (k) => k.status === 'active' && now - k.createdAt >= k.rotationIntervalMs,
     );
   }
 
-  /**
-   * Lấy tất cả key đã expired.
-   */
   listExpired(now = Date.now()): ApiKeyInfo[] {
     return Array.from(this.keys.values()).filter(
       (k) => k.expiresAt !== undefined && k.expiresAt <= now,
     );
   }
 
-  /**
-   * Cập nhật last used timestamp.
-   */
   touch(id: string): boolean {
     const k = this.keys.get(id);
     if (!k || k.status !== 'active') return false;
@@ -134,9 +110,6 @@ export class SecretRotator {
     return true;
   }
 
-  /**
-   * Rotate 1 key (tạo mới trước, revoke sau — đảm bảo luôn có key hợp lệ).
-   */
   async rotate(id: string, reason?: string): Promise<RotationEvent> {
     const k = this.keys.get(id);
     if (!k) throw new Error(`Key ${id} not found`);
@@ -202,9 +175,6 @@ export class SecretRotator {
     return event;
   }
 
-  /**
-   * Revoke 1 key vĩnh viễn.
-   */
   async revoke(id: string, reason?: string): Promise<RotationEvent> {
     const k = this.keys.get(id);
     if (!k) throw new Error(`Key ${id} not found`);
@@ -233,9 +203,6 @@ export class SecretRotator {
     return event;
   }
 
-  /**
-   * Chạy 1 rotation tick — rotate tất cả key đến hạn, revoke expired.
-   */
   async tick(): Promise<RotationEvent[]> {
     const events: RotationEvent[] = [];
     for (const k of this.listExpired()) {
@@ -277,9 +244,6 @@ export class SecretRotator {
   }
 }
 
-/**
- * Mask API key — chỉ hiện prefix 4 ký tự + suffix 4 ký tự.
- */
 export function maskKey(key: string): string {
   if (key.length <= 8) return '***';
   return `${key.slice(0, 4)}...${key.slice(-4)}`;

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Plugin Auto-updater Core (Phase 32)
-// ==============================================================================
-
 import { createHash, randomUUID } from 'node:crypto';
 import type {
   UpdateCheckOptions,

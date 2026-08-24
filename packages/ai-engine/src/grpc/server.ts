@@ -10,7 +10,6 @@ import type { ChatMessage } from '../types.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Đọc schema proto của agent
 const PROTO_PATH = path.resolve(__dirname, '../proto/agent.proto');
 
 // Lazy-init proto descriptor so importing this module in non-Node environments
@@ -65,9 +64,6 @@ export class GrpcServer {
     );
   }
 
-  /**
-   * Khởi chạy gRPC server
-   */
   start(port: number = 50051, host: string = 'localhost'): Promise<number> {
     return new Promise((resolve, reject) => {
       this.server.bindAsync(
@@ -86,9 +82,6 @@ export class GrpcServer {
     });
   }
 
-  /**
-   * Dừng gRPC server
-   */
   stop(): Promise<void> {
     return new Promise((resolve) => {
       this.server.tryShutdown(() => {
@@ -98,9 +91,6 @@ export class GrpcServer {
     });
   }
 
-  /**
-   * Xử lý luồng gRPC song phương (duplex stream) Chat
-   */
   private handleChat(
     call: grpc.ServerDuplexStream<Record<string, unknown>, Record<string, unknown>>,
   ) {
@@ -108,7 +98,6 @@ export class GrpcServer {
     let interrupted = false;
     let previousMessages: ChatMessage[] = [];
 
-    // Map lưu trữ các hàm resolve đang chờ user duyệt chạy tool
     const pendingRequests = new Map<
       string,
       (reply: { approved: boolean; reason?: string }) => void
@@ -118,21 +107,18 @@ export class GrpcServer {
       try {
         sessionId = (clientMessage.session_id as string) || sessionId || randomUUID();
 
-        // 1. Nhận tin nhắn khởi đầu
         if (clientMessage.request) {
           interrupted = false;
           const req = clientMessage.request as Record<string, unknown>;
           const userPrompt = req.prompt as string;
           const requestedProvider = (req.provider as string) || undefined;
 
-          // Hỗ trợ khôi phục session cũ
           if (sessionId && this.sessions.has(sessionId)) {
             previousMessages = [...(this.sessions.get(sessionId) ?? [])];
           } else {
             previousMessages = [];
           }
 
-          // Cập nhật lịch sử message từ request
           const history = req.history as Array<Record<string, string>> | undefined;
           if (history && history.length > 0) {
             previousMessages = history.map((msg) => ({
@@ -141,7 +127,6 @@ export class GrpcServer {
             }));
           }
 
-          // Đưa prompt mới của user vào lịch sử
           const userMessage: ChatMessage = { role: 'user', content: userPrompt || '' };
           previousMessages.push(userMessage);
 
@@ -149,7 +134,6 @@ export class GrpcServer {
           const promptTokens = 0;
           const completionTokens = 0;
 
-          // Viết luồng stream token tới Client
           try {
             const stream = this.orchestrator.chatStream(previousMessages, {
               provider: requestedProvider as AIProviderType | undefined,
@@ -158,7 +142,6 @@ export class GrpcServer {
             for await (const chunk of stream) {
               if (interrupted) break;
 
-              // Trích xuất text chunk từ stream chunk
               if (chunk.content) {
                 fullText += chunk.content;
                 call.write({
@@ -174,10 +157,9 @@ export class GrpcServer {
             }
 
             if (!interrupted) {
-              // Thêm response của AI vào lịch sử
+              
               previousMessages.push({ role: 'assistant', content: fullText });
 
-              // Lưu trữ session
               if (sessionId) {
                 if (!this.sessions.has(sessionId) && this.sessions.size >= MAX_SESSIONS) {
                   const oldestSessionId = this.sessions.keys().next().value;
@@ -188,7 +170,6 @@ export class GrpcServer {
                 this.sessions.set(sessionId, previousMessages);
               }
 
-              // Báo hiệu hoàn tất
               call.write({
                 session_id: sessionId,
                 done: {
@@ -255,7 +236,7 @@ export class GrpcServer {
 
     call.on('end', () => {
       interrupted = true;
-      // Giải phóng tất cả các request phê duyệt tool đang bị treo
+      
       for (const resolve of pendingRequests.values()) {
         resolve({ approved: false, reason: 'Stream ended by client' });
       }

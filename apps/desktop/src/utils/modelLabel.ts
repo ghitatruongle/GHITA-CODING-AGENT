@@ -1,6 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Model Label Formatting Utilities
-// ==============================================================================
 // Convert between the canonical API model name (as provided by the upstream
 // provider) and the display label shown in the UI.
 //
@@ -10,7 +7,6 @@
 // ("DEEPSEEK-V4-FLASH-FREE"). The reverse direction is needed when the user
 // picks a value from a dropdown / datalist and we must recover the original
 // API name for outbound requests.
-// ==============================================================================
 
 /** Map of provider IDs that have a non-trivial model label transformation. */
 const FORMATTED_PROVIDER_IDS = new Set<string>(['opencode-zen', 'nvidia-nim']);

@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - OpenClaw Event-Driven Skill Trigger Engine
-// ==============================================================================
 // Evaluates system & workspace events (file save, git commit, webhook) and triggers
 // associated automated skill routines across platforms.
-// ==============================================================================
 
 export type SystemEventType =
   | 'file_saved'

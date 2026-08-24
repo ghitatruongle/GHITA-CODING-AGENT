@@ -1,10 +1,7 @@
-// ==============================================================================
-// GHITA CODING AGENT — Shell Execution Utility
 // Shared utility for executing commands through the native audited command gate.
 //
 // The former plugin-shell `args: true` capability was removed in v0.6.0.
 // Commands now pass both this client-side preview and a native Rust gate.
-// ==============================================================================
 
 import { invoke } from '@tauri-apps/api/core';
 
@@ -108,7 +105,7 @@ const MALICIOUS_PATTERNS: Array<{
     reason: 'Phát hiện tạo user/group hệ thống.',
     threatLevel: 'HIGH',
   },
-  // deep-review fix (L1): Windows destructive patterns that previously
+  
   // bypassed the scan entirely.
   {
     regex: /\bdel\s+\/[fsq]+\s+.*[a-zA-Z]:[\\/]/i,
@@ -130,7 +127,7 @@ const MALICIOUS_PATTERNS: Array<{
 /**
  * Normalize a command before pattern matching: strip quote characters and the
  * `--` end-of-options marker so `rm -rf "/"`, `rm -rf -- /` and drive-letter
- * paths can no longer bypass the blocklist regexes (deep-review fix M8). The
+
  * native Rust gate remains the enforcement layer; this makes the client-side
  * preview consistent with it.
  */
@@ -151,7 +148,6 @@ export function assessShellCommand(command: string): SecurityScanResult {
     return { safe: true };
   }
 
-  // deep-review fix (M8): match against the quote-stripped form so quoted
   // arguments are scanned identically to unquoted ones.
   const scanTarget = normalizeForScan(trimmed);
 

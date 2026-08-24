@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Skill Hub Registry
-// ==============================================================================
-
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { homedir } from 'node:os';
@@ -19,22 +15,15 @@ export class SkillHub {
     this.ensureDirectory();
   }
 
-  /**
-   * Đảm bảo thư mục lưu trữ tồn tại
-   */
   private ensureDirectory(): void {
     if (!fs.existsSync(this.hubPath)) {
       fs.mkdirSync(this.hubPath, { recursive: true });
     }
   }
 
-  /**
-   * Lưu SkillTemplate xuống disk (dạng file JSON)
-   */
   saveSkill(template: SkillTemplate): string {
     this.ensureDirectory();
 
-    // Đảm bảo ID an toàn cho file system
     const safeId = template.id.replace(/[^a-zA-Z0-9.-]/g, '_');
     const filePath = path.join(this.hubPath, `${safeId}.json`);
 
@@ -42,9 +31,6 @@ export class SkillHub {
     return template.id;
   }
 
-  /**
-   * Tải tất cả các skills tự định nghĩa từ disk
-   */
   loadSkills(): SkillTemplate[] {
     this.ensureDirectory();
     const files = fs.readdirSync(this.hubPath);
@@ -66,9 +52,6 @@ export class SkillHub {
     return skills;
   }
 
-  /**
-   * Lấy một skill cụ thể theo ID
-   */
   getSkill(id: string): SkillTemplate | null {
     const safeId = id.replace(/[^a-zA-Z0-9.-]/g, '_');
     const filePath = path.join(this.hubPath, `${safeId}.json`);
@@ -83,9 +66,6 @@ export class SkillHub {
     }
   }
 
-  /**
-   * Xóa một skill khỏi disk
-   */
   deleteSkill(id: string): boolean {
     const safeId = id.replace(/[^a-zA-Z0-9.-]/g, '_');
     const filePath = path.join(this.hubPath, `${safeId}.json`);
@@ -100,18 +80,12 @@ export class SkillHub {
     }
   }
 
-  /**
-   * Serialize skill thành chuỗi JSON để xuất khẩu
-   */
   exportSkill(id: string): string {
     const skill = this.getSkill(id);
     if (!skill) throw new Error(`Không tìm thấy skill với ID: ${id}`);
     return JSON.stringify(skill, null, 2);
   }
 
-  /**
-   * Import skill từ chuỗi JSON và lưu lại
-   */
   importSkill(jsonContent: string): SkillTemplate {
     try {
       const skill = JSON.parse(jsonContent) as SkillTemplate;
@@ -125,9 +99,6 @@ export class SkillHub {
     }
   }
 
-  /**
-   * Tìm kiếm skills theo keyword
-   */
   searchSkills(query: string): SkillTemplate[] {
     const tokens = query
       .toLowerCase()
@@ -144,9 +115,6 @@ export class SkillHub {
     });
   }
 
-  /**
-   * Thống kê số lượng skills theo từng category
-   */
   listCategories(): Map<string, number> {
     const all = this.loadSkills();
     const counts = new Map<string, number>();

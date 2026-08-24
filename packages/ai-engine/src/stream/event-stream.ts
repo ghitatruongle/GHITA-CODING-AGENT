@@ -1,6 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - EventStream Subscriber Model (Phase 7)
-// ==============================================================================
 // Lightweight pub/sub bus for engine events. Used by the orchestrator, tool
 // registry, hook runner, and the Tauri WebSocket bridge.
 //
@@ -12,7 +9,6 @@
 //  - Optional RewindWriter hooks events to disk for session rewind.
 //  - A builtin "plugin API" hook runner delegates to OpenClawPluginApi
 //    when registered (no-op in the OSS-only build).
-// ==============================================================================
 
 import type {
   EventStreamConfig,
@@ -82,10 +78,8 @@ export class EventStream {
     this.maxSubscribers = config?.maxSubscribers ?? DEFAULT_MAX_SUBSCRIBERS;
   }
 
-  // -----------------------------------------------------------------------
   // Subscription
-  // -----------------------------------------------------------------------
-
+  
   /**
    * Register a subscriber. Returns an unsubscribe function.
    * By default, the new subscriber also receives the last buffered replay
@@ -116,10 +110,8 @@ export class EventStream {
     return this.subscribers.size;
   }
 
-  // -----------------------------------------------------------------------
   // Emit / publish
-  // -----------------------------------------------------------------------
-
+  
   /**
    * Emit a new event. The event is stamped with id+timestamp+seq,
    * pushed to the ring buffer, optionally persisted, and fanned out
@@ -189,10 +181,8 @@ export class EventStream {
     }
   }
 
-  // -----------------------------------------------------------------------
   // Buffer / replay
-  // -----------------------------------------------------------------------
-
+  
   /** Snapshot of the buffered events (in arrival order). */
   snapshot(): StreamEvent[] {
     return this.buffer.toArray();
@@ -250,10 +240,8 @@ export class EventStream {
     return out;
   }
 
-  // -----------------------------------------------------------------------
   // WebSocket bridge
-  // -----------------------------------------------------------------------
-
+  
   /**
    * Bridge this stream to a Tauri WebSocket. The bridge attaches a
    * subscriber that JSON-serializes each event and forwards it to the
@@ -272,10 +260,8 @@ export class EventStream {
     }, options);
   }
 
-  // -----------------------------------------------------------------------
   // Plugin hook API
-  // -----------------------------------------------------------------------
-
+  
   /**
    * Register an external plugin hook runner. Used by OpenClawPluginApi to
    * observe engine events without subscribing as a normal subscriber.
@@ -285,10 +271,8 @@ export class EventStream {
     this.pluginHookRunner = runner ?? undefined;
   }
 
-  // -----------------------------------------------------------------------
   // Stats / introspection
-  // -----------------------------------------------------------------------
-
+  
   getStats(): StreamStats {
     const snap = this.buffer.toArray();
     return {
@@ -312,9 +296,7 @@ export class EventStream {
   }
 }
 
-// -----------------------------------------------------------------------
 // Helpers
-// -----------------------------------------------------------------------
 
 /**
  * Convert a StreamEvent to a plain JSON-serializable dict.

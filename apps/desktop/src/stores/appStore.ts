@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — App Store (Zustand)
-// ==============================================================================
-
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { DeviceInfo, PluginManifest } from '@ghita/shared';
@@ -213,7 +209,6 @@ interface AppState {
   setLanguage: (lang: LocaleCode) => void;
   setLogLevel: (level: string) => void;
 
-  // Communication (Phase 6)
   serverStatus: 'offline' | 'listening' | 'error';
   pairingCode: string | null;
   connectedDevices: DeviceInfo[];
@@ -221,7 +216,6 @@ interface AppState {
   setPairingCode: (code: string | null) => void;
   setConnectedDevices: (devices: DeviceInfo[]) => void;
 
-  // Phase 5: MCP Servers
   mcpServers: Array<{
     id: string;
     name: string;
@@ -239,13 +233,11 @@ interface AppState {
     }>,
   ) => void;
 
-  // Phase 5: Hooks
   hooks: Array<{ event: string; tool: string; command: string; enabled: boolean }>;
   setHooks: (
     hooks: Array<{ event: string; tool: string; command: string; enabled: boolean }>,
   ) => void;
 
-  // Phase 6: Context usage
   contextUsage: { used: number; max: number; percentage: number };
   setContextUsage: (usage: { used: number; max: number; percentage: number }) => void;
 
@@ -253,7 +245,6 @@ interface AppState {
   permissionMode: 'custom' | 'auto';
   setPermissionMode: (mode: 'custom' | 'auto') => void;
 
-  // Phase 7: Dashboard stats
   dashboardStats: {
     totalTokens: number;
     totalCost: number;
@@ -267,7 +258,6 @@ interface AppState {
     mcpConnections: number;
   }) => void;
 
-  // Phase 3: Plugins
   plugins: Array<{ manifest: PluginManifest; enabled: boolean }>;
   setPlugins: (plugins: Array<{ manifest: PluginManifest; enabled: boolean }>) => void;
   togglePlugin: (id: string, enabled: boolean) => void;
@@ -380,7 +370,6 @@ export const useAppStore = create<AppState>()(
       },
       setLogLevel: (level) => set({ logLevel: level }),
 
-      // Communication (Phase 6)
       serverStatus: 'offline' as 'offline' | 'listening' | 'error',
       pairingCode: null as string | null,
       connectedDevices: [] as DeviceInfo[],
@@ -388,7 +377,6 @@ export const useAppStore = create<AppState>()(
       setPairingCode: (code) => set({ pairingCode: code }),
       setConnectedDevices: (devices) => set({ connectedDevices: devices }),
 
-      // Phase 5: MCP Servers
       mcpServers: [] as Array<{
         id: string;
         name: string;
@@ -398,11 +386,9 @@ export const useAppStore = create<AppState>()(
       }>,
       setMcpServers: (servers) => set({ mcpServers: servers }),
 
-      // Phase 5: Hooks
       hooks: [] as Array<{ event: string; tool: string; command: string; enabled: boolean }>,
       setHooks: (hooks) => set({ hooks: hooks }),
 
-      // Phase 6: Context usage
       contextUsage: { used: 0, max: 128000, percentage: 0 },
       setContextUsage: (usage) => set({ contextUsage: usage }),
 
@@ -410,11 +396,9 @@ export const useAppStore = create<AppState>()(
       permissionMode: 'custom' as 'custom' | 'auto',
       setPermissionMode: (mode) => set({ permissionMode: mode }),
 
-      // Phase 7: Dashboard stats
       dashboardStats: { totalTokens: 0, totalCost: 0, activeAgents: 0, mcpConnections: 0 },
       setDashboardStats: (stats) => set({ dashboardStats: stats }),
 
-      // Phase 3: Plugins
       plugins: [] as Array<{ manifest: PluginManifest; enabled: boolean }>,
       setPlugins: (plugins) => set({ plugins }),
       togglePlugin: (id, enabled) =>
@@ -432,7 +416,7 @@ export const useAppStore = create<AppState>()(
         })),
 
       // v0.7.3 — Reset all settings to defaults
-      // deep-review fix (BUG-C): also reset the v1.0.0 performance settings.
+      
       resetSettings: () =>
         set({
           theme: 'dark',

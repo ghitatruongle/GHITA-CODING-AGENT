@@ -5,7 +5,82 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [1.1.5-beta1] - WIP
+## [1.1.5] - 2026-08-24
+
+### Track 6 — Quality Gates & Publish Readiness
+
+- **Zero-warning sweep**: typecheck 44/44 · eslint 43/43 · knip exit 0 · clippy workspace 0 warning.
+- **Full test**: turbo test 44/44 · **evals gate 79/100** (baseline 75) PASS · **coverage T0/T1 đạt floor**: security 90.4%/82.8% (lines/branches, floor 80/75), agents 58.8%/74.1%, communication 53.6%/80.7%, ai-engine 64.6%/76.4%, memory 52.0%/75.7%, skills 59.0%/69.9%.
+- **Smoke**: desktop-smoke **4/4 PASS** — sửa import thiếu `.ts` trong `editProposalStore` khiến node type-stripping không resolve được; startup modules **983ms** (trước đây 1993ms — hiệu ứng Monaco lazy-load của Track 4). E2E smoke **4/4**: ingest-cli, evals-internal, security-scanner, mcp-interop.
+- **Security re-audit**: `audit-security.mjs` exit 0 — baseline 44 findings không tăng sau Track 2–5.
+- **Docs**: SECURITY.md cập nhật posture 1.1.5 (keyring là nguồn chuẩn, pairing cần xác nhận desktop + token mã hóa AES-GCM, CSP nghiêm ngặt, FS scope, approvals desktop-only); README badge / ROADMAP header đồng bộ 1.1.5.
+- **Installer final**: `release/GHITA-CODING-AGENT-Setup-v1.1.5.exe` (27.4 MB), **SHA-256 `a70d998fe524aa9f8f9fbd38057fc3b09f26f75fb3cac3de41b7d9eff34b2e75`** (đã verify ngược). Version 1.1.5 đồng bộ toàn monorepo; CHANGELOG phát hành 2026-08-24.
+
+### Track 5 — Rust Acceleration & Security
+
+- **Tokenizer (S)**: BPE vocabulary (o200k/cl100k/r50k) khởi tạo đúng **một lần mỗi process** qua `OnceLock` static — trước đây rebuild full vocab trên MỖI cache miss; `count_messages_tokens` hưởng lợi trực tiếp. **Micro-bench** (`examples/bench_vocab.rs`, release, 200 unique texts — toàn cache miss): OLD **40.682 ms** (vocab rebuild ~203 ms/text) vs NEW **226 ms init một lần + 7 ms steady-state** → **~5.812×** trên đường cache-miss, token totals khớp 100% (4000 == 4000).
+- **Code-graph**: Tarjan SCC viết lại dạng **iterative** với call-stack tường minh — hết nguy cơ tràn stack trên dependency chain sâu; 16/16 test pass gồm `tarjan_cycle_detection`.
+- **Cosine wiring**: `memory/search.ts` và `knowledge.ts` trước đây hardcode bản JS chậm dù binding SIMD nằm ngay trong package — giờ ưu tiên `getNativeCosine()` (SIMD native) và fallback JS khi addon vắng mặt.
+- **Diff một đường**: `useLineDiffStat` bỏ pass JS O(n·m) ban đầu trong Tauri runtime — chỉ còn đường native off-thread; JS giữ làm fallback cho CLI/web.
+- **Secscan parity + spans + redaction**: bộ fixtures secret dùng chung mirror giữa Rust (`secret_parity_fixtures_match_ts_corpus`) và TS (`tests/secret-parity.test.ts`) — drift giữa rule literal Rust và regex engines TS sẽ vỡ test ở cả hai phía. `ScanResult` bổ sung `match_starts`/`match_ends` (UTF-8 byte offsets, additive); helper `redactSpanned()` mới trong `@ghita/security` redact đúng span từ scanner. `SecretDetector` (enterprise) route qua native: một pass combined-regex của secscan làm pre-filter — nội dung sạch bỏ qua trọn vòng 80+ regex JS; JS giữ là nguồn chuẩn cho span/redaction; customPatterns vẫn được cover vì pre-filter dựng từ pattern list của chính instance. Guardrails `detectSecrets` cũng route native pre-filter tương tự (rules dựng từ 7 pattern của chính module); parity test mở rộng khẳng định đủ 7 category guardrails trên fixture corpus — và đã bắt ngay một drift thật: pattern `openai_key` của guardrails không nhận `sk-proj-` (đã đồng bộ với enterprise/secscan/scanner).
+- **Docloader DOCX + PDF thật**: triển khai `extract_docx` bằng `zip` (inflate) + `quick-xml` — đọc được document DEFLATE-compressed (trường hợp phổ biến, JS cũ chỉ xử lý được zip STORED), xử lý XML escape + xuống dòng theo paragraph; và `extract_pdf` bằng `pdf-extract` (lopdf) — ingest trước đây bỏ qua hoàn toàn PDF khi không inject reader. Cả hai expose qua napi (`extractDocxJs`/`extractPdfJs`); `ingest/loaders.ts` ưu tiên native qua native-bridge (reader inject giữ ưu tiên cao nhất), fallback JS giữ nguyên. Test gồm PDF tự sinh với xref table hợp lệ. Deps mới opt-in features `docx`/`pdf` (zip-rs, quick-xml, pdf-extract).
+- **Deferred có chủ đích (đã chốt với owner)**: gộp HNSW vào crates/retrieval và chuyển memory rust-napi loader sang native-bridge để lại cho sau 1.1.5 (loader hiện tại đã hoạt động và có test); PDF parse đã thực hiện theo lựa chọn của owner.
+- Gates: cargo workspace test 66/66 · clippy 0 warning · typecheck 44/44 · turbo test 44/44 · eslint 43/43.
+
+### Track 4 — Performance & Resources
+
+- **Memory DB (L win)**: SQLite mở với `WAL` + `synchronous=NORMAL` + `auto_vacuum=INCREMENTAL`; autoVacuum chạy `PRAGMA incremental_vacuum` thay vì full-file `VACUUM` mỗi 10 lần ghi (trước đây rewrite toàn bộ DB dưới exclusive lock, đơ sidecar giữa cuộc chat); prepared statements cache cho hot path `indexChatMessage`. **Micro-bench 2.000 inserts: 14.0–23.6s → ~225–260ms (~60–90×)**.
+- **KvStore (Rust)**: `PRAGMA journal_mode=WAL` khi mở; thêm `set_many(keys, values)` — N key chỉ tốn 1 commit thay vì N fsync round-trip.
+- **Streaming UI**: `MarkdownMessage` được `memo()` với bảng components ổn định; trong lúc stream render plain-text (markdown parse O(n²) theo độ dài phản hồi trước đây chạy mỗi flush 50ms); post-chunk hooks coalesce theo batch ~40ms (`streamWithHooks`) thay vì gọi per-token.
+- **Startup**: Monaco (~2MB + 5 workers) không còn nằm trong entry chunk — lazy-load đúng lúc CodeEditor mount đầu tiên; MarketplaceView/SymbolOutline chuyển sang deep imports (@ghita/skills/marketplace/*, @ghita/code-graph/ast-parser) để khỏi kéo PTY pool/MCP server/better-sqlite3 vào renderer bundle.
+- **Parallelization**: `testAll()` providers, MCP `connectAll()`, và cache-warmer sources chạy song song (hết cộng dồn latency tuần tự); semantic-dedup `bulkAdd` embed batch 8 luồng.
+- **Sidecar & tools**: Ralph loop `tsc --noEmit` chuyển sang `execFile` async (trước đây block event loop tới 30s); edit-review đọc file và checkpoint ghi file qua `fs/promises`; `listDirectory` có cap 500 entries/depth 12, trả compact JSON kèm chú thích truncate.
+- **Compaction**: `scoreAll` pre-tokenize mỗi entry một lần vào Map (bỏ vòng tokenize O(n²) trên tối đa 5.000 entries).
+- Gates: typecheck 44/44 · eslint 43/43 · turbo test 44/44 (fresh run).
+
+### Track 3 — Feature Honesty (trung thực sản phẩm)
+
+- **Tool catalog**: gỡ claim "200+ tools" khỏi ROADMAP; catalog được mô tả đúng là metadata-only (handler thực thi cần adapter + credentials).
+- **Sandbox Dashboard**: thay dashboard luôn rỗng (poll 3s vào placeholder) bằng thẻ "Planned for v2.0" trung thực, kèm ghi chú sandbox built-in (Landlock/Seatbelt/Job Object) vẫn hoạt động.
+- **Voice**: `SpeechToText` mặc định dùng Whisper API thật và **throw** khi thiếu API key — không còn chế độ fake transcript ngầm (`local-stub` chỉ chạy khi opt-in rõ ràng); package đánh dấu Incubating trong README.
+- **Bluetooth**: bỏ copy sai "connect via Bluetooth directly" khỏi thông báo Cloud Discovery ở cả 6 locale; `mobile-companion.BluetoothPairing` gắn nhãn SIMULATION ONLY và từ chối pair thiết bị chưa discover.
+- **Marketplace**: `PaymentGateway` gắn cờ `simulated` + cảnh báo runtime "không có tiền thật di chuyển"; supply-chain scan cảnh báo rõ khi `VT_API_KEY` được cấu hình nhưng external lookup chưa implement; `ScanCache.hitRate()` đo hit/miss thật thay vì placeholder 1/0.
+- **README**: bảng Core/Product/Incubating cập nhật cho 1.1.5 với ghi chú trung thực từng package incubating (marketplace revenue simulated, voice chưa có consumer, mobile-companion là harness…).
+- Gates: typecheck 44/44 · eslint 43/43 · turbo test 44/44.
+
+### Track 2 — Bug Fixes (45 phát hiện đã xác thực)
+
+- **Orchestration**: mailbox đạt at-least-once thật sự — `check()` chuyển sang trạng thái `in_flight` và tự redeliver sau visibility timeout 60s nếu consumer crash trước khi ack; cron scheduler không còn bắn lặp nhiều lần trong cùng một phút (dedup theo minute-key) và tái tạo interval timer sau stop/start (hết chết âm thầm); subagent timeout giờ hủy work qua AbortSignal thay vì bỏ mặc chạy tiếp; `awaitGate` có deadline 10 phút.
+- **Code-graph**: LSP client frame JSON-RPC theo **byte length** (Buffer) — hết treo/mất message với văn bản Unicode; mọi request có deadline 15s; `stop()` race shutdown với 2s để server treo không kẹt vĩnh viễn.
+- **AI Engine**: stream retry/fallback không còn nhân đôi phần text đã yield (phát error-chunk + partialContent); retry phân loại lỗi non-retryable (401/400/422…) + backoff nhân với jitter + tôn trọng abort signal; MCP transport hỗ trợ string JSON-RPC id (map keyed by String(id)); tool-call JSON hỏng được cảnh báo thay vì biến mất im lặng; cancel HTTP body khi consumer break sớm (`reader.cancel`); embed/image/speech/transcribe nhận `signal`; semantic cache lưu đúng finishReason.
+- **UI lifecycle**: shared socket là single-instance (socket.io tự reconnect — hết hiện tượng clobber listener chéo); useChatSocket gỡ đúng listener của mình qua handler refs; Terminal không còn kill PTY khi đổi font/cwd và tự dọn Tauri listeners sau unmount; VS Code extension disconnect socket cũ trước khi connect mới và resolve khi reconnect_failed; mobile gom alert reconnect thành tối đa 1 thông báo/30s.
+- **Communication**: daemon rollback các worker đã start khi start lỗi; multiplexer destroy pending socket khi connect timeout (hết kẹt trạng thái connecting); Discord clear heartbeat cũ trước HELLO thứ hai (+unref); iMessage poller có in-flight guard chống chồng vòng poll.
+- **Unbounded sweep**: rate limiter quotas fail-CLOSED với limit chưa đăng ký, bucket map tự eviction, resetAt chính xác nhờ fractional carry; relay-server rate-limiter evict entry hết hạn; violationLog/PTY log giới hạn dung lượng; memory FTS deindex snapshot cũ khi save (hết từ khóa mồ côi); `retry()` dùng backoff nhân + jitter và bỏ qua lỗi non-retryable.
+- Regression tests: mailbox redelivery ×3 · LSP unicode framing ×2 · cron dedup/restart ×2 · retry classification ×2. Gates: typecheck 44/44 · eslint 43/43 · turbo test 44/44.
+
+### Track 1 — Security Hardening
+
+- **CSP**: production `script-src 'self'` (bỏ `unsafe-inline`/`unsafe-eval`), shim chuyển ra `public/boot-shims.js`, `devCsp` riêng cho HMR; bổ sung `ipc: http://ipc.localhost`.
+- **FS scope**: các lệnh ghi (`fs_write_text`/`fs_mkdir`/`fs_rename`/`fs_remove`) yêu cầu thư mục đã được cấp quyền qua native dialog (`fs_request_access`, persist `fs-scope.json`); `fs_remove` chặn drive-root/home/tổ-tiên-home; dialog duyệt lệnh hiển thị cả đầu lẫn đuôi lệnh dài; 5 unit test bảo vệ.
+- **Keyring**: vault hệ điều hành là nguồn chuẩn — xóa mirror plaintext `api-config.json` khi vault ghi OK (file chỉ còn là fallback khi vault hỏng).
+- **Vùng trust local**: `/health` chỉ trả pairing code/devices khi có header `x-ghita-session-token`; `approve_command`/`reject_command` chỉ desktop (thiết bị paired không thể tự duyệt); pairing PHẢI có xác nhận trên desktop (`pairing_request` → `pairing_decision`, auto-từ-chối sau 60s); khóa bind host bỏ override `GHITA_BIND_HOST`.
+- **Skills**: `openApp`/`closeApp` spawn argv không shell; PolicyEnforcer match trên biến thể de-obfuscate + pattern command-substitution/iex-cradle/base64-pipe.
+- **Kênh truyền**: proxy preview lọc Cookie/Authorization + hop-by-hop headers; device token mã hóa AES-256-GCM với PSK = pairing code (mobile giải mã qua `@noble/ciphers`).
+- **Khác**: update yêu cầu dialog đồng ý; `terminal_create` validate shell + cwd; denylist native +10 mẫu phá hoại. Gates: cargo test 59/59 · clippy 0 · audit-security exit 0 · smoke test `/health` OK.
+
+### Track 0 — Cleanup & Sync (chuẩn bị phát hành chính thức)
+
+- **Comment hygiene toàn codebase**: xóa banner/kẻ bảng, tag provenance ("Phase N", "Track N", "deep review pass") và chuyển bình luận nội bộ tiếng Việt sang tiếng Anh ngắn gọn hoặc loại bỏ (~6.600 dòng) trên 977 file TS/TSX/MJS; 7 crate Rust chuyển header sang `//!` module docs chuẩn. Mật độ comment `packages/` 12% → 7.8%.
+- **Khối code chết**: bỏ failover block đã vô hiệu trong `apps/mobile/src/services/socketService.ts`.
+- **Suppressor discipline**: mọi `eslint-disable`/`@ts-expect-error` đều có lý do kèm theo.
+- **Repo hygiene**: `.gitignore` chặn installer/binary (`*.msi *.msix *.appx *.dmg *.deb *.rpm *.AppImage *.snap`) và state AI-assistant; bỏ khỏi git tài liệu kế hoạch nội bộ, docs trùng lặp, eval report sinh tự động.
+- Gates: typecheck 44/44 · eslint 43/43 · knip exit 0 · `sync-version --check` OK.
+
+## [1.1.5-beta2] - 2026-08-22
+
+- Beta2 build (216 files): hoàn thiện các track kế tiếp của 1.1.5, bổ sung vitest workspace config.
+
+## [1.1.5-beta1] - 2026-08-21
 
 ### Track 1 — Sandbox & Hooks & Headless (an toàn thực thi)
 

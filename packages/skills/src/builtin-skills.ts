@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Built-in Skills Definitions
-// ==============================================================================
 // All 20+ built-in skill definitions (file, terminal, git, docker, db, http,
 // code quality, search, compress, deploy). Extracted from index.ts for clarity.
-// ==============================================================================
 
 import type { SkillDefinition } from './types.js';
 import { SKILLS_VERSION } from './types.js';

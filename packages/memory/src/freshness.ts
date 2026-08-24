@@ -1,16 +1,10 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 22: memoryFreshness (decay)
-// ==============================================================================
 // Provides temporal memory decay tracking, timeline queries, namespace health,
 // and multi-signal weighted retrieval logic.
-// ==============================================================================
 
 import type { MemoryEntry, MemorySearchResult } from '@ghita/shared';
 import { cosineSimilarityJS } from './semantic/rustAddon.js';
 
-// ---------------------------------------------------------------------------
 // Optional Rust NAPI bindings (lazy-loaded once)
-// ---------------------------------------------------------------------------
 
 type RustBatchDecay = (timestamps: number[], halfLifeMs: number, now: number) => number[];
 type RustBatchCosine = (query: number[], candidates: number[][]) => number[];
@@ -36,9 +30,7 @@ function getRustBindings(): FreshnessRustBindings | null {
   return _cachedRustBindings;
 }
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 export interface NamespaceFreshness {
   namespace: string;
@@ -101,9 +93,8 @@ export interface MultiSignalRetrievalOptions {
   now?: number;
 }
 
-// ---------------------------------------------------------------------------
 // 1. Decay scoring (exponential)
-// ---------------------------------------------------------------------------
+
 /**
  * Calculates exponential decay score: Score = 2 ^ (-age / halfLife)
  * Clamps result between 0.0 and 1.0.
@@ -121,9 +112,8 @@ export function calculateDecayScore(
   return Math.min(1.0, Math.max(0.0, score));
 }
 
-// ---------------------------------------------------------------------------
 // 2. Namespace overview + freshness
-// ---------------------------------------------------------------------------
+
 /**
  * Summarizes memory entries grouped by their namespace.
  * Namespace is extracted from metadata ('namespace') or type, falling back to 'default'.
@@ -171,9 +161,8 @@ export function getNamespaceOverview(
   return overview;
 }
 
-// ---------------------------------------------------------------------------
 // 3. Timeline: time-ordered retrieval
-// ---------------------------------------------------------------------------
+
 /**
  * Returns filtered and chronologically ordered memory entries.
  */
@@ -214,9 +203,8 @@ export function getTimeline(entries: MemoryEntry[], options?: TimelineOptions): 
   return filtered;
 }
 
-// ---------------------------------------------------------------------------
 // 4. Multi-signal retrieval
-// ---------------------------------------------------------------------------
+
 /**
  * Scores and retrieves memory entries combining recency (decay), semantic similarity,
  * importance/relevance, and access frequency signals.
@@ -364,9 +352,8 @@ export function retrieveEnhanced(
   return results.sort((a, b) => b.score - a.score).slice(0, limit);
 }
 
-// ---------------------------------------------------------------------------
 // 5. MemoryFreshnessTracker Class
-// ---------------------------------------------------------------------------
+
 export class MemoryFreshnessTracker {
   constructor(
     private config?: {

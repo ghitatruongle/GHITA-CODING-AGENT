@@ -1,5 +1,5 @@
 /**
- * Phase 20 — Browser-Use-Only Control Strategy
+
  *
  * Uses Chrome DevTools Protocol (CDP) accessibility tree to drive a web
  * browser. Falls back to `getFullAXTree` when the element is not visible

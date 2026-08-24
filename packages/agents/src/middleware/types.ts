@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Agent Middleware Types (Phase 12 Enhanced)
-// ==============================================================================
-
 import type { ManagedAgent } from '../index.js';
 import type { BaseMessage } from '../messages/message.js';
 
@@ -105,10 +101,6 @@ export interface AgentMiddleware {
   /** Called when the agent completes */
   onComplete?(context: MiddlewareContext, finalResponse: BaseMessage): Promise<void>;
 }
-
-// ---------------------------------------------------------------------------
-// Phase 12: Pipeline configuration & metrics
-// ---------------------------------------------------------------------------
 
 /** Configuration for the middleware pipeline */
 export interface MiddlewarePipelineConfig {

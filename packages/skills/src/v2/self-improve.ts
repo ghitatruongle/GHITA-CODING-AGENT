@@ -80,9 +80,7 @@ export class SkillUsageTracker {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Quarantine Tier for Auto-Created Skills
-// ---------------------------------------------------------------------------
 
 export type SkillTier = 'stable' | 'experimental' | 'quarantine';
 

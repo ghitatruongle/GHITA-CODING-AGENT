@@ -1,6 +1,4 @@
-// ==============================================================================
 // @ghita/mobile-companion -- Public API
-// ==============================================================================
 
 export { BluetoothPairing } from './bluetooth.js';
 export { NetworkDiscovery } from './network-discovery.js';
@@ -13,4 +11,4 @@ export type {
   DeviceCapabilities,
 } from './types.js';
 
-export const MOBILE_COMPANION_VERSION = '1.1.5-beta2';
+export const MOBILE_COMPANION_VERSION = '1.1.5';

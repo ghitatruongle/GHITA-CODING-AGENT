@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Skill Manager
-// ==============================================================================
-
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { type Socket } from 'socket.io-client';
 import { getSharedSocket } from '../utils/sharedSocket';
@@ -195,7 +191,7 @@ function getSampleInput(skill: SkillDefinition): Record<string, unknown> {
       return { x: 10, y: 10 };
     case 'computer.typeText':
       return { text: 'GHITA' };
-    // Phase 2.1: New skill samples
+    
     case 'git.status':
       return { porcelain: true };
     case 'git.commit':
@@ -277,7 +273,7 @@ export function SkillManager() {
   // Use shared socket singleton instead of creating a separate connection
   useEffect(() => {
     let active = true;
-    // deep-review fix (M3): keep the handler refs so the listeners added here
+    
     // are actually removed on cleanup. The previous code only flipped
     // `active = false`, leaving the two listeners permanently attached to the
     // app-lifetime socket — every visit to the Skills tab added another pair.
@@ -333,7 +329,7 @@ export function SkillManager() {
     if (connected && socket) {
       // Proxy skill run to Node sidecar
       try {
-        // deep-review fix (M4): the enablement sync previously awaited a
+        
         // socket ack with no timeout — if the sidecar never answered (dead
         // handler, disconnect race), the promise never settled and the Run
         // button stayed disabled forever. Same 15s bound as the run itself.

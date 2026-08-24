@@ -1,10 +1,8 @@
-// ==============================================================================
 // v0.4.9 C1/C2/C3: Connection utilities (backoff, adaptive streaming, pairing)
 //
 // Pure, platform-agnostic helpers shared by the desktop sidecar and the mobile
 // app so the reconnect/streaming/pairing logic is tested once in @ghita/shared
 // rather than duplicated in React Native / Node.
-// ==============================================================================
 
 // ── C1: Exponential backoff with jitter ────────────────────────────────────
 

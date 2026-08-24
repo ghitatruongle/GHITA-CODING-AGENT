@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Built-in Slash Commands
-// ==============================================================================
-
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import type { SlashCommand } from './registry.js';
@@ -68,7 +64,6 @@ async function getUniversalModel(): Promise<UniversalChatModel> {
   return new UniversalChatModel({ registry });
 }
 
-/** Tạo built-in slash commands */
 export function createBuiltinSlashCommands(): SlashCommand[] {
   return [
     {
@@ -294,7 +289,7 @@ Provide a structured review including:
         'Socratic docs-aware design interview: quét docs/, phát hiện mâu thuẫn, kiểm tra thiết kế',
     },
     createSkillsSyncCommand(new SkillHub()),
-    // ===== Phase 2.2: New Slash Commands =====
+    
     {
       name: 'Run Tests',
       description: 'Run the test suite',

@@ -37,9 +37,6 @@ export class ConfigLoader {
     this.configPath = path.resolve(dataDir, '.ghita-coding-agent.json');
   }
 
-  /**
-   * Đọc cấu hình từ file agent config
-   */
   load(): LocalConfig {
     try {
       if (!fs.existsSync(this.configPath)) {
@@ -71,9 +68,6 @@ export class ConfigLoader {
     }
   }
 
-  /**
-   * Lưu cấu hình mới xuống file agent config
-   */
   save(config: LocalConfig): void {
     try {
       // Ensure api_key is never persisted (security: API keys stored in api-config.json)
@@ -88,7 +82,7 @@ export class ConfigLoader {
   }
 
   /**
-   * Chuyển đổi LocalConfig sang mảng ProviderConfig của AI Engine
+
    * Note: apiKey is left empty — actual keys are synced from api-config.json by syncApiConfigToOrchestrator()
    */
   toProviderConfigs(localConfig: LocalConfig): ProviderConfig[] {
@@ -105,9 +99,6 @@ export class ConfigLoader {
     return configs;
   }
 
-  /**
-   * Lấy danh sách MCP servers từ config
-   */
   getMCPServers(localConfig: LocalConfig): Array<{
     name: string;
     command: string;

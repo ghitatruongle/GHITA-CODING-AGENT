@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Skills v1.1.0 Track 2: Skill schema v2 validator (P25)
-// ==============================================================================
 // Validates the v2 SKILL.md frontmatter contract: `allowed-tools`,
 // `sandbox_permissions`, `metadata.{version,internal}`, `license`, `sources`,
 // plus folder-structure rules (scripts/ implies tests/).
-// ==============================================================================
 
 import type { SkillDefinition } from '../types.js';
 

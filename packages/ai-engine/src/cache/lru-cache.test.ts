@@ -73,7 +73,7 @@ describe('LRUCache byte budget (v1.1.0 Track 9 B3)', () => {
     const cache = new LRUCache<string>({ maxSize: 100, maxMemoryBytes: 200 });
     cache.set('a', 'x'.repeat(100));
     cache.set('b', 'x'.repeat(100));
-    // Cả hai entry ~200*2 bytes → vượt cap 200 → evict a.
+    
     expect(cache.has('a')).toBe(false);
     expect(cache.memoryBytes()).toBeLessThanOrEqual(200);
     cache.clear();

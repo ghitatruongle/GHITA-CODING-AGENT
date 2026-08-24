@@ -1,8 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Orchestrator Embedding & Media Module
-// ==============================================================================
 // Embedding, image generation, speech, video, and transcription methods.
-// ==============================================================================
 
 import type {
   OrchestratorContext,

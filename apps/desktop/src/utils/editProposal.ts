@@ -1,11 +1,9 @@
-// ==============================================================================
 // AI Edit Proposal engine — pure, framework-agnostic logic
 //
 // Powers the "AI proposes an edit → user reviews a Monaco diff → accept/reject"
 // flow (Cursor/Antigravity-style). This module is intentionally free of React
 // and Tauri so it can be unit-tested in isolation; the store + view layers on
 // top of it perform the reactive state + real file writes.
-// ==============================================================================
 
 export type EditProposalStatus = 'pending' | 'accepted' | 'rejected';
 

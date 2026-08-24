@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Track 3 (v1.1.5-beta1): Multi-Server LSP Client & Manager
-// ==============================================================================
 // Manages language server processes over stdio JSON-RPC, handles document sync,
 // and streams live diagnostics into the Diagnostics Ledger.
-// ==============================================================================
 
 import { spawn, type ChildProcess } from 'node:child_process';
 import path from 'node:path';
@@ -24,12 +20,21 @@ export interface LspClientOptions {
 }
 
 export class LspClient extends EventEmitter {
+  /** Hard deadline for any single LSP request — a hung server must not wedge start/stop. */
+  private static readonly REQUEST_TIMEOUT_MS = 15_000;
+
   private process: ChildProcess | null = null;
-  private messageBuffer = '';
+  // Raw bytes, not a string: Content-Length counts UTF-8 bytes and string
+  // indices silently diverge on multi-byte characters.
+  private messageBuffer: Buffer = Buffer.alloc(0);
   private nextId = 1;
   private pendingRequests = new Map<
     number,
-    { resolve: (value: unknown) => void; reject: (err: Error) => void }
+    {
+      resolve: (value: unknown) => void;
+      reject: (err: Error) => void;
+      timer: ReturnType<typeof setTimeout>;
+    }
   >();
   private openDocuments = new Map<string, { version: number; text: string }>();
 
@@ -58,7 +63,7 @@ export class LspClient extends EventEmitter {
       });
 
       this.process.stdout?.on('data', (chunk: Buffer) => {
-        this.handleStdout(chunk.toString('utf-8'));
+        this.handleStdout(chunk);
       });
 
       this.process.stderr?.on('data', (chunk: Buffer) => {
@@ -96,12 +101,16 @@ export class LspClient extends EventEmitter {
   }
 
   /**
-   * Stop the language server.
+   * Stop the language server. The shutdown request is raced against a short
+   * deadline so an unresponsive server cannot wedge stop() itself.
    */
   async stop(): Promise<void> {
     if (!this.process) return;
     try {
-      await this.sendRequest('shutdown', {});
+      await Promise.race([
+        this.sendRequest('shutdown', {}),
+        new Promise((resolve) => setTimeout(resolve, 2_000)),
+      ]);
       this.sendNotification('exit', {});
     } catch {
       // Ignore errors on shutdown
@@ -233,14 +242,20 @@ export class LspClient extends EventEmitter {
     this.emit('diagnostics', { filePath: normalized, diagnostics, diff });
   }
 
-  // ---------------------------------------------------------------------------
   // JSON-RPC Protocol Transport
-  // ---------------------------------------------------------------------------
-
-  private sendRequest(method: string, params: unknown): Promise<unknown> {
+  
+  private sendRequest(
+    method: string,
+    params: unknown,
+    timeoutMs = LspClient.REQUEST_TIMEOUT_MS,
+  ): Promise<unknown> {
     const id = this.nextId++;
     return new Promise((resolve, reject) => {
-      this.pendingRequests.set(id, { resolve, reject });
+      const timer = setTimeout(() => {
+        this.pendingRequests.delete(id);
+        reject(new Error(`LSP request timed out after ${timeoutMs}ms: ${method}`));
+      }, timeoutMs);
+      this.pendingRequests.set(id, { resolve, reject, timer });
       this.writeMessage({ jsonrpc: '2.0', id, method, params });
     });
   }
@@ -256,24 +271,33 @@ export class LspClient extends EventEmitter {
     this.process.stdin.write(header + json);
   }
 
-  private handleStdout(chunk: string): void {
-    this.messageBuffer += chunk;
+  private handleStdout(chunk: Buffer): void {
+    this.messageBuffer = Buffer.concat([this.messageBuffer, chunk]);
 
     while (true) {
-      const headerMatch = this.messageBuffer.match(/Content-Length:\s*(\d+)\r\n\r\n/i);
-      if (!headerMatch || headerMatch.index === undefined) break;
+      const headerEnd = this.messageBuffer.indexOf('\r\n\r\n');
+      if (headerEnd === -1) break;
+      const header = this.messageBuffer.subarray(0, headerEnd).toString('utf-8');
+      const headerMatch = header.match(/Content-Length:\s*(\d+)/i);
+      if (!headerMatch) {
+        // Malformed header block — drop it and keep scanning.
+        this.messageBuffer = this.messageBuffer.subarray(headerEnd + 4);
+        continue;
+      }
 
-      const headerLen = headerMatch[0].length;
       const contentLen = parseInt(headerMatch[1] ?? '0', 10);
-      const startIndex = headerMatch.index + headerLen;
+      const bodyStart = headerEnd + 4;
 
-      if (this.messageBuffer.length < startIndex + contentLen) {
+      // Compare BYTE counts against the byte buffer — never string lengths.
+      if (this.messageBuffer.length < bodyStart + contentLen) {
         // Incomplete message body
         break;
       }
 
-      const bodyStr = this.messageBuffer.slice(startIndex, startIndex + contentLen);
-      this.messageBuffer = this.messageBuffer.slice(startIndex + contentLen);
+      const bodyStr = this.messageBuffer
+        .subarray(bodyStart, bodyStart + contentLen)
+        .toString('utf-8');
+      this.messageBuffer = this.messageBuffer.subarray(bodyStart + contentLen);
 
       try {
         const parsed = JSON.parse(bodyStr);
@@ -295,6 +319,7 @@ export class LspClient extends EventEmitter {
     if (typeof msg.id === 'number' && this.pendingRequests.has(msg.id)) {
       const handler = this.pendingRequests.get(msg.id);
       this.pendingRequests.delete(msg.id);
+      if (handler) clearTimeout(handler.timer);
       if (msg.error) {
         handler?.reject(new Error(JSON.stringify(msg.error)));
       } else {
@@ -352,10 +377,12 @@ export class LspClient extends EventEmitter {
       }
       this.process = null;
     }
-    for (const { reject } of this.pendingRequests.values()) {
+    for (const { reject, timer } of this.pendingRequests.values()) {
+      clearTimeout(timer);
       reject(new Error('LSP server terminated'));
     }
     this.pendingRequests.clear();
+    this.messageBuffer = Buffer.alloc(0);
   }
 
   private detectLanguageId(filePath: string): string {

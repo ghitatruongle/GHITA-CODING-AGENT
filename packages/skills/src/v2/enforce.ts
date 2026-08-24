@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Skills v1.1.0 Track 2: allowed-tools enforcement (P27)
-// ==============================================================================
 // Execution-boundary enforcement: when a skill declares `allowed-tools`, any
 // adapter key outside the list is denied with a clear reason (deny-default).
-// ==============================================================================
 
 import type { SkillDefinition, SkillInvocation, SkillRuntimeAdapters } from '../types.js';
 import type { SkillResult } from '@ghita/shared';

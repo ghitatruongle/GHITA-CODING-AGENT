@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Provider Health Checker (Phase 28)
 // Periodically probes each provider's /models endpoint to track health state.
-// ==============================================================================
 
 import type {
   HealthCheckConfig,
@@ -12,9 +9,7 @@ import type {
 } from './types.js';
 import { DEFAULT_HEALTH_CONFIG } from './types.js';
 
-// ---------------------------------------------------------------------------
 // Health Checker
-// ---------------------------------------------------------------------------
 
 export class HealthChecker {
   private config: Required<HealthCheckConfig>;

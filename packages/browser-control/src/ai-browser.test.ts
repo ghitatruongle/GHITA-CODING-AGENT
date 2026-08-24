@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - AI Browser Tests
-// ==============================================================================
-
 import { describe, it, expect, vi } from 'vitest';
 import {
   collectCandidates,

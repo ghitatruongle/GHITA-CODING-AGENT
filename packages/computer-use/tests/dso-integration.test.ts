@@ -1,15 +1,9 @@
-// =============================================================================
-// GHITA CODING AGENT - DSO Integration Test Suite
-// Chạy thử ứng dụng React + Postgres thật trong DSO
-// =============================================================================
-
 /**
  * Integration test suite cho DSO Orchestrator
  *
- * Test này tạo thật Docker containers: Postgres DB + Node.js Web Server
- * và kiểm tra chúng có thể kết nối với nhau qua Docker Bridge Network.
+
  *
- * ⚠️ YÊU CẦU: Docker daemon phải đang chạy trên máy host
+
  *
  * Verify command: pnpm test dso-integration
  */
@@ -19,11 +13,6 @@ import { DSOOrchestrator } from '../src/sandbox/dsoOrchestrator.js';
 import type { SandboxServiceConfig } from '../src/sandbox/types.js';
 import { GHITA_SANDBOX_LABEL } from '../src/sandbox/types.js';
 
-// =============================================================================
-// Cấu hình containers cho integration test
-// =============================================================================
-
-/** Postgres 16 Alpine — nhẹ, nhanh khởi động */
 const POSTGRES_CONFIG: SandboxServiceConfig = {
   image: 'postgres:16-alpine',
   name: 'test-postgres',
@@ -44,7 +33,6 @@ const POSTGRES_CONFIG: SandboxServiceConfig = {
   },
 };
 
-/** Node.js 22 Alpine — giả lập web server */
 const NODE_SERVER_CONFIG: SandboxServiceConfig = {
   image: 'node:22-alpine',
   name: 'test-webserver',
@@ -89,9 +77,7 @@ SERVEREOF
   startupTimeoutMs: 8_000,
 };
 
-// =============================================================================
 // Integration Tests
-// =============================================================================
 
 describe.skip('DSO Integration: React + Postgres (requires Docker)', () => {
   let dso: DSOOrchestrator;
@@ -101,38 +87,32 @@ describe.skip('DSO Integration: React + Postgres (requires Docker)', () => {
   beforeAll(async () => {
     dso = new DSOOrchestrator();
 
-    // Bước 1: Cleanup orphan containers từ lần test trước
     const cleaned = await dso.cleanupOrphans();
     if (cleaned > 0) {
       console.log(`[DSO Test] Cleaned up ${cleaned} orphan containers`);
     }
 
-    // Bước 2: Tạo Docker Bridge Network
     await dso.createNetwork('integration-test');
 
-    // Bước 3: Khởi chạy Postgres container
     const pgContainer = await dso.spawnContainer(POSTGRES_CONFIG);
     postgresPort = pgContainer.ports[0]?.hostPort ? Number(pgContainer.ports[0].hostPort) : 5432;
     console.log(`[DSO Test] Postgres running on host port ${postgresPort}`);
 
-    // Bước 4: Khởi chạy Web Server container (kết nối Postgres qua Docker DNS)
     const webContainer = await dso.spawnContainer(NODE_SERVER_CONFIG);
     webserverPort = webContainer.ports[0]?.hostPort ? Number(webContainer.ports[0].hostPort) : 3000;
     console.log(`[DSO Test] Web server running on host port ${webserverPort}`);
-  }, 120_000); // Timeout 2 phút cho setup
+  }, 120_000); 
 
   afterAll(async () => {
-    // Dọn dẹp tất cả containers và networks
+    
     if (dso) {
       await dso.destroyAll();
       console.log('[DSO Test] All containers destroyed');
     }
   }, 30_000);
 
-  // ===========================================================================
   // Test: Network & Container Creation
-  // ===========================================================================
-
+  
   describe('Network & Container Creation', () => {
     it('nên tạo 2 containers đang chạy', () => {
       const containers = dso.getContainers();
@@ -163,10 +143,8 @@ describe.skip('DSO Integration: React + Postgres (requires Docker)', () => {
     });
   });
 
-  // ===========================================================================
   // Test: Resource Limits
-  // ===========================================================================
-
+  
   describe('Resource Limits', () => {
     it('Postgres container phải có resource limits đúng', async () => {
       const pg = dso.getContainerByName('test-postgres')!;
@@ -185,10 +163,8 @@ describe.skip('DSO Integration: React + Postgres (requires Docker)', () => {
     });
   });
 
-  // ===========================================================================
   // Test: Container Stats (CPU/RAM monitoring)
-  // ===========================================================================
-
+  
   describe('Container Stats', () => {
     it('nên lấy được stats CPU/RAM của Postgres', async () => {
       const pg = dso.getContainerByName('test-postgres')!;
@@ -210,13 +186,11 @@ describe.skip('DSO Integration: React + Postgres (requires Docker)', () => {
     });
   });
 
-  // ===========================================================================
   // Test: Inter-Container Communication (Docker DNS)
-  // ===========================================================================
-
+  
   describe('Inter-Container Communication', () => {
     it('Web Server nên phản hồi HTTP trên /health', async () => {
-      // Đợi server khởi động hoàn tất
+      
       await new Promise((r) => setTimeout(r, 3000));
 
       try {
@@ -227,7 +201,7 @@ describe.skip('DSO Integration: React + Postgres (requires Docker)', () => {
         expect(body.status).toBe('ok');
         expect(body.service).toBe('ghita-dso-test');
       } catch (err: unknown) {
-        // Nếu port không accessible (Docker có thể map khác port), skip
+        
         console.warn(
           `[DSO Test] HTTP test skipped: ${err instanceof Error ? err.message : String(err)}`,
         );
@@ -250,13 +224,11 @@ describe.skip('DSO Integration: React + Postgres (requires Docker)', () => {
     });
   });
 
-  // ===========================================================================
   // Test: Orphan Cleanup
-  // ===========================================================================
-
+  
   describe('Orphan Cleanup', () => {
     it('nên có thể destroy 1 container riêng lẻ', async () => {
-      // Tạo container tạm
+      
       const tempContainer = await dso.spawnContainer({
         image: 'alpine:latest',
         name: 'temp-container',
@@ -266,7 +238,6 @@ describe.skip('DSO Integration: React + Postgres (requires Docker)', () => {
 
       expect(dso.getContainers()).toHaveLength(3);
 
-      // Destroy container tạm
       await dso.destroy(tempContainer.id);
 
       expect(dso.getContainers()).toHaveLength(2);
@@ -274,10 +245,8 @@ describe.skip('DSO Integration: React + Postgres (requires Docker)', () => {
     });
   });
 
-  // ===========================================================================
   // Test: Cleanup All
-  // ===========================================================================
-
+  
   describe('destroyAll', () => {
     it('nên destroy tất cả containers và networks', async () => {
       expect(dso.getContainers().length).toBeGreaterThan(0);
@@ -289,14 +258,10 @@ describe.skip('DSO Integration: React + Postgres (requires Docker)', () => {
   });
 });
 
-// =============================================================================
 // SQLite Logger Integration Test
-// =============================================================================
 
 describe.skip('SandboxLogger SQLite Integration (requires better-sqlite3)', () => {
-  // Test này kiểm tra SandboxLogger ghi logs xuống SQLite thật
-  // Skip nếu chưa install better-sqlite3
-
+  
   it('nên ghi và đọc logs từ SQLite', async () => {
     const { SandboxLogger } = await import('../src/sandbox/sandboxLogger.js');
     const logger = new SandboxLogger({
@@ -306,7 +271,6 @@ describe.skip('SandboxLogger SQLite Integration (requires better-sqlite3)', () =
 
     await logger.initDatabase();
 
-    // Ghi một số logs
     logger.log({
       containerId: 'test-1',
       containerName: 'test-container',
@@ -323,14 +287,11 @@ describe.skip('SandboxLogger SQLite Integration (requires better-sqlite3)', () =
       timestamp: new Date(),
     });
 
-    // Kiểm tra logs trong memory
     expect(logger.getLogs()).toHaveLength(2);
 
-    // Kiểm tra logs trong SQLite
     const dbCount = logger.getDbLogCount();
     expect(dbCount).toBe(2);
 
-    // Query logs từ SQLite
     const errorLogs = logger.queryLogsFromDb({ event: 'error' });
     expect(errorLogs).toHaveLength(1);
     expect(errorLogs[0].message).toBe('Something went wrong');

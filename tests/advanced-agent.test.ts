@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 4 Integration/Unit Tests
-// ==============================================================================
-
 import { describe, it, expect, vi } from 'vitest';
 import {
   SubagentSpawner,

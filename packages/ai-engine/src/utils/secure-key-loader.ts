@@ -1,8 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Secure Key Loader
 // Securely loads API keys from environment variables with built-in redaction
 // support to prevent key leakage through error messages, logs, or stack traces.
-// ==============================================================================
 
 /**
  * Map of known API key environment variables by provider.

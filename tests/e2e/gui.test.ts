@@ -1,13 +1,8 @@
-// ==============================================================================
-// GHITA CODING AGENT - E2E Playwright GUI Test Suite (Phase 46)
 // Playwright-based GUI tests for the Tauri desktop app
-// ==============================================================================
 
 import { describe, it, expect } from 'vitest';
 
-// ---------------------------------------------------------------------------
 // Playwright Test Helpers (mock — actual Playwright requires browser binary)
-// ---------------------------------------------------------------------------
 
 interface PageElement {
   selector: string;
@@ -72,9 +67,7 @@ class PlaywrightTestHelper {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Tests
-// ---------------------------------------------------------------------------
 
 describe('Phase 46 - Playwright GUI Tests', () => {
   let pw: PlaywrightTestHelper;

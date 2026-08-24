@@ -57,9 +57,9 @@ import type {
 } from '../../packages/ai-engine/src/types.js';
 
 describe('1 Core AI Engine Features Test Suite', () => {
-  // ==============================================================================
+  
   // 1. Custom Error Hierarchy (STT 1.6)
-  // ==============================================================================
+  
   describe('Custom Error Hierarchy (STT 1.6)', () => {
     it('should correctly construct and verify properties for AIBaseError', () => {
       const causeError = new Error('Original Cause');
@@ -140,9 +140,8 @@ describe('1 Core AI Engine Features Test Suite', () => {
     });
   });
 
-  // ==============================================================================
   // 2. Structured Output (STT 1.1)
-  // ==============================================================================
+  
   describe('Structured Output (STT 1.1)', () => {
     describe('zodToJsonSchema converter', () => {
       it('should convert primitive types', () => {
@@ -274,9 +273,8 @@ describe('1 Core AI Engine Features Test Suite', () => {
     });
   });
 
-  // ==============================================================================
   // 3. Tool Call Repair (STT 1.2)
-  // ==============================================================================
+  
   describe('Tool Call Repair (STT 1.2)', () => {
     let mockOrchestrator: any;
     let parseFn: any;
@@ -345,9 +343,8 @@ describe('1 Core AI Engine Features Test Suite', () => {
     });
   });
 
-  // ==============================================================================
   // 4. Context-Injected Permissions & Active Filter (STT 1.3)
-  // ==============================================================================
+  
   describe('Permissions Context & Active Filter (STT 1.3)', () => {
     let permissionManager: PermissionManager;
 
@@ -403,9 +400,8 @@ describe('1 Core AI Engine Features Test Suite', () => {
     });
   });
 
-  // ==============================================================================
   // 5. Smooth Streaming & Token Calculator (STT 1.4)
-  // ==============================================================================
+  
   describe('Smooth Streaming & Token Calculator (STT 1.4)', () => {
     describe('smoothStream pacing helper', () => {
       it('should yield stream chunks correctly paced', async () => {
@@ -479,9 +475,8 @@ describe('1 Core AI Engine Features Test Suite', () => {
     });
   });
 
-  // ==============================================================================
   // 6. Reasoning & Thinking Extraction (STT 1.5)
-  // ==============================================================================
+  
   describe('Reasoning Extraction (STT 1.5)', () => {
     describe('Static extractReasoning parser', () => {
       it('should statically separate think tags from response content', () => {
@@ -562,9 +557,8 @@ describe('1 Core AI Engine Features Test Suite', () => {
     });
   });
 
-  // ==============================================================================
   // 7. Embeddings Support (STT 1.7)
-  // ==============================================================================
+  
   describe('Embeddings Support (STT 1.7)', () => {
     let orchestrator: Orchestrator;
     let mockProvider: any;
@@ -628,9 +622,8 @@ describe('1 Core AI Engine Features Test Suite', () => {
     });
   });
 
-  // ==============================================================================
   // 8. Middleware Pipeline (STT 1.8)
-  // ==============================================================================
+  
   describe('Middleware Pipeline (STT 1.8)', () => {
     let mockProvider: AIProvider;
     const initialResponse: ChatResponse = {

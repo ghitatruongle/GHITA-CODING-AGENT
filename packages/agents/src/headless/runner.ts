@@ -1,11 +1,7 @@
-// ==============================================================================
-// GHITA CODING AGENT - v1.1.5-beta1 Track 1.3: Headless / CI mode
-// ------------------------------------------------------------------------------
 // Runs a scripted agent task with no UI and emits a stable JSON-lines event
 // stream (pattern: grok-build headless `--output-format streaming-json`).
 // Exit codes: 0 = success · 1 = runtime error · 2 = run exhausted
 // (max-turns reached without a final answer — the "findings exist" contract).
-// ==============================================================================
 
 import { createReActAgent } from '../react/agent.js';
 import type { ReActAgentRunResult, ReActTool } from '../react/types.js';

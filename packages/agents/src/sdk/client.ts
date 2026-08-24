@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Agent SDK Client
-// ==============================================================================
-
 export interface AgentSDKConfig {
   serverUrl?: string;
   apiKey?: string;
@@ -22,7 +18,7 @@ export interface AgentMessage {
 }
 
 /**
- * GhitAgentClient — SDK cho developer xây dựng custom agents trên nền GHITA
+
  *
  * @example
  * ```ts
@@ -42,7 +38,6 @@ export class GhitAgentClient {
     };
   }
 
-  /** Gửi message và nhận response */
   async sendMessage(message: string, options?: SendMessageOptions): Promise<AgentMessage> {
     const response = await fetch(`${this.config.serverUrl}/api/chat`, {
       method: 'POST',
@@ -67,7 +62,6 @@ export class GhitAgentClient {
     return (await response.json()) as AgentMessage;
   }
 
-  /** Kiểm tra server status */
   async getStatus(): Promise<{ status: string; version: string }> {
     const response = await fetch(`${this.config.serverUrl}/health`, {
       signal: AbortSignal.timeout(5000),
@@ -75,7 +69,6 @@ export class GhitAgentClient {
     return (await response.json()) as { status: string; version: string };
   }
 
-  /** Lấy danh sách providers khả dụng */
   async getProviders(): Promise<string[]> {
     const response = await fetch(`${this.config.serverUrl}/api/providers`, {
       signal: AbortSignal.timeout(5000),
@@ -84,7 +77,6 @@ export class GhitAgentClient {
     return data.providers;
   }
 
-  /** Lấy danh sách subagents khả dụng */
   async getSubagents(): Promise<Record<string, unknown>[]> {
     try {
       const response = await fetch(`${this.config.serverUrl}/api/subagents`, {
@@ -98,7 +90,6 @@ export class GhitAgentClient {
     }
   }
 
-  /** Kích hoạt vòng lặp tự sửa sai Ralph Loop cho một tác vụ */
   async runRalphLoop(task: string, maxIterations = 5): Promise<Record<string, unknown>> {
     const response = await fetch(`${this.config.serverUrl}/api/ralph-loop`, {
       method: 'POST',

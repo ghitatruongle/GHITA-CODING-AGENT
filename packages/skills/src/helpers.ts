@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Skills Helpers
-// ==============================================================================
 // Shared helper functions for skill implementations.
 // Extracted from index.ts for reuse across skill modules.
-// ==============================================================================
 
 import type { SkillResult } from '@ghita/shared';
 

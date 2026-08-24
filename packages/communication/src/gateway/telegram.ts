@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Telegram Communication Gateway
-// ==============================================================================
-
 import type { CommunicationGateway, GatewayMessage, GatewayType } from './types.js';
 
 export class TelegramGateway implements CommunicationGateway {

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Cache Warmer (Phase 26)
-// ==============================================================================
-
 import type { CacheWarmerConfig, WarmSource } from './types.js';
 
 const DEFAULT_CONFIG: CacheWarmerConfig = {
@@ -55,17 +51,20 @@ export class CacheWarmer<T = unknown> {
       }
     }
 
-    // 2. Load from registered warm sources
-    for (const source of this.sources) {
-      try {
-        const entries = await source.load();
-        allEntries.push(...entries.map((e) => ({ key: e.key, value: e.value as T, tags: e.tags })));
-      } catch (err) {
-        this._errors.push(
-          `Source "${source.name}" failed: ${err instanceof Error ? err.message : String(err)}`,
-        );
-      }
-    }
+    // 2. Load from registered warm sources — in parallel; sources hit disk or
+    // network, so serial loads multiplied warm-up time.
+    await Promise.all(
+      this.sources.map(async (source) => {
+        try {
+          const entries = await source.load();
+          allEntries.push(...entries.map((e) => ({ key: e.key, value: e.value as T, tags: e.tags })));
+        } catch (err) {
+          this._errors.push(
+            `Source "${source.name}" failed: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        }
+      }),
+    );
 
     // 3. Add predefined preload keys (with null value — they'll be populated on first real access)
     for (const key of this.config.preloadKeys) {

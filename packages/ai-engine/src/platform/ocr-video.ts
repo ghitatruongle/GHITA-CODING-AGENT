@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - OCR & Video Multimodal Analysis
-// ==============================================================================
-
 import type { Orchestrator } from '../orchestrator.js';
 
 export class OCRProcessor {
@@ -11,9 +7,6 @@ export class OCRProcessor {
     this.orchestrator = orchestrator;
   }
 
-  /**
-   * Trích xuất văn bản từ hình ảnh sử dụng Multimodal LLM
-   */
   async parseImage(
     image: Buffer,
     _mimeType = 'image/png',
@@ -49,9 +42,6 @@ export class VideoContentAnalyzer {
     this.orchestrator = orchestrator;
   }
 
-  /**
-   * Phân tích nội dung video đa phương thức
-   */
   async analyzeVideo(
     video: Buffer,
     _mimeType = 'video/mp4',

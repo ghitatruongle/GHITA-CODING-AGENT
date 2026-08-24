@@ -1,6 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Operator Utilities (Phase 1 Rust Rewrite)
-// ==============================================================================
 //
 // Pure helper functions used by TauriOperator and the ReAct loop.
 // Previously these lived in screenshot.ts alongside the (now removed)
@@ -8,7 +5,6 @@
 //
 // The actual screen capture, mouse/keyboard control, and image resize are
 // now handled natively by the Rust backend in computer_use.rs.
-// ==============================================================================
 
 import type { ScreenCapture, ScreenSize } from '../index.js';
 import type { OperatorContext } from './types.js';

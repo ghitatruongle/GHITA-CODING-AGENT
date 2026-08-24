@@ -1,5 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Audit Fix 2.19 Regression Tests
 //
 // Covers the warm-count arithmetic fix in `TierManager.migrate()`:
 // the previous expression was `warm.length - demoted.filter(...).length`,
@@ -13,7 +11,6 @@
 // These tests build a synthetic `MemoryStorageAdapter` and assert that
 // the eviction actually triggers when it should, and doesn't when it
 // shouldn't.
-// ==============================================================================
 
 import { describe, it, expect } from 'vitest';
 import { TierManager } from '../src/compression/tier-manager.js';

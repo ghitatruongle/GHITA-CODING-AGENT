@@ -1,6 +1,4 @@
-// ==============================================================================
 // Wave 3b — ScreenCapture config/lifecycle without real capture hardware
-// ==============================================================================
 
 import { describe, it, expect, vi } from 'vitest';
 import { ScreenCapture } from '../src/screen-capture.js';

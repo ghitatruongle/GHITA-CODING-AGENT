@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Search Engine Tests
-// ==============================================================================
-
 import { describe, it, expect, beforeEach } from 'vitest';
 import { SearchEngine } from './search.js';
 import type { CodeNode } from './types.js';

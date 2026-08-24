@@ -1,16 +1,10 @@
 #!/usr/bin/env node
-// ==============================================================================
-// GHITA CODING AGENT - Security audit (v1.1.0 Track 10 R4)
-// ------------------------------------------------------------------------------
-// Quét pattern rủi ro trong packages/*/src + apps/desktop/src-tauri/src:
-//   [S1] exec/child_process với chuỗi nối không escape
+
 //   [S2] eval/new Function
-//   [S3] đường dẫn từ input user dùng trực tiếp (path.join không sanitize)
-//   [S4] secret trong code (sk-/AKIA/ghp_/password literal) — ngoại trừ rules/scanner
+
 //   [S5] innerHTML/document.write (XSS)
-//   [S6] fetch/http tới URL động không allowlist
+
 // Usage: node scripts/audit-security.mjs
-// ==============================================================================
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';

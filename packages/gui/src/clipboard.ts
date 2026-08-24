@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Clipboard Abstraction (Phase 33)
 // Cross-platform clipboard read/write with Tauri + browser fallback
-// ==============================================================================
 
 /**
  * Unified clipboard service. Delegates to Tauri's clipboard plugin when

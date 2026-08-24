@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — Error Fallback Component
 // Used with react-error-boundary pattern from plan
-// ==============================================================================
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';

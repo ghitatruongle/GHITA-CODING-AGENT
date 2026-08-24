@@ -1,5 +1,5 @@
 /**
- * Phase 20 — Mixed Control Strategy
+
  *
  * Chooses between the browser-use-only and gui-agent-only strategies
  * based on the task type and a quick URL / focus probe. The mixed

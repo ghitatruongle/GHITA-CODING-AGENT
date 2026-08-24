@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Operators / Screenshot Pipeline unit tests (Phase 1 Rust Rewrite)
-// ==============================================================================
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import {

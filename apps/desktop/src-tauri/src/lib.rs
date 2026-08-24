@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -49,6 +49,8 @@ pub fn command_is_blocked(command: &str) -> bool {
     let compact = normalized.split_whitespace().collect::<Vec<_>>().join(" ");
     compact.contains("rm -rf /")
         || compact.contains("rm -rf ~")
+        || compact.contains("rm -fr /")
+        || compact.contains("rm -r -f /")
         || compact.contains("format c:")
         || compact.contains("format.com c:")
         || compact.contains("mkfs.")
@@ -58,16 +60,193 @@ pub fn command_is_blocked(command: &str) -> bool {
         || compact.contains("reboot")
         || compact.contains("remove-item c:\\ -recurse")
         || compact.contains("remove-item -recurse c:\\")
+        || compact.contains("rd /s /q c:")
+        || compact.contains("rd /s /q d:")
+        || compact.contains("rmdir /s /q c:")
+        || compact.contains("diskpart")
+        || compact.contains("cipher /w")
+        || compact.contains("bcdedit")
+        || compact.contains("reg delete hklm")
+        || compact.contains("reg delete hkcu")
 }
 
 pub fn clamp_command_timeout(timeout_ms: Option<u64>) -> u64 {
     timeout_ms.unwrap_or(120_000).clamp(1_000, 300_000)
 }
 
+// --- Filesystem scope for IPC ---
+// Renderer-initiated FS mutations are only allowed inside folders the user
+// explicitly granted through a native dialog (`fs_request_access`). Grants are
+// persisted to app data so they survive restarts. Reads stay open so the
+// editor can browse any folder the user navigates to.
+struct FsScopeState {
+    roots: std::sync::Mutex<std::collections::HashSet<PathBuf>>,
+}
+
+fn normalize_path(p: &Path) -> PathBuf {
+    let c = p.canonicalize().unwrap_or_else(|_| p.to_path_buf());
+    let s = c.to_string_lossy();
+    match s.strip_prefix(r"\\?\") {
+        Some(stripped) => PathBuf::from(stripped.to_string()),
+        None => c,
+    }
+}
+
+/// Normalize a path that may not exist yet (write/mkdir targets): canonicalize
+/// the nearest existing ancestor and append the remainder verbatim.
+fn normalize_loose(p: &Path) -> PathBuf {
+    if p.exists() {
+        return normalize_path(p);
+    }
+    match p.parent() {
+        Some(parent) if parent != p => {
+            normalize_loose(parent).join(p.file_name().unwrap_or_default())
+        }
+        _ => p.to_path_buf(),
+    }
+}
+
+fn normalized_lower(p: &Path) -> String {
+    let s = normalize_path(p).to_string_lossy().into_owned();
+    s.trim_end_matches(['/', '\\']).to_lowercase()
+}
+
+/// True when `child` equals `root` or lives underneath it (component-safe,
+/// case-insensitive for Windows).
+pub fn is_within_root(child: &Path, root: &Path) -> bool {
+    let c = normalized_lower(child);
+    let r = normalized_lower(root);
+    if r.is_empty() || c.is_empty() {
+        return false;
+    }
+    c == r || (c.starts_with(&r) && c[r.len()..].starts_with(['/', '\\']))
+}
+
+fn home_dir() -> Option<PathBuf> {
+    std::env::var_os("USERPROFILE")
+        .or_else(|| std::env::var_os("HOME"))
+        .map(PathBuf::from)
+}
+
+/// Refuse destructive operations on filesystem roots, the user's home
+/// directory, and any ancestor of it (`C:\Users`, `C:\Users\<name>`, …).
+pub fn is_protected_system_path(path: &Path) -> bool {
+    let trimmed = normalized_lower(path);
+    if trimmed.is_empty() {
+        return true;
+    }
+    // Filesystem/drive roots have a single component ("c:", "/").
+    if Path::new(&trimmed).components().count() <= 1 {
+        return true;
+    }
+    if let Some(home) = home_dir() {
+        let h = normalized_lower(&home);
+        if !h.is_empty()
+            && (trimmed == h
+                || (h.starts_with(&trimmed) && h[trimmed.len()..].starts_with(['/', '\\'])))
+        {
+            return true;
+        }
+    }
+    false
+}
+
+fn load_fs_scope(app: &tauri::AppHandle) -> std::collections::HashSet<PathBuf> {
+    let Ok(file) = app_storage_path(app, "fs-scope.json") else {
+        return Default::default();
+    };
+    let Ok(content) = fs::read_to_string(file) else {
+        return Default::default();
+    };
+    serde_json::from_str::<serde_json::Value>(&content)
+        .ok()
+        .and_then(|v| {
+            v.get("roots").and_then(|r| r.as_array()).map(|arr| {
+                arr.iter()
+                    .filter_map(|p| p.as_str())
+                    .map(PathBuf::from)
+                    .filter(|p| p.exists())
+                    .collect::<std::collections::HashSet<PathBuf>>()
+            })
+        })
+        .unwrap_or_default()
+}
+
+fn persist_fs_scope(
+    app: &tauri::AppHandle,
+    scope: &tauri::State<'_, FsScopeState>,
+) -> Result<(), String> {
+    let file = app_storage_path(app, "fs-scope.json")?;
+    let roots: Vec<String> = scope
+        .roots
+        .lock()
+        .unwrap()
+        .iter()
+        .map(|p| p.to_string_lossy().into_owned())
+        .collect();
+    let json = serde_json::json!({ "roots": roots });
+    fs::write(file, json.to_string()).map_err(|e| format!("Failed to persist fs scope: {e}"))
+}
+
+fn ensure_fs_scoped(scope: &tauri::State<'_, FsScopeState>, path: &Path) -> Result<(), String> {
+    let candidate = normalize_loose(path);
+    let granted = scope.roots.lock().unwrap();
+    if granted.iter().any(|r| is_within_root(&candidate, r)) {
+        return Ok(());
+    }
+    Err(format!(
+        "Path is outside the granted filesystem scope ({candidate:?}). The user must approve access first (fs_request_access)."
+    ))
+}
+
+/// Ask the user, via a native dialog, to grant GHITA file access to a folder
+/// subtree. Returns false when declined.
+#[tauri::command]
+fn fs_request_access(
+    app: tauri::AppHandle,
+    scope: tauri::State<'_, FsScopeState>,
+    path: String,
+) -> Result<bool, String> {
+    let trimmed = path.trim();
+    if trimmed.is_empty() {
+        return Err("Access request requires a path.".to_string());
+    }
+    if is_protected_system_path(Path::new(trimmed)) {
+        return Err("Refusing to grant access to a system-critical path.".to_string());
+    }
+    let approved = app
+        .dialog()
+        .message(format!(
+            "Allow GHITA to read and edit files under:\n\n{trimmed}\n\nOnly approve folders you trust."
+        ))
+        .title("Grant folder access")
+        .kind(MessageDialogKind::Info)
+        .buttons(MessageDialogButtons::OkCancel)
+        .blocking_show();
+    if !approved {
+        return Ok(false);
+    }
+    let norm = normalize_path(Path::new(trimmed));
+    scope.roots.lock().unwrap().insert(norm);
+    persist_fs_scope(&app, &scope)?;
+    Ok(true)
+}
+
+#[tauri::command]
+fn fs_scope_list(scope: tauri::State<'_, FsScopeState>) -> Vec<String> {
+    scope
+        .roots
+        .lock()
+        .unwrap()
+        .iter()
+        .map(|p| p.to_string_lossy().into_owned())
+        .collect()
+}
+
 // --- Native filesystem commands ---
-// The editor must be able to open/edit files in ANY folder the user navigates
-// to. These commands use std::fs directly and are used by the file explorer
-// and code editor (the previous plugin-fs scope restriction has been removed).
+// Reads are open so the editor can browse any folder the user navigates to.
+// Mutations (write/mkdir/rename/remove) require the target to live inside a
+// folder granted via `fs_request_access` (native dialog, persisted).
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -97,13 +276,14 @@ struct NativeFsReadText {
 }
 
 fn decode_utf16_bytes(bytes: &[u8], little_endian: bool) -> String {
-    let units: Vec<u16> = bytes
-        .chunks_exact(2)
+    let (pairs, _) = bytes.as_chunks::<2>();
+    let units: Vec<u16> = pairs
+        .iter()
         .map(|c| {
             if little_endian {
-                u16::from_le_bytes([c[0], c[1]])
+                u16::from_le_bytes(*c)
             } else {
-                u16::from_be_bytes([c[0], c[1]])
+                u16::from_be_bytes(*c)
             }
         })
         .collect();
@@ -190,7 +370,13 @@ fn fs_read_text(path: String, max_bytes: Option<u64>) -> Result<NativeFsReadText
 /// the file is written back in its original encoding instead of being
 /// corrupted; when omitted, plain UTF-8 is written.
 #[tauri::command]
-fn fs_write_text(path: String, content: String, encoding: Option<String>) -> Result<(), String> {
+fn fs_write_text(
+    scope: tauri::State<'_, FsScopeState>,
+    path: String,
+    content: String,
+    encoding: Option<String>,
+) -> Result<(), String> {
+    ensure_fs_scoped(&scope, Path::new(&path))?;
     let bytes: Vec<u8> = match encoding.as_deref() {
         Some("utf-8-bom") => {
             let mut v = vec![0xEF, 0xBB, 0xBF];
@@ -246,7 +432,12 @@ fn fs_metadata(path: String) -> Result<NativeFsMetadata, String> {
 
 /// Create a directory with native std::fs (`recursive` mirrors `mkdir -p`).
 #[tauri::command]
-fn fs_mkdir(path: String, recursive: Option<bool>) -> Result<(), String> {
+fn fs_mkdir(
+    scope: tauri::State<'_, FsScopeState>,
+    path: String,
+    recursive: Option<bool>,
+) -> Result<(), String> {
+    ensure_fs_scoped(&scope, Path::new(&path))?;
     let recursive = recursive.unwrap_or(false);
     if recursive {
         std::fs::create_dir_all(&path).map_err(|e| format!("Failed to create directory: {e}"))
@@ -255,19 +446,23 @@ fn fs_mkdir(path: String, recursive: Option<bool>) -> Result<(), String> {
     }
 }
 
-/// Remove a file or directory with native std::fs. Empty-string guards and a
-/// no-recursive default protect against accidental bulk deletion.
+/// Remove a file or directory with native std::fs. Refuses filesystem roots,
+/// the user's home directory and its ancestors, and anything outside the
+/// granted fs-scope; `recursive` still requires an explicit flag.
 #[tauri::command]
-fn fs_remove(path: String, recursive: Option<bool>) -> Result<(), String> {
+fn fs_remove(
+    scope: tauri::State<'_, FsScopeState>,
+    path: String,
+    recursive: Option<bool>,
+) -> Result<(), String> {
     let trimmed = path.trim();
-    if trimmed.is_empty()
-        || trimmed == "/"
-        || trimmed == "\\"
-        || trimmed == "C:"
-        || trimmed == "C:\\"
-    {
-        return Err("Refusing to remove a filesystem root.".to_string());
+    if trimmed.is_empty() {
+        return Err("Refusing to remove an empty path.".to_string());
     }
+    if is_protected_system_path(Path::new(trimmed)) {
+        return Err("Refusing to remove a filesystem root or system-critical path.".to_string());
+    }
+    ensure_fs_scoped(&scope, Path::new(trimmed))?;
     let recursive = recursive.unwrap_or(false);
     let meta = std::fs::symlink_metadata(&path).map_err(|e| format!("Failed to stat path: {e}"))?;
     if meta.is_dir() && !recursive {
@@ -282,10 +477,16 @@ fn fs_remove(path: String, recursive: Option<bool>) -> Result<(), String> {
 
 /// Rename/move a file or directory with native std::fs.
 #[tauri::command]
-fn fs_rename(from: String, to: String) -> Result<(), String> {
+fn fs_rename(
+    scope: tauri::State<'_, FsScopeState>,
+    from: String,
+    to: String,
+) -> Result<(), String> {
     if from.trim().is_empty() || to.trim().is_empty() {
         return Err("Rename requires both source and destination paths.".to_string());
     }
+    ensure_fs_scoped(&scope, Path::new(&from))?;
+    ensure_fs_scoped(&scope, Path::new(&to))?;
     std::fs::rename(&from, &to).map_err(|e| format!("Failed to rename: {e}"))
 }
 
@@ -306,8 +507,18 @@ async fn execute_approved_command(
 
     // Renderer state is not a trust boundary. Always obtain approval from a
     // native dialog instead of accepting a caller-controlled boolean over IPC.
+    // Long commands show BOTH head and tail so nothing can hide past the cut.
     let command_preview = if command.chars().count() > 2_000 {
-        format!("{}…", command.chars().take(2_000).collect::<String>())
+        let elided = command.chars().count() - 2_100;
+        format!(
+            "{}\n\n…[{} characters elided]…\n\n{}",
+            command.chars().take(1_500).collect::<String>(),
+            elided,
+            command
+                .chars()
+                .skip(command.chars().count() - 600)
+                .collect::<String>()
+        )
     } else {
         command.clone()
     };
@@ -530,6 +741,20 @@ async fn check_update(app: tauri::AppHandle) -> Result<String, String> {
     match updater.check().await {
         Ok(Some(update)) => {
             let version = update.version.clone();
+            // Installing replaces the binary and restarts the app — never do
+            // this silently; the user must consent to each update.
+            let approved = app
+                .dialog()
+                .message(format!(
+                    "Update GHITA CODING AGENT to version {version} now?\n\nThe update is signature-verified and will restart the application."
+                ))
+                .title("Update available")
+                .kind(MessageDialogKind::Info)
+                .buttons(MessageDialogButtons::OkCancel)
+                .blocking_show();
+            if !approved {
+                return Ok(format!("Update to {version} postponed by the user."));
+            }
             update
                 .download_and_install(|_chunk, _total| {}, || {})
                 .await
@@ -830,6 +1055,7 @@ fn get_local_ips() -> Vec<String> {
 #[tauri::command]
 async fn get_server_status(
     state: tauri::State<'_, Mutex<ServerState>>,
+    security: tauri::State<'_, SecurityState>,
 ) -> Result<serde_json::Value, String> {
     let (running, port, client) = {
         let mut s = state.lock().map_err(|e| e.to_string())?;
@@ -858,7 +1084,13 @@ async fn get_server_status(
     if running {
         let url = format!("http://127.0.0.1:{}/health", port);
 
-        if let Ok(resp) = client.get(&url).send().await {
+        if let Ok(resp) = client
+            .get(&url)
+            // The sidecar only returns pairing/device data to authenticated callers.
+            .header("x-ghita-session-token", security.session_token.clone())
+            .send()
+            .await
+        {
             if let Ok(mut json) = resp.json::<serde_json::Value>().await {
                 // Inject local IPs into response
                 json["localIps"] = serde_json::json!(ips);
@@ -1259,30 +1491,37 @@ fn load_api_config(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
 fn save_api_config(app: tauri::AppHandle, config: serde_json::Value) -> Result<(), String> {
     let content = serde_json::to_string(&config).map_err(|e| e.to_string())?;
 
-    // Try the OS credential vault first. When it fails (reinstall / locked
-    // Credential Manager), fall back to the app-data file so the user's keys
-    // are NEVER silently lost — the load path reads both sources.
-    let mut vault_ok = false;
+    // The OS credential vault is the source of truth. Plaintext mirrors are
+    // only written when the vault itself is unavailable, and any stale
+    // plaintext file is deleted once the vault confirms the write — keys must
+    // not linger on disk.
     match api_config_keyring_entry() {
-        Ok(entry) => {
-            match entry.set_password(&content) {
-                Ok(()) => vault_ok = true,
-                Err(e) => {
-                    eprintln!("[GHITA] Credential vault unavailable ({e}) — falling back to file storage.");
+        Ok(entry) => match entry.set_password(&content) {
+            Ok(()) => {
+                let file_path = api_config_path(&app)?;
+                if file_path.exists() {
+                    if let Err(e) = fs::remove_file(&file_path) {
+                        eprintln!("[GHITA] Failed to delete plaintext key mirror ({e})");
+                    }
                 }
+                Ok(())
             }
-        }
+            Err(e) => {
+                eprintln!(
+                    "[GHITA] Credential vault unavailable ({e}) — falling back to file storage."
+                );
+                let file_path = api_config_path(&app)?;
+                fs::write(&file_path, &content)
+                    .map_err(|e2| format!("Failed to persist API keys (vault: {e}, file: {e2})"))
+            }
+        },
         Err(e) => {
             eprintln!("[GHITA] Credential vault unavailable ({e}) — falling back to file storage.");
+            let file_path = api_config_path(&app)?;
+            fs::write(&file_path, &content)
+                .map_err(|e2| format!("Failed to persist API keys (vault: {e}, file: {e2})"))
         }
     }
-
-    // Keep the file in sync whenever the vault path is used too, so a later
-    // reinstall (where the vault may be gone) still finds the keys.
-    let file_path = api_config_path(&app)?;
-    fs::write(&file_path, &content)
-        .map_err(|e| format!("Failed to persist API keys (vault: {vault_ok}, file: {e})"))?;
-    Ok(())
 }
 
 #[tauri::command]
@@ -1493,6 +1732,9 @@ pub fn run(headless: bool) {
             starting: false,
         }))
         .manage(SecurityState { session_token })
+        .manage(FsScopeState {
+            roots: std::sync::Mutex::new(std::collections::HashSet::new()),
+        })
         .manage(Arc::new(RwLock::new(ProxyState::default())))
         .manage(ComputerUseState::new())
         .manage(TerminalManager::new())
@@ -1541,7 +1783,7 @@ pub fn run(headless: bool) {
             run_grill_session,
             // v1.1.1 Track 8: native LCS diff-stat (async, off main thread)
             diff::line_diff_stat_command,
-            // Native filesystem commands (editor — full access, no fs-scope)
+            // Native filesystem commands (reads open; writes gated by fs-scope grants)
             fs_read_dir,
             fs_read_text,
             fs_write_text,
@@ -1549,8 +1791,16 @@ pub fn run(headless: bool) {
             fs_mkdir,
             fs_remove,
             fs_rename,
+            fs_request_access,
+            fs_scope_list,
         ])
         .setup(move |app| {
+            // Restore persisted filesystem-scope grants before anything else.
+            {
+                let scope = app.state::<FsScopeState>();
+                let loaded = load_fs_scope(app.handle());
+                *scope.roots.lock().unwrap() = loaded;
+            }
             // In headless mode: skip window management, auto-start server
             if headless {
                 eprintln!("[GHITA] Running in headless mode — skipping window setup");
@@ -1697,4 +1947,58 @@ pub fn run(headless: bool) {
             _ => {}
         }
     });
+}
+
+#[cfg(test)]
+mod security_tests {
+    use super::*;
+
+    #[test]
+    fn refuses_filesystem_roots() {
+        assert!(is_protected_system_path(Path::new("/")));
+        assert!(is_protected_system_path(Path::new("\\")));
+        assert!(is_protected_system_path(Path::new("C:\\")));
+        assert!(is_protected_system_path(Path::new("D:/")));
+    }
+
+    #[test]
+    fn refuses_home_and_its_ancestors() {
+        let Some(home) = home_dir() else { return };
+        assert!(is_protected_system_path(&home));
+        if let Some(parent) = home.parent() {
+            assert!(is_protected_system_path(parent));
+        }
+    }
+
+    #[test]
+    fn allows_normal_project_paths() {
+        // A nested non-home path is not system-critical.
+        let p = std::env::temp_dir().join("ghita-test-project");
+        assert!(!is_protected_system_path(&p));
+    }
+
+    #[test]
+    fn within_root_rejects_lookalike_prefixes() {
+        let root = Path::new("/home/dev/project");
+        assert!(is_within_root(
+            Path::new("/home/dev/project/src/a.ts"),
+            root
+        ));
+        assert!(is_within_root(root, root));
+        assert!(!is_within_root(
+            Path::new("/home/dev/projects-x/a.ts"),
+            root
+        ));
+        assert!(!is_within_root(Path::new("/etc/passwd"), root));
+    }
+
+    #[test]
+    fn within_root_survives_parent_traversal() {
+        let root = normalize_path(&std::env::temp_dir());
+        let sneaky = normalize_loose(&std::env::temp_dir().join("..").join("elsewhere"));
+        assert!(
+            !is_within_root(&sneaky, &root) || sneaky == root,
+            "traversal must not silently stay inside the root"
+        );
+    }
 }

@@ -1,8 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - LLMGuardrail Unit Tests
 // 25 test cases covering PII detection, content filtering, LLM judge,
 // custom rules, audit log, and rule management.
-// ==============================================================================
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { LLMGuardrail } from '../src/guardrail/guardrail.js';

@@ -1,8 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Hermes Agent Multi-Channel Chat Gateway
-// ==============================================================================
 // Bridges GHITA Agent to external messaging channels (Telegram, Slack, Discord).
-// ==============================================================================
 
 export type ChatChannelPlatform = 'telegram' | 'slack' | 'discord' | 'matrix' | 'whatsapp';
 

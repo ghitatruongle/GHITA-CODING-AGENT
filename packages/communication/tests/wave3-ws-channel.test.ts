@@ -1,6 +1,4 @@
-// ==============================================================================
 // Wave 3 — WsChannel buffering / subscribe / flush
-// ==============================================================================
 
 import { describe, it, expect } from 'vitest';
 import { WsChannel } from '../src/ws/channel.js';

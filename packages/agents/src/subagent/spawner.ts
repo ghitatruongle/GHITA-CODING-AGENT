@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Sub-Agent Spawner (Phase 6)
 // Isolated context spawning with concurrency control, timeouts & lifecycle hooks
-// ==============================================================================
 
 import type { AgentManager } from '../index.js';
 import type {
@@ -11,17 +8,13 @@ import type {
   SpawnerConfig,
 } from './types.js';
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 function generateSubId(): string {
   return `sub_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-// ---------------------------------------------------------------------------
 // SubagentSpawner
-// ---------------------------------------------------------------------------
 
 export class SubagentSpawner {
   private readonly activeSubagents = new Map<string, SubagentState>();
@@ -58,10 +51,8 @@ export class SubagentSpawner {
     };
   }
 
-  // -----------------------------------------------------------------------
   // Core Spawn
-  // -----------------------------------------------------------------------
-
+  
   /**
    * Spawn an isolated sub-agent and execute its designated task.
    *
@@ -117,9 +108,10 @@ export class SubagentSpawner {
     this.config.onSpawn?.(state);
 
     try {
-      // Race task execution against timeout
+      // Race task execution against timeout — the timeout aborts the signal so
+      // the in-flight run stops instead of leaking work after removal.
       const taskResult = await this.executeWithTimeout(
-        () => this.agentManager.assignTask(agent.id, input.task),
+        (signal) => this.agentManager.assignTask(agent.id, input.task, undefined, { signal }),
         timeoutMs,
       );
 
@@ -203,10 +195,8 @@ export class SubagentSpawner {
     return this.queue.length;
   }
 
-  // -----------------------------------------------------------------------
   // Parallel & Sequential Spawning
-  // -----------------------------------------------------------------------
-
+  
   /**
    * Spawn multiple sub-agents in parallel, respecting concurrency limits.
    * If inputs exceed maxConcurrency, they are batched automatically.
@@ -255,10 +245,8 @@ export class SubagentSpawner {
     return results;
   }
 
-  // -----------------------------------------------------------------------
   // State Management
-  // -----------------------------------------------------------------------
-
+  
   /** List all tracked sub-agent states */
   listStates(): SubagentState[] {
     return [...this.activeSubagents.values()];
@@ -306,10 +294,8 @@ export class SubagentSpawner {
     return count;
   }
 
-  // -----------------------------------------------------------------------
   // Private Helpers
-  // -----------------------------------------------------------------------
-
+  
   private updateState(id: string, state: SubagentState): void {
     this.activeSubagents.set(id, state);
   }
@@ -329,22 +315,30 @@ export class SubagentSpawner {
   }
 
   /**
-   * Execute an async function with a timeout.
+   * Execute an async function with a timeout. On timeout (and once the race
+   * settles) the supplied AbortController is aborted so the underlying work
+   * stops early instead of running to completion with its result discarded.
    */
-  private async executeWithTimeout<T>(fn: () => Promise<T>, timeoutMs: number): Promise<T> {
+  private async executeWithTimeout<T>(
+    fn: (signal: AbortSignal) => Promise<T>,
+    timeoutMs: number,
+  ): Promise<T> {
+    const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout> | null = null;
 
     const timeoutPromise = new Promise<never>((_, reject) => {
       timer = setTimeout(() => {
+        controller.abort();
         reject(new Error(`[SubagentTimeout] Execution exceeded ${timeoutMs}ms limit`));
       }, timeoutMs);
     });
 
     try {
-      const result = await Promise.race([fn(), timeoutPromise]);
+      const result = await Promise.race([fn(controller.signal), timeoutPromise]);
       return result;
     } finally {
       if (timer) clearTimeout(timer);
+      controller.abort();
     }
   }
 }

@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Skills v1.1.0 Track 6 P68: document.ingest skill
-// ==============================================================================
 // `document.ingest`: run the @ghita/ingest pipeline from inside the agent —
 // loaders → chunkers → (optional) KnowledgeEngine upsert. Returns stats for
 // the agent to report.
-// ==============================================================================
 
 import type { SkillDefinition, SkillInvocation, SkillExecutionContext } from '../types.js';
 import type { ChunkSink } from '@ghita/ingest';

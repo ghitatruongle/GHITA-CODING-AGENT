@@ -1,7 +1,3 @@
-// ==============================================================================
-// Phase 33: Rate Limiting & Quotas — Public API
-// ==============================================================================
-
 export { RateLimiter } from './rate-limiter.js';
 export { DEFAULT_ENDPOINT_LIMITS, getLimitsByGroup, findLimitByRoute } from './endpoint-limits.js';
 export type { EndpointRule } from './endpoint-limits.js';
@@ -27,4 +23,4 @@ export type {
   QuotaConfig,
 } from './types.js';
 
-export const QUOTAS_VERSION = '1.1.5-beta2';
+export const QUOTAS_VERSION = '1.1.5';

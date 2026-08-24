@@ -1,12 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Guardrail Pipeline
-// ==============================================================================
-// Wire LLMGuardrail (from @ghita/memory) vào GatewayDaemon. Pipeline:
-//   1. Extract text từ GatewayMessage
 //   2. Scan PII (email/phone/SSN/credit card/IP/API key) → redact
 //   3. Run content filter (blocked keywords, max length)
 //   4. Return { allowed, sanitized, original, threats[] }
-// ==============================================================================
 
 import type { GatewayMessage, GatewayType } from './gateway/types.js';
 
@@ -38,7 +32,7 @@ export interface GuardrailPipelineConfig {
     severity?: 'low' | 'medium' | 'high';
     replacement?: string;
   }>;
-  /** Action khi có threat high-severity */
+  
   onHighSeverity?: 'block' | 'flag' | 'redact';
   /** Enable audit log */
   auditLog?: boolean;
@@ -100,11 +94,6 @@ const DEFAULT_BLOCKED_KEYWORDS = [
 
 const DEFAULT_MAX_LENGTH = 32_000;
 
-/**
- * Self-contained guardrail pipeline. Hoạt động độc lập, KHÔNG depend
- * vào @ghita/memory (tránh vòng lặp dependency trong communication).
- * Tương thích API với LLMGuardrail.scanPII/check() ở mức cơ bản.
- */
 export class GuardrailPipeline {
   private config: Required<GuardrailPipelineConfig>;
   private auditLog: Array<{
@@ -123,7 +112,6 @@ export class GuardrailPipeline {
     };
   }
 
-  /** Process một GatewayMessage */
   process(message: GatewayMessage): GuardrailPipelineResult {
     const text = message.text ?? '';
     const threats: GuardrailThreat[] = [];
@@ -201,7 +189,6 @@ export class GuardrailPipeline {
     return result;
   }
 
-  /** Batch process nhiều messages */
   processBatch(messages: GatewayMessage[]): GuardrailPipelineResult[] {
     return messages.map((m) => this.process(m));
   }
@@ -247,23 +234,20 @@ export class GuardrailPipeline {
   }
 }
 
-// ----------------------------------------------------------------------------
 // Daemon integration helper
-// ----------------------------------------------------------------------------
 
-/** Tạo hook function cho GatewayDaemon.setGuardrailHook() */
 export function createDaemonGuardrailHook(pipeline: GuardrailPipeline) {
   return async (_source: string, message: unknown): Promise<unknown> => {
     const msg = message as GatewayMessage;
     if (!msg || typeof msg.text !== 'string') {
-      // Không phải GatewayMessage shape - pass through
+      
       return message;
     }
     const result = pipeline.process(msg);
     if (!result.allowed) {
       throw new Error(`Blocked by guardrail: ${result.blockedBy ?? 'unknown'}`);
     }
-    // Trả về message đã redact PII
+    
     return { ...msg, text: result.sanitized };
   };
 }

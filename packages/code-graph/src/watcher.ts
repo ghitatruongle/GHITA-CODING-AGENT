@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Track 3 (v1.1.5-beta1): Auto-Sync Watcher
-// ==============================================================================
 // Background file watcher and git hook synchronizer for the code knowledge graph.
 // Debounces file system changes (<2s latency) and batches updates to prevent spam.
-// ==============================================================================
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -167,10 +163,8 @@ export class CodeGraphWatcher extends EventEmitter {
     return { ...this.stats };
   }
 
-  // ---------------------------------------------------------------------------
   // Internal Event Processing
-  // ---------------------------------------------------------------------------
-
+  
   private handleRawEvent(baseDir: string, relativePath: string, _eventType: string): void {
     // Check ignored patterns
     const normalized = relativePath.replace(/\\/g, '/');

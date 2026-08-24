@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — DeviceDiscoveryList Component
 // Bluetooth device list with scan/rescan and empty state
-// ==============================================================================
 
 import React from 'react';
 import {

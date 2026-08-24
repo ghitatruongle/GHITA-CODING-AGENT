@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Marketplace v1.1.0 Track 3 P39: agent-driven install skill
-// ==============================================================================
 // `$plugin-installer`-like skill: lets the coding agent install plugins during
 // a session ("discover → install → report"), matching OpenAI's agent-driven
 // skill-installer pattern.
-// ==============================================================================
 
 import type { PluginManifest } from '../types.js';
 

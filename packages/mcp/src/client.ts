@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - @ghita/mcp client (official SDK transports)
-// ==============================================================================
-
 import { Client as McpClient } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';

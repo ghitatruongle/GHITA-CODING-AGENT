@@ -1,15 +1,11 @@
-// ==============================================================================
-// Phase 34: CORS Auditor
-// ==============================================================================
-
 import type { CorsConfig, SecurityIssue } from './types.js';
 
 const DANGEROUS_METHODS = ['TRACE', 'CONNECT'];
 
 /**
- * CorsAuditor — đánh giá CORS config có an toàn không.
+
  *
- * Sử dụng:
+
  *   const auditor = new CorsAuditor();
  *   const issues = auditor.audit({
  *     origins: ['*'],
@@ -19,9 +15,7 @@ const DANGEROUS_METHODS = ['TRACE', 'CONNECT'];
  *   }, 'api.config.ts');
  */
 export class CorsAuditor {
-  /**
-   * Audit 1 CORS config, trả về danh sách issue.
-   */
+  
   audit(config: CorsConfig, location: string): SecurityIssue[] {
     const issues: SecurityIssue[] = [];
     const now = Date.now();
@@ -147,9 +141,6 @@ export class CorsAuditor {
     return issues;
   }
 
-  /**
-   * Audit nhiều CORS config cùng lúc.
-   */
   auditMany(configs: Array<{ config: CorsConfig; location: string }>): SecurityIssue[] {
     return configs.flatMap((c) => this.audit(c.config, c.location));
   }

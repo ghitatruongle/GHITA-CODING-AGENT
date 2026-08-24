@@ -48,7 +48,6 @@ async function main() {
   }
   console.log('');
 
-  // 4. Agent Protocol (AP) Server Test (Phase 5)
   try {
     const { AgentProtocolServer } = await import('../packages/agents/src/index.js');
     const apServer = new AgentProtocolServer();
@@ -75,7 +74,6 @@ async function main() {
   }
   console.log('');
 
-  // 5. Agent Router & Cost Optimizer Test (Phase 5)
   try {
     const { AgentRouter } = await import('../packages/agents/src/index.js');
     const router = new AgentRouter();

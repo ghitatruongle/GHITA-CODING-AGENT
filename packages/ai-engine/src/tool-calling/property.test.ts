@@ -2,10 +2,6 @@ import { describe, it } from 'vitest';
 import fc from 'fast-check';
 import { parseToolArguments, repairToolCallArguments, isRetryableRepair } from './repair.js';
 
-// ==============================================================================
-// v1.1.0 Track 11 F5 — property tests cho tool-call repair (fast-check)
-// ==============================================================================
-
 describe('repairToolCallArguments property tests', () => {
   it('never throws on arbitrary input and always returns an args object', () => {
     fc.assert(

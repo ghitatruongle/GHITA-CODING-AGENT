@@ -1,6 +1,5 @@
-// ==============================================================================
 // useActivePolling — polling that pauses when the tab is hidden or unfocused
-// ==============================================================================
+
 // Several live views poll on a fixed interval. When the window is hidden or
 // the view is not the active tab, those intervals keep firing and waste CPU.
 // This hook keeps a single interval alive but only invokes `fn` while:

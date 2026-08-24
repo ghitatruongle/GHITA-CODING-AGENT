@@ -1,15 +1,10 @@
-// ==============================================================================
-// GHITA CODING AGENT - Provider Recommendation System (Phase 2)
 // Task-aware provider & model recommendation with historical affinity tracking
-// ==============================================================================
 
 import type { AIProviderType } from '@ghita/shared';
 import type { ChatMessage, ChatOptions, AIProvider } from '../types.js';
 import { getModelPricing, type ModelPricing } from '../cost/tracker.js';
 
-// ---------------------------------------------------------------------------
 // Task Type Detection
-// ---------------------------------------------------------------------------
 
 /** Detected task type from prompt analysis */
 export type TaskType =
@@ -26,9 +21,7 @@ export type TaskType =
   | 'planning'
   | 'general';
 
-// ---------------------------------------------------------------------------
 // Recommendation Types
-// ---------------------------------------------------------------------------
 
 /** A single recommendation entry with score breakdown */
 export interface ProviderRecommendation {
@@ -49,9 +42,7 @@ export interface RecommendationResult {
   analyzedAt: number;
 }
 
-// ---------------------------------------------------------------------------
 // Configuration
-// ---------------------------------------------------------------------------
 
 export interface RecommendationConfig {
   /** Known provider→models mapping (provider → model list) */
@@ -70,9 +61,7 @@ export interface RecommendationConfig {
   taskAffinityOverrides?: Partial<Record<TaskType, Record<string, number>>>;
 }
 
-// ---------------------------------------------------------------------------
 // Default provider → models mapping
-// ---------------------------------------------------------------------------
 
 const DEFAULT_PROVIDER_MODELS: Partial<Record<AIProviderType, string[]>> = {
   openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'o3-mini'],
@@ -82,9 +71,7 @@ const DEFAULT_PROVIDER_MODELS: Partial<Record<AIProviderType, string[]>> = {
   deepseek: ['deepseek-chat', 'deepseek-coder'],
 };
 
-// ---------------------------------------------------------------------------
 // Default task→model affinity (hand-tuned starting values, updated via feedback)
-// ---------------------------------------------------------------------------
 
 const DEFAULT_TASK_AFFINITY: Record<TaskType, Record<string, number>> = {
   'code-generation': {
@@ -168,9 +155,7 @@ const DEFAULT_TASK_AFFINITY: Record<TaskType, Record<string, number>> = {
   },
 };
 
-// ---------------------------------------------------------------------------
 // Keyword sets for task type detection
-// ---------------------------------------------------------------------------
 
 const TASK_KEYWORDS: Record<Exclude<TaskType, 'general'>, string[]> = {
   'code-generation': [
@@ -275,9 +260,7 @@ const TASK_KEYWORDS: Record<Exclude<TaskType, 'general'>, string[]> = {
   ],
 };
 
-// ---------------------------------------------------------------------------
 // ProviderRecommendationSystem
-// ---------------------------------------------------------------------------
 
 export class ProviderRecommendationSystem {
   private providerModels: Partial<Record<AIProviderType, string[]>>;
@@ -320,10 +303,8 @@ export class ProviderRecommendationSystem {
     }
   }
 
-  // -----------------------------------------------------------------------
   // Public API
-  // -----------------------------------------------------------------------
-
+  
   /**
    * Detect the task type from a conversation.
    */
@@ -528,10 +509,8 @@ export class ProviderRecommendationSystem {
     return JSON.parse(JSON.stringify(this.taskAffinity));
   }
 
-  // -----------------------------------------------------------------------
   // Private helpers
-  // -----------------------------------------------------------------------
-
+  
   /**
    * Score cost efficiency: cheaper models get higher scores.
    * Normalized against a max reference cost.

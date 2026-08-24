@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - k6 Load Testing Scripts (Phase 46)
 // Performance benchmarks for API endpoints
-// ==============================================================================
 
 // Note: These are TypeScript representations of k6 load test scripts.
 // To run with k6, convert to .js or use k6 TypeScript support.

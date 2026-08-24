@@ -1,5 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Audit Fix 2.9 Regression Tests
 //
 // Covers the budget-persistence fix in `BudgetManager`:
 // the previous implementation kept `spent` entirely in RAM, so the
@@ -14,7 +12,6 @@
 //
 // These tests use a temp directory for the persistence file so they don't
 // pollute the repo.
-// ==============================================================================
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs';

@@ -1,9 +1,7 @@
 #!/usr/bin/env node
-// ==============================================================================
-// GHITA CODING AGENT - i18n Key Validation Script
+
 // Compares all language files and reports missing/extra keys per language.
 // Exits with code 1 if discrepancies found (for CI integration).
-// ==============================================================================
 
 import fs from 'node:fs';
 import path from 'node:path';

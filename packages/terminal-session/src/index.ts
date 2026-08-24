@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Terminal session primitives (v1.1.0 Track 7 P74/P75)
-// ==============================================================================
 // Buffer serialize/restore (addon-serialize style), flow control (XOFF/XON)
 // and resize with pixel-size — desktop + mobile remote reuse these.
-// ==============================================================================
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';

@@ -1,8 +1,8 @@
 # Security Policy
 
-> **Version:** v0.4.9
+> **Version:** v1.1.5
 > **Maintainer:** GHITA Coding Agent Security Team (`security@ghita.dev`)
-> **Last updated:** 2026-07-30
+> **Last updated:** 2026-08-23
 
 GHITA CODING AGENT takes the security of its users, their devices, and their data seriously. This document describes how to report vulnerabilities, what we support, and the security guarantees built into the project.
 
@@ -12,11 +12,11 @@ GHITA CODING AGENT takes the security of its users, their devices, and their dat
 
 We provide security updates for the following versions:
 
-| Version  | Supported        | Notes                        |
-| -------- | ---------------- | ---------------------------- |
-| `0.4.9`  | ✅ Active        | Current hardening line       |
-| `0.3.x`  | ⚠️ Critical only | Patch-only for critical CVEs |
-| `<0.3.0` | ❌ End of life   | Upgrade required             |
+| Version   | Supported        | Notes                        |
+| --------- | ---------------- | ---------------------------- |
+| `1.1.5`   | ✅ Active        | Current hardened line        |
+| `1.1.x`   | ⚠️ Critical only | Patch-only for critical CVEs |
+| `<1.1.0`  | ❌ End of life   | Upgrade required             |
 
 We follow [Semantic Versioning](https://semver.org/). Security fixes are released as soon as possible and may be back-ported to the previous minor version when feasible.
 
@@ -85,11 +85,14 @@ GHITA bridges a desktop AI agent (Tauri + React) and a mobile companion app (Rea
 
 | Risk                           | Mitigation                                                     |
 | ------------------------------ | -------------------------------------------------------------- |
-| Malicious skill code           | `SkillGuard` hash pin + AST-Lock + plugin manifest review      |
-| Prompt-injection from web/UI   | Guardrail middleware (`packages/communication/src/guardrail/`) |
+| Malicious skill code           | `SkillGuard` hash pin + AST-Lock + plugin manifest review; skills spawn via argv (no shell) with governance denylist |
+| Prompt-injection from web/UI   | Guardrail middleware + enterprise secret detector, both backed by the native `secscan` one-pass pre-filter |
 | Computer-use overreach         | Per-action approval on mobile + sandbox isolation              |
-| API-key leakage                | OS keychain (`packages/security/src/secret-rotator.ts`)        |
-| LAN MitM during pairing        | 6-digit rotating PIN + TLS for cloud relay                     |
+| API-key leakage                | OS credential vault is the source of truth; the plaintext `api-config.json` mirror is deleted once the vault write succeeds |
+| Renderer compromise            | Production CSP forbids inline/eval script; FS mutations are scoped to folders the user granted via a native dialog; command approval dialogs show head AND tail of long commands |
+| LAN MitM during pairing        | Rotating 6-digit code **plus mandatory desktop-side confirmation**; the device token travels AES-256-GCM-sealed under a key derived from the pairing code |
+| Paired-device overreach        | Command/edit approvals are desktop-only — a paired phone can never approve its own agent's shell commands |
+| Local process escalation       | `/health` returns pairing/device data only to callers holding the desktop session token; bind host derives solely from the LAN toggle |
 | Outbound dependency compromise | `dependency-review.yml` workflow + `pnpm audit` in CI          |
 | Insecure deserialization       | `resolutions: serialize-javascript ^7.0.5` enforced            |
 

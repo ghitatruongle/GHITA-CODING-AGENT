@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — Chat Input Component
 // Send text commands to AI via Socket.io
-// ==============================================================================
 
 import React, { useState, useCallback } from 'react';
 import { View, TextInput, TouchableOpacity, Text, StyleSheet } from 'react-native';

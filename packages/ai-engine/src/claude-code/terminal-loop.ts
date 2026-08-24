@@ -1,8 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Claude Code Terminal Execution Loop & Prompt Framing
-// ==============================================================================
 // Terminal-first execution framing, compact system prompt generation, and CLI safeguards.
-// ==============================================================================
 
 export interface TerminalFramingConfig {
   workspaceCwd: string;

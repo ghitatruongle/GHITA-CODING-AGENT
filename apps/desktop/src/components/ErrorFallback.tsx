@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Error Fallback
-// ==============================================================================
-
 import { useState } from 'react';
 import type { FallbackProps } from 'react-error-boundary';
 import { useTranslation } from '../i18n';

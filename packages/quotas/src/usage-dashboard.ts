@@ -1,12 +1,8 @@
-// ==============================================================================
-// Phase 33: Usage Dashboard — aggregation & analytics
-// ==============================================================================
-
 import type { UsageSummary, UsageRecord } from './types.js';
 import type { UsageTracker } from './usage-tracker.js';
 
 export interface DashboardOptions {
-  /** Số record tối đa giữ trong cache */
+  
   maxRecords?: number;
 }
 
@@ -24,9 +20,9 @@ export interface TimeSeriesPoint {
 export type TimeBucket = 'hour' | 'day' | 'week' | 'month';
 
 /**
- * UsageDashboard — cung cấp view tổng quan & time series cho admin/user.
+
  *
- * Sử dụng:
+
  *   const dashboard = new UsageDashboard(tracker);
  *   const summary = dashboard.summary('u1', Date.now() - 30*86400_000, Date.now());
  *   const series = dashboard.timeSeries('u1', start, end, 'day');
@@ -34,9 +30,6 @@ export type TimeBucket = 'hour' | 'day' | 'week' | 'month';
 export class UsageDashboard {
   constructor(private readonly tracker: UsageTracker) {}
 
-  /**
-   * Tổng quan usage cho user trong khoảng thời gian.
-   */
   summary(userId: string, periodStart: number, periodEnd: number): UsageSummary {
     return this.tracker.summary(userId, periodStart, periodEnd);
   }
@@ -82,9 +75,6 @@ export class UsageDashboard {
       .slice(0, n);
   }
 
-  /**
-   * Lấy tất cả records (cho export).
-   */
   export(userId?: string): UsageRecord[] {
     if (!userId) return this.tracker.all();
     const all = this.tracker.all();

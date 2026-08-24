@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Unified Communication Gateway Types
-// ==============================================================================
-
 export type GatewayType = 'telegram' | 'discord' | 'slack';
 
 export interface GatewayMessage {

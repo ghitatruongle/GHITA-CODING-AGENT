@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Tool Call Repair Utility
-// ==============================================================================
-
 import { AIToolCallRepairError } from '../errors/index.js';
 import type { ChatMessage, ChatOptions, ChatResponse } from '../types.js';
 import type { Orchestrator } from '../orchestrator.js';

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Bug Report Template & Tracker (Phase 40)
-// ==============================================================================
-
 import { randomUUID } from 'node:crypto';
 import type { BugReport } from './types.js';
 

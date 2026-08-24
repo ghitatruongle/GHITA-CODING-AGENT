@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — Activity Bar
 // VS Code-inspired left-side icon-based navigation bar
-// ==============================================================================
 
 import { useMemo } from 'react';
 import { useAppStore, type TabId } from '../stores/appStore';

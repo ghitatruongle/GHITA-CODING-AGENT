@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Auto README Generator (Phase 37)
-// ==============================================================================
-
 import type { ReadmeOptions, ReadmeResult } from './types.js';
 
 /**

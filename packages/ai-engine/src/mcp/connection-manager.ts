@@ -1,14 +1,9 @@
-// ==============================================================================
-// GHITA CODING AGENT - MCP Connection Manager + OAuth (Phase 11)
-// ==============================================================================
-// Phase 11 introduces:
 //   - MCPConnectionManager : pool of MCP servers with reconnect, health
 //                           checks, and lifecycle hooks
 //   - OAuth token cache     : in-memory store with auto-refresh hook for
 //                             OAuth-protected MCP servers
 //   - Official MCP server registry : declarative list of well-known servers
 //                                   the user can enable with one click
-// ==============================================================================
 
 import type { MCPServerConfig, MCPServerStatus, MCPTool, MCPToolResult } from './types.js';
 import {
@@ -18,9 +13,7 @@ import {
 } from './transport-extended.js';
 import type { MCPTransport } from './transport.js';
 
-// -----------------------------------------------------------------------
 // Connection Manager
-// -----------------------------------------------------------------------
 
 export interface MCPConnectionManagerOptions {
   /** Reconnect attempts on transport failure (default: 3) */
@@ -58,10 +51,8 @@ export class MCPConnectionManager {
     };
   }
 
-  // -----------------------------------------------------------------
   // Registration
-  // -----------------------------------------------------------------
-
+  
   /** Add or replace a server in the pool. Does not connect. */
   addServer(config: MCPServerConfig & ExtendedServerConfig): void {
     if (this.servers.has(config.name)) {
@@ -95,10 +86,8 @@ export class MCPConnectionManager {
     });
   }
 
-  // -----------------------------------------------------------------
   // Connection
-  // -----------------------------------------------------------------
-
+  
   /** Connect a single server and discover its tools. */
   async connect(name: string): Promise<MCPTool[]> {
     const entry = this.servers.get(name);
@@ -124,19 +113,22 @@ export class MCPConnectionManager {
     }
   }
 
-  /** Connect every enabled server. Failures are captured in status. */
+  /** Connect every enabled server — in parallel. Each connect is a process
+   * spawn + handshake; serializing them delayed tool availability by the SUM
+   * of all handshakes. Failures are captured per-server in status. */
   async connectAll(): Promise<Record<string, MCPTool[]>> {
-    const out: Record<string, MCPTool[]> = {};
-    for (const [name, entry] of this.servers) {
-      if (!entry.config.enabled) continue;
-      try {
-        out[name] = await this.connect(name);
-      } catch (err) {
-        out[name] = [];
-        // already recorded in entry.error
-      }
-    }
-    return out;
+    const enabled = [...this.servers.entries()].filter(([, e]) => e.config.enabled);
+    const results = await Promise.all(
+      enabled.map(async ([name]) => {
+        try {
+          return [name, await this.connect(name)] as const;
+        } catch {
+          // already recorded in entry.error
+          return [name, [] as MCPTool[]] as const;
+        }
+      }),
+    );
+    return Object.fromEntries(results);
   }
 
   /** Disconnect a single server. */
@@ -153,10 +145,8 @@ export class MCPConnectionManager {
     await Promise.all([...this.servers.keys()].map((n) => this.disconnect(n)));
   }
 
-  // -----------------------------------------------------------------
   // Tool calls
-  // -----------------------------------------------------------------
-
+  
   /** Invoke a tool on a specific server. */
   async callTool(
     serverName: string,
@@ -185,10 +175,8 @@ export class MCPConnectionManager {
     return { content: result.content ?? [], isError: false };
   }
 
-  // -----------------------------------------------------------------
   // Status / introspection
-  // -----------------------------------------------------------------
-
+  
   /** Aggregate status snapshot for every registered server. */
   getStatus(): MCPServerStatus[] {
     return [...this.servers.values()].map((entry) => ({
@@ -216,10 +204,8 @@ export class MCPConnectionManager {
     return n;
   }
 
-  // -----------------------------------------------------------------
   // Internals
-  // -----------------------------------------------------------------
-
+  
   private async discoverTools(entry: ManagedServer): Promise<MCPTool[]> {
     const response = await entry.transport.send({ method: 'tools/list' });
     const result = (response.result ?? {}) as { tools?: MCPTool[] };
@@ -266,9 +252,7 @@ export class MCPConnectionManager {
   }
 }
 
-// -----------------------------------------------------------------------
 // OAuth token cache
-// -----------------------------------------------------------------------
 
 export interface OAuthToken {
   accessToken: string;
@@ -331,9 +315,7 @@ export class OAuthTokenCache {
   }
 }
 
-// -----------------------------------------------------------------------
 // Official MCP server registry
-// ---------------------------------------------------------------------
 
 /** Declarative entry in the official MCP server registry. */
 export interface OfficialMCPServer {

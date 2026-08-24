@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Browser v1.1.0 Track 7 P79: outcome verifier + taxonomy
-// ==============================================================================
 // Post-action verification (evidence-based), error taxonomy and retry policy
 // (Stagehand verifier + browser-use recovery pattern).
-// ==============================================================================
 
 export type ActErrorCategory =
   | 'timeout'

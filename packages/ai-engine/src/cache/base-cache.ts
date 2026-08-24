@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Base Cache Interface & In-Memory Implementation
-// ==============================================================================
 // Simple async cache interface for backward compatibility with the legacy
 // utils/cache.ts module. For advanced use cases (LRU, eviction policies,
 // event-driven invalidation), prefer LRUCache from lru-cache.ts.
-// ==============================================================================
 
 /** Base async cache interface (legacy STT 2.1) */
 export interface BaseCache {

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Notification Module Barrel Export (Phase 35)
-// ==============================================================================
-
 // --- Types ---
 export type {
   NotificationPriority,
@@ -26,4 +22,4 @@ export type { BatchConfig, BatchFlushListener } from './batch.js';
 export { NotificationTemplate } from './template.js';
 export type { TemplateContext, TemplateOptions } from './template.js';
 
-export const NOTIFICATION_VERSION = '1.1.5-beta2';
+export const NOTIFICATION_VERSION = '1.1.5';

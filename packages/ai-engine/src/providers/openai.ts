@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - OpenAI Provider
-// ==============================================================================
-
 import type { AIStreamChunk } from '@ghita/shared';
 import type {
   ChatMessage,
@@ -149,7 +145,14 @@ export class OpenAIProvider extends BaseProvider {
             const args = JSON.parse(call.argumentsText || '{}') as unknown;
             if (!args || typeof args !== 'object' || Array.isArray(args) || !call.name) return [];
             return [{ id: call.id, name: call.name, arguments: args as Record<string, unknown> }];
-          } catch {
+          } catch (err) {
+            // Malformed tool-call JSON must be surfaced — silently dropping it
+            // makes the agent loop proceed as if no tool had been called.
+            console.warn(
+              `[openai] Dropping malformed tool-call arguments for "${call.name}":`,
+              err instanceof Error ? err.message : err,
+              call.argumentsText.slice(0, 200),
+            );
             return [];
           }
         });
@@ -221,6 +224,9 @@ export class OpenAIProvider extends BaseProvider {
         }
       }
     } finally {
+      // Cancel the HTTP body when the consumer breaks early — releaseLock()
+      // alone leaves the upstream connection and stream open.
+      void reader.cancel().catch(() => {});
       reader.releaseLock();
     }
   }
@@ -247,7 +253,10 @@ export class OpenAIProvider extends BaseProvider {
     return `${baseUrl}/chat/completions`;
   }
 
-  async embed(text: string, options?: { model?: string }): Promise<EmbeddingResponse> {
+  async embed(
+    text: string,
+    options?: { model?: string; signal?: AbortSignal },
+  ): Promise<EmbeddingResponse> {
     const apiKey = this.getApiKey();
     const model = options?.model ?? 'text-embedding-3-small';
     const baseUrl = this.getBaseUrl() || 'https://api.openai.com/v1';
@@ -262,6 +271,7 @@ export class OpenAIProvider extends BaseProvider {
         model,
         input: text,
       }),
+      signal: options?.signal,
     });
 
     if (!response.ok) {
@@ -288,7 +298,10 @@ export class OpenAIProvider extends BaseProvider {
     };
   }
 
-  async embedMany(texts: string[], options?: { model?: string }): Promise<EmbeddingManyResponse> {
+  async embedMany(
+    texts: string[],
+    options?: { model?: string; signal?: AbortSignal },
+  ): Promise<EmbeddingManyResponse> {
     const apiKey = this.getApiKey();
     const model = options?.model ?? 'text-embedding-3-small';
     const baseUrl = this.getBaseUrl() || 'https://api.openai.com/v1';
@@ -303,6 +316,7 @@ export class OpenAIProvider extends BaseProvider {
         model,
         input: texts,
       }),
+      signal: options?.signal,
     });
 
     if (!response.ok) {
@@ -353,6 +367,7 @@ export class OpenAIProvider extends BaseProvider {
         size: options?.size ?? '1024x1024',
         response_format: options?.responseFormat ?? 'url',
       }),
+      signal: options?.signal as AbortSignal | undefined,
     });
 
     if (!response.ok) {
@@ -394,6 +409,7 @@ export class OpenAIProvider extends BaseProvider {
         response_format: options?.responseFormat ?? 'mp3',
         speed: options?.speed,
       }),
+      signal: options?.signal as AbortSignal | undefined,
     });
 
     if (!response.ok) {
@@ -432,6 +448,7 @@ export class OpenAIProvider extends BaseProvider {
         Authorization: `Bearer ${apiKey}`,
       },
       body: formData,
+      signal: options?.signal as AbortSignal | undefined,
     });
 
     if (!response.ok) {

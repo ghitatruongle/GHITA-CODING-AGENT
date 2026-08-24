@@ -1,6 +1,3 @@
-// ==============================================================================
-// Phase 32: Sentry Client Wrapper
-// ==============================================================================
 // Thin wrapper around Sentry SDK. Now @sentry/node is installed.
 
 import type {
@@ -19,7 +16,7 @@ export interface SentryBreadcrumb {
   data?: Record<string, unknown>;
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any -- optional Sentry SDK ships no usable types for this surface */
 type SentryModuleType = {
   init(options: Record<string, unknown>): void;
   captureException(exception: unknown, hint?: Record<string, unknown>): string;
@@ -45,9 +42,9 @@ async function getSentry(): Promise<SentryModuleType> {
 }
 
 /**
- * SentryClient — giao tiếp với Sentry SDK hoặc self-hosted Sentry-compatible.
+
  *
- * Sử dụng:
+
  *   const sentry = new SentryClient({ dsn, environment, release });
  *   await sentry.captureException(error, context);
  *   const tx = sentry.startTransaction({ name: 'POST /chat', op: 'http.server' });
@@ -62,7 +59,7 @@ export class SentryClient {
   private transactionQueue: PerformanceTransaction[] = [];
   /** In-flight transactions map by traceId */
   private readonly transactions = new Map<string, PerformanceTransaction>();
-  /** Max events buffered khi chưa flush */
+  
   private readonly maxQueueSize = 1000;
 
   constructor(config: SentryConfig) {
@@ -73,9 +70,6 @@ export class SentryClient {
     return this.config;
   }
 
-  /**
-   * Khởi tạo Sentry SDK (lazy + graceful).
-   */
   async init(): Promise<void> {
     if (this.initialized) return;
     try {
@@ -98,15 +92,12 @@ export class SentryClient {
       }
       this.eventQueue = [];
     } catch (err) {
-      // Fallback: chỉ log warning, monitoring vẫn hoạt động locally
+      
       console.warn('[SentryClient] init failed, using in-memory queue:', err);
       this.initialized = true;
     }
   }
 
-  /**
-   * Capture exception và push lên Sentry (hoặc queue nếu Sentry chưa init).
-   */
   async captureException(error: Error | string, context?: MonitoringContext): Promise<string> {
     const event = this.toCapturedError(error, 'error', context);
     return this.sendEvent(event);
@@ -124,9 +115,6 @@ export class SentryClient {
     return this.sendEvent(event);
   }
 
-  /**
-   * Bắt đầu performance transaction.
-   */
   startTransaction(params: {
     name: string;
     op: string;
@@ -149,16 +137,10 @@ export class SentryClient {
     return tx;
   }
 
-  /**
-   * Lấy transaction theo traceId.
-   */
   getTransaction(traceId: string): PerformanceTransaction | undefined {
     return this.transactions.get(traceId);
   }
 
-  /**
-   * Kết thúc transaction và gửi lên Sentry.
-   */
   async finishTransaction(traceId: string, status: 'ok' | 'internal_error' = 'ok'): Promise<void> {
     const tx = this.transactions.get(traceId);
     if (!tx || tx.finished) return;
@@ -209,9 +191,6 @@ export class SentryClient {
     }
   }
 
-  /**
-   * Tạo child span từ transaction.
-   */
   startChildSpan(traceId: string, op: string, description?: string): PerformanceSpan | undefined {
     const tx = this.transactions.get(traceId);
     if (!tx) return undefined;
@@ -228,9 +207,6 @@ export class SentryClient {
     return span;
   }
 
-  /**
-   * Kết thúc span.
-   */
   finishSpan(span: PerformanceSpan, status: 'ok' | 'internal_error' = 'ok'): void {
     span.endTimestamp = Date.now();
     span.status = status;
@@ -262,9 +238,6 @@ export class SentryClient {
     }
   }
 
-  /**
-   * Flush queue (gửi tất cả event đang chờ).
-   */
   async flush(timeoutMs = 2000): Promise<void> {
     if (this.initialized) {
       const Sentry = await getSentry();
@@ -274,18 +247,13 @@ export class SentryClient {
     this.transactionQueue = [];
   }
 
-  /**
-   * Đóng Sentry client.
-   */
   async close(): Promise<void> {
     await this.flush();
     this.initialized = false;
   }
 
-  // ============================================================================
   // Private helpers
-  // ============================================================================
-
+  
   private contextToExtras(context?: MonitoringContext): Record<string, unknown> {
     if (!context) return {};
     const extras: Record<string, unknown> = {};
@@ -339,7 +307,7 @@ export class SentryClient {
   }
 
   private computeFingerprint(error: Error): string {
-    // Combine type + top 3 stack frames để gom nhóm
+    
     const topFrames = (error.stack ?? '').split('\n').slice(0, 3).join('|');
     return simpleHash(`${error.name}:${error.message}:${topFrames}`);
   }
@@ -359,9 +327,6 @@ export class SentryClient {
   }
 }
 
-/**
- * Hash đơn giản (FNV-1a) — không dùng crypto để giữ lightweight.
- */
 function simpleHash(input: string): string {
   let hash = 2166136261;
   for (let i = 0; i < input.length; i++) {

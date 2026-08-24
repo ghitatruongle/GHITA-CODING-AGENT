@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Marketplace v1.1.0 Track 3: plugins public entry
-// ==============================================================================
-
 export {
   importClaudePluginJson,
   importClaudeMarketplaceJson,

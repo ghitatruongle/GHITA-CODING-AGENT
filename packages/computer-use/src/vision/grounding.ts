@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - GUI Grounding
-// ==============================================================================
-
 import { VisionScreenshotAnalyzer } from './analyzer.js';
 import { ActionParser } from '../actionParser.js';
 import type { GroundingResult, ScreenSize, Point, BoundingBox } from './types.js';

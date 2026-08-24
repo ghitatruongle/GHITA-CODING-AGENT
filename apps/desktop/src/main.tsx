@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import './lib/monaco-setup';
+// Monaco setup is intentionally NOT imported here — it is heavy (~2 MB + 5
+// workers) and is lazy-loaded on the CodeEditor's first mount instead.
 import { App } from './App';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import './styles/globals.css';

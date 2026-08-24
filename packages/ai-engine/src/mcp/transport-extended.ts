@@ -1,21 +1,15 @@
-// ==============================================================================
-// GHITA CODING AGENT - MCP Transport Extensions (Phase 11)
-// ==============================================================================
 // Adds two new MCP transports on top of the base stdio/sse pair:
 //   - HttpTransport  : JSON-RPC over plain HTTP POST with custom headers
 //   - InProcessTransport : call a handler function in the same Node process
 // A factory `createExtendedTransport` resolves any MCPTransportType
 // (including 'http' and 'in-process') and is wired into the base
 // `createTransport` switch via re-export.
-// ==============================================================================
 
 import type { MCPServerConfig } from './types.js';
 import type { MCPTransport } from './transport.js';
 import { createTransport } from './transport.js';
 
-// -----------------------------------------------------------------------
 // Public types
-// -----------------------------------------------------------------------
 
 /** Handler signature for InProcessTransport. */
 export type InProcessHandler = (
@@ -32,9 +26,7 @@ export interface ExtendedServerConfig {
   handler?: InProcessHandler;
 }
 
-// -----------------------------------------------------------------------
 // HttpTransport
-// -----------------------------------------------------------------------
 
 /**
  * Plain JSON-RPC over HTTP POST. Unlike SSETransport this does not hold
@@ -113,9 +105,7 @@ export class HttpTransport implements MCPTransport {
   }
 }
 
-// -----------------------------------------------------------------------
 // InProcessTransport
-// -----------------------------------------------------------------------
 
 /**
  * Talks to a handler running in the same Node process. Useful for
@@ -179,9 +169,7 @@ export class InProcessTransport implements MCPTransport {
   }
 }
 
-// -----------------------------------------------------------------------
 // Factory
-// -----------------------------------------------------------------------
 
 /**
  * Extended factory that knows about the two new transports. The base

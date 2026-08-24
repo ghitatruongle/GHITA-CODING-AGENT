@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Error Analytics (Phase 39)
-// ==============================================================================
-
 import { createHash } from 'node:crypto';
 import type { PluginError } from './types.js';
 

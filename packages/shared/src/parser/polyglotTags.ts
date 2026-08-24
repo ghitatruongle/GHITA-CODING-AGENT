@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Polyglot SCM Tag Parser
-// ==============================================================================
-
 import fs from 'fs';
 import path from 'path';
 import * as url from 'url';
@@ -35,7 +31,6 @@ export class PolyglotTagParser {
   private tagsDir: string;
   private isInitialized = false;
 
-  // Cache các parser và language để tối ưu hóa hiệu năng
   private parserCache: Map<string, { parser: Parser; language: Parser.Language }> = new Map();
 
   constructor(customTagsDir?: string, customParsersDir?: string) {
@@ -43,9 +38,6 @@ export class PolyglotTagParser {
     this.downloader = new WasmParserDownloader(customParsersDir);
   }
 
-  /**
-   * Khởi chạy tree-sitter runtime
-   */
   private async ensureInitialized() {
     if (this.isInitialized) return;
 
@@ -56,9 +48,6 @@ export class PolyglotTagParser {
     this.isInitialized = true;
   }
 
-  /**
-   * Lấy parser và language instance đã được cấu hình cho ngôn ngữ đó
-   */
   private async getParserForLanguage(
     lang: string,
   ): Promise<{ parser: Parser; language: Parser.Language }> {
@@ -79,9 +68,6 @@ export class PolyglotTagParser {
     return instance;
   }
 
-  /**
-   * Đọc nội dung tệp .scm tương ứng của ngôn ngữ
-   */
   private getQueryScmContent(lang: string): string {
     const normalized = this.downloader.normalizeLanguageName(lang);
     const queryPath = path.join(this.tagsDir, `${normalized}-tags.scm`);
@@ -93,11 +79,6 @@ export class PolyglotTagParser {
     return fs.readFileSync(queryPath, 'utf8');
   }
 
-  /**
-   * Bóc tách toàn bộ Symbol định nghĩa và tham chiếu từ chuỗi mã nguồn
-   * @param code Mã nguồn cần phân tích
-   * @param lang Ngôn ngữ lập trình (ví dụ: 'typescript', 'go', 'python')
-   */
   public async extractSymbols(code: string, lang: string): Promise<SymbolTag[]> {
     const normalized = this.downloader.normalizeLanguageName(lang);
 
@@ -125,7 +106,6 @@ export class PolyglotTagParser {
           }
         }
 
-        // Cơ chế fallback nếu không bắt được cặp name/anchor chuẩn
         if (!nameNode && anchorNode) {
           nameNode = anchorNode;
         }
@@ -152,7 +132,7 @@ export class PolyglotTagParser {
       return tags;
     } catch (err) {
       console.error(`Lỗi khi bóc tách symbol cho ngôn ngữ ${lang}:`, err);
-      // Trả về mảng rỗng để chống đổ bể luồng xử lý chính của repomap (Tolerant Parser)
+      
       return [];
     }
   }

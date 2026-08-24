@@ -1,23 +1,18 @@
-// ==============================================================================
-// Phase 33: Rate Limiter (token-bucket per user)
-// ==============================================================================
-
 import type { RateLimit, RateLimitResult, RateLimitWindow } from './types.js';
 
 interface Bucket {
-  /** Token còn lại (cho token-bucket) */
+  
   tokens: number;
   /** Last refill timestamp */
   lastRefill: number;
 }
 
 /**
- * RateLimiter — token-bucket algorithm với sliding refill.
+
  *
- * Mỗi user có 1 bucket cho mỗi rate limit spec.
- * Hỗ trợ cả request-count và token-count.
+
  *
- * Sử dụng:
+
  *   const limiter = new RateLimiter();
  *   const result = limiter.check('user-1', { id: 'chat.req', limit: 60, window: 'minute', scope: 'requests' });
  *   if (!result.allowed) throw new Error(`Rate limited, retry after ${result.retryAfterMs}ms`);
@@ -30,9 +25,6 @@ export class RateLimiter {
   private totalChecks = 0;
   private totalBlocked = 0;
 
-  /**
-   * Đăng ký rate limit spec.
-   */
   registerLimit(limit: RateLimit): void {
     this.limits.set(limit.id, limit);
   }
@@ -44,30 +36,36 @@ export class RateLimiter {
     return Array.from(this.limits.values());
   }
 
-  /**
-   * Xóa rate limit spec.
-   */
   unregisterLimit(id: string): boolean {
     this.limits.delete(id);
     return true;
   }
 
-  /**
-   * Check rate limit cho user, có thể dùng atomicConsume.
-   * Nếu cost=1 thì check trước, consume nếu allowed.
-   */
+  /** Drop buckets idle for >24h so the bucket map cannot grow unboundedly. */
+  private evictIdleBuckets(): void {
+    if (this.buckets.size < 1024 || (this.totalChecks & 4095) !== 0) return;
+    const cutoff = Date.now() - 86_400_000;
+    for (const [key, bucket] of this.buckets) {
+      if (bucket.lastRefill < cutoff) this.buckets.delete(key);
+    }
+  }
+
   check(userId: string, limitId: string, cost = 1): RateLimitResult {
     this.totalChecks++;
     const limit = this.limits.get(limitId);
     if (!limit) {
+      // Fail CLOSED: an unregistered limit must not grant unlimited quota —
+      // a typo or missing registration would otherwise bypass rate limiting.
       return {
-        allowed: true,
-        limit: Infinity,
-        remaining: Infinity,
-        resetAt: 0,
+        allowed: false,
+        limit: 0,
+        remaining: 0,
+        resetAt: Date.now() + 60_000,
+        retryAfterMs: 60_000,
         scope: limitId.includes('token') ? 'tokens' : 'requests',
       };
     }
+    this.evictIdleBuckets();
 
     const windowMs = windowToMs(limit.window);
     const key = `${userId}:${limitId}`;
@@ -79,24 +77,22 @@ export class RateLimiter {
       this.buckets.set(key, bucket);
     }
 
-    // Refill: proportional refill dựa trên thời gian trôi qua
-    const elapsed = now - bucket.lastRefill;
-    if (elapsed > 0) {
-      const refillRate = limit.limit / windowMs;
-      const refill = Math.floor(elapsed * refillRate);
-      if (refill > 0) {
-        bucket.tokens = Math.min(limit.limit, bucket.tokens + refill);
-        bucket.lastRefill = now;
-      }
+    // Refill with fractional carry so `lastRefill` always advances and the
+    // reported resetAt stays accurate even for slow rates (<1 token per tick).
+    const refillRate = limit.limit / windowMs;
+    const accrued = (now - bucket.lastRefill) * refillRate;
+    if (accrued >= 1) {
+      const whole = Math.floor(accrued);
+      bucket.tokens = Math.min(limit.limit, bucket.tokens + whole);
+      bucket.lastRefill += whole / refillRate;
     }
 
-    const resetAt = bucket.lastRefill + windowMs;
+    const resetAt = Math.ceil(bucket.lastRefill + windowMs);
     const remaining = Math.max(0, Math.floor(bucket.tokens));
 
     if (bucket.tokens < cost) {
       this.totalBlocked++;
       const deficit = cost - bucket.tokens;
-      const refillRate = limit.limit / windowMs;
       const retryAfterMs = refillRate > 0 ? Math.ceil(deficit / refillRate) : windowMs;
       return {
         allowed: false,
@@ -132,9 +128,6 @@ export class RateLimiter {
     }
   }
 
-  /**
-   * Lấy remaining tokens cho user (không consume).
-   */
   peek(userId: string, limitId: string): number {
     const limit = this.limits.get(limitId);
     if (!limit) return Infinity;
@@ -144,9 +137,6 @@ export class RateLimiter {
     return Math.max(0, Math.floor(bucket.tokens));
   }
 
-  /**
-   * Stats tổng quan.
-   */
   stats(): {
     totalChecks: number;
     totalBlocked: number;
@@ -166,9 +156,6 @@ export class RateLimiter {
     };
   }
 
-  /**
-   * Clear tất cả bucket (test only).
-   */
   clear(): void {
     this.buckets.clear();
     this.totalChecks = 0;

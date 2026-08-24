@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 1: Unified LLMProvider Interface
-// ==============================================================================
 // Unified interface wrapping all LLM providers (Anthropic/OpenAI/Google/Groq/Mistral)
 // with standardized streaming, config schema, and response buffering.
-// ==============================================================================
 
 import type { AIProviderType, AIStreamChunk } from '@ghita/shared';
 import type {
@@ -15,9 +11,7 @@ import type {
   TokenUsage,
 } from '../types.js';
 
-// ---------------------------------------------------------------------------
 // LLMProvider — the single unified interface for all LLM backends
-// ---------------------------------------------------------------------------
 
 /**
  * Unified LLM provider interface.
@@ -48,9 +42,7 @@ export interface LLMProvider extends AIProvider {
   getCapabilities(): ProviderCapabilities;
 }
 
-// ---------------------------------------------------------------------------
 // Capabilities descriptor
-// ---------------------------------------------------------------------------
 
 export interface ProviderCapabilities {
   streaming: boolean;
@@ -64,9 +56,7 @@ export interface ProviderCapabilities {
   reasoningTokens: boolean;
 }
 
-// ---------------------------------------------------------------------------
 // SSE Stream Event types (POST /chat/stream → event-stream)
-// ---------------------------------------------------------------------------
 
 export type SSEEventType =
   | 'message_start'
@@ -90,9 +80,7 @@ export interface SSEStreamEvent {
   };
 }
 
-// ---------------------------------------------------------------------------
 // Response Buffer types — partial JSON assembly for streaming
-// ---------------------------------------------------------------------------
 
 export interface ResponseBufferState {
   /** Accumulated raw bytes/text from the stream */
@@ -107,9 +95,7 @@ export interface ResponseBufferState {
   startedAt: number;
 }
 
-// ---------------------------------------------------------------------------
 // Provider YAML Config types
-// ---------------------------------------------------------------------------
 
 export interface ProviderYAMLConfig {
   /** Provider identifier */
@@ -160,9 +146,7 @@ export interface ProvidersYAMLRoot {
   };
 }
 
-// ---------------------------------------------------------------------------
 // Helper: derive ProviderConfig (internal) from ProviderYAMLConfig
-// ---------------------------------------------------------------------------
 
 export function yamlToProviderConfig(yaml: ProviderYAMLConfig): ProviderConfig {
   return {

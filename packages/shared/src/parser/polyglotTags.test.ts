@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Polyglot SCM Parser Unit Tests
-// ==============================================================================
-
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -15,7 +11,6 @@ import { SymbolCache } from './symbolCache.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Tạo thư mục tạm dành riêng cho tests để tránh làm bẩn môi trường production
 const TEMP_TEST_DIR = path.resolve(__dirname, '../../resources/test-temp');
 const TEMP_DB_PATH = path.join(TEMP_TEST_DIR, 'test-symbol-cache.db');
 
@@ -26,7 +21,7 @@ describe('1: Polyglot SCM Parser & AST Tags Tests', () => {
   let cache: SymbolCache;
 
   beforeAll(async () => {
-    // Dọn dẹp thư mục test tạm nếu đã tồn tại
+    
     if (fs.existsSync(TEMP_TEST_DIR)) {
       fs.rmSync(TEMP_TEST_DIR, { recursive: true, force: true });
     }
@@ -37,7 +32,6 @@ describe('1: Polyglot SCM Parser & AST Tags Tests', () => {
     ranker = new PageRankRanker();
     cache = new SymbolCache(TEMP_DB_PATH);
 
-    // deep-review fix (BUG-D): pre-warm the parsers needed by the parse tests
     // so a slow CDN cannot make an individual test blow its 15s timeout
     // (flaky CI). Failures here surface as clear beforeAll errors instead of
     // random per-test timeouts; the downloader tests below still verify the
@@ -50,15 +44,14 @@ describe('1: Polyglot SCM Parser & AST Tags Tests', () => {
 
   afterAll(() => {
     cache.close();
-    // Dọn dẹp tệp tin tạm sau khi test hoàn tất
+    
     if (fs.existsSync(TEMP_TEST_DIR)) {
       fs.rmSync(TEMP_TEST_DIR, { recursive: true, force: true });
     }
   });
 
-  // ==========================================
   // 1. Tests cho WasmParserDownloader
-  // ==========================================
+  
   describe('WasmParserDownloader', () => {
     it('should normalize language names correctly', () => {
       expect(downloader.normalizeLanguageName('js')).toBe('javascript');
@@ -76,12 +69,11 @@ describe('1: Polyglot SCM Parser & AST Tags Tests', () => {
       const typescriptWasmPath = await downloader.getLanguageWasm('typescript');
       expect(fs.existsSync(typescriptWasmPath)).toBe(true);
       expect(path.basename(typescriptWasmPath)).toBe('tree-sitter-typescript.wasm');
-    }, 60000); // deep-review fix (BUG-D): generous timeout for first-run CDN download
+    }, 60000); 
   });
 
-  // ==========================================
   // 2. Tests cho PolyglotTagParser
-  // ==========================================
+  
   describe('PolyglotTagParser', () => {
     it('should parse and extract definitions and references from TypeScript code', async () => {
       const code = `
@@ -106,26 +98,22 @@ describe('1: Polyglot SCM Parser & AST Tags Tests', () => {
 
       expect(tags.length).toBeGreaterThan(0);
 
-      // Kiểm định định nghĩa Class
       const classDef = tags.find((t) => t.name === 'UserService' && t.kind === 'definition');
       expect(classDef).toBeDefined();
       expect(classDef?.type).toBe('class');
 
-      // Kiểm định định nghĩa Method
       const methodDef = tags.find((t) => t.name === 'getUser' && t.kind === 'definition');
       expect(methodDef).toBeDefined();
       expect(methodDef?.type).toBe('method');
 
-      // Kiểm định định nghĩa Function
       const funcDef = tags.find((t) => t.name === 'databaseCall' && t.kind === 'definition');
       expect(funcDef).toBeDefined();
       expect(funcDef?.type).toBe('function');
 
-      // Kiểm định tham chiếu (class instantiation)
       const classRef = tags.find((t) => t.name === 'UserService' && t.kind === 'reference');
       expect(classRef).toBeDefined();
       expect(classRef?.type).toBe('class');
-    }, 60000); // deep-review fix (BUG-D): generous timeout for CDN parser download
+    }, 60000); 
 
     it('should parse and extract definitions and references from Python code', async () => {
       const pythonCode = `
@@ -158,7 +146,7 @@ mgr.calculate_total(123)
       // Verify Function definition
       const funcDef = tags.find((t) => t.name === 'get_order_items' && t.kind === 'definition');
       expect(funcDef).toBeDefined();
-    }, 60000); // deep-review fix (BUG-D): generous timeout for CDN parser download
+    }, 60000); 
 
     it('should parse and extract definitions and references from Go code', async () => {
       const goCode = `
@@ -198,7 +186,7 @@ func main() {
       // Verify function definition
       const funcDef = tags.find((t) => t.name === 'printBook' && t.kind === 'definition');
       expect(funcDef).toBeDefined();
-    }, 60000); // deep-review fix (BUG-D): generous timeout for CDN parser download
+    }, 60000); 
 
     it('should handle unsupported/missing languages gracefully without crashing', async () => {
       const tags = await parser.extractSymbols('const a = 1;', 'invalid_lang_name');
@@ -223,12 +211,11 @@ func main() {
     });
   });
 
-  // ==========================================
   // 3. Tests cho PageRankRanker
-  // ==========================================
+  
   describe('PageRankRanker', () => {
     it('should calculate correct PageRank importance scores', () => {
-      // Giả lập 3 files:
+      
       // - utils.ts defines 'helper'
       // - service.ts defines 'runService' which references/calls 'helper'
       // - main.ts defines 'main' which references/calls 'runService'
@@ -286,15 +273,12 @@ func main() {
       expect(ranks['service.ts#runService']).toBeDefined();
       expect(ranks['main.ts#main']).toBeDefined();
 
-      // 'helper' được 'runService' gọi, 'runService' được 'main' gọi
-      // Điểm số của 'helper' sẽ cao nhất do nhận dòng PageRank truyền từ 'runService'
       expect(ranks['utils.ts#helper'] ?? 0).toBeGreaterThan(ranks['main.ts#main'] ?? 0);
     });
   });
 
-  // ==========================================
   // 4. Tests cho SymbolCache
-  // ==========================================
+  
   describe('SymbolCache', () => {
     it('should cache and retrieve symbols correctly using SQLite', () => {
       const filePath = '/absolute/path/to/UserService.ts';
@@ -311,11 +295,9 @@ func main() {
         } as const,
       ];
 
-      // 1. Kiểm tra cache trống ban đầu
       const initialFetch = cache.getCachedSymbols(filePath, hash);
       expect(initialFetch).toBeNull();
 
-      // 2. Lưu vào cache và lấy ra
       cache.saveCachedSymbols(filePath, hash, [...mockSymbols]);
       const cachedFetch = cache.getCachedSymbols(filePath, hash);
 
@@ -323,7 +305,6 @@ func main() {
       expect(cachedFetch?.length).toBe(1);
       expect(cachedFetch?.[0]?.name).toBe('UserService');
 
-      // 3. Thay đổi nội dung tệp (hash thay đổi) để kiểm chứng cache miss
       const newHash = cache.calculateHash(`${content}\n// modification`);
       const missFetch = cache.getCachedSymbols(filePath, newHash);
       expect(missFetch).toBeNull();

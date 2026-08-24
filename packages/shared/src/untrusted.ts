@@ -1,13 +1,9 @@
-// ==============================================================================
-// GHITA CODING AGENT - v1.1.5-beta1 Track 1.4: Untrusted-data discipline
-// ------------------------------------------------------------------------------
 // Tool output (shell stdout, scraped pages, scan results, file contents from
 // outside the workspace) is DATA, never instructions. Every observation that
 // enters the LLM context is wrapped in an explicit untrusted envelope and any
 // attempt to close the envelope early from inside the payload is neutralised.
 // Pattern source: hackingtool `OPERATOR.md` (`<scan_data>` charter) adapted to
 // a generic tool-output boundary.
-// ==============================================================================
 
 /**
  * Short Operator Charter prepended to agent system prompts when untrusted

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Web Fetch Tool
-// ==============================================================================
-
 export interface FetchResponse {
   url: string;
   title: string;
@@ -10,7 +6,6 @@ export interface FetchResponse {
   statusCode: number;
 }
 
-// v1.0.0 deep-review fix (M11): SSRF guard mirroring the Rust proxy policy.
 // A prompt-injected agent must not be able to pivot web_fetch into loopback
 // services, private LAN hosts, or cloud metadata endpoints. Hostnames are
 // resolved and every A/AAAA record is checked; DNS rebinding is mitigated by
@@ -72,9 +67,9 @@ export async function assertSafeFetchUrl(rawUrl: string): Promise<{ url: URL; ip
 }
 
 export class WebFetchTool {
-  /** Fetch URL và convert sang markdown-ish text */
+  
   async fetch(url: string): Promise<FetchResponse> {
-    // deep-review fix (M11): SSRF validation + DNS pinning before the request.
+    
     const { url: parsedUrl, ip } = await assertSafeFetchUrl(url);
     const init = {
       signal: AbortSignal.timeout(10000),

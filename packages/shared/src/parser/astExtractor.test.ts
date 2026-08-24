@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - AST Multi-Language Extractor Tests (Phase 2)
-// ==============================================================================
-
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -37,9 +33,6 @@ describe('2: AST Multi-Language Extractor Tests', () => {
     }
   });
 
-  // ==========================================
-  // Tác vụ 1: Kiểm tra Pascal tags.scm tồn tại
-  // ==========================================
   describe('Pascal SCM Tags', () => {
     it('should have pascal-tags.scm file in resources/tags/', () => {
       const tagsDir = path.resolve(__dirname, '../../resources/tags');
@@ -52,9 +45,6 @@ describe('2: AST Multi-Language Extractor Tests', () => {
     });
   });
 
-  // ==========================================
-  // Tác vụ 2: Kiểm tra WASM Parser cho Kotlin, Scala, Pascal
-  // ==========================================
   describe('WASM Parser Downloads', () => {
     it('should normalize Kotlin aliases correctly', () => {
       const dl = new WasmParserDownloader(TEMP_TEST_DIR);
@@ -69,9 +59,6 @@ describe('2: AST Multi-Language Extractor Tests', () => {
     });
   });
 
-  // ==========================================
-  // Tác vụ 2: ProjectConfigSniffer
-  // ==========================================
   describe('ProjectConfigSniffer', () => {
     it('should detect Kotlin project from build.gradle.kts', () => {
       const testDir = path.join(TEMP_TEST_DIR, 'kotlin-proj');
@@ -104,9 +91,6 @@ describe('2: AST Multi-Language Extractor Tests', () => {
     });
   });
 
-  // ==========================================
-  // Tác vụ 3: ASTExtractor — Kotlin
-  // ==========================================
   describe('ASTExtractor — Kotlin', () => {
     it('should extract class, function, object definitions from Kotlin code', async () => {
       const kotlinCode = `
@@ -179,9 +163,6 @@ class MyClass {
     }, 30000);
   });
 
-  // ==========================================
-  // Tác vụ 3: ASTExtractor — Scala
-  // ==========================================
   describe('ASTExtractor — Scala', () => {
     it('should extract definitions from Scala code without crashing', async () => {
       const scalaCode = `
@@ -211,9 +192,6 @@ def processList(items: List[Int]): Int = items.sum
     }, 30000);
   });
 
-  // ==========================================
-  // Tác vụ 4: Tolerant Parser — Xử lý lỗi cú pháp
-  // ==========================================
   describe('Tolerant Parser', () => {
     it('should parse broken code without crashing', async () => {
       const brokenKotlin = `
@@ -227,7 +205,7 @@ fun anotherFunction(): Int {
 `;
 
       const nodes = await extractor.extractAST(brokenKotlin, 'kotlin');
-      // Không crash, trả về mảng (có thể rỗng hoặc có partial nodes)
+      
       expect(Array.isArray(nodes)).toBe(true);
     }, 30000);
 
@@ -252,9 +230,6 @@ object Working {
     }, 30000);
   });
 
-  // ==========================================
-  // Tác vụ 5: Scope Indexing — Phân cấp Class.Method
-  // ==========================================
   describe('Scope Indexing', () => {
     it('should assign hierarchical scope to nested definitions', async () => {
       const kotlinCode = `
@@ -277,9 +252,6 @@ class OuterClass {
     }, 30000);
   });
 
-  // ==========================================
-  // Nâng cấp: SymbolCache — Advanced
-  // ==========================================
   describe('SymbolCache — Advanced', () => {
     it('should return null for non-existent file path', () => {
       const result = cache.getCachedSymbols('/nonexistent/path/file.kt', 'somehash');
@@ -310,9 +282,6 @@ class OuterClass {
     }, 30000);
   });
 
-  // ==========================================
-  // Nâng cấp: WasmParserDownloader normalization
-  // ==========================================
   describe('WasmParserDownloader normalization — extended', () => {
     it('should normalize scala correctly', () => {
       const dl = new WasmParserDownloader(TEMP_TEST_DIR);
@@ -332,9 +301,6 @@ class OuterClass {
     });
   });
 
-  // ==========================================
-  // Nâng cấp: buildHierarchy — 3-level nesting
-  // ==========================================
   describe('buildHierarchy — 3-level nesting', () => {
     it('should assign child to immediate/smallest parent only', async () => {
       const kotlinCode = `
@@ -362,9 +328,6 @@ class OuterClass {
     }, 30000);
   });
 
-  // ==========================================
-  // Nâng cấp: Reference scope — smallest enclosing
-  // ==========================================
   describe('Reference scope — smallest enclosing definition', () => {
     it('should assign reference scope to innermost enclosing method', async () => {
       const kotlinCode = `
@@ -386,9 +349,6 @@ class Calculator {
     }, 30000);
   });
 
-  // ==========================================
-  // Nâng cấp: ASTExtractor — Pascal
-  // ==========================================
   describe('ASTExtractor — Pascal', () => {
     it('should extract definitions from Pascal code without crashing', async () => {
       const pascalCode = `
@@ -425,9 +385,6 @@ end.
     }, 30000);
   });
 
-  // ==========================================
-  // Nâng cấp: ProjectConfigSniffer edge cases
-  // ==========================================
   describe('ProjectConfigSniffer — edge cases', () => {
     it('should throw for empty unknown project directory', () => {
       const emptyDir = path.join(TEMP_TEST_DIR, 'empty-unknown-proj');
@@ -456,9 +413,6 @@ end.
     });
   });
 
-  // ==========================================
-  // Nâng cấp: extractSymbolTags — broken node filtering
-  // ==========================================
   describe('extractSymbolTags — broken node filtering', () => {
     it('should exclude broken/error nodes from SymbolTag output', async () => {
       const brokenCode = `

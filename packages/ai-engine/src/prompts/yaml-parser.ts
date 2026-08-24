@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Custom, Zero-Dependency YAML Parser
-// ==============================================================================
-
 interface YamlTreeNode {
   indent: number;
   isListItem: boolean;

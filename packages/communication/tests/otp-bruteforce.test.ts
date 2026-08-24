@@ -1,13 +1,9 @@
-// ==============================================================================
-// GHITA CODING AGENT — OTP Brute-Force Protection Unit Tests
-// ==============================================================================
 // Tests for TelepresencePortal.verifyOTP security hardening:
 //   - OTP expiry (10-minute window)
 //   - Per-socket attempt limit (5 max)
 //   - Global lockout after 20 cumulative failures (5-minute cooldown)
 //   - OTP format validation on setOTP
 //   - Successful authentication resets attempt counters
-// ==============================================================================
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TelepresencePortal } from '../src/channels/telepresencePortal.js';
@@ -43,9 +39,8 @@ describe('TelepresencePortal — OTP Brute-Force Protection', () => {
     vi.restoreAllMocks();
   });
 
-  // ---------------------------------------------------------------------------
   // 1. OTP Expiry
-  // ---------------------------------------------------------------------------
+  
   describe('OTP Expiry (10-minute window)', () => {
     it('should accept OTP within the expiry window', () => {
       portal.setOTP('123456');
@@ -92,9 +87,8 @@ describe('TelepresencePortal — OTP Brute-Force Protection', () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
   // 2. Per-Socket Attempt Limit (max 5)
-  // ---------------------------------------------------------------------------
+  
   describe('Per-Socket Attempt Limit (5 max)', () => {
     it('should block a socket after 5 failed attempts even with correct OTP on the 6th', () => {
       portal.setOTP('999999');
@@ -148,14 +142,12 @@ describe('TelepresencePortal — OTP Brute-Force Protection', () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
   // 3. Global Lockout (20 cumulative failures → 5-min cooldown)
-  // ---------------------------------------------------------------------------
+  
   describe('Global Lockout (20 failures → 5-min cooldown)', () => {
     it('should trigger global lockout after 20 total failed attempts across sockets', () => {
       portal.setOTP('888888');
 
-      // Use 4 sockets × 5 attempts each = 20 total failures
       // Note: per-socket limit is 5, so each socket can contribute up to 5
       const sockets = Array.from({ length: 4 }, () => createMockSocket());
 
@@ -212,9 +204,8 @@ describe('TelepresencePortal — OTP Brute-Force Protection', () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
   // 4. OTP Format Validation
-  // ---------------------------------------------------------------------------
+  
   describe('OTP Format Validation (setOTP)', () => {
     it('should accept a valid 6-digit OTP', () => {
       expect(() => portal.setOTP('000000')).not.toThrow();
@@ -238,9 +229,8 @@ describe('TelepresencePortal — OTP Brute-Force Protection', () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
   // 5. Successful Authentication Resets Counters
-  // ---------------------------------------------------------------------------
+  
   describe('Successful Authentication Resets State', () => {
     it('should clear per-socket attempt counter on successful verification', () => {
       portal.setOTP('444444');
@@ -276,9 +266,8 @@ describe('TelepresencePortal — OTP Brute-Force Protection', () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
   // 6. Edge Cases
-  // ---------------------------------------------------------------------------
+  
   describe('Edge Cases', () => {
     it('should reject verification when no OTP has been set (empty otpCode)', () => {
       const socket = createMockSocket();

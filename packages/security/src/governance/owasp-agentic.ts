@@ -1,26 +1,22 @@
-// ==============================================================================
 // v0.4.9 A2: Agent Governance — OWASP Agentic AI Top 10 Checks
 //
 // Heuristic checks that map an agent action context to the OWASP Agentic AI
 // Top 10 risk catalogue. These are runtime guardrails, not a substitute for
 // design review — they surface the most common failure modes cheaply.
-// ==============================================================================
 
 import type { AgentActionContext, GovernanceFinding } from './types.js';
 
-/** Ngưỡng mặc định cho các heuristic. */
 export interface OwaspCheckOptions {
-  /** Số vòng lặp tối đa trước khi cảnh báo resource overload. Mặc định 25. */
+  
   maxIterations?: number;
-  /** Tỷ lệ token đã dùng/giới hạn kích hoạt cảnh báo. Mặc định 0.9. */
+  
   tokenUsageWarnRatio?: number;
-  /** Số approval chờ tối đa trước khi cảnh báo HITL quá tải. Mặc định 5. */
+  
   maxPendingApprovals?: number;
-  /** Điểm tin cậy ký ức tối thiểu. Mặc định 0.5. */
+  
   minMemoryTrust?: number;
 }
 
-/** Các mẫu prompt-injection/intent-manipulation thường gặp. */
 const INTENT_MANIPULATION_PATTERNS: RegExp[] = [
   /\bignore\s+(?:all\s+)?(?:previous|prior|above)\s+instructions?\b/i,
   /\bdisregard\s+(?:the\s+)?(?:system|previous)\s+prompt\b/i,
@@ -29,13 +25,8 @@ const INTENT_MANIPULATION_PATTERNS: RegExp[] = [
   /\bdeveloper\s+mode\b/i,
 ];
 
-/** Các hành động tool "nguy hiểm" cần đặc quyền rõ ràng. */
 const DANGEROUS_ACTIONS = new Set(['delete', 'execute', 'write', 'deploy', 'grant']);
 
-/**
- * Chấm một lượt hành động agent theo OWASP Agentic Top 10.
- * Trả về danh sách finding (rỗng nếu không phát hiện rủi ro).
- */
 export function checkOwaspAgentic(
   ctx: AgentActionContext,
   options: OwaspCheckOptions = {},
@@ -46,7 +37,6 @@ export function checkOwaspAgentic(
   const minMemoryTrust = options.minMemoryTrust ?? 0.5;
   const findings: GovernanceFinding[] = [];
 
-  // AAI01 — Memory poisoning: nguồn ký ức tin cậy thấp.
   if (ctx.memoryTrustScore !== undefined && ctx.memoryTrustScore < minMemoryTrust) {
     findings.push({
       riskId: 'AAI01-memory-poisoning',
@@ -57,7 +47,6 @@ export function checkOwaspAgentic(
     });
   }
 
-  // AAI02 / AAI03 — Tool misuse & privilege compromise: hành động nguy hiểm.
   for (const call of ctx.toolCalls ?? []) {
     if (DANGEROUS_ACTIONS.has(call.action)) {
       findings.push({
@@ -70,7 +59,6 @@ export function checkOwaspAgentic(
     }
   }
 
-  // AAI04 — Resource overload: lặp quá nhiều hoặc gần cạn token budget.
   if (ctx.iterationCount !== undefined && ctx.iterationCount > maxIterations) {
     findings.push({
       riskId: 'AAI04-resource-overload',
@@ -107,7 +95,6 @@ export function checkOwaspAgentic(
     }
   }
 
-  // AAI08 — Repudiation & untraceability: không ghi audit.
   if (ctx.auditLogged === false) {
     findings.push({
       riskId: 'AAI08-repudiation-untraceability',
@@ -118,7 +105,6 @@ export function checkOwaspAgentic(
     });
   }
 
-  // AAI09 — Identity spoofing: thiếu agentId khi có tool-call.
   if ((ctx.toolCalls?.length ?? 0) > 0 && !ctx.agentId) {
     findings.push({
       riskId: 'AAI09-identity-spoofing',

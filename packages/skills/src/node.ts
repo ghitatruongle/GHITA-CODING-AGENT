@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Node Runtime Adapters for Skills
-// ==============================================================================
-
 import { spawn } from 'node:child_process';
 import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { dirname, extname, isAbsolute, relative, resolve } from 'node:path';
@@ -24,25 +20,6 @@ function resolveWorkspacePath(defaultCwd: string, requestedPath: string): string
   }
 
   throw new Error(`Path is outside the workspace: ${requestedPath}`);
-}
-
-/**
- * Escape a string for safe use as a shell argument.
- * Wraps in double quotes and escapes internal quotes/backslashes.
- */
-function escapeShellArg(value: string): string {
-  if (value.length === 0) return '""';
-  // If no special characters, return as-is
-  if (!/[\s"'\\%$`!#&|<>(){}[\];]/.test(value)) return value;
-
-  if (platform === 'win32') {
-    // Windows: escape backslashes before double-quotes, escape %env vars%
-    const escaped = value.replace(/(\\*)"/g, '$1$1\\"').replace(/%(?=\w)/g, '^%');
-    return `"${escaped}"`;
-  }
-  // Unix: escape backslashes and double-quotes
-  const escaped = value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-  return `"${escaped}"`;
 }
 
 function runProcess(
@@ -73,8 +50,44 @@ function runProcess(
       windowsHide: true,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
+    monitorChildProcess(child, options, startedAt, resolveProcess);
+  });
+}
 
-    let stdout = '';
+interface RunProcessOptions {
+  cwd?: string;
+  timeoutMs?: number;
+  signal?: AbortSignal;
+  maxOutputBytes: number;
+}
+
+type ProcessResult = { exitCode: number; stdout: string; stderr: string; duration: number };
+
+/// Spawn WITHOUT a shell — argv elements reach the OS verbatim, so shell
+/// metacharacters in arguments ($(), backticks, &, |) are never interpreted.
+function runProcessArgv(
+  program: string,
+  args: string[],
+  options: RunProcessOptions,
+): Promise<ProcessResult> {
+  const startedAt = Date.now();
+  return new Promise((resolveProcess) => {
+    const child = spawn(program, args, {
+      cwd: options.cwd,
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    monitorChildProcess(child, options, startedAt, resolveProcess);
+  });
+}
+
+function monitorChildProcess(
+  child: ReturnType<typeof spawn>,
+  options: RunProcessOptions,
+  startedAt: number,
+  resolveProcess: (result: ProcessResult) => void,
+): void {
+  let stdout = '';
     let stderr = '';
     let stdoutBytes = 0;
     let stderrBytes = 0;
@@ -162,7 +175,6 @@ function runProcess(
       clearTimeout(timeout);
       finish(code ?? 0);
     });
-  });
 }
 
 function windowlessSetTimeout(callback: () => void, ms: number): ReturnType<typeof setTimeout> {
@@ -215,17 +227,41 @@ export function createNodeSkillAdapters(
     },
     app: {
       openApp: async (target, args = []) => {
-        const safeTarget = escapeShellArg(target);
-        const safeArgs = args.map(escapeShellArg).join(' ');
-        const command =
-          platform === 'win32' ? `start "" ${safeTarget} ${safeArgs}` : `${safeTarget} ${safeArgs}`;
-        await runProcess(command, { cwd: defaultCwd, timeoutMs: 5000, maxOutputBytes });
+        // No shell involved: argv elements are passed directly to the OS so
+        // metacharacters ($(), backticks, &, |) can never be re-interpreted.
+        // Quotes/percent are rejected outright — they cannot appear safely in
+        // a cross-platform argv without shell-level re-parsing.
+        const unsafe = [target, ...args].find((a) => /["%`\n]/.test(a));
+        if (unsafe !== undefined) {
+          throw new Error(`openApp argument contains forbidden characters: ${unsafe}`);
+        }
+        if (platform === 'win32') {
+          await runProcessArgv('cmd.exe', ['/d', '/s', '/c', 'start', '', target, ...args], {
+            cwd: defaultCwd,
+            timeoutMs: 5000,
+            maxOutputBytes,
+          });
+        } else {
+          await runProcessArgv(target, args, { cwd: defaultCwd, timeoutMs: 5000, maxOutputBytes });
+        }
       },
       closeApp: async (target) => {
-        const safeTarget = escapeShellArg(target);
-        const command =
-          platform === 'win32' ? `taskkill /IM ${safeTarget} /T` : `pkill -f ${safeTarget}`;
-        await runProcess(command, { cwd: defaultCwd, timeoutMs: 5000, maxOutputBytes });
+        if (/["%`\n]/.test(target)) {
+          throw new Error(`closeApp target contains forbidden characters: ${target}`);
+        }
+        if (platform === 'win32') {
+          await runProcessArgv('taskkill', ['/IM', target, '/T'], {
+            cwd: defaultCwd,
+            timeoutMs: 5000,
+            maxOutputBytes,
+          });
+        } else {
+          await runProcessArgv('pkill', ['-f', target], {
+            cwd: defaultCwd,
+            timeoutMs: 5000,
+            maxOutputBytes,
+          });
+        }
       },
     },
   };
@@ -237,7 +273,6 @@ export function createNodeSkillRegistry(options: NodeSkillAdapterOptions = {}) {
 
 export { SkillHub } from './registry/hub.js';
 
-// --- Phase 5: Socratic Docs-Aware /grill-me ---
 export { DocsGriller, createGrillMeCommand } from './engineering/docsGriller.js';
 export type {
   DocEntry,
@@ -247,15 +282,12 @@ export type {
   DocsGrillerConfig,
 } from './engineering/docsGriller.js';
 
-// --- Phase 6A: Slash Commands ---
 export { SlashCommandRegistry } from './commands/registry.js';
 export type { SlashCommand, SlashCommandFlag, ParsedArgs } from './commands/registry.js';
 export { createBuiltinSlashCommands } from './commands/builtins.js';
 
-// --- Phase 7: Dynamic Skill Generation Loop ---
 export { DynamicSkillGenerator, createSkillsSyncCommand } from './registry/dynamicGenerator.js';
 
-// Phase 2.3: Marketplace
 export { SkillCatalogClient } from './marketplace/catalog.js';
 export { SkillInstaller } from './marketplace/installer.js';
 export { SkillRatingsStore } from './marketplace/ratings.js';

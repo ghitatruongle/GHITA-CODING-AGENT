@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Batch Engine (Phase 27)
 // Token-efficient request batching with multiple dispatch strategies.
-// ==============================================================================
 
 import type { ChatMessage, ChatOptions, ChatResponse } from '../types.js';
 import type { AIProviderType } from '@ghita/shared';
@@ -25,26 +22,20 @@ import {
 } from './parallel-executor.js';
 import { BatchCostTracker, estimateCostUsd } from './cost-tracker.js';
 
-// ---------------------------------------------------------------------------
 // Internal: extend BatchRequest with private resolvers (no leakage outside)
-// ---------------------------------------------------------------------------
 
 type PendingRequest = BatchRequest & {
   _resolve: (r: BatchRequestResult) => void;
   _reject: (e: Error) => void;
 };
 
-// ---------------------------------------------------------------------------
 // Grouping key: requests with the same (provider, model, tag) can be batched.
-// ---------------------------------------------------------------------------
 
 function groupKey(r: BatchRequest): string {
   return `${r.provider}::${r.model ?? ''}::${r.tag ?? 'default'}`;
 }
 
-// ---------------------------------------------------------------------------
 // Batch Engine
-// ---------------------------------------------------------------------------
 
 export class BatchEngine {
   private config: Required<BatchEngineConfig>;

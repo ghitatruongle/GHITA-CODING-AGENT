@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Built-in Skill: Presentation Deck Generator
-// ==============================================================================
 // Absorbed from Presenton reference project (AI Presentation Generator & API).
 // Converts raw text/markdown outlines into structured slide deck ASTs, HTML, and Marp slides.
-// ==============================================================================
 
 import type { SkillDefinition } from '../types.js';
 import { SKILLS_VERSION } from '../types.js';

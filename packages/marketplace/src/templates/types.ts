@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Agent Template Types (Phase 36)
-// ==============================================================================
-
 /** Agent template definition */
 export interface AgentTemplate {
   /** Unique template ID */

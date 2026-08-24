@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Native Dialog Abstractions (Phase 33)
 // Wrappers around Tauri's dialog API with graceful fallback
-// ==============================================================================
 
 /** Result of a confirm/prompt dialog */
 export interface DialogResult<T = boolean> {

@@ -1,6 +1,4 @@
-// ==============================================================================
 // v0.4.9: PluginUpdater real-registry check tests
-// ==============================================================================
 
 import { describe, it, expect, vi } from 'vitest';
 import { PluginUpdater, type FetchLike } from './updater.js';

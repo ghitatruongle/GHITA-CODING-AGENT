@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Memory v1.1.0 Track 6 P71: contradiction detection
-// ==============================================================================
 // Detects conflicting memories (via polarity + semantic similarity with an
 // injectable embedder) and resolves them by superseding the older entry.
-// ==============================================================================
 
 export interface MemoryText {
   id: string;

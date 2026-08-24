@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Slack Communication Gateway
-// ==============================================================================
-
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import WebSocket, { type RawData } from 'ws';
 import type { CommunicationGateway, GatewayMessage, GatewayType } from './types.js';
@@ -204,7 +200,6 @@ export class SlackGateway implements CommunicationGateway {
       return;
     }
 
-    // P1-5 (deep review pass #2): only ack the envelope AFTER we have
     // successfully consumed the event. The previous code acked every envelope
     // unconditionally, which trains Slack to retry indefinitely when the
     // handler is dropped or the event is malformed — multiplying load on

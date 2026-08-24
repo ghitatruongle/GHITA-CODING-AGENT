@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Provider Registry
-// ==============================================================================
-
 import type { AIProviderType } from '@ghita/shared';
 import { AI_PROVIDERS } from '@ghita/shared';
 import type { AIProvider, ProviderConfig } from './types.js';
@@ -22,49 +18,40 @@ import { AzureOpenAIProvider } from './providers/azure-openai.js';
 export class ProviderRegistry {
   private providers = new Map<AIProviderType, AIProvider>();
 
-  /** Đăng ký một provider */
   register(provider: AIProvider): void {
     this.providers.set(provider.type, provider);
   }
 
-  /** Tạo và đăng ký provider từ config */
   registerFromConfig(config: ProviderConfig): AIProvider {
     const provider = this.createProvider(config);
     this.register(provider);
     return provider;
   }
 
-  /** Lấy provider theo type */
   get(type: AIProviderType): AIProvider | undefined {
     return this.providers.get(type);
   }
 
-  /** Lấy tất cả providers */
   getAll(): AIProvider[] {
     return Array.from(this.providers.values());
   }
 
-  /** Lấy tất cả provider types đã đăng ký */
   getTypes(): AIProviderType[] {
     return Array.from(this.providers.keys());
   }
 
-  /** Kiểm tra provider đã đăng ký chưa */
   has(type: AIProviderType): boolean {
     return this.providers.has(type);
   }
 
-  /** Xoá provider */
   remove(type: AIProviderType): boolean {
     return this.providers.delete(type);
   }
 
-  /** Xoá tất cả */
   clear(): void {
     this.providers.clear();
   }
 
-  /** Lấy status của tất cả providers */
   async getStatus(): Promise<Array<{ type: AIProviderType; name: string; ready: boolean }>> {
     const results: Array<{ type: AIProviderType; name: string; ready: boolean }> = [];
     for (const provider of this.providers.values()) {
@@ -89,10 +76,10 @@ export class ProviderRegistry {
         return new OllamaProvider(config);
       case 'custom':
         return new CustomProvider(config);
-      // Phase 1: Dedicated Groq provider (ultra-fast LPU inference)
+      
       case 'groq':
         return new GroqProvider(config);
-      // Phase 1: Dedicated Mistral provider (La Plateforme API)
+      
       case 'mistral':
         return new MistralProvider(config);
       // v0.4.9 A5: Dedicated providers (proper models + capabilities)
@@ -107,7 +94,7 @@ export class ProviderRegistry {
       case 'azure-openai':
         return new AzureOpenAIProvider(config);
       // OpenAI-compatible providers (reuse CustomProvider)
-      // Phase 1.2 providers use the same path.
+      
       case 'opengateway':
       case 'mimo':
       case 'deepseek':

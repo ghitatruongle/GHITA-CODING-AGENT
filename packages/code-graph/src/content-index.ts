@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Track 3 (v1.1.5-beta1): Content-Addressed Index
-// ==============================================================================
 // Content-addressed AST parse cache + branch/checkpoint tags catalog.
 // Catalog keyed by SHA-256 hash of file content. Switching branches / commits
 // reuses cached AST entities with >=90% hit rate without re-parsing files.
-// ==============================================================================
 
 import crypto from 'node:crypto';
 import fs from 'node:fs';

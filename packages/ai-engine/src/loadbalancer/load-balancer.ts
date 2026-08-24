@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Load Balancer (Phase 28)
 // Main engine: routing, health checks, rate limiting, failover.
-// ==============================================================================
 
 import type { AIProviderType } from '@ghita/shared';
 import type { ChatMessage, ChatOptions, ChatResponse } from '../types.js';
@@ -25,9 +22,7 @@ import { RateLimiter } from './rate-limiter.js';
 import { HealthChecker } from './health-checker.js';
 import { filterEligible, pickProvider } from './router.js';
 
-// ---------------------------------------------------------------------------
 // Load Balancer
-// ---------------------------------------------------------------------------
 
 export class LoadBalancer {
   private config: LoadBalancerConfig;

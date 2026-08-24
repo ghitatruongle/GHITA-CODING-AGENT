@@ -12,7 +12,6 @@ describe('HeadlessSearchScanner', () => {
       fs.mkdirSync(testDir, { recursive: true });
     }
 
-    // Viết tệp tin mẫu với các comments, imports và dấu ngoặc phức tạp để kiểm thử
     const fileContent = `import { useState } from 'react';
 import type { Point } from '../types.js';
 // Đây là comment một dòng ở đầu tệp
@@ -78,15 +77,9 @@ export class SampleClass {
     const result = await scanner.searchFile(sampleFilePath, 'this.point = {');
 
     expect(result.found).toBe(true);
-    // Đoạn code "this.point = {" nằm trong khối "if (true) { ... }" ở execute()
-    // Nếu range = 2, nó sẽ cắt từ dòng 20 đến dòng 24.
-    // Dòng 20: "      this.point = {"
-    // Dòng 21: "        x,"
-    // Dòng 22: "        y"
-    // Bị mất dấu đóng ngoặc } của point, của if block và của execute method.
-    // Bộ balancer sẽ mở rộng xuống dưới hoặc lên trên để cân bằng dấu ngoặc { và }.
+    
     expect(result.content).toContain('this.point = {');
-    // Đếm số lượng { và } trong nội dung trích xuất
+    
     const openBraces = (result.content.match(/{/g) || []).length;
     const closeBraces = (result.content.match(/}/g) || []).length;
     expect(openBraces).toBe(closeBraces);

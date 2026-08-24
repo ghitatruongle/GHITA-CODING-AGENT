@@ -1,12 +1,8 @@
-// ==============================================================================
-// GHITA CODING AGENT - v1.1.5-beta1 Track 6.3: Retrieval Fusion v2 (RRF)
-// ------------------------------------------------------------------------------
 // Reciprocal Rank Fusion (RRF) with k=60 combining BM25, vector similarity,
 // and graph entity streams. Includes session diversification (max N per session)
 // to prevent single-session dominance in results.
 //
 // Pattern: agentmemory RRF fusion k=60, session diversify max 3/session.
-// ==============================================================================
 
 export interface RankedResult {
   id: string;

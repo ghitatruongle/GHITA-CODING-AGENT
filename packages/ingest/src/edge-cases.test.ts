@@ -11,10 +11,6 @@ import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-// ==============================================================================
-// R6 edge-case tests: unicode/CJK/emoji + file 0/1/N + empty input (Track 10)
-// ==============================================================================
-
 const CJK = '中文测试：中文文本的中文分词与拆分处理。';
 const EMOJI = '🚀🔥💡 test with emoji mixed 中文字符 émojis 🎉';
 const MIXED = 'English words + 日本語のテキスト + 한국어 텍스트 + emoji 🚀\nSecond line 中文';
@@ -103,7 +99,7 @@ describe('splitters — empty / 0 / 1 / large (R6)', () => {
   it('very long single line is handled (minified skip in fast scan path)', () => {
     // Scanner fast path skips lines > 2000 — splitters still chunk them.
     const long = 'x'.repeat(10_000);
-    // chunkSize 500, overlap mặc định 100 → bước 400 → 25 phần.
+    
     const parts = splitFixed(long, { chunkSize: 500 });
     expect(parts.length).toBe(25);
     expect(parts.every((p) => p.length <= 500)).toBe(true);

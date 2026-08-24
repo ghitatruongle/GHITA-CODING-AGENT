@@ -1,8 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Tier Manager (Phase 30)
 // Migrate entries between hot/warm/cold tiers based on age, access, and
 // capacity limits.
-// ==============================================================================
 
 import type {
   CompressableMemoryEntry,
@@ -12,9 +9,7 @@ import type {
   TierMigrationResult,
 } from './types.js';
 
-// ---------------------------------------------------------------------------
 // Tier Manager
-// ---------------------------------------------------------------------------
 
 export class TierManager {
   private config: Required<TierMigrationConfig>;

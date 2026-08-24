@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Hub Integration (Prompt Hub)
-// ==============================================================================
-
 import type { HubPrompt, HubConfig, HubSearchQuery, HubPushInput, HubCacheEntry } from './types.js';
 
 /**

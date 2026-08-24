@@ -1,12 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Multimodal Pipeline Extensions
-// Phase 19 (Update 0.0.3 beta2): Frame extraction, multimodal message prep,
 //                                  visual evals for workflow builder
-// ==============================================================================
 
-// =============================================================================
 // Frame extraction (binary-safe; works in Node, Bun, Deno and the browser)
-// =============================================================================
 
 export interface FrameExtractionOptions {
   /** Total frames to extract, evenly spaced. Defaults to 16. */
@@ -164,9 +158,7 @@ export async function extractFrames(
   return out;
 }
 
-// =============================================================================
 // Multimodal message preparation
-// =============================================================================
 
 export type MultimodalMessageContentPart =
   | { type: 'text'; text: string }
@@ -225,9 +217,7 @@ export function prepareMultimodalMessage(
   return { role: 'user', content: parts };
 }
 
-// =============================================================================
 // Visual evals for the workflow builder
-// =============================================================================
 
 export interface UIActionExpectation {
   /** Predicted action type from a vision model (e.g. "click", "type"). */

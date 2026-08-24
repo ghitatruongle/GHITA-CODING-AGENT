@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Lightweight Agent Runtime
-// ==============================================================================
-
 import type { Agent, AgentGroup, AgentRole, AgentTask, MemoryEntry } from '@ghita/shared';
 
 export interface SkillRegistry {

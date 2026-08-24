@@ -1,6 +1,5 @@
-// ==============================================================================
 // useAiEditProposal — wires the AI edit-proposal store into a code view
-// ==============================================================================
+
 //
 // Encapsulates the "AI proposes an edit → review a Monaco diff → accept/reject"
 // behaviour: exposing the active proposal, applying it to disk on accept, and
@@ -13,7 +12,6 @@
 //     replace_file_content call): accept/reject is answered back to the
 //     sidecar via `edit_proposal_response`; the sidecar performs the actual
 //     write + checkpoint and broadcasts `edit_applied`.
-// ==============================================================================
 
 import { useCallback, useEffect, useRef } from 'react';
 import { fsWriteText, fsReadText } from '../lib/native-fs';
@@ -47,7 +45,7 @@ interface UseAiEditProposalResult {
 /**
  * Answer a remote (agent-side) proposal through the shared socket.
  *
- * v1.0.0 deep-review fix (BUG-A): the sidecar now acks `edit_proposal_response`.
+
  * Returns 'ok' when the sidecar still had the proposal and handled it, 'stale'
  * when the proposal is gone (run ended / 5-min timeout — the file was NOT
  * written), or 'offline' when there is no socket. Callers must not optimistically
@@ -96,7 +94,7 @@ export function useAiEditProposal({
     // ---- Remote proposal (Antigravity gate): the sidecar owns the write ----
     if (activeProposal.remoteId) {
       const res = await respondRemote(activeProposal.remoteId, true);
-      // deep-review fix (BUG-A): never optimistically mark the file saved
+      
       // unless the sidecar confirmed it still had the proposal.
       if (res !== 'ok') {
         removeProposal(activeProposal.id);
@@ -147,7 +145,6 @@ export function useAiEditProposal({
       if (!ok) return;
     }
 
-    // P1-4 (deep review pass #2): refuse to write the truncated preview of an
     // oversized file even via the AI proposal path. handleSave already guards
     // direct write; this is the same guard for the proposal flow.
     if (cache?.isTruncated) {
@@ -156,7 +153,7 @@ export function useAiEditProposal({
     }
 
     try {
-      // P1-4 (deep review pass #2): always re-read the file before writing.
+      
       // (1) If `cache?.encoding` is unknown we MUST learn it or a naive UTF-8
       //     write would corrupt a UTF-16/BOM/latin-1 file.
       // (2) TOCTOU: an external editor (or another agent run) may have
@@ -201,7 +198,7 @@ export function useAiEditProposal({
         hydrated: true,
       });
       setOpenFiles(
-        // P1-2 (deep review pass #2): read the latest openFiles from the
+        
         // store, not the closure snapshot. Otherwise an onChange that
         // arrives a tick after a tab close can write the old array (with
         // the just-closed tab) back into the store, resurrecting it.
@@ -247,7 +244,7 @@ export function useAiEditProposal({
           hydrated: true,
         });
       }
-      // P1-2 (deep review pass #2): read the latest openFiles from the store
+      
       // instead of the closure snapshot, to avoid resurrecting a tab that was
       // closed between the time this effect closed over `openFiles` and the
       // time it ran.

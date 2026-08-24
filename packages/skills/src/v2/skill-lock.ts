@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Skills v1.1.0 Track 2: skill-lock v3 (P31)
-// ==============================================================================
 // Deterministic folder-hash based lockfile: any file change inside a skill
 // directory changes the hash → stale detection for `skills update`.
-// ==============================================================================
 
 import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync, statSync } from 'node:fs';

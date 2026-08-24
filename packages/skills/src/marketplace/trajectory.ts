@@ -1,13 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Trajectory-to-Skill
-// Phase 9 (Update 0.0.3 beta2): Skill auto-create from agent trajectories
-// ==============================================================================
-
 import type { SkillManifest } from './types.js';
 
-// ----------------------------------------------------------------------------
 // Trajectory types
-// ----------------------------------------------------------------------------
 
 export interface TrajectoryStep {
   /** Human-readable action name, e.g. "navigate", "click", "extract". */
@@ -61,9 +54,7 @@ export interface ExtractedSkill {
   frequency: number;
 }
 
-// ----------------------------------------------------------------------------
 // Pattern detection
-// ----------------------------------------------------------------------------
 
 const MIN_PATTERN_LENGTH = 2;
 const MIN_FREQUENCY = 2;
@@ -109,9 +100,7 @@ export function detectPatterns(trajectories: AgentTrajectory[]): TrajectoryPatte
   return patterns.sort((a, b) => b.frequency - a.frequency);
 }
 
-// ----------------------------------------------------------------------------
 // Skill extraction
-// ----------------------------------------------------------------------------
 
 function unique<T>(arr: T[]): T[] {
   return Array.from(new Set(arr));
@@ -241,9 +230,7 @@ export function extractSkills(
   return out;
 }
 
-// ----------------------------------------------------------------------------
 // Trajectory store (in-memory, used by tests and the auto-mine UI)
-// ----------------------------------------------------------------------------
 
 export class TrajectoryStore {
   private byId = new Map<string, AgentTrajectory>();

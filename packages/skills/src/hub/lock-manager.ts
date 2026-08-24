@@ -1,9 +1,5 @@
-// =============================================================================
-// GHITA CODING AGENT - Phase 12: Lock Manager (lock.json CRUD + Verify)
-// =============================================================================
 // Manages the lock.json file that tracks installed skills, their versions,
 // and content hashes for integrity verification.
-// =============================================================================
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';

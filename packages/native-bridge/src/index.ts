@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Native addon bridge (v1.1.5-beta2)
-// ==============================================================================
 // Native-first with JS fallback: `loadNative(name)` resolves a compiled napi
 // addon (crates/<name>/target/release/index.node, production resource paths,
 // or a caller-registered addon), returning the JS fallback when unavailable.
-// ==============================================================================
 
 import { existsSync, readdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -118,4 +114,4 @@ export function isAddonBuilt(name: string): boolean {
   return addonCandidates(name).some((c) => existsSync(c));
 }
 
-export const NATIVE_BRIDGE_VERSION = '1.1.5-beta2';
+export const NATIVE_BRIDGE_VERSION = '1.1.5';

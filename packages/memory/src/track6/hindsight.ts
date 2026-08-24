@@ -1,11 +1,7 @@
-// ==============================================================================
-// GHITA CODING AGENT - v1.1.5-beta1 Track 6.5: Hindsight + Autolearn Seed
-// ------------------------------------------------------------------------------
 // Post-session reflection that generates procedural notes and skill seeds.
-// Good seeds are promoted to skill suggestions (queued for review in Track 7.2).
+
 //
 // Pattern: oh-my-pi hindsight/autolearn.
-// ==============================================================================
 
 export interface SessionReflection {
   sessionId: string;

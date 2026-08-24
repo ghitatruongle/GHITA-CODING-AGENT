@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Agent Adapter Types
-// ==============================================================================
-
 import type { BaseMessage } from '../messages/message.js';
 import type { AgentStep } from '../react/types.js';
 

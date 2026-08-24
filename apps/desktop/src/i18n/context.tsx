@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — i18n Context & Hook
-// ==============================================================================
-
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { useAppStore } from '../stores/appStore';
 import { vi } from './vi';

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Voice Module Barrel Export (Phase 34)
-// ==============================================================================
-
 // --- Types ---
 export type {
   AudioEncoding,
@@ -34,4 +30,4 @@ export {
 export { AudioRingBuffer } from './audio-buffer.js';
 export { TranscriptMerger, type PartialSegment } from './transcript-merger.js';
 
-export const VOICE_VERSION = '1.1.5-beta2';
+export const VOICE_VERSION = '1.1.5';

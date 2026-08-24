@@ -1,8 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 10: E2E Integration & Load Test Suite
 // Covers: WebSocket sync, Agent routing, Monaco diagnostics,
 //         Browser observe/act, PTY terminal, and 30-client load test
-// ==============================================================================
 
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import * as http from 'node:http';
@@ -12,9 +9,7 @@ import * as path from 'node:path';
 import { EventEmitter } from 'node:events';
 import { SOCKET_EVENTS } from '../../packages/shared/src/constants.js';
 
-// ---------------------------------------------------------------------------
 // Lightweight in-process WebSocket simulator (no actual network binding)
-// ---------------------------------------------------------------------------
 
 interface MockWsMessage {
   event: string;
@@ -87,9 +82,7 @@ class MockWebSocketServer extends EventEmitter {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Mock Agent Router — resolves file change events to provider actions
-// ---------------------------------------------------------------------------
 
 interface AgentRouteResult {
   provider: string;
@@ -112,9 +105,7 @@ function mockAgentRouter(event: { filePath: string; changeType: string }): Agent
   return { provider: 'openai', action: 'general-assist', fileType: 'unknown' };
 }
 
-// ---------------------------------------------------------------------------
 // Mock Monaco Editor Marker (Diagnostics) Store
-// ---------------------------------------------------------------------------
 
 interface MonacoMarker {
   severity: 'error' | 'warning' | 'info' | 'hint';
@@ -150,9 +141,7 @@ class MockMonacoEditorModel {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Mock PTY Terminal stream (simulates PTY command execution)
-// ---------------------------------------------------------------------------
 
 class MockPtyTerminal extends EventEmitter {
   processId: number = Math.floor(Math.random() * 10000) + 1000;
@@ -213,9 +202,7 @@ class MockPtyTerminal extends EventEmitter {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Mock Browser Agent (simulate Compacted DOM Accessibility Tree + Act)
-// ---------------------------------------------------------------------------
 
 interface A11yNode {
   role: string;
@@ -324,9 +311,7 @@ class MockBrowserAgent extends EventEmitter {
   }
 }
 
-// ===========================================================================
 // TEST SUITES
-// ===========================================================================
 
 describe('10: E2E Integration & Load Test Suite', () => {
   let wss: MockWebSocketServer;
@@ -349,9 +334,8 @@ describe('10: E2E Integration & Load Test Suite', () => {
     monacoModel.clearAllMarkers();
   });
 
-  // ─────────────────────────────────────────────────────────────────────────
   // 1. WebSocket File-Change Sync (simulates VS Code save event → WS)
-  // ─────────────────────────────────────────────────────────────────────────
+  
   describe('WebSocket: VS Code File-Change Sync', () => {
     it('should broadcast VSCODE_FILE_CHANGE event to all connected clients', async () => {
       const client1 = wss.addClient();
@@ -417,9 +401,8 @@ describe('10: E2E Integration & Load Test Suite', () => {
     });
   });
 
-  // ─────────────────────────────────────────────────────────────────────────
   // 2. Agent Router: File Type → Provider Resolution
-  // ─────────────────────────────────────────────────────────────────────────
+  
   describe('Agent Router: Provider Resolution', () => {
     const routingMatrix: Array<{ file: string; expectedProvider: string; expectedAction: string }> =
       [
@@ -453,9 +436,8 @@ describe('10: E2E Integration & Load Test Suite', () => {
     });
   });
 
-  // ─────────────────────────────────────────────────────────────────────────
   // 3. Monaco Editor Marker / Diagnostics Update
-  // ─────────────────────────────────────────────────────────────────────────
+  
   describe('Monaco Editor: Diagnostics & Marker Updates', () => {
     it('should set and retrieve error markers correctly', () => {
       const resource = 'file:///src/index.ts';
@@ -576,9 +558,8 @@ describe('10: E2E Integration & Load Test Suite', () => {
     });
   });
 
-  // ─────────────────────────────────────────────────────────────────────────
   // 4. Browser Agent: Observe & Act (with Self-Healing Selectors)
-  // ─────────────────────────────────────────────────────────────────────────
+  
   describe('Browser Agent: Observe & Act with Self-Healing', () => {
     it('should observe and return the full accessibility tree', () => {
       const tree = browser.observe();
@@ -639,9 +620,8 @@ describe('10: E2E Integration & Load Test Suite', () => {
     });
   });
 
-  // ─────────────────────────────────────────────────────────────────────────
   // 5. PTY Terminal: Stream Command Execution
-  // ─────────────────────────────────────────────────────────────────────────
+  
   describe('PTY Terminal: Stream Command Execution', () => {
     let pty: MockPtyTerminal;
 
@@ -711,9 +691,8 @@ describe('10: E2E Integration & Load Test Suite', () => {
     });
   });
 
-  // ─────────────────────────────────────────────────────────────────────────
   // 6. Full Workflow Integration: VS Code Save → WS → Agent Router → Monaco
-  // ─────────────────────────────────────────────────────────────────────────
+  
   describe('Full Workflow: VS Code Save → WS Sync → Agent Router → Monaco Diagnostics', () => {
     it('should process a full file-save workflow end-to-end', async () => {
       const client = wss.addClient();
@@ -771,9 +750,8 @@ describe('10: E2E Integration & Load Test Suite', () => {
     });
   });
 
-  // ─────────────────────────────────────────────────────────────────────────
   // 7. Load Test: 30 Concurrent WebSocket Streams
-  // ─────────────────────────────────────────────────────────────────────────
+  
   describe('Load Test: 30 Concurrent Active WebSocket Streams', () => {
     const CLIENT_COUNT = 30;
     const EVENTS_PER_CLIENT = 5;
@@ -872,9 +850,8 @@ describe('10: E2E Integration & Load Test Suite', () => {
     });
   });
 
-  // ─────────────────────────────────────────────────────────────────────────
   // 8. Socket Events: PING/PONG & Status Heartbeat
-  // ─────────────────────────────────────────────────────────────────────────
+  
   describe('Socket Events: PING/PONG Heartbeat', () => {
     it('should respond to PING with PONG event', async () => {
       const client = wss.addClient();
@@ -920,9 +897,8 @@ describe('10: E2E Integration & Load Test Suite', () => {
     });
   });
 
-  // ─────────────────────────────────────────────────────────────────────────
   // 9. SOCKET_EVENTS constants completeness check
-  // ─────────────────────────────────────────────────────────────────────────
+  
   describe('SOCKET_EVENTS: Constants Integrity', () => {
     it('should export all required socket event names', () => {
       const requiredEvents: Array<keyof typeof SOCKET_EVENTS> = [

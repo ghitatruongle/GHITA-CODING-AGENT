@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - @ghita/ingest shared types
-// ==============================================================================
-
 export type SourceType = 'text' | 'markdown' | 'json' | 'csv' | 'pdf' | 'docx' | 'code' | 'unknown';
 
 export interface IngestDocument {

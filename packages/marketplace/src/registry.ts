@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Marketplace Registry API Client (Phase 31)
-// ==============================================================================
-
 import type {
   PluginManifest,
   RegistrySearchResult,

@@ -1,6 +1,4 @@
-// ==============================================================================
 // v0.2.5 Skills Modules Unit Tests
-// ==============================================================================
 
 import { describe, it, expect } from 'vitest';
 import { PTYSessionPool } from '../src/terminal/pty-pool.js';

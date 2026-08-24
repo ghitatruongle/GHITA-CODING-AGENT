@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Built-in Tools Registry
-// ==============================================================================
-
 import { WebSearchTool } from './web-search.js';
 import { WebFetchTool } from './web-fetch.js';
 import {
@@ -29,7 +25,6 @@ export interface BuiltInTool {
   execute: (args: Record<string, unknown>) => Promise<string>;
 }
 
-/** Tạo built-in tools registry */
 export function createBuiltInTools(): BuiltInTool[] {
   const webSearch = new WebSearchTool();
   const webFetch = new WebFetchTool();

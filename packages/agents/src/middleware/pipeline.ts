@@ -1,13 +1,10 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
-// ==============================================================================
-// GHITA CODING AGENT - Agent Middleware Pipeline (Phase 12 Enhanced)
-// ==============================================================================
+/* eslint-disable @typescript-eslint/no-non-null-assertion -- non-null invariants are guaranteed by construction before access */
+
 // Priority-ordered middleware execution with:
 // - Per-middleware timeout enforcement
 // - Error boundary mode (stop pipeline on error)
 // - Dry-run mode (execute but don't apply mutations)
 // - Execution metrics tracking (per-call & aggregate stats)
-// ==============================================================================
 
 import type {
   AgentMiddleware,
@@ -48,10 +45,8 @@ export class MiddlewarePipeline {
     };
   }
 
-  // -----------------------------------------------------------------------
   // Middleware management
-  // -----------------------------------------------------------------------
-
+  
   /** Register a middleware */
   use(middleware: AgentMiddleware): void {
     this.middlewares.push(middleware);
@@ -86,10 +81,8 @@ export class MiddlewarePipeline {
     return this.config.dryRun;
   }
 
-  // -----------------------------------------------------------------------
   // Pre-model hooks
-  // -----------------------------------------------------------------------
-
+  
   /** Run all preModel hooks, applying modifications in priority order */
   async runPreModel(context: MiddlewareContext): Promise<{
     context: MiddlewareContext;
@@ -126,10 +119,8 @@ export class MiddlewarePipeline {
     return { context: currentContext };
   }
 
-  // -----------------------------------------------------------------------
   // Post-model hooks
-  // -----------------------------------------------------------------------
-
+  
   /** Run all postModel hooks */
   async runPostModel(
     context: MiddlewareContext,
@@ -165,10 +156,8 @@ export class MiddlewarePipeline {
     return { result: currentResult, retry, retryReason };
   }
 
-  // -----------------------------------------------------------------------
   // Pre-tool hooks
-  // -----------------------------------------------------------------------
-
+  
   /** Run all preTool hooks */
   async runPreTool(
     toolName: string,
@@ -204,10 +193,8 @@ export class MiddlewarePipeline {
     return { proceed: true, args: currentArgs };
   }
 
-  // -----------------------------------------------------------------------
   // Post-tool hooks
-  // -----------------------------------------------------------------------
-
+  
   /** Run all postTool hooks */
   async runPostTool(toolName: string, result: string, context: MiddlewareContext): Promise<string> {
     if (context.skipMiddlewares) return result;
@@ -232,10 +219,8 @@ export class MiddlewarePipeline {
     return currentResult;
   }
 
-  // -----------------------------------------------------------------------
   // Error hooks
-  // -----------------------------------------------------------------------
-
+  
   /** Run all onError hooks */
   async runOnError(error: Error, context: MiddlewareContext): Promise<{ retry: boolean }> {
     if (context.skipMiddlewares) return { retry: false };
@@ -256,10 +241,8 @@ export class MiddlewarePipeline {
     return { retry: shouldRetry };
   }
 
-  // -----------------------------------------------------------------------
   // Complete hooks
-  // -----------------------------------------------------------------------
-
+  
   /** Run all onComplete hooks */
   async runOnComplete(context: MiddlewareContext, finalResponse: BaseMessage): Promise<void> {
     if (context.skipMiddlewares) return;
@@ -270,10 +253,8 @@ export class MiddlewarePipeline {
     }
   }
 
-  // -----------------------------------------------------------------------
   // Safe invocation with timeout & error boundary
-  // -----------------------------------------------------------------------
-
+  
   /** Execute a middleware hook with timeout enforcement and error handling */
   private async safeInvoke<T>(
     mw: AgentMiddleware,
@@ -326,10 +307,8 @@ export class MiddlewarePipeline {
     });
   }
 
-  // -----------------------------------------------------------------------
   // Metrics
-  // -----------------------------------------------------------------------
-
+  
   private recordMetric(
     name: string,
     phase: MetricPhase,

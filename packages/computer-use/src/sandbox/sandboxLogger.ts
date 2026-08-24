@@ -1,26 +1,13 @@
-// =============================================================================
-// GHITA CODING AGENT - Sandbox Logger
-// Ghi vết logs hoạt động sandbox + thống kê tài nguyên container
-// Hỗ trợ 2 mode: in-memory (default) và SQLite persistence
-// =============================================================================
-
 import type { SandboxLogEntry, ContainerStats } from './types.js';
 import type Database from 'better-sqlite3';
 
-/**
- * Cấu hình cho SQLite persistence
- */
 export interface SandboxLoggerConfig {
-  /** Đường dẫn file SQLite database (nếu không truyền, dùng in-memory only) */
+  
   dbPath?: string;
-  /** Giới hạn số logs giữ trong memory cache */
+  
   maxLogs?: number;
 }
 
-/**
- * SandboxLogger — Ghi và quản lý logs hoạt động của Docker sandbox
- * Logs được lưu cả in-memory cache lẫn SQLite (nếu cấu hình dbPath)
- */
 export class SandboxLogger {
   private logs: SandboxLogEntry[] = [];
   private maxLogs: number;
@@ -33,25 +20,16 @@ export class SandboxLogger {
     this.dbPath = config.dbPath ?? null;
   }
 
-  // =========================================================================
-  // SQLite Initialization (lazy — gọi initDatabase() trước khi dùng)
-  // =========================================================================
-
-  /**
-   * Khởi tạo SQLite database và tạo bảng logs
-   * Phải gọi trước khi log nếu muốn persist xuống SQLite
-   */
   async initDatabase(dbPath?: string): Promise<void> {
     const path = dbPath ?? this.dbPath;
     if (!path) return;
 
     try {
-      // Dynamic import để không fail khi chưa install better-sqlite3
+      
       const Database = (await import('better-sqlite3')).default;
       this.db = new Database(path);
       this.dbPath = path;
 
-      // Tạo bảng sandbox_logs nếu chưa tồn tại
       this.db.exec(`
         CREATE TABLE IF NOT EXISTS sandbox_logs (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -76,7 +54,6 @@ export class SandboxLogger {
         VALUES (@containerId, @containerName, @event, @message, @metadata, @timestamp)
       `);
 
-      // Tự động cleanup logs cũ hơn 30 ngày
       this.cleanupOldLogs(30);
     } catch (err: unknown) {
       console.warn(
@@ -87,17 +64,13 @@ export class SandboxLogger {
     }
   }
 
-  /**
-   * Ghi một log entry — xuống cả memory cache và SQLite
-   */
   log(entry: SandboxLogEntry): void {
-    // 1. Ghi vào memory cache
+    
     this.logs.push(entry);
     if (this.logs.length > this.maxLogs) {
       this.logs = this.logs.slice(-this.maxLogs);
     }
 
-    // 2. Ghi vào SQLite nếu đã init
     if (this.insertStmt) {
       try {
         this.insertStmt.run({
@@ -119,20 +92,10 @@ export class SandboxLogger {
     console.info(`${prefix} ${timestamp} ${entry.containerName}: ${entry.message}`);
   }
 
-  // =========================================================================
-  // Query từ SQLite
-  // =========================================================================
-
-  /**
-   * Lấy logs từ SQLite (nếu có) hoặc memory
-   */
   getLogs(): SandboxLogEntry[] {
     return [...this.logs];
   }
 
-  /**
-   * Query logs từ SQLite với điều kiện lọc
-   */
   queryLogsFromDb(
     options: {
       containerId?: string;
@@ -170,30 +133,18 @@ export class SandboxLogger {
     return rows.map(this.rowToLogEntry) as SandboxLogEntry[];
   }
 
-  /**
-   * Lấy logs theo container ID (memory)
-   */
   getLogsByContainer(containerId: string): SandboxLogEntry[] {
     return this.logs.filter((l) => l.containerId === containerId);
   }
 
-  /**
-   * Lấy logs theo event type (memory)
-   */
   getLogsByEvent(event: SandboxLogEntry['event']): SandboxLogEntry[] {
     return this.logs.filter((l) => l.event === event);
   }
 
-  /**
-   * Lấy N logs gần nhất (memory)
-   */
   getRecentLogs(count: number = 100): SandboxLogEntry[] {
     return this.logs.slice(-count);
   }
 
-  /**
-   * Lấy số lượng logs trong SQLite
-   */
   getDbLogCount(): number {
     if (!this.db) return 0;
     const result = this.db.prepare('SELECT COUNT(*) as count FROM sandbox_logs').get() as Record<
@@ -203,13 +154,8 @@ export class SandboxLogger {
     return (result?.count as number) ?? 0;
   }
 
-  // =========================================================================
   // Cleanup
-  // =========================================================================
-
-  /**
-   * Xóa tất cả logs (memory + SQLite)
-   */
+  
   clear(): void {
     this.logs = [];
     if (this.db) {
@@ -217,9 +163,6 @@ export class SandboxLogger {
     }
   }
 
-  /**
-   * Xóa logs cũ hơn N ngày trong SQLite
-   */
   cleanupOldLogs(days: number = 30): number {
     if (!this.db) return 0;
 
@@ -233,9 +176,6 @@ export class SandboxLogger {
     return result.changes;
   }
 
-  /**
-   * Đóng kết nối SQLite
-   */
   close(): void {
     if (this.db) {
       this.db.close();
@@ -244,20 +184,12 @@ export class SandboxLogger {
     }
   }
 
-  // =========================================================================
   // Export & Summary
-  // =========================================================================
-
-  /**
-   * Xuất logs ra JSON string
-   */
+  
   exportJson(): string {
     return JSON.stringify(this.logs, null, 2);
   }
 
-  /**
-   * Tạo báo cáo tóm tắt sandbox session
-   */
   getSessionSummary(): {
     totalLogs: number;
     dbLogCount: number;
@@ -288,9 +220,6 @@ export class SandboxLogger {
     };
   }
 
-  /**
-   * Tính toán resource usage summary từ mảng stats
-   */
   static computeResourceSummary(statsArray: ContainerStats[]): {
     totalCpuPercent: number;
     totalMemoryUsageMb: number;
@@ -328,10 +257,8 @@ export class SandboxLogger {
     };
   }
 
-  // =========================================================================
   // Private Helpers
-  // =========================================================================
-
+  
   private rowToLogEntry(row: unknown): SandboxLogEntry {
     const r = row as Record<string, unknown>;
     return {

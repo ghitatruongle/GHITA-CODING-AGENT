@@ -1,12 +1,8 @@
-// ==============================================================================
-// GHITA CODING AGENT - v1.1.5-beta2 Track 2: Exec Policy (pre-exec check)
-// ------------------------------------------------------------------------------
 // Parse a shell command the agent is about to run and evaluate it against a
 // policy rule set BEFORE spawning (pattern: codex-rs `execpolicy` — the
 // command is inspected, never trusted). Compound commands (&&, ||, ;, |) are
 // split and every segment must pass. `deny` wins over `ask`, `ask` over the
 // default allow — matching the deny-default governance posture.
-// ==============================================================================
 
 /** Segment of a (possibly compound) shell command after splitting. */
 export interface CommandSegment {

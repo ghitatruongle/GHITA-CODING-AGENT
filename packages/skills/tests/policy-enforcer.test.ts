@@ -1,6 +1,4 @@
-// ==============================================================================
 // Policy Enforcer Security Tests
-// ==============================================================================
 
 import { describe, it, expect } from 'vitest';
 import { PolicyEnforcer } from '../src/governance/policy-enforcer.js';

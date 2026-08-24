@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Evals: trajectory replay
-// ==============================================================================
-
 import type { EvalRun, EvalStep } from './types.js';
 
 export interface StepHandler {

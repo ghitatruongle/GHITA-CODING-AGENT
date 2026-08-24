@@ -1,8 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 3.7: LLM-as-Judge
 // Use LLM to evaluate content quality, safety, and relevance
 // Reference: LiteLLM proxy/guardrails/
-// ==============================================================================
 
 import type { AIProvider, ChatMessage } from '../types.js';
 

@@ -1,7 +1,3 @@
-// ==============================================================================
-// v1.1.5-beta1 Track 2.1 — Mailbox Orchestration Tests
-// ==============================================================================
-
 import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 import { MailboxStore } from '../src/mailbox/store.js';
 

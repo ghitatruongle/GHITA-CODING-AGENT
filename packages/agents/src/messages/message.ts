@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Message Classes
-// ==============================================================================
-
 import type { MessageRole, ContentPart, ToolCall, MessageMetadata, MessageData } from './types.js';
 
 function generateMessageId(): string {

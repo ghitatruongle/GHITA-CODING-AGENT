@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT — DocsGriller Utilities
-// ==============================================================================
 // Text processing and vector math utilities for the grill-me system.
 // Extracted from docsGriller.ts for reuse and testability.
-// ==============================================================================
 
 /** Tokenize text into lowercase words, removing punctuation */
 export function tokenize(text: string): string[] {

@@ -1,8 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 3.5: Content Filtering
 // Input/output content filtering guardrails
 // Reference: LiteLLM proxy/guardrails/
-// ==============================================================================
 
 // --- Types ---
 

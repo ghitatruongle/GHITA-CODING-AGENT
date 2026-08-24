@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Korean Translations
-// ==============================================================================
-
 import type { TranslationKeys } from './types';
 
 export const ko: TranslationKeys = {
@@ -35,7 +31,7 @@ export const ko: TranslationKeys = {
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v1.1.5-beta2',
+    version: 'v1.1.5',
     deviceReconnected: '기기에 다시 연결됨: {{name}}',
     devicePaired: '기기 페어링 성공: {{name}}',
     commandReceived: '기기로부터 명령 수신: {{action}}',
@@ -464,7 +460,7 @@ export const ko: TranslationKeys = {
     hide: '키 숨기기',
     show: '키 표시',
     fetch: '가져오기',
-    // Phase 1.1: Multi-key
+    
     addKey: '키 추가',
     removeKey: '제거',
     keyStrategy: 'API 키 순환 전략',
@@ -527,7 +523,7 @@ export const ko: TranslationKeys = {
     noContainersDesc:
       'AI가 테스트 또는 안전하지 않은 작업을 실행해야 할 때 격리된 Docker 컨테이너가 자동으로 시작됩니다.',
   },
-  // Phase 7: Notification System (Q3 2026)
+  
   notification: {
     ariaLabel: '알림',
     title: '알림',
@@ -536,7 +532,7 @@ export const ko: TranslationKeys = {
     unreadBadge: '{{count}}',
     dismiss: '알림 닫기',
   },
-  // Phase 8: Voice I/O (Q3 2026)
+  
   voice: {
     start: '음성 입력 시작',
     stop: '리스닝 중지',
@@ -544,7 +540,7 @@ export const ko: TranslationKeys = {
     unsupported: '음성 입력이 지원되지 않음',
     unsupportedHint: '이 환경에서는 음성 인식을 사용할 수 없습니다',
   },
-  // Phase 9: Monitoring Dashboard (Q3 2026)
+  
   monitoring: {
     title: '모니터링',
     loading: '모니터링 로드 중…',
@@ -566,7 +562,7 @@ export const ko: TranslationKeys = {
     lastSeen: '마지막 감지',
     refresh: '새로 고침',
   },
-  // Phase 10: Quota & Rate Limiting (Q3 2026)
+  
   quota: {
     title: '할당량 및 속도 제한',
     loading: '할당량 로드 중…',
@@ -590,7 +586,7 @@ export const ko: TranslationKeys = {
     refresh: '새로 고침',
     budgetUsage: '예산 사용',
   },
-  // Phase 11: Code Knowledge Graph (Q3 2026)
+  
   codeGraph: {
     title: '코드 지식 그래프',
     workspacePath: '워크스페이스 경로',

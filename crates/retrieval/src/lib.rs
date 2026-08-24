@@ -1,13 +1,12 @@
-// ==============================================================================
-// ghita-retrieval — inverted-index BM25 + Vector + RRF Fusion core (v1.1.5-beta2)
-// ==============================================================================
-// Combines:
-// 1. Inverted-index BM25 with O(1) DF lookups and precomputed chunk length normalization.
-// 2. Vector Cosine Similarity and fast top-K vector search.
-// 3. Reciprocal Rank Fusion (RRF k=60) for multi-source hybrid search.
-// 4. Unicode CJK/Vietnamese n-gram tokenization support.
-// Std-only (HashMap + Vec) so `cargo test` runs offline; addon exposes napi.
-// ==============================================================================
+//! ghita-retrieval — inverted-index BM25 + Vector + RRF Fusion core
+//!
+//! Combines:
+//! 1. Inverted-index BM25 with O(1) DF lookups and precomputed chunk length normalization.
+//! 2. Vector Cosine Similarity and fast top-K vector search.
+//! 3. Reciprocal Rank Fusion (RRF k=60) for multi-source hybrid search.
+//! 4. Unicode CJK/Vietnamese n-gram tokenization support.
+//!
+//! Std-only (HashMap + Vec) so `cargo test` runs offline; addon exposes napi.
 
 pub mod splitters;
 
@@ -86,12 +85,14 @@ impl BM25Index {
             let Some(entry) = self.index.get(&term) else {
                 continue;
             };
-            let idf = (1.0 + (self.n as f64 - entry.df as f64 + 0.5) / (entry.df as f64 + 0.5)).ln();
+            let idf =
+                (1.0 + (self.n as f64 - entry.df as f64 + 0.5) / (entry.df as f64 + 0.5)).ln();
             for posting in &entry.postings {
                 let chunk_idx = posting.chunk as usize;
                 let len = self.lengths[chunk_idx] as f64;
                 let tf_norm = (posting.tf as f64 * (self.k1 + 1.0))
-                    / (posting.tf as f64 + self.k1 * (1.0 - self.b + self.b * (len / self.avg_len)));
+                    / (posting.tf as f64
+                        + self.k1 * (1.0 - self.b + self.b * (len / self.avg_len)));
                 *scores.entry(posting.chunk).or_insert(0.0) += idf * tf_norm;
             }
         }
@@ -238,10 +239,22 @@ mod tests {
 
     fn chunks() -> Vec<Chunk> {
         vec![
-            Chunk { id: 0, text: "the red fox jumps over the dog".into() },
-            Chunk { id: 1, text: "the blue sky is clear today".into() },
-            Chunk { id: 2, text: "foxes and dogs run fast in the park".into() },
-            Chunk { id: 3, text: "tìm kiếm tiếng Việt và thuật toán RRF".into() },
+            Chunk {
+                id: 0,
+                text: "the red fox jumps over the dog".into(),
+            },
+            Chunk {
+                id: 1,
+                text: "the blue sky is clear today".into(),
+            },
+            Chunk {
+                id: 2,
+                text: "foxes and dogs run fast in the park".into(),
+            },
+            Chunk {
+                id: 3,
+                text: "tìm kiếm tiếng Việt và thuật toán RRF".into(),
+            },
         ]
     }
 
@@ -307,7 +320,8 @@ mod tests {
         assert!(sim_1_3 > 0.9);
         assert!(sim_1_2 < 0.01);
 
-        let search_results = vector_search(&v1, &[10, 20, 30], &[v1.clone(), v2.clone(), v3.clone()], 2);
+        let search_results =
+            vector_search(&v1, &[10, 20, 30], &[v1.clone(), v2.clone(), v3.clone()], 2);
         assert_eq!(search_results[0].0, 10); // exact match
         assert_eq!(search_results[1].0, 30); // close match
     }

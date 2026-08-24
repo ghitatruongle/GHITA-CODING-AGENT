@@ -1,7 +1,3 @@
-// ==============================================================================
-// Phase 6: Kimi (Moonshot AI) Provider — dùng defineVendor
-// ==============================================================================
-
 import { defineVendor } from './base-extended.js';
 import { BaseProvider } from './base.js';
 import type { AIProviderType } from '@ghita/shared';

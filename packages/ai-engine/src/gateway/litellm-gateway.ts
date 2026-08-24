@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - LiteLLM Multi-Provider Gateway & Key Rotation
-// ==============================================================================
 // Inspired by LiteLLM: Unified API wrapper for 100+ AI Providers with automatic
 // key rotation, load balancing, and failover handling.
-// ==============================================================================
 
 import type { AIProviderType } from '@ghita/shared';
 

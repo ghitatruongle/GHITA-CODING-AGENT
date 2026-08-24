@@ -1,11 +1,7 @@
-// ==============================================================================
-// GHITA CODING AGENT - v1.1.5-beta1 Track 1.2: Hook System Types
-// ------------------------------------------------------------------------------
 // Declarative, self-healing hooks (pattern: openclaude hook-chains +
 // claude-code hooks + grok-build hook events). Rules live in
 // `.ghita/hooks.json` (project) or `~/.ghita/hooks.json` (global); every tool
 // boundary in the agent runtime dispatches events through a HookDispatcher.
-// ==============================================================================
 
 /** Lifecycle events a hook rule can subscribe to. */
 export type HookEventName =

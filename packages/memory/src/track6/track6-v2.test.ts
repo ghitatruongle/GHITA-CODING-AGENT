@@ -9,9 +9,7 @@ import { reflectOnSession, promoteSeedToReview, shouldPromoteSeed } from './hind
 import type { SkillSeed } from './hindsight.js';
 import { loadDocument, detectMimeType } from './docloader.js';
 
-// ===========================================================================
 // T6.1: Episodic/Procedural tiers + consolidation
-// ===========================================================================
 
 describe('T6.1: Episodic/Procedural tiers + consolidation', () => {
   let engine: ConsolidationEngine;
@@ -155,9 +153,7 @@ describe('T6.1: Episodic/Procedural tiers + consolidation', () => {
   });
 });
 
-// ===========================================================================
 // T6.2: PreCompact re-injection
-// ===========================================================================
 
 describe('T6.2: PreCompact re-injection', () => {
   it('selects relevant memories for injection based on keyword overlap', () => {
@@ -224,9 +220,7 @@ describe('T6.2: PreCompact re-injection', () => {
   });
 });
 
-// ===========================================================================
 // T6.3: RRF fusion k=60
-// ===========================================================================
 
 describe('T6.3: RRF fusion k=60', () => {
   it('fuses two ranked lists with correct RRF scoring', () => {
@@ -294,9 +288,7 @@ describe('T6.3: RRF fusion k=60', () => {
   });
 });
 
-// ===========================================================================
 // T6.4: Document loader
-// ===========================================================================
 
 describe('T6.4: Document loader', () => {
   it('detects MIME types from file extensions', () => {
@@ -326,9 +318,7 @@ describe('T6.4: Document loader', () => {
   });
 });
 
-// ===========================================================================
 // T6.5: Hindsight + autolearn seed
-// ===========================================================================
 
 describe('T6.5: Hindsight + autolearn seed', () => {
   it('generates reflection from session messages', () => {

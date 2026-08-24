@@ -1,8 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Search Quality Loop Benchmark Tests
-// Phase 4: Comprehensive Test Suite for Repomap Quality Measurement
-// ==============================================================================
-
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import fs from 'fs';
 import path from 'path';
@@ -46,9 +41,7 @@ afterAll(() => {
   }
 });
 
-// ==============================================================================
 // TEST SUITE 1: Confusion Matrix (TP, FP, FN) — Task 2
-// ==============================================================================
 
 describe('Confusion Matrix (TP, FP, FN)', () => {
   it('should return TP=1 when symbol found in expected file', () => {
@@ -150,9 +143,7 @@ describe('Confusion Matrix (TP, FP, FN)', () => {
   });
 });
 
-// ==============================================================================
 // TEST SUITE 2: Precision, Recall, F1 — Task 3
-// ==============================================================================
 
 describe('Precision, Recall, F1-Score Calculations', () => {
   it('calculatePrecision: perfect precision (no FP)', () => {
@@ -205,9 +196,7 @@ describe('Precision, Recall, F1-Score Calculations', () => {
   });
 });
 
-// ==============================================================================
 // TEST SUITE 3: Mock LLM Search Engine — Task 4
-// ==============================================================================
 
 describe('Mock LLM Search Engine (Deterministic)', () => {
   it('should find symbol that exists in benchmark data', () => {
@@ -260,9 +249,7 @@ describe('Mock LLM Search Engine (Deterministic)', () => {
   });
 });
 
-// ==============================================================================
 // TEST SUITE 4: Full Quality Metrics Calculation
-// ==============================================================================
 
 describe('calculateQualityMetrics (Full Pipeline)', () => {
   it('should return perfect metrics with deterministic mock', () => {
@@ -304,9 +291,7 @@ describe('calculateQualityMetrics (Full Pipeline)', () => {
   });
 });
 
-// ==============================================================================
 // TEST SUITE 5: Quality Report Generation — Task 5
-// ==============================================================================
 
 describe('Quality Report Generation', () => {
   it('should generate complete report with all fields', () => {
@@ -389,9 +374,7 @@ describe('Quality Report Generation', () => {
   });
 });
 
-// ==============================================================================
 // TEST SUITE 6: Vis.js Trend Chart Data — Task 6
-// ==============================================================================
 
 describe('Vis.js Trend Chart Data Export', () => {
   it('should generate nodes and edges from trend data', () => {
@@ -470,9 +453,7 @@ describe('Vis.js Trend Chart Data Export', () => {
   });
 });
 
-// ==============================================================================
 // TEST SUITE 7: F1 Threshold Gate — Task 7
-// ==============================================================================
 
 describe('F1 Threshold Gate', () => {
   it('should PASS when F1 >= 80%', () => {
@@ -545,9 +526,7 @@ describe('F1 Threshold Gate', () => {
   });
 });
 
-// ==============================================================================
 // TEST SUITE 8: PageRank vs Regex Comparison — Task 9
-// ==============================================================================
 
 describe('PageRank vs Regex Search Comparison', () => {
   it('should compare both methods and return metrics + timing', () => {
@@ -597,9 +576,7 @@ describe('PageRank vs Regex Search Comparison', () => {
   });
 });
 
-// ==============================================================================
 // TEST SUITE 9: Auto-adjust Damping Parameter — Task 10
-// ==============================================================================
 
 describe('Auto-adjust PageRank Damping Parameter', () => {
   it('should find optimal damping within range', () => {
@@ -660,9 +637,7 @@ describe('Auto-adjust PageRank Damping Parameter', () => {
   });
 });
 
-// ==============================================================================
 // TEST SUITE 10: Benchmark Data Integrity
-// ==============================================================================
 
 describe('Benchmark Data Integrity', () => {
   it('should have exactly 100 queries', () => {

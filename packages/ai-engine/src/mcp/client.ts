@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - MCP Client
-// ==============================================================================
-
 import type { MCPServerConfig, MCPTool, MCPToolResult, MCPServerStatus } from './types.js';
 import { createTransport, type MCPTransport } from './transport.js';
 
@@ -16,7 +12,6 @@ interface MCPServerEntry {
 export class MCPClient {
   private servers = new Map<string, MCPServerEntry>();
 
-  /** Đăng ký MCP server từ config */
   addServer(config: MCPServerConfig): void {
     const transport = createTransport(config);
     this.servers.set(config.name, {
@@ -27,7 +22,6 @@ export class MCPClient {
     });
   }
 
-  /** Xóa MCP server */
   removeServer(name: string): void {
     const entry = this.servers.get(name);
     if (entry) {
@@ -36,7 +30,6 @@ export class MCPClient {
     }
   }
 
-  /** Kết nối tới MCP server và discover tools */
   async connectServer(name: string): Promise<MCPTool[]> {
     const entry = this.servers.get(name);
     if (!entry) throw new Error(`MCP server "${name}" not found`);
@@ -63,7 +56,6 @@ export class MCPClient {
     }
   }
 
-  /** Ngắt kết nối MCP server */
   async disconnectServer(name: string): Promise<void> {
     const entry = this.servers.get(name);
     if (entry) {
@@ -73,7 +65,6 @@ export class MCPClient {
     }
   }
 
-  /** Gọi MCP tool */
   async callTool(
     serverName: string,
     toolName: string,
@@ -99,7 +90,6 @@ export class MCPClient {
     };
   }
 
-  /** Lấy tất cả tools từ tất cả servers */
   getAllTools(): MCPTool[] {
     const tools: MCPTool[] = [];
     for (const entry of this.servers.values()) {
@@ -110,7 +100,6 @@ export class MCPClient {
     return tools;
   }
 
-  /** Lấy tool theo tên (tìm trong tất cả servers) */
   getTool(toolName: string): MCPTool | undefined {
     for (const entry of this.servers.values()) {
       const tool = entry.tools.find((t) => t.name === toolName);
@@ -119,7 +108,6 @@ export class MCPClient {
     return undefined;
   }
 
-  /** Lấy status tất cả servers */
   getStatus(): MCPServerStatus[] {
     const statuses: MCPServerStatus[] = [];
     for (const entry of this.servers.values()) {
@@ -133,7 +121,6 @@ export class MCPClient {
     return statuses;
   }
 
-  /** Kết nối tất cả servers đã enabled */
   async connectAll(): Promise<void> {
     const promises = [...this.servers.values()]
       .filter((e) => e.config.enabled)
@@ -141,7 +128,6 @@ export class MCPClient {
     await Promise.allSettled(promises);
   }
 
-  /** Ngắt kết nối tất cả */
   async disconnectAll(): Promise<void> {
     const promises = [...this.servers.values()].map((e) =>
       this.disconnectServer(e.config.name).catch(() => {}),
@@ -149,12 +135,10 @@ export class MCPClient {
     await Promise.allSettled(promises);
   }
 
-  /** Kiểm tra server đã đăng ký chưa */
   hasServer(name: string): boolean {
     return this.servers.has(name);
   }
 
-  /** Lấy danh sách server names */
   getServerNames(): string[] {
     return [...this.servers.keys()];
   }

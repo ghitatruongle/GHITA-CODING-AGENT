@@ -1,11 +1,6 @@
 #!/usr/bin/env node
-// ==============================================================================
-// GHITA CODING AGENT - Zero-copy / streaming audit (v1.1.0 Track 9 B8)
-// ------------------------------------------------------------------------------
-// Rà hot paths: `.split('\n')` trên nội dung lớn, `JSON.parse(JSON.stringify`,
-// map/forEach tạo object mới trong vòng lặp lớn → báo cáo số điểm mỗi package.
+
 // Usage: node scripts/audit-zero-copy.mjs
-// ==============================================================================
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';

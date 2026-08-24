@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Runnable Pipeline Types
-// ==============================================================================
-
 export interface RunnableConfig {
   /** Name tag for the runnable */
   name?: string;

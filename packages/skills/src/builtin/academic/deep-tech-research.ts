@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Built-in Skill: Deep Technical Research & Paper Reviewer
-// ==============================================================================
 // Absorbed from Academic Research Skills reference project.
 // Multi-step research pipeline for searching technical papers (ArXiv, IEEE, GitHub),
 // verifying citations, and drafting peer-review quality technical summaries.
-// ==============================================================================
 
 import type { SkillDefinition } from '../../types.js';
 import { SKILLS_VERSION } from '../../types.js';

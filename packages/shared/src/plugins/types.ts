@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Plugin API & Types
-// ==============================================================================
-
 import type { Skill, SkillResult } from '../types.js';
 
 export type PluginType = 'code' | 'bundle';

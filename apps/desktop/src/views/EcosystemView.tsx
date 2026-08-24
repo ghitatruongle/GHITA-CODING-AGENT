@@ -1,6 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Ecosystem & Integration Settings
-// ==============================================================================
 // v0.8.0: Removed the simulated "Demo Mode" data entirely. The gRPC / Agent
 // Protocol cards previously fabricated random logs and requests; there was no
 // real daemon behind them. This view now shows the *real* sidecar server status

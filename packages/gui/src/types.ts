@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Tauri Window Management Types (Phase 33)
-// ==============================================================================
-
 /** Logical window role */
 export type WindowRole = 'main' | 'chat' | 'settings' | 'agent' | 'logs' | 'tray-popup';
 

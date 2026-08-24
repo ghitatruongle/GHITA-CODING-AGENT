@@ -1,18 +1,12 @@
-// ==============================================================================
-// GHITA CODING AGENT - v1.1.5-beta1 Track 4.4: Router v2
-// ------------------------------------------------------------------------------
 // Bandit per (request_type x model) with SQLite persistence + complexity
 // classifier run BEFORE the bandit (pattern: litellm complexity_router +
 // adaptive_router). Persisted arm state survives restarts.
-// ==============================================================================
 
 import Database from 'better-sqlite3';
 import { AdaptiveBanditRouter } from './adaptive-router.js';
 import type { RequestBucket, BanditArm, SignalKind } from './adaptive-router.js';
 
-// ---------------------------------------------------------------------------
 // Complexity classifier (keyword + length heuristic, runs pre-bandit)
-// ---------------------------------------------------------------------------
 
 export type TurnTier = 'simple' | 'moderate' | 'complex';
 
@@ -56,9 +50,7 @@ export function tierToBuckets(tier: TurnTier): RequestBucket[] {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Persistent bandit router (state survives restart via SQLite)
-// ---------------------------------------------------------------------------
 
 export interface PersistentBanditConfig {
   /** Path to the SQLite file (':memory:' for tests). */
@@ -169,9 +161,7 @@ export class PersistentBanditRouter extends AdaptiveBanditRouter {
   }
 }
 
-// ---------------------------------------------------------------------------
 // High-level router v2: classifier -> bucket filter -> bandit -> persist
-// ---------------------------------------------------------------------------
 
 export interface RouterV2Options {
   dbPath: string;

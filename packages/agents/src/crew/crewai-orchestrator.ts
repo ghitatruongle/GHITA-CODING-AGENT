@@ -1,8 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - CrewAI Role-Based Hierarchical Task Orchestrator
-// ==============================================================================
 // Coordinates specialized agent roles in sequential or hierarchical delegation workflows.
-// ==============================================================================
 
 export interface CrewMember {
   id: string;

@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — PairingCodeInput Component
 // Styled text input for the 6-character pairing code
-// ==============================================================================
 
 import React from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';

@@ -1,7 +1,4 @@
-﻿// ==============================================================================
-// GHITA CODING AGENT — Premium AI Chat Panel (Composition Root)
 // Wires together extracted hooks and sub-components.
-// ==============================================================================
 
 import { useState, useRef } from 'react';
 import { useTranslation } from '../i18n';
@@ -115,7 +112,7 @@ export function ChatPanel() {
     connectionStatus,
     modelOptions,
     provider,
-    // deep-review fix (M2): pass the in-flight flag so Enter cannot double-send.
+    
     isSending,
     setIsSending,
     setActiveFlow,

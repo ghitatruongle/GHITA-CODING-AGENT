@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 13: AST Parser
-// ==============================================================================
 // Extracts functions, classes, interfaces, types, enums, variables from
 // TypeScript/JavaScript source files using the TypeScript Compiler API.
 // Also extracts import declarations for building the dependency graph.
-// ==============================================================================
 
 import ts from 'typescript';
 import fs from 'node:fs';
@@ -12,11 +8,8 @@ import path from 'node:path';
 import { loadNative } from '@ghita/native-bridge';
 import type { CodeNode, CodeEdge, ImportInfo, CodeNodeKind, ParseOptions } from './types.js';
 
-// ---------------------------------------------------------------------------
-// v1.1.1 Track 8 A10: native tree-sitter parse (codegraph addon, via
 // @ghita/native-bridge). Native-first with TS-compiler-API fallback — the
 // addon only speaks ts/tsx/js/mjs/cjs/py; anything else takes the JS path.
-// ---------------------------------------------------------------------------
 
 /** Native addon surface (camelCase — napi renames snake_case fields). */
 interface CodegraphNative {
@@ -60,16 +53,13 @@ interface NativeFileResult {
   edges: NativeEdge[];
 }
 
-/** Bridge cho codegraph addon — load một lần (native-first, JS fallback). */
 const codegraphBridge = () =>
   loadNative<CodegraphNative>('codegraph', undefined as unknown as CodegraphNative);
 
 /** Extensions the native grammar bundle understands. */
 const NATIVE_EXTS = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.py']);
 
-// ---------------------------------------------------------------------------
 // Default parse options
-// ---------------------------------------------------------------------------
 
 const DEFAULT_OPTIONS: Required<ParseOptions> = {
   extensions: ['.ts', '.tsx', '.js', '.jsx'],
@@ -79,9 +69,7 @@ const DEFAULT_OPTIONS: Required<ParseOptions> = {
   forceJs: false,
 };
 
-// ---------------------------------------------------------------------------
 // File discovery
-// ---------------------------------------------------------------------------
 
 /**
  * Recursively discover source files under a directory.
@@ -127,17 +115,13 @@ export function discoverFiles(dir: string, options?: ParseOptions): string[] {
   return results.sort();
 }
 
-// ---------------------------------------------------------------------------
 // Node ID generation
-// ---------------------------------------------------------------------------
 
 function makeNodeId(filePath: string, qualifiedName: string): string {
   return `${filePath}::${qualifiedName}`;
 }
 
-// ---------------------------------------------------------------------------
 // JSDoc extraction
-// ---------------------------------------------------------------------------
 
 function extractJSDoc(node: ts.Node): string | undefined {
   const jsDoc = ts.getJSDocCommentsAndTags(node);
@@ -161,9 +145,7 @@ function extractJSDoc(node: ts.Node): string | undefined {
   return text.length > 0 ? text.slice(0, 500) : undefined;
 }
 
-// ---------------------------------------------------------------------------
 // Source excerpt
-// ---------------------------------------------------------------------------
 
 function extractExcerpt(sourceFile: ts.SourceFile, node: ts.Node, maxLen = 200): string {
   const start = node.getStart(sourceFile);
@@ -171,17 +153,13 @@ function extractExcerpt(sourceFile: ts.SourceFile, node: ts.Node, maxLen = 200):
   return sourceFile.text.slice(start, end).replace(/\s+/g, ' ').trim();
 }
 
-// ---------------------------------------------------------------------------
 // Line number helper
-// ---------------------------------------------------------------------------
 
 function getLine(sourceFile: ts.SourceFile, pos: number): number {
   return sourceFile.getLineAndCharacterOfPosition(pos).line + 1;
 }
 
-// ---------------------------------------------------------------------------
 // Main parse function
-// ---------------------------------------------------------------------------
 
 export interface ParseResult {
   nodes: CodeNode[];
@@ -774,9 +752,7 @@ function parseFileWithTs(
   return { nodes, edges, imports };
 }
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 function hasExportModifier(node: ts.Node): boolean {
   const modifiers = ts.canHaveModifiers(node) ? ts.getModifiers(node) : undefined;

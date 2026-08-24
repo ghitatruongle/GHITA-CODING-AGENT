@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — Mobile Theme Colors
 // Matches desktop app themes
-// ==============================================================================
 
 export const darkColors = {
   // --- Background ---

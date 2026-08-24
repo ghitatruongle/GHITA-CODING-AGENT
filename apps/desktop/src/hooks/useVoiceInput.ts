@@ -1,6 +1,4 @@
-// ==============================================================================
 // Voice Input hook — Web Speech API with graceful fallback
-// ==============================================================================
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 

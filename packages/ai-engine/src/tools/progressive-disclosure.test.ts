@@ -1,7 +1,3 @@
-// ==============================================================================
-// v1.1.5-beta1 Track 4.6 — Progressive Tool Disclosure Tests
-// ==============================================================================
-
 import { describe, expect, it, beforeEach } from 'vitest';
 import { ToolRegistry } from './registry.js';
 import type { ToolDefinition } from './registry-types.js';

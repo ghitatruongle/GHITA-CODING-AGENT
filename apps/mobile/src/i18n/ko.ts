@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Korean dictionary for Mobile App
-// ==============================================================================
-
 import type { TranslationKeys } from './types';
 
 export const ko: TranslationKeys = {
@@ -70,7 +66,7 @@ export const ko: TranslationKeys = {
     pairErrApiKeyMissing:
       '클라우드 디스커버리용 API 키가 구성되지 않았습니다. IP 주소를 수동으로 입력해 주세요.',
     pairErrCloudDisabled:
-      '클라우드 디스커버리가 일시적으로 비활성화되었습니다. Wi-Fi 탭에서 IP 주소를 수동으로 입력하거나 블루투스를 통해 컴퓨터에 직접 연결하세요.',
+      '클라우드 디스커버리가 일시적으로 비활성화되었습니다. Wi-Fi 탭에서 컴퓨터의 IP 주소를 수동으로 입력해 주세요.',
     noCodeFromServer: '서버에서 페어링 코드를 가져올 수 없습니다.',
   },
   remote: {

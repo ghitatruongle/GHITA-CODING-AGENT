@@ -1,8 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Orchestrator Chat Module
-// ==============================================================================
 // Chat completion and streaming with semantic cache, fallback, and retry logic.
-// ==============================================================================
 
 import { sleep } from '@ghita/shared';
 import type { AIStreamChunk } from '@ghita/shared';
@@ -14,6 +10,14 @@ import type {
   AIProviderType,
 } from './types.js';
 import { stableMessageKey } from './helpers.js';
+
+/** Auth/validation failures must never be retried — retrying cannot fix them
+ * and only burns budget. Network/5xx/429-style failures are retryable. */
+function isRetryableStreamError(error: Error): boolean {
+  const msg = error.message.toLowerCase();
+  return !/\b(400|401|403|404|422)\b/.test(msg)
+    && !/unauthorized|forbidden|invalid[ _-]api[ _-]?key|authentication|permission/i.test(msg);
+}
 
 /** Chat with provider priority, fallback on error */
 export async function orchestratorChat(
@@ -84,14 +88,22 @@ export async function* orchestratorChatStream(
   let resolvedProvider = provider.type;
   let resolvedModel = options?.model || provider.defaultModel || 'default';
   let finalUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+  let finalFinishReason: 'stop' | 'length' | 'error' | 'aborted' | undefined;
   let success = false;
   let lastError: Error | undefined;
+  // Once any chunk of the current response reached the consumer, restarting
+  // the stream (retry or fallback) would REPLAY that prefix — so we surface a
+  // partial + error instead of duplicating output.
+  let everEmitted = false;
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+  for (let attempt = 1; attempt <= maxAttempts && !success; attempt++) {
+    let emittedThisAttempt = false;
     try {
       accumulatedContent = '';
       const stream = provider.chatStream(messages, options);
       for await (const chunk of stream) {
+        emittedThisAttempt = true;
+        everEmitted = true;
         accumulatedContent += chunk.content;
         if (chunk.provider) resolvedProvider = chunk.provider;
         if (chunk.model) resolvedModel = chunk.model;
@@ -102,19 +114,52 @@ export async function* orchestratorChatStream(
             totalTokens: chunk.usage.totalTokens,
           };
         }
+        const fr = (chunk as { finishReason?: typeof finalFinishReason }).finishReason;
+        if (fr) finalFinishReason = fr;
         yield chunk;
       }
       success = true;
-      break;
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
+      if (options?.signal?.aborted) {
+        if (emittedThisAttempt) {
+          yield {
+            content: '',
+            role: 'assistant' as const,
+            provider: resolvedProvider,
+            model: resolvedModel,
+            finishReason: 'error',
+            partialContent: accumulatedContent,
+          } as unknown as AIStreamChunk;
+        }
+        throw lastError;
+      }
+      if (emittedThisAttempt) {
+        yield {
+          content: '',
+          role: 'assistant' as const,
+          provider: resolvedProvider,
+          model: resolvedModel,
+          finishReason: 'error',
+          partialContent: accumulatedContent,
+        } as unknown as AIStreamChunk;
+        throw lastError;
+      }
+      if (!isRetryableStreamError(lastError)) throw lastError;
       if (attempt < maxAttempts) {
-        await sleep(ctx.config.retryDelayMs ?? 1000);
+        // Linear backoff with jitter — never a fixed sleep.
+        const base = ctx.config.retryDelayMs ?? 1000;
+        await sleep(base * attempt + Math.floor(Math.random() * 250));
       }
     }
   }
 
   if (!success) {
+    if (everEmitted) {
+      // A previous attempt already streamed content — falling back would
+      // duplicate it in the consumer's transcript.
+      throw lastError;
+    }
     const fallback = ctx.findFallbackProvider(provider.type);
     if (fallback) {
       try {
@@ -133,6 +178,8 @@ export async function* orchestratorChatStream(
               totalTokens: chunk.usage.totalTokens,
             };
           }
+          const fr = (chunk as { finishReason?: typeof finalFinishReason }).finishReason;
+        if (fr) finalFinishReason = fr;
           yield chunk;
         }
         success = true;
@@ -159,13 +206,14 @@ export async function* orchestratorChatStream(
     }
   }
 
-  // Cache the fully compiled response
+  // Cache the fully compiled response with the REAL finish reason so a
+  // length-capped or tool-calling answer is not replayed as a plain stop.
   const completeResponse: ChatResponse = {
     content: accumulatedContent,
     model: resolvedModel,
     provider: resolvedProvider,
     usage: finalUsage,
-    finishReason: 'stop',
+    finishReason: finalFinishReason ?? 'stop',
   };
 
   try {

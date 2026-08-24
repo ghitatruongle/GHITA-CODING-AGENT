@@ -1,7 +1,3 @@
-// ==============================================================================
-// Phase 6: DeepSeek Provider — dùng defineVendor
-// ==============================================================================
-
 import { defineVendor } from './base-extended.js';
 import { BaseProvider } from './base.js';
 

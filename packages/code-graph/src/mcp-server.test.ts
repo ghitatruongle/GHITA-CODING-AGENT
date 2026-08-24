@@ -1,6 +1,4 @@
-// ==============================================================================
 // CodeGraph MCP Server Unit Tests (standard @ghita/mcp + official SDK)
-// ==============================================================================
 
 import { describe, it, expect } from 'vitest';
 import { createLinkedPair, createMCPClient } from '@ghita/mcp';

@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Marketplace v1.1.0 Track 3 P37: Claude plugin import
-// ==============================================================================
 // Parses `.claude-plugin/plugin.json` and `marketplace.json` (Claude Code
 // ecosystem format) into native GHITA PluginManifest objects.
-// ==============================================================================
 
 import { existsSync, readFileSync } from 'node:fs';
 import { validateManifest } from '../manifest.js';

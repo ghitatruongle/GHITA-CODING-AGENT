@@ -1,12 +1,7 @@
-// ==============================================================================
-// GHITA CODING AGENT - Secure Key Loader Extensions (Phase 10)
 // Built on top of SecureKeyLoader (secure-key-loader.ts):
 //  - loadFromFile() / loadFromKeyring() (optional integrations)
-//  - rotateKey() - swap key khi được invalid
+
 //  - validateFormat() - check key shape
-//  - maskKey() - show chỉ first/last 4 chars
-//  - audit log cho key access (không log key value)
-// ==============================================================================
 
 import { readFileSync } from 'node:fs';
 import { SecureKeyLoader } from './secure-key-loader.js';
@@ -14,7 +9,7 @@ import { SecureKeyLoader } from './secure-key-loader.js';
 export interface KeyValidationResult {
   valid: boolean;
   reason?: string;
-  /** Provider mà key dành cho */
+  
   provider: string;
   /** Detected key prefix (vd: 'sk-', 'sk-ant-', 'ghp_') */
   prefix?: string;
@@ -38,10 +33,6 @@ export interface KeyRotationResult {
   rotatedAt: number;
 }
 
-/**
- * Extended key loader: thêm rotation, validation, audit log.
- * Composes SecureKeyLoader từ secure-key-loader.ts.
- */
 export class SecureKeyLoaderExtended {
   private accessLog: KeyAccessLogEntry[] = [];
   private maxLogSize = 500;
@@ -62,7 +53,6 @@ export class SecureKeyLoaderExtended {
     { provider: 'xai', pattern: /^xai-[A-Za-z0-9_-]{20,}$/, prefix: 'xai-' },
   ];
 
-  /** Load key với fallback chain: custom → SecureKeyLoader (env) → undefined */
   load(provider: string): string | undefined {
     const custom = this.customKeys.get(provider);
     if (custom) {
@@ -84,7 +74,6 @@ export class SecureKeyLoaderExtended {
     this.logAccess(provider, 'rotate', 'cache', this.maskKey(key));
   }
 
-  /** Rotate key - returns redacted old/new để audit */
   rotateKey(provider: string, newKey: string): KeyRotationResult | null {
     const old = this.load(provider);
     if (!old) {
@@ -101,7 +90,6 @@ export class SecureKeyLoaderExtended {
     };
   }
 
-  /** Validate key format - detect provider từ prefix */
   validateFormat(key: string): KeyValidationResult {
     for (const pat of SecureKeyLoaderExtended.PREFIX_PATTERNS) {
       if (pat.pattern.test(key)) {
@@ -145,7 +133,6 @@ export class SecureKeyLoaderExtended {
     return undefined;
   }
 
-  /** Clear custom key (giữ env version vẫn accessible qua SecureKeyLoader) */
   clearKey(provider: string): boolean {
     const had = this.customKeys.delete(provider);
     if (had) this.logAccess(provider, 'clear', 'cache');

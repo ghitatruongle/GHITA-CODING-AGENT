@@ -1,6 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Skills Package
-// ==============================================================================
 //
 // The Skills package provides the tool/capability layer that agents use to
 // interact with the host system and external services.
@@ -27,7 +24,6 @@
 //
 // @packageDocumentation
 // @module @ghita/skills
-// ==============================================================================
 
 import type { SkillCategory, SkillResult } from '@ghita/shared';
 
@@ -302,15 +298,12 @@ export async function runSkillSequence(
   return results;
 }
 
-// --- Phase 2: Skills Auto-Creation & Hub Registry ---
 export * from './auto-create/types.js';
 export { SkillAutoCreator } from './auto-create/engine.js';
 export { SkillImprover } from './auto-create/improver.js';
 
-// --- Phase 7: Dynamic Skill Generation Loop ---
 export { DynamicSkillGenerator, createSkillsSyncCommand } from './registry/dynamicGenerator.js';
 
-// --- Phase 17: Skill Registry & Composio SaaS Integration ---
 export { ComposioSkillAdapter } from './registry/composioAdapter.js';
 export type {
   SaaSConnection,
@@ -322,7 +315,6 @@ export type {
   WebhookHandler,
 } from './registry/composioAdapter.js';
 
-// --- Phase 2.3: Skill Marketplace (types + catalog only — no Node.js deps) ---
 export { getDefaultCatalog } from './marketplace/defaultCatalog.js';
 export type {
   SkillManifest,
@@ -345,17 +337,14 @@ export type {
   SkillPackImportResult,
 } from './marketplace/skill-pack-importer.js';
 
-// --- Phase 13: Tool Auto-Repair Gate ---
 export {
   ToolRepairGate,
   type RepairLLMProvider,
   type ToolRepairOptions,
 } from './registry/repair-gate.js';
 
-// --- Phase 2: SKILL.md Manifest Loader & Hot-Reload Watcher ---
 export { loadSkillMd, validateSkill, SkillDirectoryWatcher } from './registry/md-loader.js';
 
-// --- Phase 12: Skills Hub + lock.json ---
 export {
   HubRegistry,
   SkillGuard,
@@ -388,7 +377,6 @@ export type {
   IntegrityReport,
 } from './hub/index.js';
 
-// --- Phase 25: OAuth Handoff, Keychain Storage, Permission Gates, and toolkitSlug Discovery ---
 export {
   OAuthHandoffManager,
   KeychainStore,
@@ -422,7 +410,6 @@ export {
   type SystemEventType,
 } from './openclaw/trigger-engine.js';
 
-// v1.1.0 Track 1 P22: standard MCP server
 export { SkillsMCPServer, createSkillsMCPServer } from './mcp-server.js';
 export type { SkillLike, SkillsMCPServerConfig } from './mcp-server.js';
 
@@ -435,9 +422,7 @@ export type {
   FiredInstinct,
 } from './instincts/index.js';
 
-// ── v1.1.0 Track 2: Skill schema v2, sandbox, lock, discovery, creator loop ──
 export * from './v2/index.js';
 
-// ── v1.1.0 Track 6 P68: document.ingest skill ──
 export { createDocumentIngestSkill } from './ingest/document-ingest.js';
 export type { DocumentIngestSkillDeps, DocumentIngestInput } from './ingest/document-ingest.js';

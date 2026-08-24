@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Shared Card Primitive
-// ==============================================================================
-
 import { type HTMLAttributes, type ReactNode } from 'react';
 
 export interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title'> {

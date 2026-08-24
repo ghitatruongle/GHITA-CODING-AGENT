@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - SaaS Action Simulator
-// ==============================================================================
 // Simulated responses for 50+ SaaS app actions.
 // Extracted from composioAdapter.ts for testability and modularity.
-// ==============================================================================
 
 /** Simulate a SaaS API action when no real SDK is available. */
 export async function simulateAction(

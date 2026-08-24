@@ -1,11 +1,7 @@
-// ==============================================================================
-// GHITA CODING AGENT — Playwright E2E Smoke Test
-// ==============================================================================
 // Real browser E2E test against the desktop app's splash.html and dev server.
 // Tests actual page load, DOM rendering, and basic UI interactions.
 //
 // Usage: npx playwright test tests/e2e/playwright-smoke.test.ts
-// ==============================================================================
 
 import { test, expect } from '@playwright/test';
 

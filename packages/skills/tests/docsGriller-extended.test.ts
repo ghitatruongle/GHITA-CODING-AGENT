@@ -1,8 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — Phase 5: DocsGriller Extended Tests
-// Bổ sung: vector math, cosine similarity, contradiction detection, comparison,
 // history persistence, formatReport, Socratic questions, edge cases
-// ==============================================================================
 
 import { describe, it, expect, vi } from 'vitest';
 import { DocsGriller, createGrillMeCommand } from '../src/engineering/docsGriller.js';
@@ -22,9 +18,7 @@ vi.mock('child_process', () => ({
   execSync: vi.fn(() => '1700000000'),
 }));
 
-// =============================================================================
 // Constructor & Config
-// =============================================================================
 
 describe('DocsGriller — constructor & config', () => {
   it('should use all defaults', () => {
@@ -54,9 +48,7 @@ describe('DocsGriller — constructor & config', () => {
   });
 });
 
-// =============================================================================
 // scanLocalDocs
-// =============================================================================
 
 describe('DocsGriller — scanLocalDocs', () => {
   it('should return empty when directory does not exist', async () => {
@@ -97,9 +89,7 @@ describe('DocsGriller — scanLocalDocs', () => {
   });
 });
 
-// =============================================================================
 // generateQuestions
-// =============================================================================
 
 describe('DocsGriller — generateQuestions', () => {
   it('should return empty when no docs and no contradictions', () => {
@@ -175,9 +165,7 @@ describe('DocsGriller — generateQuestions', () => {
   });
 });
 
-// =============================================================================
 // compareAnswer
-// =============================================================================
 
 describe('DocsGriller — compareAnswer', () => {
   it('should return empty matches when no docs loaded', () => {
@@ -197,9 +185,7 @@ describe('DocsGriller — compareAnswer', () => {
   });
 });
 
-// =============================================================================
 // detectContradictions
-// =============================================================================
 
 describe('DocsGriller — detectContradictions', () => {
   it('should return empty when no docs loaded', () => {
@@ -216,9 +202,7 @@ describe('DocsGriller — detectContradictions', () => {
   });
 });
 
-// =============================================================================
 // findSharedTopics
-// =============================================================================
 
 describe('DocsGriller — findSharedTopics', () => {
   it('should return empty map when no docs', () => {
@@ -228,9 +212,7 @@ describe('DocsGriller — findSharedTopics', () => {
   });
 });
 
-// =============================================================================
 // recordAnswer
-// =============================================================================
 
 describe('DocsGriller — recordAnswer', () => {
   it('should record answer without throwing', () => {
@@ -277,9 +259,7 @@ describe('DocsGriller — recordAnswer', () => {
   });
 });
 
-// =============================================================================
 // addDesignDecision
-// =============================================================================
 
 describe('DocsGriller — designDecisions (via formatReport)', () => {
   it('should render design decisions in report', () => {
@@ -318,9 +298,7 @@ describe('DocsGriller — designDecisions (via formatReport)', () => {
   });
 });
 
-// =============================================================================
 // formatReport
-// =============================================================================
 
 describe('DocsGriller — formatReport', () => {
   it('should format empty session', () => {
@@ -491,9 +469,7 @@ describe('DocsGriller — formatReport', () => {
   });
 });
 
-// =============================================================================
 // loadHistory
-// =============================================================================
 
 describe('DocsGriller — loadHistory', () => {
   it('should return empty array when no history file', async () => {
@@ -514,9 +490,7 @@ describe('DocsGriller — loadHistory', () => {
   });
 });
 
-// =============================================================================
 // runGrillSession
-// =============================================================================
 
 describe('DocsGriller — runGrillSession', () => {
   it('should run session and return result with correct structure', async () => {
@@ -546,9 +520,7 @@ describe('DocsGriller — runGrillSession', () => {
   });
 });
 
-// =============================================================================
 // createGrillMeCommand
-// =============================================================================
 
 describe('createGrillMeCommand', () => {
   it('should create valid slash command', () => {
@@ -575,9 +547,7 @@ describe('createGrillMeCommand', () => {
   });
 });
 
-// =============================================================================
 // Edge Cases
-// =============================================================================
 
 describe('DocsGriller — edge cases', () => {
   it('should handle special characters in file paths', async () => {

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Skill → npm Converter (Phase 37)
-// ==============================================================================
-
 import type { ConvertOptions, NpmPackageJson } from './types.js';
 
 /** A single file produced by conversion */

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Usage Tracker Tests
-// ==============================================================================
-
 import { describe, it, expect, beforeEach } from 'vitest';
 import { UsageTracker } from './usage-tracker.js';
 

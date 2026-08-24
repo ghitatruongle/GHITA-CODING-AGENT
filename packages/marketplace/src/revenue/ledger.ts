@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Double-Entry Ledger (Phase 38)
 // Immutable transaction log with debit/credit balance tracking & SQLite Persistence
-// ==============================================================================
 
 import DatabaseCtor from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';

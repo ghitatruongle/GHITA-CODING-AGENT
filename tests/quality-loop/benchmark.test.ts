@@ -1,9 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Quality Loop regression gate
 //
 // Vitest test that runs the runner and asserts the canonical F1 gate plus
 // latency budget. This guarantees CI fails when search quality regresses.
-// ==============================================================================
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import fs from 'fs';

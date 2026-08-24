@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - @ghita/ingest splitters (v1.1.5-beta2)
-// ==============================================================================
 // Fixed-size, markdown-heading, code-line and recursive splitters with overlap.
 // Uses native Rust addon (crates/retrieval) when available, falls back to JS.
-// ==============================================================================
 
 import { loadNative } from '@ghita/native-bridge';
 import type { Chunk, ChunkingOptions, IngestDocument } from './types.js';

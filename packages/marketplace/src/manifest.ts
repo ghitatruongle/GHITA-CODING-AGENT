@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Plugin Manifest Validator (Phase 31)
-// ==============================================================================
-
 import { z } from 'zod';
 import type { PluginManifest, PluginCategory, PluginPermission } from './types.js';
 

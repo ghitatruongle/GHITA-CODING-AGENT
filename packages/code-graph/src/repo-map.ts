@@ -1,16 +1,13 @@
-// ==============================================================================
 // v0.4.9 A8: Repo-Map Ranking
 //
 // Ranks code symbols by importance using PageRank over the reference graph,
 // then greedily selects the most important symbols that fit a token budget —
 // a "repo map" of high-signal context for an LLM.
-// ==============================================================================
 
 import path from 'node:path';
 import { loadNative } from '@ghita/native-bridge';
 import type { CodeEdge, CodeNode } from './types.js';
 
-/** v1.1.0 Track 8 A11: codegraph native addon surface (via @ghita/native-bridge). */
 interface CodegraphNative {
   pagerank(
     n: number,
@@ -22,7 +19,6 @@ interface CodegraphNative {
   ): Float32Array;
 }
 
-/** Bridge cho codegraph addon — load một lần (native-first, JS fallback). */
 const codegraphBridge = () =>
   loadNative<CodegraphNative>('codegraph', undefined as unknown as CodegraphNative);
 
@@ -53,7 +49,7 @@ export interface PageRankOptions {
   damping?: number;
   /** Power-iteration count. Default 30. */
   iterations?: number;
-  /** v1.1.0 Track 8 A11: bỏ qua native addon (test parity / debug). */
+  
   forceJs?: boolean;
 }
 
@@ -82,7 +78,6 @@ export function computePageRank(
   const scores = new Map<string, number>();
   if (n === 0) return scores;
 
-  // ── v1.1.0 Track 8 A11: native pagerank (CSR TypedArray) khi addon có sẵn ──
   if (!options.forceJs) {
     const bridge = codegraphBridge();
     if (bridge.native && typeof bridge.impl.pagerank === 'function') {
@@ -113,13 +108,9 @@ export function computePageRank(
     }
   }
 
-  // ── v1.1.0 Track 8 A5: CSR + TypedArray (Float64Array/Uint32Array) ──────
-  // Map id → index để đổi sang không gian số; mọi vòng lặp nóng chạy trên
-  // mảng gốc (không object churn), giữ nguyên ngữ nghĩa Map đầu ra.
   const indexById = new Map<string, number>();
   for (const [i, node] of nodes.entries()) indexById.set(node.id, i);
 
-  // Xây danh sách kề trọng số dạng CSR (from/to/weight phẳng).
   const csrFrom: number[] = [];
   const csrTo: number[] = [];
   const csrWeight: number[] = [];
@@ -144,7 +135,6 @@ export function computePageRank(
   for (let iter = 0; iter < iterations; iter++) {
     next.fill(base);
 
-    // Phân phối khối lượng dangling node đều cho mọi node.
     let danglingMass = 0;
     for (let i = 0; i < n; i++) {
       if (outWeight[i] === 0) danglingMass += rank[i] ?? 0;
@@ -234,10 +224,6 @@ export function renderRepoMap(map: RepoMap): string {
   }
   return lines.join('\n');
 }
-
-// ---------------------------------------------------------------------------
-// Track 3 (3.4): Repo-Map Session Injection & Tree Rendering
-// ---------------------------------------------------------------------------
 
 export interface TreeRepoMapOptions {
   /** Root directory to compute relative paths from */

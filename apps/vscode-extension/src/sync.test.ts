@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — VS Code Sidecar: unit tests for sync helpers
-// ==============================================================================
-
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   generateSyncId,

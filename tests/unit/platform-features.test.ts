@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 5 Platform & Advanced Features Unit Tests
-// ==============================================================================
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   Orchestrator,

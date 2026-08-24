@@ -1,15 +1,7 @@
-// =============================================================================
-// GHITA CODING AGENT - Week 4: Sandbox Integration Test Suite
-// Nghiệm thu & Phản hồi kết quả sandbox nội bộ
-// =============================================================================
-
 /**
- * Integration Test Suite cho Week 4 - Nghiệm thu Sandbox nội bộ
+
  *
- * Test tích hợp liên kết 3 module:
- * - Phase 12: DSO - Dynamic Sandbox Orchestrator
- * - Phase 13: Security Guardrails
- * - Phase 14: Headless Search
+
  *
  * Verify command: pnpm test sandbox-validation
  */
@@ -25,9 +17,7 @@ import {
 import fs from 'fs';
 import path from 'path';
 
-// =============================================================================
 // Mock Dockerode
-// =============================================================================
 
 const mockContainer = {
   id: 'abc123def456',
@@ -118,9 +108,6 @@ describe('Week 4: Sandbox Validation - Nghiệm thu Sandbox nội bộ', () => {
     }
   });
 
-  // =============================================================================
-  // Test Suite 1: Phase 12 - DSO Orchestrator Validation
-  // =============================================================================
   describe('12: DSO Orchestrator', () => {
     it('should create Docker Bridge network successfully', async () => {
       const networkId = await dso.createNetwork(testNetworkName);
@@ -153,9 +140,6 @@ describe('Week 4: Sandbox Validation - Nghiệm thu Sandbox nội bộ', () => {
     });
   });
 
-  // =============================================================================
-  // Test Suite 2: Phase 13 - Security Guardrails Validation
-  // =============================================================================
   describe('13: Security Guardrails', () => {
     const dangerousCommands = [
       { cmd: 'rm -rf /', expectedBlocked: true, description: 'Recursive delete root' },
@@ -219,9 +203,6 @@ describe('Week 4: Sandbox Validation - Nghiệm thu Sandbox nội bộ', () => {
     });
   });
 
-  // =============================================================================
-  // Test Suite 3: Phase 14 - Headless Search Validation
-  // =============================================================================
   describe('14: Headless Search', () => {
     const testCode = `function hello() {
   console.log("Hello, World!");
@@ -263,9 +244,8 @@ export { hello, TestClass };
     });
   });
 
-  // =============================================================================
   // Test Suite 4: Integration - All 3 Modules Together
-  // =============================================================================
+  
   describe('Integration: All 3 Sandbox Modules', () => {
     it('should create sandbox and validate security in same session', async () => {
       const networkId = await dso.createNetwork('security-test');
@@ -337,9 +317,8 @@ export { hello, TestClass };
     });
   });
 
-  // =============================================================================
   // Test Suite 5: Edge Cases and Error Handling
-  // =============================================================================
+  
   describe('Edge Cases & Error Handling', () => {
     it('should handle multiple rapid network creations', async () => {
       const results = await Promise.all([

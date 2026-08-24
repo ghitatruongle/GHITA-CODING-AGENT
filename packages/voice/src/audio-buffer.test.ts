@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Audio Ring Buffer Tests
-// ==============================================================================
-
 import { describe, it, expect, beforeEach } from 'vitest';
 import { AudioRingBuffer } from './audio-buffer.js';
 import type { AudioChunk } from './types.js';
@@ -77,7 +73,7 @@ describe('AudioRingBuffer', () => {
   it('should convert to ArrayBuffer', () => {
     buffer.pushSamples(new Int16Array([1, 2, 3]));
     const ab = buffer.toArrayBuffer();
-    expect(ab.byteLength).toBe(6); // 3 samples × 2 bytes
+    expect(ab.byteLength).toBe(6); 
   });
 
   it('should clear', () => {

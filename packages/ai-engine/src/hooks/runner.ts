@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Hook Runner (Phase 12 Enhanced)
-// ==============================================================================
 // Priority-ordered, parallel-capable hook execution engine with timeout
 // enforcement, error strategies (continue/fail/skip), audit trail, and
 // glob-based tool matching.
-// ==============================================================================
 
 import type {
   HookConfig,
@@ -17,9 +13,7 @@ import type {
   HookErrorStrategy,
 } from './types.js';
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 function generateId(prefix: string): string {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -39,9 +33,7 @@ function matchGlob(pattern: string, value: string): boolean {
 const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_MAX_AUDIT = 1_000;
 
-// ---------------------------------------------------------------------------
 // HookRunner
-// ---------------------------------------------------------------------------
 
 export class HookRunner {
   private hooks: HookConfig[] = [];
@@ -68,10 +60,8 @@ export class HookRunner {
     this.auditEnabled = config?.auditEnabled ?? true;
   }
 
-  // -----------------------------------------------------------------------
   // Hook management
-  // -----------------------------------------------------------------------
-
+  
   /** Load hooks from an array (replaces existing) */
   loadHooks(hooks: HookConfig[]): void {
     this.hooks = hooks;
@@ -115,10 +105,8 @@ export class HookRunner {
     return this.hooks.filter((h) => h.enabled && h.event === event);
   }
 
-  // -----------------------------------------------------------------------
   // Matching
-  // -----------------------------------------------------------------------
-
+  
   /** Check whether a hook's matcher matches the given tool name */
   matches(hook: HookConfig, toolName: string): boolean {
     const { matcher } = hook;
@@ -146,10 +134,8 @@ export class HookRunner {
     return true;
   }
 
-  // -----------------------------------------------------------------------
   // Execution
-  // -----------------------------------------------------------------------
-
+  
   /**
    * Run all hooks matching the given event + tool.
    * Returns a composite result with individual hook results and blocking status.
@@ -232,10 +218,8 @@ export class HookRunner {
     return composite.results;
   }
 
-  // -----------------------------------------------------------------------
   // Sequential execution with error strategy
-  // -----------------------------------------------------------------------
-
+  
   private async executeSequential(
     hooks: HookConfig[],
     toolName: string,
@@ -263,10 +247,8 @@ export class HookRunner {
     return results;
   }
 
-  // -----------------------------------------------------------------------
   // Single hook execution with timeout
-  // -----------------------------------------------------------------------
-
+  
   private async executeHook(
     hook: HookConfig,
     toolName: string,
@@ -358,10 +340,8 @@ export class HookRunner {
     });
   }
 
-  // -----------------------------------------------------------------------
   // Audit Trail
-  // -----------------------------------------------------------------------
-
+  
   private recordAudit(
     event: HookEvent,
     toolName: string,
@@ -412,10 +392,8 @@ export class HookRunner {
     this.auditLog.length = 0;
   }
 
-  // -----------------------------------------------------------------------
   // Statistics
-  // -----------------------------------------------------------------------
-
+  
   private ensureStats(hookId: string): void {
     if (!this.statsMap.has(hookId)) {
       this.statsMap.set(hookId, {

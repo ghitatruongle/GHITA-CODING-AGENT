@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Socket.IO Mock for Phase 6 Relay Server Tests
-// ==============================================================================
-
 import { vi } from 'vitest';
 
 export class Server {

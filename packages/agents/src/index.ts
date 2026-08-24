@@ -1,6 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Agents Package
-// ==============================================================================
 //
 // The Agents package provides the orchestration layer for AI agent lifecycle
 // management, multi-agent collaboration, and task execution pipelines.
@@ -28,7 +25,7 @@
 //
 // @packageDocumentation
 // @module @ghita/agents
-// ==============================================================================
+
 import type { Agent, AgentGroup, AgentRole, AgentTask } from '@ghita/shared';
 import type { AgentMemory } from '@ghita/memory';
 
@@ -95,7 +92,6 @@ export type {
 /** Pipeline executing interceptors sequentially before and after agent model actions. */
 export { MiddlewarePipeline } from './middleware/pipeline.js';
 
-// v1.1.5-beta1 Track 2.2: history processors pipeline (swe-agent pattern)
 export {
   lastNObservations,
   tagToolCalls,
@@ -195,7 +191,7 @@ export type {
 
 // --- Original exports below ---
 
-export const AGENTS_VERSION = '1.1.5-beta2';
+export const AGENTS_VERSION = '1.1.5';
 
 export type AgentStatus = 'idle' | 'working' | 'completed' | 'error';
 
@@ -210,6 +206,8 @@ export interface AgentRuntimeContext {
   task: AgentTask;
   skills?: SkillRegistry;
   memory?: AgentMemory;
+  /** Aborted when the caller cancels/timeout — runtimes should observe it and stop early. */
+  signal?: AbortSignal;
 }
 
 export type AgentRuntime = (context: AgentRuntimeContext) => Promise<string>;
@@ -325,9 +323,17 @@ export class AgentManager {
     return filtered.sort((a, b) => (b.startTime ?? 0) - (a.startTime ?? 0));
   }
 
-  async assignTask(agentId: string, description: string, groupId?: string): Promise<AgentTask> {
+  async assignTask(
+    agentId: string,
+    description: string,
+    groupId?: string,
+    options?: { signal?: AbortSignal },
+  ): Promise<AgentTask> {
     const agent = this.agents.get(agentId);
     if (!agent) throw new Error(`Agent not found: ${agentId}`);
+    if (options?.signal?.aborted) {
+      throw new Error(`Agent task cancelled before start: ${description.slice(0, 80)}`);
+    }
 
     const task = createTask(agentId, description, groupId);
     this.tasks.set(task.id, task);
@@ -346,6 +352,7 @@ export class AgentManager {
         task: running,
         skills: this.skills,
         memory: this.memory,
+        signal: options?.signal,
       });
       const completed: AgentTask = {
         ...running,
@@ -525,7 +532,6 @@ export function createDefaultAgentGroupManager(agentManager: AgentManager): Agen
   return groupManager;
 }
 
-// --- Phase 4/6: Subagent Spawner, Channel & State Sync ---
 export { SubagentSpawner } from './subagent/spawner.js';
 export { AgentChannel } from './subagent/channel.js';
 export { StateSyncManager } from './subagent/sync.js';
@@ -543,7 +549,6 @@ export type {
 export { CronScheduler } from './scheduler/cron.js';
 export type { ScheduledTaskConfig, ScheduledTask } from './scheduler/types.js';
 
-// --- Phase 6: Debate-Driven Architectural Alignment ---
 export { DebateEngine } from './orchestrator/debateEngine.js';
 export type {
   DebateResult,
@@ -551,21 +556,17 @@ export type {
   DebateEngineOptions,
 } from './orchestrator/debateEngine.js';
 
-// --- Phase 7A: Agent SDK ---
 export { GhitAgentClient } from './sdk/client.js';
 export type { AgentSDKConfig, SendMessageOptions, AgentMessage } from './sdk/types.js';
 
-// --- Phase 5: Agent Protocol & Router ---
 export { AgentProtocolServer } from './protocol/ap.js';
 export type { APTask, APStep, APArtifact } from './protocol/ap.js';
 export { AgentRouter } from './router/router.js';
 export type { ComplexityLevel, RouteResolution } from './router/router.js';
 
-// --- Phase 5: Workflow Engine ---
 export { WorkflowAgent } from './workflow/engine.js';
 export type { WorkflowStep, WorkflowCallbacks } from './workflow/engine.js';
 
-// --- Phase 3: AST-Lock ---
 export {
   ASTLockEngine,
   ASTLockMiddleware,
@@ -575,10 +576,8 @@ export {
 } from './checker/astLock.js';
 export type { HierarchicalSymbol, ASTLockConfig } from './checker/astLock.js';
 
-// --- Phase 8: Git Safe-Points & Safe-Rollback Loop + Phase 12 Enhancements ---
 export { GitSafePointManager, GitSafePointMiddleware } from './git/workflow.js';
 
-// --- Phase 11: Source-Controlled Markdown CI Checks Gates ---
 export { MarkdownRulesChecker, MarkdownChecksMiddleware } from './checker/markdownRules.js';
 export type { MarkdownRule, CheckIssue } from './checker/markdownRules.js';
 
@@ -623,19 +622,14 @@ export type {
   WorkLoopReview,
 } from './harness/index.js';
 
-// ── v1.1.0 Track 5: HITL, lifecycle, worktrees, review, declarative agents ──
 export * from './track5/index.js';
 
-// v1.1.5-beta1 Track 1.2: declarative hook system
 export * from './hooks/index.js';
 
-// v1.1.5-beta1 Track 1.3: headless / CI mode
 export * from './headless/index.js';
 
-// v1.1.5-beta1 Track 2.1: Mailbox orchestration
 export * from './mailbox/index.js';
 
-// v1.1.5-beta1 Track 2.3: Context middleware stack
 export {
   createSummarizationMiddleware,
   createContextEditingMiddleware,
@@ -643,16 +637,12 @@ export {
   createPiiRedactionMiddleware,
 } from './middleware/context-middleware.js';
 
-// v1.1.5-beta1 Track 2.4: Interjection buffer
 export * from './interjection/index.js';
 
-// v1.1.5-beta1 Track 2.5: Smart per-turn router
 export * from './routing/index.js';
 
-// v1.1.5-beta1 Track 2.6: RetryAgent + reviewer-on-submit
 export { runWithRetry, createHeuristicReviewer, createLlmReviewer } from './retry-agent.js';
 export type { ReviewerVerdict, ReviewerFn, RetryAgentConfig } from './retry-agent.js';
 
-// v1.1.5-beta1 Track 2.7: Stateless reducer
 export { createInitialState, agentRunReducer, replayEvents } from './reducer.js';
 export type { AgentRunEvent, AgentRunState } from './reducer.js';

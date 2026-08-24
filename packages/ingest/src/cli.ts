@@ -1,7 +1,4 @@
 #!/usr/bin/env node
-// ==============================================================================
-// GHITA CODING AGENT - @ghita/ingest CLI (P68): `ghita ingest <path>`
-// ==============================================================================
 
 import { parseArgs } from 'node:util';
 import { mkdirSync, writeFileSync } from 'node:fs';

@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT — Phase 3: Rust NAPI Module Integration Tests
-// ==============================================================================
 // Tests the Rust NAPI bindings: SIMD cosine, HNSW index, batch decay scoring.
 // All tests gracefully fall back to JS when the native addon is unavailable.
-// ==============================================================================
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import { RustMemoryAddon } from '../src/semantic/rustAddon.js';
@@ -23,9 +19,8 @@ beforeAll(() => {
   }
 });
 
-// ==============================================================================
 // 1. Cosine Similarity
-// ==============================================================================
+
 describe('Rust NAPI — Cosine Similarity', () => {
   function jsCosine(a: number[], b: number[]): number {
     const len = Math.min(a.length, b.length);
@@ -113,9 +108,8 @@ describe('Rust NAPI — Cosine Similarity', () => {
   });
 });
 
-// ==============================================================================
 // 2. HNSW Index
-// ==============================================================================
+
 describe('Rust NAPI — HNSW Index', () => {
   it('should create, add, search, and remove via RustMemoryAddon', () => {
     const addon = new RustMemoryAddon({ maxVectorEntries: 1000 });
@@ -246,9 +240,8 @@ describe('Rust NAPI — HNSW Index', () => {
   });
 });
 
-// ==============================================================================
 // 3. Batch Decay Scoring
-// ==============================================================================
+
 describe('Rust NAPI — Batch Decay Scoring', () => {
   it('batch_decay_score should match JS calculateDecayScore', () => {
     if (!rustBindings?.batchDecayScore) return;
@@ -346,9 +339,8 @@ describe('Rust NAPI — Batch Decay Scoring', () => {
   });
 });
 
-// ==============================================================================
 // 4. Edge Cases
-// ==============================================================================
+
 describe('Rust NAPI — Edge Cases', () => {
   it('empty vector search returns empty results', () => {
     const addon = new RustMemoryAddon(':memory:');
@@ -406,9 +398,8 @@ describe('Rust NAPI — Edge Cases', () => {
   });
 });
 
-// ==============================================================================
 // 5. Integration — retrieveEnhanced with Rust batch ops
-// ==============================================================================
+
 describe('Rust NAPI — Integration with freshness.ts', () => {
   it('retrieveEnhanced should use batch decay when available', async () => {
     const { retrieveEnhanced } = await import('../src/freshness.js');

@@ -17,6 +17,7 @@ export class IMessageAdapter implements ChannelAdapter {
   private messageHandler?: (message: unknown) => void | Promise<void>;
   private isWatching = false;
   private watchInterval: NodeJS.Timeout | null = null;
+  private pollInFlight = false;
   private chatDbPath = '';
   private lastRowId = 0;
 
@@ -42,7 +43,7 @@ export class IMessageAdapter implements ChannelAdapter {
         // Safe escaping of quotes for AppleScript
         const escapedText = text.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
         const script = `tell application "Messages" to send "${escapedText}" to buddy "${channelId}"`;
-        // P1-9 (deep review pass #2): keeps the rest of the codebase's
+        
         // windowsHide consistency. macOS ignores this flag (it's a no-op).
         await execFileAsync('osascript', ['-e', script], { windowsHide: true });
         return true;
@@ -109,6 +110,10 @@ export class IMessageAdapter implements ChannelAdapter {
   private startDbPoller(dbPath: string): void {
     this.watchInterval = setInterval(async () => {
       if (!this.isWatching) return;
+      // In-flight guard: a slow/locked chat.db must not stack overlapping
+      // polls that duplicate handler invocations when the backlog clears.
+      if (this.pollInFlight) return;
+      this.pollInFlight = true;
 
       try {
         const query = `SELECT message.ROWID, message.text, handle.id FROM message JOIN handle ON message.handle_id = handle.ROWID WHERE message.is_from_me = 0 AND message.ROWID > ${this.lastRowId} ORDER BY message.ROWID ASC;`;
@@ -139,6 +144,8 @@ export class IMessageAdapter implements ChannelAdapter {
         }
       } catch (error) {
         // Fail silently to prevent console spam
+      } finally {
+        this.pollInFlight = false;
       }
     }, 3000);
   }

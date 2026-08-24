@@ -113,9 +113,9 @@ vi.mock('ioredis', () => {
 });
 
 describe('2 Core AI Engine Features Test Suite', () => {
-  // ==============================================================================
+  
   // 1. InMemoryCache (STT 2.1)
-  // ==============================================================================
+  
   describe('InMemoryCache (STT 2.1)', () => {
     let cache: InMemoryCache;
 
@@ -155,9 +155,8 @@ describe('2 Core AI Engine Features Test Suite', () => {
     });
   });
 
-  // ==============================================================================
   // 2. RedisCache (STT 2.2)
-  // ==============================================================================
+  
   describe('RedisCache (STT 2.2)', () => {
     let cache: RedisCache;
 
@@ -206,9 +205,8 @@ describe('2 Core AI Engine Features Test Suite', () => {
     });
   });
 
-  // ==============================================================================
   // 3. SemanticCache (STT 2.3)
-  // ==============================================================================
+  
   describe('SemanticCache (STT 2.3)', () => {
     let mockEmbedder: any;
     let semanticCache: SemanticCache;
@@ -351,9 +349,8 @@ describe('2 Core AI Engine Features Test Suite', () => {
     });
   });
 
-  // ==============================================================================
   // 4. Cost Tracker & Budgeting (STT 2.4, 2.5)
-  // ==============================================================================
+  
   describe('Cost Tracker & Budgeting (STT 2.4, 2.5)', () => {
     describe('getModelPricing & Pricing Table Resolution', () => {
       it('should match exact model names from default pricing table', () => {
@@ -451,9 +448,8 @@ describe('2 Core AI Engine Features Test Suite', () => {
     });
   });
 
-  // ==============================================================================
   // 5. Prompt System (STT 2.6, 2.10)
-  // ==============================================================================
+  
   describe('Prompt System (STT 2.6, 2.10)', () => {
     describe('PromptTemplate', () => {
       it('should render both {{var}} and {var} template placeholders', () => {
@@ -579,9 +575,8 @@ describe('2 Core AI Engine Features Test Suite', () => {
     });
   });
 
-  // ==============================================================================
   // 6. Middleware Extensions (STT 2.7, 2.8)
-  // ==============================================================================
+  
   describe('Middleware Extensions (STT 2.7, 2.8)', () => {
     let mockProvider: any;
 
@@ -689,9 +684,8 @@ describe('2 Core AI Engine Features Test Suite', () => {
     });
   });
 
-  // ==============================================================================
   // 7. Universal Chat Model Router (STT 2.9)
-  // ==============================================================================
+  
   describe('Universal Chat Model Router (STT 2.9)', () => {
     let registry: ProviderRegistry;
     let mockOpenAI: any;
@@ -784,9 +778,8 @@ describe('2 Core AI Engine Features Test Suite', () => {
     });
   });
 
-  // ==============================================================================
   // 8. Output Parsers (STT 2.11)
-  // ==============================================================================
+  
   describe('Output Parsers (STT 2.11)', () => {
     describe('JSONOutputParser', () => {
       it('should parse markdown JSON blocks correctly', () => {

@@ -17,7 +17,6 @@ export function useWebViewPanel() {
   const inputRef = useRef<HTMLInputElement>(null);
   const proxyPortRef = useRef(0);
 
-  // deep-review fix (M9): per-tab navigation history. The previous toolbar
   // called `iframe.contentWindow.history.back()` directly, which is a
   // cross-origin access (tauri:// app vs http://127.0.0.1 proxy) and always
   // threw a SecurityError — the back/forward buttons were dead. We track the
@@ -25,14 +24,12 @@ export function useWebViewPanel() {
   const [historyMap, setHistoryMap] = useState<Record<string, string[]>>({});
   const [historyIndexMap, setHistoryIndexMap] = useState<Record<string, number>>({});
 
-  // Giữ ref đồng bộ
   useEffect(() => {
     proxyPortRef.current = proxyPort;
   }, [proxyPort]);
 
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? tabs[0];
 
-  // ─── Khởi tạo và cập nhật proxy port ───────────────────────────────────
   const ensureProxy = useCallback(async (targetUrl: string): Promise<number> => {
     try {
       const status = await invoke<ProxyStatus>('get_proxy_status');
@@ -42,7 +39,7 @@ export function useWebViewPanel() {
         proxyPortRef.current = port;
         return port;
       } else {
-        // Cập nhật target URL của proxy đang chạy
+        
         const port = await invoke<number>('start_proxy', { targetUrl, port: status.port });
         setProxyPort(port);
         proxyPortRef.current = port;
@@ -65,7 +62,6 @@ export function useWebViewPanel() {
       .catch((err) => console.warn('[WebViewPanel] get_proxy_status failed:', err));
   }, []);
 
-  // ─── Điều hướng ───────────────────────────────────────────────────────
   const navigateTo = useCallback(
     async (rawUrl: string) => {
       const normalizedUrl = normalizeUrl(rawUrl);
@@ -74,7 +70,6 @@ export function useWebViewPanel() {
       setError(null);
       setIsEditing(false);
 
-      // deep-review fix (M9): record the navigation in the tab's history
       // stack (truncating any forward entries when navigating fresh).
       setHistoryMap((prev) => {
         const stack = prev[activeTabId] ?? [normalizedUrl];
@@ -91,7 +86,6 @@ export function useWebViewPanel() {
         return { ...prev, [activeTabId]: truncated.length };
       });
 
-      // Cập nhật tab thành loading ngay lập tức
       setTabs((prev) =>
         prev.map((t) =>
           t.id === activeTabId
@@ -132,7 +126,6 @@ export function useWebViewPanel() {
     [activeTabId, ensureProxy, historyIndexMap, historyMap],
   );
 
-  // deep-review fix (M9): navigate the active tab through its own history.
   const goBack = useCallback(() => {
     const stack = historyMap[activeTabId] ?? [];
     const idx = historyIndexMap[activeTabId] ?? stack.length - 1;
@@ -219,7 +212,7 @@ export function useWebViewPanel() {
   const handleRefresh = () => {
     const tabUrl = activeTab?.url;
     if (!tabUrl) return;
-    // deep-review fix (L3): reload the tab's own URL from state instead of
+    
     // reading `iframe.src` — the previous code snapshotted the live src and
     // restored it 50ms later, which could clobber a navigation that happened
     // in that window.
@@ -232,7 +225,6 @@ export function useWebViewPanel() {
     }
   };
 
-  // Cập nhật address bar khi đổi tab / khi tab điều hướng
   useEffect(() => {
     setAddressInput(activeTab?.displayUrl || '');
   }, [activeTabId, activeTab?.displayUrl]);
@@ -261,7 +253,7 @@ export function useWebViewPanel() {
     switchTab,
     handleIframeLoad,
     handleRefresh,
-    // deep-review fix (M9): history navigation exposed to the toolbar.
+    
     goBack,
     goForward,
   };

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Browser Controller Tests
-// ==============================================================================
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BrowserController, createBrowserControlSkills } from './index.js';
 

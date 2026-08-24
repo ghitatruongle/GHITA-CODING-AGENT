@@ -1,10 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - AI Engine v1.1.0 Track 4 P50: adaptive bandit router
-// ==============================================================================
-// Thompson-sampling (Beta-Bernoulli) router per (arm × request-type) bucket.
 // Learns from completion signals (success/error/latency) instead of static
 // heuristics — mirrors LiteLLM's adaptive router.
-// ==============================================================================
 
 export type RequestBucket = 'chat' | 'tool' | 'code' | 'embed' | 'image' | 'reasoning' | 'default';
 

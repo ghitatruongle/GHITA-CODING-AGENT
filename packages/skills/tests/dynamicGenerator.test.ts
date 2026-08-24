@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Phase 7: DynamicSkillGenerator Unit Tests
-// ==============================================================================
-
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   DynamicSkillGenerator,
@@ -19,7 +15,6 @@ vi.mock('node:fs', () => ({
   unlinkSync: vi.fn(),
 }));
 
-// Mock child_process — after P1-7 the sync command only uses execFile
 // (promisified, array-args). Hoisted refs let each test configure behavior.
 const { mockExecFile } = vi.hoisted(() => ({
   mockExecFile: vi.fn(),
@@ -42,9 +37,6 @@ describe('DynamicSkillGenerator', () => {
     vi.clearAllMocks();
   });
 
-  // ==============================================================================
-  // 1. Sanitization / Che giấu thông tin nhạy cảm
-  // ==============================================================================
   describe('sanitizeCommand', () => {
     it('should redact sensitive API Keys (sk-, ghp_, AIzaSy)', () => {
       const orig =
@@ -76,9 +68,6 @@ describe('DynamicSkillGenerator', () => {
     });
   });
 
-  // ==============================================================================
-  // 2. Shell Malicious Patterns / Quét mã độc Shell
-  // ==============================================================================
   describe('validateSkillSafety', () => {
     it('should accept valid and safe JSON skill specs', () => {
       const validSpec = {
@@ -131,9 +120,6 @@ describe('DynamicSkillGenerator', () => {
     });
   });
 
-  // ==============================================================================
-  // 3. recordSession / Ghi vết
-  // ==============================================================================
   describe('recordSession', () => {
     it('should record successful terminal actions as a valid TaskTrajectory', () => {
       const cmds = ['pnpm install', 'pnpm test'];
@@ -148,9 +134,6 @@ describe('DynamicSkillGenerator', () => {
     });
   });
 
-  // ==============================================================================
-  // 4. generateAndRegister / Đóng gói & Nạp ngầm
-  // ==============================================================================
   describe('generateAndRegister', () => {
     it('should package commands, validate safety and save skill dynamically', async () => {
       const saveSpy = vi.spyOn(hub, 'saveSkill').mockReturnValue('auto.terminal.custom');
@@ -184,9 +167,8 @@ describe('DynamicSkillGenerator', () => {
   });
 });
 
-// ==============================================================================
 // 5. Slash Command /skills-sync
-// ==============================================================================
+
 describe('createSkillsSyncCommand', () => {
   let hub: SkillHub;
 

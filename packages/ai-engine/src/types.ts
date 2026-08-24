@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - AI Engine Types
-// ==============================================================================
-
 import type { AIProviderType, AIStreamChunk } from '@ghita/shared';
 
 export interface PermissionContext {
@@ -19,40 +15,30 @@ export interface AIProvider {
   readonly defaultModel: string;
   readonly models: string[];
 
-  /** Kiểm tra provider đã sẵn sàng chưa (có API key, kết nối được không) */
   isReady(): Promise<boolean>;
 
-  /** Gửi message và nhận response (non-streaming) */
   chat(messages: ChatMessage[], options?: ChatOptions): Promise<ChatResponse>;
 
-  /** Gửi message và nhận streaming response */
   chatStream(messages: ChatMessage[], options?: ChatOptions): AsyncGenerator<AIStreamChunk>;
 
-  /** Test kết nối provider */
   test(): Promise<boolean>;
 
-  /** Tạo vector embedding cho một chuỗi text */
   embed(text: string, options?: { model?: string }): Promise<EmbeddingResponse>;
 
-  /** Tạo vector embedding cho danh sách các chuỗi text */
   embedMany(texts: string[], options?: { model?: string }): Promise<EmbeddingManyResponse>;
 
-  /** Sinh ảnh từ văn bản */
   generateImage?(
     prompt: string,
     options?: Record<string, unknown>,
   ): Promise<{ url: string; b64?: string }>;
 
-  /** Chuyển văn bản thành giọng nói */
   generateSpeech?(
     text: string,
     options?: Record<string, unknown>,
   ): Promise<{ audio: Buffer; contentType: string }>;
 
-  /** Sinh video từ văn bản */
   generateVideo?(prompt: string, options?: Record<string, unknown>): Promise<{ url: string }>;
 
-  /** Chuyển giọng nói/âm thanh thành văn bản */
   transcribe?(audio: Buffer, options?: Record<string, unknown>): Promise<{ text: string }>;
 }
 
@@ -115,9 +101,9 @@ export type KeyRotationStrategy = 'round-robin' | 'failover' | 'random';
 export interface ProviderConfig {
   type: AIProviderType;
   apiKey?: string;
-  /** Phase 1.1: Multiple API keys for rotation/failover */
+  
   apiKeys?: string[];
-  /** Phase 1.1: Key rotation strategy (default: 'failover') */
+  
   rotationStrategy?: KeyRotationStrategy;
   baseUrl?: string;
   defaultModel?: string;
@@ -161,7 +147,7 @@ export interface OrchestratorConfig {
   qdrantUrl?: string;
   collectionName?: string;
   cacheThreshold?: number;
-  /** Phase 1.4: Smart routing configuration */
+  
   smartRouting?: {
     strategy: 'cost-first' | 'quality-first' | 'balanced' | 'latency-first';
     maxCostPerRequest?: number;

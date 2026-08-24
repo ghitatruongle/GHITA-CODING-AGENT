@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Real-time WebSocket Proxy
-// ==============================================================================
-
 import { EventEmitter } from 'events';
 
 export class RealtimeProxy extends EventEmitter {
@@ -22,9 +18,6 @@ export class RealtimeProxy extends EventEmitter {
     this.apiKey = options?.apiKey || process.env.OPENAI_API_KEY || '';
   }
 
-  /**
-   * Khởi chạy WebSocket Proxy Server
-   */
   async start(port = 8081): Promise<void> {
     try {
       const { WebSocketServer } = await import('ws');

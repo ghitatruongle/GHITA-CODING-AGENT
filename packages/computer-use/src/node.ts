@@ -1,12 +1,8 @@
-// ==============================================================================
-// GHITA CODING AGENT - Node.js Entry Point (Phase 1 Rust Rewrite)
-// ==============================================================================
 //
 // This module re-exports the Tauri-native operator and shared utilities for
 // server-side (Node.js) consumers. The legacy NutJS adapter has been removed;
 // all native screen capture / mouse / keyboard operations now go through the
 // Rust backend via Tauri IPC.
-// ==============================================================================
 
 import type { ScreenCapture } from './index.js';
 

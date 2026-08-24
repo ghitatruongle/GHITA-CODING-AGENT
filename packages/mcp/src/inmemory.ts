@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - @ghita/mcp in-memory transport pair (for tests/embedding)
-// ==============================================================================
 // Implements the SDK `Transport` contract with two linked ends, mirroring the
 // SDK's internal in-memory transport (which is not part of the public exports
 // of the installed SDK version). Used by tests and embedded pair mode.
-// ==============================================================================
 
 import { EventEmitter } from 'node:events';
 import type { JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js';

@@ -1,6 +1,3 @@
-// =============================================================================
-// GHITA CODING AGENT - Phase 12: /skills CLI Commands
-// =============================================================================
 // Slash commands for managing skills in the hub:
 //   /skills create   — Create a new skill
 //   /skills list     — List all skills
@@ -13,7 +10,6 @@
 //   /skills audit    — Show audit log
 //   /skills lock     — Show lock file status
 //   /skills trust    — Manage trust levels
-// =============================================================================
 
 import type { SlashCommand, ParsedArgs } from '../commands/registry.js';
 import type { HubRegistry } from './hub-registry.js';

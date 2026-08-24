@@ -1,13 +1,11 @@
-// ==============================================================================
-// GHITA CODING AGENT — Extension Marketplace View
-// ==============================================================================
-
 import { useState, useEffect, useMemo } from 'react';
 import { useAppStore } from '../stores/appStore';
 import { useTranslation } from '../i18n';
 import type { PluginManifest } from '@ghita/shared';
-import { getDefaultCatalog } from '@ghita/skills';
-import type { SkillManifest } from '@ghita/skills';
+// Deep imports: the @ghita/skills barrel re-exports the PTY pool, MCP server
+// and directory watchers — far beyond this view's catalog needs.
+import { getDefaultCatalog } from '@ghita/skills/marketplace/defaultCatalog';
+import type { SkillManifest } from '@ghita/skills/marketplace/types';
 
 // Pre-defined available marketplace plugins
 const MARKETPLACE_PLUGINS: PluginManifest[] = [
@@ -102,7 +100,6 @@ export function MarketplaceView() {
   const [filterType, setFilterType] = useState<'all' | 'code' | 'bundle' | 'installed'>('all');
   const [sortBy, setSortBy] = useState<'downloads' | 'rating' | 'newest'>('downloads');
 
-  // Phase 2.3: Load catalog skills
   const [catalogSkills, setCatalogSkills] = useState<SkillManifest[]>([]);
   useEffect(() => {
     setCatalogSkills(getDefaultCatalog());

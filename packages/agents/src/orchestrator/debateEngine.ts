@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Debate-Driven Architectural Alignment (Phase 6)
-// ==============================================================================
-
 import { HumanMessage, SystemMessage } from '../messages/message.js';
 import type { BaseMessage } from '../messages/message.js';
 
@@ -19,7 +15,7 @@ export interface DebateCallbacks {
 }
 
 export interface DebateEngineOptions {
-  /** Hàm gọi LLM để lấy phản hồi từ tin nhắn */
+  
   llmCall: (messages: BaseMessage[], options?: Record<string, unknown>) => Promise<BaseMessage>;
   model?: string;
 }
@@ -34,12 +30,6 @@ export class DebateEngine {
     this.model = options.model || 'gpt-4o';
   }
 
-  /**
-   * Khởi chạy luồng tranh biện đa tác nhân 3 lượt và tổng hợp Spec kỹ thuật tối ưu
-   * @param topic Chủ đề kiến trúc cần thiết kế
-   * @param docsContext Tài liệu tham chiếu làm căn cứ đối soát
-   * @param callbacks Các sự kiện phản hồi trong chu kỳ tranh biện
-   */
   async runDebate(
     topic: string,
     docsContext: string,
@@ -52,15 +42,13 @@ export class DebateEngine {
     }> = [];
     let currentSpec = `Draft specification for topic: ${topic}`;
 
-    // --- LƯỢT TRANH BIỆN (Turn Budget = 3) ---
     for (let turn = 1; turn <= this.maxTurns; turn++) {
-      // 1. INNOVATOR TẠO / CẬP NHẬT SPEC
+      
       callbacks?.onTurnStart?.('Innovator', turn);
       currentSpec = await this.callInnovator(topic, docsContext, currentSpec, debateHistory, turn);
       debateHistory.push({ role: 'Innovator', turn, content: currentSpec });
       callbacks?.onTurnEnd?.('Innovator', turn, currentSpec);
 
-      // 2. DEVIL'S ADVOCATE PHẢN BIỆN KHỐC LIỆT
       callbacks?.onTurnStart?.('DevilAdvocate', turn);
       const critique = await this.callDevilsAdvocate(
         topic,
@@ -73,18 +61,15 @@ export class DebateEngine {
       callbacks?.onTurnEnd?.('DevilAdvocate', turn, critique);
     }
 
-    // --- EDITOR-IN-CHIEF TỔNG HỢP VÀ CHẤM ĐIỂM ---
     callbacks?.onTurnStart?.('EIC', 4);
     const eicResult = await this.callEditorInChief(topic, docsContext, debateHistory);
     callbacks?.onTurnEnd?.('EIC', 4, eicResult.spec);
 
-    // --- THỦ TỤC PHÊ DUYỆT (Approval Spec) ---
     let approved = true;
     if (callbacks?.onApprovalRequired) {
       approved = await callbacks.onApprovalRequired(eicResult.spec, eicResult.consensusScore);
     }
 
-    // Tạo log tranh luận dạng chuỗi để lưu vết
     const debateLog = debateHistory
       .map(
         (entry) =>
@@ -100,9 +85,6 @@ export class DebateEngine {
     };
   }
 
-  /**
-   * Gọi LLM cho Innovator Agent
-   */
   private async callInnovator(
     topic: string,
     docs: string,
@@ -147,9 +129,6 @@ Please revise and improve the specification to address these critiques.`),
     return response.getText();
   }
 
-  /**
-   * Gọi LLM cho Devil's Advocate Agent
-   */
   private async callDevilsAdvocate(
     _topic: string,
     docs: string,
@@ -180,9 +159,6 @@ ${currentSpec}`),
     return response.getText();
   }
 
-  /**
-   * Gọi LLM cho Editor-in-Chief Agent để biên soạn Spec tối ưu và tính điểm
-   */
   private async callEditorInChief(
     _topic: string,
     docs: string,

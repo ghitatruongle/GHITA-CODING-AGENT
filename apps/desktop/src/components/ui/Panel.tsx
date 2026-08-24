@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Shared Panel Primitive (side panel / section wrapper)
-// ==============================================================================
-
 import { type HTMLAttributes, type ReactNode } from 'react';
 
 export interface PanelProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title'> {

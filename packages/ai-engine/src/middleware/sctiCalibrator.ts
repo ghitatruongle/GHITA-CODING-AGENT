@@ -1,24 +1,10 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 9: SCTI (Self-Correcting Trajectory Injection)
-// ==============================================================================
-// Động cơ tự vá lỗi ghi vết.
-// Phát hiện và lưu vết sửa lỗi thành công, đối sánh ngữ nghĩa và tiêm few-shot
-// giúp Agent sửa lỗi chính xác ngay trong lượt đầu.
-// Tham chiếu: SWE-agent (trajectories)
-// ==============================================================================
-
 import type BetterSqlite3 from 'better-sqlite3';
 type BetterSqlite3Database = InstanceType<typeof BetterSqlite3>;
 import type { ChatMessage } from '../types.js';
 import type { ChatMiddleware, ChatStreamMiddleware } from '../utils/middleware.js';
 
-// ==============================================================================
 // Utility Functions
-// ==============================================================================
 
-/**
- * Trích xuất mã lỗi nổi bật như AST-LOCK-001 hoặc TS2322 (Tác vụ 2)
- */
 export function extractErrorCode(text: string): string | null {
   const astLockMatch = text.match(/AST-LOCK-\d+/i);
   if (astLockMatch) return astLockMatch[0].toUpperCase();
@@ -32,9 +18,6 @@ export function extractErrorCode(text: string): string | null {
   return null;
 }
 
-/**
- * Thuật toán Jaccard Similarity đo khoảng cách từ vựng giữa hai lỗi (Tác vụ 3)
- */
 export function getJaccardSimilarity(textA: string, textB: string): number {
   const wordsA = new Set(
     textA
@@ -60,21 +43,14 @@ export function getJaccardSimilarity(textA: string, textB: string): number {
   return intersectionSize / unionSize;
 }
 
-/**
- * Nén mã diff để tiết kiệm không gian context tối đa (Tác vụ 6)
- */
 export function compressDiff(diff: string): string {
-  // Loại bỏ các dòng trống thừa và nén khoảng trắng
+  
   return diff
     .split('\n')
     .map((line) => line.trimEnd())
     .filter((line) => line.length > 0)
     .join('\n');
 }
-
-// ==============================================================================
-// SCTIEngine — Lõi quản lý SQLite lưu vết sửa đổi (Tác vụ 1, 2, 3, 5, 6, 7, 8)
-// ==============================================================================
 
 export interface SCTITrajectory {
   id?: number;
@@ -94,16 +70,12 @@ export class SCTIEngine {
   private insertStmt: Runnable | null = null;
   private dbInitialized = false;
 
-  // Cache bộ nhớ trong phòng trường hợp SQLite lỗi
   private inMemoryCache: SCTITrajectory[] = [];
 
   constructor(customDbPath?: string) {
     this.dbPath = customDbPath ?? null;
   }
 
-  /**
-   * Lazily khởi tạo SQLite
-   */
   private async ensureDb(): Promise<void> {
     if (this.dbInitialized) return;
     this.dbInitialized = true;
@@ -154,9 +126,6 @@ export class SCTIEngine {
     }
   }
 
-  /**
-   * Ghi nhận và lưu vết sửa lỗi thành công (Tác vụ 1, 2)
-   */
   public async storeCorrection(
     errorSnippet: string,
     solutionDiff: string,
@@ -175,10 +144,8 @@ export class SCTIEngine {
       timestamp,
     };
 
-    // 1. Lưu vào cache trong bộ nhớ
     this.inMemoryCache.push(entry);
 
-    // 2. Lưu vào SQLite
     if (this.insertStmt) {
       try {
         this.insertStmt.run({
@@ -194,23 +161,18 @@ export class SCTIEngine {
     }
   }
 
-  /**
-   * Đối sánh tương đồng và trả về trajectory khớp nhất (Tác vụ 3, 5)
-   */
   public async getMatchingTrajectory(errorText: string): Promise<SCTITrajectory | null> {
     await this.ensureDb();
 
     const currentCode = extractErrorCode(errorText);
 
-    // 1. Ưu tiên đối sánh khớp hoàn toàn mã lỗi trước
     if (currentCode && currentCode !== 'UNKNOWN') {
       const match = this.inMemoryCache.find((t) => t.errorCode === currentCode);
       if (match) return match;
     }
 
-    // 2. Đối sánh tương đồng Jaccard nếu không có mã lỗi hoặc không tìm thấy khớp hoàn toàn
     let bestMatch: SCTITrajectory | null = null;
-    let highestSim = 0.2; // Ngưỡng tương đồng tối thiểu là 20%
+    let highestSim = 0.2; 
 
     for (const trajectory of this.inMemoryCache) {
       const sim = getJaccardSimilarity(errorText, trajectory.errorSnippet);
@@ -223,19 +185,14 @@ export class SCTIEngine {
     return bestMatch;
   }
 
-  /**
-   * Tự động dọn dẹp các tệp tin lưu vết quá 30 ngày (Tác vụ 8)
-   */
   public async cleanObsoleteCorrections(): Promise<number> {
     await this.ensureDb();
     const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
 
-    // Lọc cache bộ nhớ trong
     this.inMemoryCache = this.inMemoryCache.filter(
       (t) => new Date(t.timestamp).getTime() > thirtyDaysAgo,
     );
 
-    // Dọn dẹp SQLite
     if (this.db) {
       try {
         const timeLimit = new Date(thirtyDaysAgo).toISOString();
@@ -267,15 +224,11 @@ export class SCTIEngine {
   }
 }
 
-// ==============================================================================
-// SCTI Injector — Middleware tiêm Few-shot động (Tác vụ 4, 5, 6, 10)
-// ==============================================================================
-
 export async function injectSctiTrajectories(
   messages: ChatMessage[],
   engine: SCTIEngine,
 ): Promise<ChatMessage[]> {
-  // 1. Tìm tin nhắn lỗi gần nhất trong lịch sử hội thoại
+  
   const lastErrorMsg = [...messages]
     .reverse()
     .find(
@@ -289,11 +242,9 @@ export async function injectSctiTrajectories(
 
   if (!lastErrorMsg || !lastErrorMsg.content) return messages;
 
-  // 2. Tìm kiếm trajectory sửa đổi khớp nhất từ engine
   const match = await engine.getMatchingTrajectory(lastErrorMsg.content);
   if (!match) return messages;
 
-  // 3. Sao chép và tiêm Few-shot prompt ngầm vào System Message
   const updatedMessages = messages.map((m) => ({ ...m }));
   const systemMsg = updatedMessages.find((m) => m.role === 'system');
 
@@ -314,7 +265,7 @@ ${match.solutionDiff.trim()}
   if (systemMsg) {
     systemMsg.content += fewShotPrompt;
   } else {
-    // Nếu không có system message, tự chèn lên vị trí đầu tiên
+    
     updatedMessages.unshift({
       role: 'system',
       content: `Bạn là trợ lý lập trình tự trị thông minh.${fewShotPrompt}`,
@@ -323,10 +274,6 @@ ${match.solutionDiff.trim()}
 
   return updatedMessages;
 }
-
-// ==============================================================================
-// Factories: Khởi tạo Middleware cho AI Gateway (Tác vụ 4)
-// ==============================================================================
 
 export function createSctiMiddleware(engine: SCTIEngine): ChatMiddleware {
   return async (params, next) => {

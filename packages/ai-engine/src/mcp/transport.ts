@@ -1,12 +1,7 @@
-// ==============================================================================
-// GHITA CODING AGENT - MCP Transport Layer
-// ==============================================================================
-
 import type { MCPServerConfig } from './types.js';
 import { spawn } from 'node:child_process';
 import * as readline from 'node:readline';
 
-// deep-review fix (M13): every MCP request must settle within this window or
 // the promise rejects and the pending entry is cleaned up. Without a timeout a
 // silent MCP server would hang the agent loop forever.
 const MCP_REQUEST_TIMEOUT_MS = 30_000;
@@ -26,8 +21,10 @@ export class StdioTransport implements MCPTransport {
   private requestId = 0;
   private process: ReturnType<typeof spawn> | undefined;
   private rl?: readline.Interface;
+  // Keyed by String(id): JSON-RPC ids may be numbers OR strings depending on
+  // the server implementation.
   private pendingRequests = new Map<
-    number,
+    string,
     { resolve: (res: Record<string, unknown>) => void; reject: (err: Error) => void }
   >();
 
@@ -75,9 +72,9 @@ export class StdioTransport implements MCPTransport {
             message.id !== undefined &&
             (typeof message.id === 'number' || typeof message.id === 'string')
           ) {
-            const req = this.pendingRequests.get(message.id as number);
+            const req = this.pendingRequests.get(String(message.id));
             if (req) {
-              this.pendingRequests.delete(message.id as number);
+              this.pendingRequests.delete(String(message.id));
               if (message.error) {
                 req.reject(new Error(JSON.stringify(message.error)));
               } else {
@@ -113,18 +110,19 @@ export class StdioTransport implements MCPTransport {
     }
     const id = ++this.requestId;
     const jsonRpc = { jsonrpc: '2.0', id, ...request };
+    const pendingKey = String(id);
 
     return new Promise((resolve, reject) => {
-      // deep-review fix (M13): reject and clean up if the server never answers.
+      
       const timer = setTimeout(() => {
-        this.pendingRequests.delete(id);
+        this.pendingRequests.delete(pendingKey);
         reject(
           new Error(
             `MCP server "${this.config.name}" did not respond within ${MCP_REQUEST_TIMEOUT_MS}ms`,
           ),
         );
       }, MCP_REQUEST_TIMEOUT_MS);
-      this.pendingRequests.set(id, {
+      this.pendingRequests.set(pendingKey, {
         resolve: (res) => {
           clearTimeout(timer);
           resolve(res);
@@ -137,7 +135,7 @@ export class StdioTransport implements MCPTransport {
       stdin.write(`${JSON.stringify(jsonRpc)}\n`, (err) => {
         if (err) {
           clearTimeout(timer);
-          this.pendingRequests.delete(id);
+          this.pendingRequests.delete(pendingKey);
           reject(err);
         }
       });
@@ -179,7 +177,6 @@ export class SSETransport implements MCPTransport {
     const id = ++this.requestId;
     const jsonRpc = { jsonrpc: '2.0', id, ...request };
 
-    // deep-review fix (M13): bounded fetch so a silent SSE server cannot hang
     // the agent loop.
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), MCP_REQUEST_TIMEOUT_MS);
@@ -213,7 +210,6 @@ export class SSETransport implements MCPTransport {
   }
 }
 
-/** Factory tạo transport từ config */
 export function createTransport(config: MCPServerConfig): MCPTransport {
   switch (config.transport) {
     case 'stdio':

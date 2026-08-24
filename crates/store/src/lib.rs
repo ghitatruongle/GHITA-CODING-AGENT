@@ -1,6 +1,9 @@
 #[cfg(feature = "addon")]
 mod napi;
 
+#[cfg(feature = "addon")]
+use rusqlite::OptionalExtension;
+
 use std::collections::HashMap;
 
 /// A simple key-value store interface.
@@ -24,6 +27,13 @@ impl KvStore {
                 rusqlite::Connection::open(path)
             }
             .map_err(|e| StoreError::Open(e.to_string()))?;
+
+            // WAL turns per-set fsyncs into cheap appends; NORMAL is the
+            // recommended synchronous level for WAL mode.
+            db.pragma_update(None, "journal_mode", "WAL")
+                .map_err(|e| StoreError::Init(e.to_string()))?;
+            db.pragma_update(None, "synchronous", "NORMAL")
+                .map_err(|e| StoreError::Init(e.to_string()))?;
 
             db.execute_batch(
                 "CREATE TABLE IF NOT EXISTS kv (
@@ -84,6 +94,34 @@ impl KvStore {
         #[cfg(not(feature = "addon"))]
         {
             let _ = (key, value);
+            Ok(())
+        }
+    }
+
+    /// Set many key-value pairs in ONE transaction — N keys cost one commit
+    /// instead of N fsync round-trips.
+    pub fn set_many(&self, entries: &[(&str, &str)]) -> Result<(), StoreError> {
+        #[cfg(feature = "addon")]
+        {
+            let tx = self
+                .db
+                .unchecked_transaction()
+                .map_err(|e| StoreError::Write(e.to_string()))?;
+            for (key, value) in entries {
+                tx.execute(
+                    "INSERT INTO kv (key, value, updated_at) VALUES (?1, ?2, strftime('%s','now'))
+                     ON CONFLICT(key) DO UPDATE SET value = ?2, updated_at = strftime('%s','now')",
+                    [key, value],
+                )
+                .map_err(|e| StoreError::Write(e.to_string()))?;
+            }
+            tx.commit().map_err(|e| StoreError::Write(e.to_string()))?;
+            Ok(())
+        }
+
+        #[cfg(not(feature = "addon"))]
+        {
+            let _ = entries;
             Ok(())
         }
     }
@@ -214,4 +252,3 @@ mod tests {
         assert_eq!(val, None);
     }
 }
-

@@ -1,7 +1,3 @@
-// ==============================================================================
-// v1.1.5-beta1 Track 5.2 — SARIF + Safe Fence Tests
-// ==============================================================================
-
 import { describe, expect, it } from 'vitest';
 import { buildSarifLog, computeClassHash, safeFence, renderFindingMarkdown } from './sarif.js';
 import type { FindingForSarif } from './sarif.js';

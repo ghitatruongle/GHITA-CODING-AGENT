@@ -1,7 +1,3 @@
-// ==============================================================================
-// Phase 32: Error Monitor — Facade
-// ==============================================================================
-
 import { EventEmitter } from 'node:events';
 import { SentryClient } from './sentry-client.js';
 import { ErrorGrouper } from './error-grouper.js';
@@ -26,15 +22,15 @@ export interface ErrorMonitorEvents {
 }
 
 /**
- * ErrorMonitor — facade chính cho Phase 32.
+
  *
- * Tổng hợp:
+
  *  - SentryClient (transport)
  *  - ErrorGrouper (dedup)
  *  - Tracer (performance)
  *  - AlertEngine (rules)
  *
- * Sử dụng:
+
  *   const monitor = new ErrorMonitor({ enabled: true, sentry: { dsn, environment } });
  *   await monitor.init();
  *
@@ -65,9 +61,6 @@ export class ErrorMonitor extends EventEmitter {
     }
   }
 
-  /**
-   * Khởi tạo Sentry transport.
-   */
   async init(): Promise<void> {
     if (!this.config.enabled) return;
     if (this.sentry) await this.sentry.init();
@@ -137,9 +130,6 @@ export class ErrorMonitor extends EventEmitter {
     await this.captureException(new Error(message), context, severity);
   }
 
-  /**
-   * Bắt đầu transaction.
-   */
   startTransaction(
     name: string,
     op?: string,
@@ -154,9 +144,6 @@ export class ErrorMonitor extends EventEmitter {
     return tx;
   }
 
-  /**
-   * Kết thúc transaction.
-   */
   async finishTransaction(
     tx: PerformanceTransaction,
     status: 'ok' | 'internal_error' = 'ok',
@@ -164,9 +151,6 @@ export class ErrorMonitor extends EventEmitter {
     await this.tracer.finish(tx, status);
   }
 
-  /**
-   * Helper: chạy async operation trong transaction.
-   */
   async withTransaction<T>(
     name: string,
     op: string,
@@ -186,23 +170,14 @@ export class ErrorMonitor extends EventEmitter {
     }
   }
 
-  /**
-   * Thêm alert rule.
-   */
   addAlertRule(rule: AlertRule): void {
     this.alerter.addRule(rule);
   }
 
-  /**
-   * Lấy top error groups.
-   */
   topErrors(n = 10): ErrorGroup[] {
     return this.grouper.top(n);
   }
 
-  /**
-   * Lấy tổng quan stats.
-   */
   stats(): MonitoringStats {
     const grouperStats = this.grouper.stats();
     const tracerStats = this.tracer.stats();
@@ -218,9 +193,6 @@ export class ErrorMonitor extends EventEmitter {
     };
   }
 
-  /**
-   * Đóng monitor, flush queue.
-   */
   async shutdown(): Promise<void> {
     if (this.sentry) await this.sentry.close();
     this.removeAllListeners();

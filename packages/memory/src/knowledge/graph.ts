@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Knowledge Graph RAG
-// ==============================================================================
-
 import type { GraphNode, GraphEdge, EntityExtractionProvider } from './types.js';
 
 export class KnowledgeGraph {
@@ -251,8 +247,7 @@ export class GraphRAGQueryCompiler {
   constructor(private graph: KnowledgeGraph) {}
 
   compileQuery(query: string, maxDepth: number = 2): string {
-    // 1. Dùng heuristic đơn giản (hoặc LLM) để trích xuất các từ khóa từ query.
-    // Giả lập bằng cách tokenize query thành các từ dài hơn 3 ký tự.
+    
     const tokens = query
       .toLowerCase()
       .replace(/[^\p{L}\p{N}_-]/gu, ' ')
@@ -267,7 +262,6 @@ export class GraphRAGQueryCompiler {
 
     if (matchedNodes.size === 0) return '';
 
-    // 2. Lấy subgraph (khám phá đồ thị từ các matched nodes theo maxDepth)
     const visitedNodes = new Set<string>();
     const subEdges = new Set<GraphEdge>();
 
@@ -286,7 +280,6 @@ export class GraphRAGQueryCompiler {
       traverse(node.id, 1);
     }
 
-    // 3. Xây dựng textual representation của subgraph
     const lines = ['=== KNOWLEDGE GRAPH CONTEXT ==='];
     for (const edge of subEdges) {
       const source = this.graph.getNode(edge.sourceId);

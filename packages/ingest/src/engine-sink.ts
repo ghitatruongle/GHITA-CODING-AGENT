@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - @ghita/ingest sink → memory KnowledgeEngine (P67)
-// ==============================================================================
 // Adapter that upserts ingested documents into @ghita/memory KnowledgeEngine
-// (hash-dedup nằm sẵn trong engine.ingestDocument). Structural typing keeps
+
 // this package decoupled from memory internals.
-// ==============================================================================
 
 import type { ChunkSink } from './indexer.js';
 import type { Chunk, IngestDocument } from './types.js';

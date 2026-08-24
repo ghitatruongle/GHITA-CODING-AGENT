@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Agents v1.1.0 Track 5 P61: declarative subagents
-// ==============================================================================
 // File-based agent definitions (`agents/*.md` with frontmatter: description,
 // allowed-tools, model) + a dispatcher that runs tasks with the declared
 // tool surface (Claude Code pattern).
-// ==============================================================================
 
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';

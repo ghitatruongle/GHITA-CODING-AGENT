@@ -1,6 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - v1.1.5-beta1 Track 2.3: Context Middleware Stack
-// ------------------------------------------------------------------------------
 // Composable middleware for managing agent context quality (pattern:
 // langchainjs agents/middleware — summarization, contextEditing, piiRedaction,
 // toolError). Each middleware plugs into the existing AgentMiddleware pipeline.
@@ -13,15 +10,12 @@
 //                         instead of crashing the run (onError + postTool)
 //   - piiRedaction      : mask emails, API keys, tokens in outbound messages
 //                         before they reach the model (preModel)
-// ==============================================================================
 
 import type { AgentMiddleware, MiddlewareContext, PreModelResult } from './types.js';
 import { SystemMessage, ToolMessage } from '../messages/message.js';
 import type { BaseMessage } from '../messages/message.js';
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 function totalChars(msgs: BaseMessage[]): number {
   let sum = 0;
@@ -46,9 +40,7 @@ function redactPii(text: string): string {
   return result;
 }
 
-// ---------------------------------------------------------------------------
 // Summarization Middleware
-// ---------------------------------------------------------------------------
 
 export interface SummarizationOptions {
   /** Char threshold above which summarization triggers (default: 8000). */
@@ -107,9 +99,7 @@ export function createSummarizationMiddleware(options: SummarizationOptions = {}
   };
 }
 
-// ---------------------------------------------------------------------------
 // Context Editing Middleware
-// ---------------------------------------------------------------------------
 
 export interface ContextEditingOptions {
   /** Maximum character budget for the full message list (default: 10000). */
@@ -163,9 +153,7 @@ export function createContextEditingMiddleware(
   };
 }
 
-// ---------------------------------------------------------------------------
 // Tool Error Recovery Middleware
-// ---------------------------------------------------------------------------
 
 export interface ToolErrorRecoveryOptions {
   /** Convert tool execution errors into observations instead of throwing (default: true). */
@@ -206,9 +194,7 @@ export function createToolErrorRecoveryMiddleware(
   };
 }
 
-// ---------------------------------------------------------------------------
 // PII Redaction Middleware
-// ---------------------------------------------------------------------------
 
 export interface PiiRedactionOptions {
   /** Additional regex patterns to redact beyond the built-in set. */

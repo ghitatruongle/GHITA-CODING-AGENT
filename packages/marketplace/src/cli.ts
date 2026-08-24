@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Plugin CLI: Install / Uninstall / Update (Phase 31)
-// ==============================================================================
-
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { mkdir, readFile, writeFile, rm, readdir } from 'node:fs/promises';

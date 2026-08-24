@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - In-Memory Storage Backend
-// ==============================================================================
-
 import type { StorageBackend, StorageOptions, SerializedEntry } from './types.js';
 
 export class InMemoryStorage<T = unknown> implements StorageBackend<T> {

@@ -1,7 +1,3 @@
-// ==============================================================================
-// Phase 34: Input Sanitizer — XSS, SQL injection, command injection
-// ==============================================================================
-
 import dnsPromises from 'node:dns/promises';
 import net from 'node:net';
 import type { SecurityIssue, SanitizationRule } from './types.js';
@@ -18,9 +14,9 @@ const HTML_ESCAPES: Record<string, string> = {
 };
 
 /**
- * InputSanitizer — detect & sanitize các loại injection.
+
  *
- * Sử dụng:
+
  *   const sanitizer = new InputSanitizer();
  *   const result = sanitizer.scan(userInput, 'comment');
  *   if (result.issues.length > 0) console.warn('Suspicious input:', result.issues);
@@ -36,16 +32,10 @@ export class InputSanitizer {
     this.customRules.push(...DEFAULT_RULES);
   }
 
-  /**
-   * Thêm rule tuỳ chỉnh.
-   */
   addRule(rule: SanitizationRule): void {
     this.customRules.push(rule);
   }
 
-  /**
-   * Quét input cho tất cả rule, trả về issues phát hiện được.
-   */
   scan(input: string, location: string): { issues: SecurityIssue[]; cleaned: string } {
     this.totalScans++;
     const issues: SecurityIssue[] = [];
@@ -82,9 +72,6 @@ export class InputSanitizer {
       .replace(/[<>"'`=/]/g, (c) => HTML_ESCAPES[c] ?? c);
   }
 
-  /**
-   * Strip toàn bộ HTML tags.
-   */
   stripHtml(input: string): string {
     return input.replace(/<[^>]*>/g, '');
   }
@@ -103,22 +90,19 @@ export class InputSanitizer {
     return `'${input.replace(/'/g, `'\\''`)}'`;
   }
 
-  /**
-   * Sanitize filename — chặn path traversal.
-   */
   sanitizeFilename(input: string): string {
     return (
       input
         .replace(/\.\.[/\\]/g, '')
         .replace(/[/\\]/g, '_')
-        // eslint-disable-next-line no-control-regex
+        // eslint-disable-next-line no-control-regex -- control characters are matched intentionally so they get stripped
         .replace(/[<>:"|?*\x00-\x1f]/g, '')
         .replace(/^\.+/, '')
     );
   }
 
   /**
-   * Validate URL — chặn SSRF / DNS Rebinding (sync fast-path).
+
    *
    * Performs two-layer validation:
    *   1. Checks the literal hostname against a private/reserved IP blocklist.

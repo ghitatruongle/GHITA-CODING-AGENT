@@ -1,12 +1,9 @@
 #!/usr/bin/env node
-// ==============================================================================
-// GHITA CODING AGENT - Evals CI gate (v1.1.0 Track 1 P11)
-// ------------------------------------------------------------------------------
+
 // Runs the internal eval suite with the offline fixture adapter and fails CI
 // when the average score drops below the configured baseline.
 // Usage: node scripts/evals-gate.mjs [--baseline 75]
 // Env:   EVALS_BASELINE (default 75) · EVALS_OUT (default .ghita/evals)
-// ==============================================================================
 
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, existsSync } from 'node:fs';

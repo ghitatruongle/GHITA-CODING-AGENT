@@ -1,8 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — Phase 6: defineVendor Factory (extended)
-// ==============================================================================
 // Composition layer: compose BaseProvider via defineVendor pattern.
-// Không sửa base.ts — dùng composition qua constructor injection.
 
 import type { AIProviderType, AIStreamChunk } from '@ghita/shared';
 import type { ProviderConfig, ChatMessage, ChatOptions, ChatResponse } from '../types.js';
@@ -14,7 +10,6 @@ import {
   toOpenAIChatMessages,
 } from './openai-tool-calling.js';
 
-// Import BaseProvider qua dynamic để tránh circular
 type BaseProviderClass = abstract new (config: ProviderConfig) => LLMProvider;
 
 export interface VendorSpec {
@@ -33,10 +28,6 @@ export interface VendorSpec {
   transformResponse?: (data: unknown) => ChatResponse;
 }
 
-/**
- * defineVendor — factory tạo LLMProvider class từ VendorSpec.
- * Tránh viết class riêng cho mỗi OpenAI-compatible vendor.
- */
 export function defineVendor(
   spec: VendorSpec,
   BaseProvider: BaseProviderClass,

@@ -1,6 +1,4 @@
-// ==============================================================================
 // Notification Tray — bell icon + dropdown panel
-// ==============================================================================
 
 import { useState, useRef, useEffect } from 'react';
 import { Bell } from 'lucide-react';

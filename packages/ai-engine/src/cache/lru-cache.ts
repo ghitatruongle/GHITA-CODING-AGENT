@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - LRU Cache with TTL + Event-Driven Invalidation (Phase 26)
-// ==============================================================================
-
 import * as crypto from 'node:crypto';
 import type {
   CacheEntry,
@@ -32,7 +28,7 @@ export class LRUCache<T = unknown> {
   private cleanupTimer: ReturnType<typeof setInterval> | null = null;
   private _stats: CacheStats;
   private globalListeners: CacheEventListener[] = [];
-  /** v1.1.0 Track 9 B3: tổng bytes đang giữ (cap theo maxMemoryBytes). */
+  
   private totalBytes = 0;
 
   constructor(config?: Partial<LRUCacheConfig>) {
@@ -109,7 +105,7 @@ export class LRUCache<T = unknown> {
       this.totalBytes += size - (existing.size ?? 0);
       this.map.set(key, entry);
     } else {
-      // Evict if needed (entry-count cap, rồi byte cap — v1.1.0 Track 9 B3).
+      
       while (this.map.size >= this.config.maxSize) {
         this.evictOne();
       }
@@ -313,7 +309,6 @@ export class LRUCache<T = unknown> {
     }
   }
 
-  /** v1.1.0 Track 9 B3: bytes đang giữ trong cache. */
   memoryBytes(): number {
     return this.totalBytes;
   }

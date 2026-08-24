@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Hooks Types (Phase 12 Enhanced)
-// ==============================================================================
 // Comprehensive type system for the hook runner, security checkers, and
 // audit trail. Supports priority ordering, timeout policies, error strategies,
 // parallel execution, and glob-based tool matching.
-// ==============================================================================
 
 /** Event that triggers a hook */
 export type HookEvent = 'pre_tool' | 'post_tool' | 'pre_response' | 'on_error' | 'on_complete';

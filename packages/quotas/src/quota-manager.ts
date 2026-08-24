@@ -1,7 +1,3 @@
-// ==============================================================================
-// Phase 33: Quota Manager
-// ==============================================================================
-
 import type { Quota, QuotaCheckResult, OverageEvent } from './types.js';
 import { UsageTracker } from './usage-tracker.js';
 
@@ -11,9 +7,9 @@ export interface QuotaManagerOptions {
 }
 
 /**
- * QuotaManager — quản lý quota & overage cho user.
+
  *
- * Sử dụng:
+
  *   const qm = new QuotaManager();
  *   qm.setQuota({ userId: 'u1', plan: 'free', tokenLimit: 100000, window: 'month', resetAt: ..., overage: {...} });
  *   const check = qm.check('u1', 5000); // request 5000 tokens
@@ -38,23 +34,14 @@ export class QuotaManager {
     this.quotas.set(quota.userId, quota);
   }
 
-  /**
-   * Lấy quota của user.
-   */
   getQuota(userId: string): Quota | undefined {
     return this.quotas.get(userId);
   }
 
-  /**
-   * Xóa quota của user.
-   */
   removeQuota(userId: string): boolean {
     return this.quotas.delete(userId);
   }
 
-  /**
-   * Check xem user có thể dùng `tokens` nữa không.
-   */
   check(userId: string, tokens: number): QuotaCheckResult {
     const quota = this.quotas.get(userId);
     if (!quota) {
@@ -82,7 +69,6 @@ export class QuotaManager {
       };
     }
 
-    // Auto-reset nếu đã quá resetAt
     if (Date.now() >= quota.resetAt) {
       quota.resetAt = this.computeNextReset(quota.window);
     }
@@ -146,9 +132,6 @@ export class QuotaManager {
     };
   }
 
-  /**
-   * Ghi nhận sử dụng token và trigger overage event nếu cần.
-   */
   async consume(
     userId: string,
     tokens: number,
@@ -187,9 +170,6 @@ export class QuotaManager {
     }
   }
 
-  /**
-   * Reset quota cho user (vd: nâng cấp plan).
-   */
   reset(userId: string): void {
     const quota = this.quotas.get(userId);
     if (!quota) return;
@@ -215,10 +195,8 @@ export class QuotaManager {
     };
   }
 
-  // ============================================================================
   // Private
-  // ============================================================================
-
+  
   private tokensUsedInWindow(userId: string, resetAt: number): number {
     const now = Date.now();
     const windowStart =

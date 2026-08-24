@@ -1,10 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { assertSafeFetchUrl, isPrivateIpv4 } from './web-fetch.js';
 
-// ==============================================================================
-// v1.1.0 Track 11 F1/F2 — regression tests for CR-001 (web-fetch SSRF guard)
-// ==============================================================================
-
 describe('assertSafeFetchUrl (CR-001 SSRF guard)', () => {
   it('rejects non-http(s) protocols', async () => {
     await expect(assertSafeFetchUrl('file:///etc/passwd')).rejects.toThrow(/http/);

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Main Layout
-// ==============================================================================
-
 import { useCallback, useRef, useEffect, Component, lazy, Suspense } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';

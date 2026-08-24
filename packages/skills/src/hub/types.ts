@@ -1,8 +1,4 @@
-// =============================================================================
-// GHITA CODING AGENT - Phase 12: Skills Hub Types
-// =============================================================================
 // SkillMeta, TrustLevel, LockEntry, HubConfig, AuditEntry types
-// =============================================================================
 
 import type { SkillCategory } from '@ghita/shared';
 

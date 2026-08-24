@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Russian dictionary for Mobile App (Optimized)
-// ==============================================================================
-
 import type { TranslationKeys } from './types';
 
 export const ru: TranslationKeys = {
@@ -71,7 +67,7 @@ export const ru: TranslationKeys = {
     pairErrApiKeyMissing:
       'Ключ Cloud Discovery API не настроен. Пожалуйста, укажите IP-адрес вручную.',
     pairErrCloudDisabled:
-      'Cloud Discovery временно отключён. Укажите IP-адрес вручную на вкладке Wi-Fi или подключитесь по Bluetooth напрямую к компьютеру.',
+      'Cloud Discovery временно отключён. Укажите IP-адрес компьютера вручную на вкладке Wi-Fi.',
     noCodeFromServer: 'Не удалось получить код сопряжения от сервера.',
   },
   remote: {

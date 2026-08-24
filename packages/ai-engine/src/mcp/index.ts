@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - MCP Module Entry
-// ==============================================================================
-
 export { MCPClient } from './client.js';
 export { StdioTransport, SSETransport, createTransport } from './transport.js';
 export type {

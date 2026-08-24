@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Logger System
-// ==============================================================================
-
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 export interface LogEntry {

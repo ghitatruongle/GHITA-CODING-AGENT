@@ -1,6 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - v1.1.5-beta1 Track 4.6: Progressive Tool Disclosure
-// ------------------------------------------------------------------------------
 // When total tool definitions exceed a threshold (default 60), replace the
 // full tool list with 3 lightweight bridge tools:
 //   - tool_search   : keyword search across name/description/tags
@@ -10,7 +7,6 @@
 // This keeps context budget under ~5% regardless of registry size.
 // Hidden tools remain fully executable via tool_call.
 // Pattern: hermes tool_search.py 3-tier bridge.
-// ==============================================================================
 
 import type { ToolDefinition, ToolExecutionResult } from './registry-types.js';
 import type { ToolRegistry } from './registry.js';

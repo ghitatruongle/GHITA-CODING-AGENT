@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Skills v1.1.0 Track 2: skill sandbox runner (P28/P29)
-// ==============================================================================
 // Runs skill scripts inside a Docker container with GHITA sandbox labels and
 // resource limits. Docker presence is probed; when unavailable or disabled the
 // runner refuses (deny-default) instead of falling back to the host.
-// ==============================================================================
 
 import { spawnSync } from 'node:child_process';
 

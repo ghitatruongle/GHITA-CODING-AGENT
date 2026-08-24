@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — File Tree (renders the file/folder list + context menu)
-// ==============================================================================
-
 import { type FileEntry } from './file-explorer-utils';
 import { FileTreeNode } from './FileTreeNode';
 

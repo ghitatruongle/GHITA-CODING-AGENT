@@ -1,15 +1,7 @@
-// ==============================================================================
-// GHITA CODING AGENT - Skill Self-Improvement Engine
-// ==============================================================================
-
 import type { TaskTrajectory, SkillTemplate, SkillImprovement, SkillVersion } from './types.js';
 
 export class SkillImprover {
-  /**
-   * So sánh hai lần chạy (gốc và chạy thử nghiệm lại) của cùng một skill.
-   * Nếu lần chạy mới hiệu quả hơn (nhanh hơn, ít lỗi hơn hoặc thành công),
-   * đề xuất cải tiến tham số hoặc cấu trúc các bước.
-   */
+  
   compareOutcomes(
     original: TaskTrajectory,
     rerun: TaskTrajectory,
@@ -28,7 +20,7 @@ export class SkillImprover {
 
     if (original.success && rerun.success) {
       const timeSaved = original.totalDurationMs - rerun.totalDurationMs;
-      // Nếu thời gian chạy mới tiết kiệm hơn 20%
+      
       if (timeSaved > 0 && timeSaved / original.totalDurationMs > 0.2) {
         return {
           skillId,
@@ -44,10 +36,6 @@ export class SkillImprover {
     return null;
   }
 
-  /**
-   * Phân tích nhiều lần sử dụng một skill để phát hiện các cơ hội cải tiến,
-   * chẳng hạn như phát hiện tham số tĩnh nào nên được biến đổi thành tham số động.
-   */
   suggestImprovement(
     skill: SkillTemplate,
     trajectories: TaskTrajectory[],
@@ -57,12 +45,8 @@ export class SkillImprover {
     const successfulRuns = trajectories.filter((t) => t.success);
     if (successfulRuns.length === 0) return null;
 
-    // Phân tích input của các bước qua nhiều lần chạy để phát hiện hằng số khác nhau
-    // Nếu có một giá trị hardcoded trong stepTemplate mà lại thay đổi ở các lần chạy thực tế,
-    // đề xuất chuyển nó thành parameter.
     const paramSuggestions: string[] = [];
 
-    // Giả lập phân tích tĩnh
     const firstRun = successfulRuns[0];
     if (!firstRun) return null;
     const otherRuns = successfulRuns.slice(1);
@@ -75,9 +59,9 @@ export class SkillImprover {
       if (!actualInputFirst) continue;
 
       for (const [key, val] of Object.entries(step.inputTemplate)) {
-        // Nếu trường này chưa phải là parameter động {{param}}
+        
         if (typeof val === 'string' && !val.startsWith('{{')) {
-          // So sánh với các lần chạy khác
+          
           const isDifferentInOtherRuns = otherRuns.some((run) => {
             const actualVal = run.steps[stepIndex]?.input[key];
             return actualVal !== undefined && actualVal !== val;
@@ -106,12 +90,9 @@ export class SkillImprover {
     return null;
   }
 
-  /**
-   * Tạo phiên bản mới của Skill từ cải tiến được duyệt
-   */
   createNewVersion(skill: SkillTemplate, improvement: SkillImprovement): SkillVersion {
     const currentParts = skill.version.split('.').map(Number);
-    // Tăng số minor (0.1.0 -> 0.2.0) cho parameter/step, patch cho optimization
+    
     if (improvement.improvementType === 'parameter' || improvement.improvementType === 'step') {
       currentParts[1] = (currentParts[1] ?? 0) + 1;
       currentParts[2] = 0;
@@ -120,15 +101,13 @@ export class SkillImprover {
     }
     const newVersionStr = currentParts.join('.');
 
-    // Cập nhật cấu trúc
     const updatedSkill: SkillTemplate = {
       ...skill,
       version: newVersionStr,
     };
 
-    // Áp dụng đề xuất một cách heuristic (thực tế sẽ được tinh chỉnh bởi LLM ở UI layer)
     if (improvement.improvementType === 'parameter') {
-      // Heuristic: Thêm tham số mới giả lập
+      
       const newParamName = `dynamic_param_${Date.now().toString(36).slice(-4)}`;
       updatedSkill.parameters = {
         ...updatedSkill.parameters,

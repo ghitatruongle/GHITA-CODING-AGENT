@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Vietnamese Translations (Optimized)
-// ==============================================================================
-
 import type { TranslationKeys } from './types';
 
 export const vi: TranslationKeys = {
@@ -35,7 +31,7 @@ export const vi: TranslationKeys = {
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v1.1.5-beta2',
+    version: 'v1.1.5',
     deviceReconnected: 'Khôi phục kết nối với thiết bị: {{name}}',
     devicePaired: 'Đã ghép đôi thành công thiết bị: {{name}}',
     commandReceived: 'Đã nhận lệnh từ thiết bị: {{action}}',
@@ -473,7 +469,7 @@ export const vi: TranslationKeys = {
     hide: 'Ẩn đi',
     show: 'Hiển thị',
     fetch: 'Lấy dữ liệu',
-    // Phase 1.1: Multi-key
+    
     addKey: 'Thêm API Key',
     removeKey: 'Xóa bỏ',
     keyStrategy: 'Chiến lược xoay vòng API Keys',
@@ -538,7 +534,7 @@ export const vi: TranslationKeys = {
     noContainersDesc:
       'Sandbox cách ly sẽ tự động kích hoạt khi Trợ lý AI cần thực thi các bộ test E2E hoặc các dịch vụ độc lập.',
   },
-  // Phase 7: Notification System (Q3 2026)
+  
   notification: {
     ariaLabel: 'Thông báo',
     title: 'Thông báo',
@@ -547,7 +543,7 @@ export const vi: TranslationKeys = {
     unreadBadge: '{{count}}',
     dismiss: 'Bỏ qua thông báo',
   },
-  // Phase 8: Voice I/O (Q3 2026)
+  
   voice: {
     start: 'Bắt đầu nhập giọng nói',
     stop: 'Dừng nghe',
@@ -555,7 +551,7 @@ export const vi: TranslationKeys = {
     unsupported: 'Nhập giọng nói không được hỗ trợ',
     unsupportedHint: 'Nhận dạng giọng nói không khả dụng trong môi trường này',
   },
-  // Phase 9: Monitoring Dashboard (Q3 2026)
+  
   monitoring: {
     title: 'Giám sát',
     loading: 'Đang tải giám sát…',
@@ -577,7 +573,7 @@ export const vi: TranslationKeys = {
     lastSeen: 'Lần cuối thấy',
     refresh: 'Làm mới',
   },
-  // Phase 10: Quota & Rate Limiting (Q3 2026)
+  
   quota: {
     title: 'Hạn mức & Giới hạn tốc độ',
     loading: 'Đang tải hạn mức…',
@@ -601,7 +597,7 @@ export const vi: TranslationKeys = {
     refresh: 'Làm mới',
     budgetUsage: 'Mức sử dụng ngân sách',
   },
-  // Phase 11: Code Knowledge Graph (Q3 2026)
+  
   codeGraph: {
     title: 'Đồ thị mã nguồn',
     workspacePath: 'Đường dẫn workspace',

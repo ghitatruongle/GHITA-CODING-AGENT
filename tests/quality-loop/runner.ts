@@ -1,5 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Search Quality Loop Benchmark Runner
 //
 // Runs the canonical 100-query benchmark, measures per-query latency, computes
 // quality metrics, and APPENDS a single JSON line to trends.jsonl so CI can
@@ -10,7 +8,6 @@
 //   npx tsx tests/quality-loop/runner.ts --queries=20 --gate-min-f1=0.7
 //
 // Exit code is non-zero when the F1-score is below `--gate-min-f1`.
-// ==============================================================================
 
 import fs from 'fs';
 import path from 'path';
@@ -26,9 +23,7 @@ import {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// ---------------------------------------------------------------------------
 // CLI args
-// ---------------------------------------------------------------------------
 
 interface RunnerOptions {
   queryLimit: number | null;
@@ -62,9 +57,7 @@ function parseArgs(argv: string[]): RunnerOptions {
   return opts;
 }
 
-// ---------------------------------------------------------------------------
 // Benchmark execution
-// ---------------------------------------------------------------------------
 
 export interface BenchmarkRunResult {
   timestamp: number;
@@ -125,9 +118,7 @@ export function runBenchmark(
   };
 }
 
-// ---------------------------------------------------------------------------
 // CLI entry
-// ---------------------------------------------------------------------------
 
 function readGitSha(): string | null {
   try {

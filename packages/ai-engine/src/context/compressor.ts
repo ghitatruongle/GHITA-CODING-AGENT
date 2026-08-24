@@ -1,67 +1,52 @@
-// ==============================================================================
-// GHITA CODING AGENT - Trajectory Compressor
-// ==============================================================================
-// Nén lịch sử hội thoại thông minh — giữ lại decisions & outcomes,
-// loại bỏ chi tiết không cần thiết. Tham khảo Hermes Agent trajectory_compressor.py.
-// ==============================================================================
-
 import type { ChatMessage } from '../types.js';
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
-/** Mức độ quan trọng của một message trong trajectory */
 export type MessageImportance = 'critical' | 'high' | 'medium' | 'low' | 'noise';
 
-/** Kết quả phân tích một message */
 export interface MessageAnalysis {
   message: ChatMessage;
   importance: MessageImportance;
   reason: string;
-  /** true nếu message chứa quyết định hoặc outcome quan trọng */
+  
   isDecision: boolean;
-  /** true nếu message chứa lỗi hoặc exception */
+  
   isError: boolean;
-  /** Token count ước tính */
+  
   estimatedTokens: number;
 }
 
-/** Kết quả compression */
 export interface CompressionResult {
-  /** Messages đã nén */
+  
   messages: ChatMessage[];
-  /** Số messages gốc */
+  
   originalCount: number;
-  /** Số messages sau nén */
+  
   compressedCount: number;
-  /** Token count ước tính trước nén */
+  
   originalTokens: number;
-  /** Token count ước tính sau nén */
+  
   compressedTokens: number;
-  /** Tỷ lệ nén (0-1, thấp hơn = nén nhiều hơn) */
+  
   compressionRatio: number;
 }
 
-/** Cấu hình compressor */
 export interface CompressorConfig {
-  /** Ngưỡng token tối đa (default 128000) */
+  
   maxTokens: number;
-  /** Tỷ lệ % token mục tiêu sau nén (default 0.5 = 50% of max) */
+  
   targetRatio: number;
-  /** Số messages cuối luôn giữ nguyên, không nén (default 10) */
+  
   preserveRecentCount: number;
-  /** Luôn giữ system messages (default true) */
+  
   preserveSystemMessages: boolean;
-  /** Patterns regex để phát hiện decisions (default: list chuẩn) */
+  
   decisionPatterns: RegExp[];
-  /** Patterns regex để phát hiện errors (default: list chuẩn) */
+  
   errorPatterns: RegExp[];
 }
 
-// ---------------------------------------------------------------------------
 // Default Patterns
-// ---------------------------------------------------------------------------
 
 const DEFAULT_DECISION_PATTERNS: RegExp[] = [
   // English
@@ -83,9 +68,7 @@ const DEFAULT_ERROR_PATTERNS: RegExp[] = [
   /```[\s\S]*?(?:error|Error|ERROR|failed|FAILED)[\s\S]*?```/,
 ];
 
-// ---------------------------------------------------------------------------
 // TrajectoryCompressor
-// ---------------------------------------------------------------------------
 
 const DEFAULT_CONFIG: CompressorConfig = {
   maxTokens: 128000,
@@ -103,21 +86,16 @@ export class TrajectoryCompressor {
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
 
-  // =========================================================================
   // Public API
-  // =========================================================================
-
+  
   /**
-   * Nén trajectory bằng rule-based heuristics (không cần LLM).
+
    * Multi-pass compression:
-   *   Pass 1: Phân tích importance mỗi message
-   *   Pass 2: Nhóm và tóm tắt messages ít quan trọng
-   *   Pass 3: Ghép lại thành trajectory nén
+
    */
   compress(messages: ChatMessage[]): CompressionResult {
     const originalTokens = this.estimateTokensTotal(messages);
 
-    // Nếu chưa cần nén, trả nguyên
     const targetTokens = Math.floor(this.config.maxTokens * this.config.targetRatio);
     if (originalTokens <= targetTokens) {
       return {
@@ -130,10 +108,8 @@ export class TrajectoryCompressor {
       };
     }
 
-    // Pass 1: Phân tích importance
     const analyses = this.analyzeMessages(messages);
 
-    // Pass 2: Quyết định giữ/nén
     const compressedMessages = this.applyCompression(analyses, targetTokens);
 
     const compressedTokens = this.estimateTokensTotal(compressedMessages);
@@ -147,10 +123,6 @@ export class TrajectoryCompressor {
     };
   }
 
-  /**
-   * Nén trajectory bằng LLM (async — gọi LLM để tóm tắt).
-   * Cần truyền một hàm summarizer.
-   */
   async compressAsync(
     messages: ChatMessage[],
     summarizer: (messagesToSummarize: ChatMessage[]) => Promise<string>,
@@ -169,19 +141,14 @@ export class TrajectoryCompressor {
       };
     }
 
-    // Pass 1: Phân tích importance (not needed for simple LLM slice, keeping rule-based fallbacks)
-
-    // Chia messages thành 2 phần: cũ (nén) và mới (giữ)
     const preserveCount = Math.min(this.config.preserveRecentCount, messages.length);
     const oldMessages = messages.slice(0, messages.length - preserveCount);
     const recentMessages = messages.slice(messages.length - preserveCount);
 
-    // Nếu phần cũ đủ nhỏ, chỉ dùng rule-based
     if (this.estimateTokensTotal(oldMessages) < targetTokens * 0.3) {
       return this.compress(messages);
     }
 
-    // Gọi LLM summarize phần cũ
     try {
       const summary = await summarizer(oldMessages);
       const summaryMessage: ChatMessage = {
@@ -206,9 +173,6 @@ export class TrajectoryCompressor {
     }
   }
 
-  /**
-   * Phân tích importance của mỗi message.
-   */
   analyzeMessages(messages: ChatMessage[]): MessageAnalysis[] {
     return messages.map((msg, index) => {
       const isLast = index >= messages.length - this.config.preserveRecentCount;
@@ -251,28 +215,16 @@ export class TrajectoryCompressor {
     });
   }
 
-  /**
-   * Lấy cấu hình hiện tại.
-   */
   getConfig(): CompressorConfig {
     return { ...this.config };
   }
 
-  /**
-   * Cập nhật cấu hình.
-   */
   updateConfig(config: Partial<CompressorConfig>): void {
     Object.assign(this.config, config);
   }
 
-  // =========================================================================
   // Private Helpers
-  // =========================================================================
-
-  /**
-   * Áp dụng compression dựa trên analyses.
-   * Giữ critical/high, nhóm và tóm tắt medium/low/noise.
-   */
+  
   private applyCompression(analyses: MessageAnalysis[], targetTokens: number): ChatMessage[] {
     const result: ChatMessage[] = [];
     let currentTokens = 0;
@@ -280,7 +232,7 @@ export class TrajectoryCompressor {
 
     for (const analysis of analyses) {
       if (analysis.importance === 'critical' || analysis.importance === 'high') {
-        // Flush pending group trước
+        
         if (pendingGroup.length > 0) {
           const summary = this.summarizeGroup(pendingGroup);
           const summaryTokens = this.estimateTokensSingle(summary);
@@ -291,18 +243,17 @@ export class TrajectoryCompressor {
           pendingGroup = [];
         }
 
-        // Giữ message quan trọng
         if (currentTokens + analysis.estimatedTokens <= targetTokens) {
           result.push(analysis.message);
           currentTokens += analysis.estimatedTokens;
         } else {
-          // Nếu over budget, truncate message
+          
           const truncated = this.truncateMessage(analysis.message, targetTokens - currentTokens);
           result.push(truncated);
           currentTokens = targetTokens;
         }
       } else {
-        // medium/low/noise → nhóm lại để tóm tắt
+        
         pendingGroup.push(analysis);
       }
     }
@@ -316,9 +267,6 @@ export class TrajectoryCompressor {
     return result;
   }
 
-  /**
-   * Tóm tắt một nhóm messages ít quan trọng thành 1 message.
-   */
   private summarizeGroup(group: MessageAnalysis[]): ChatMessage {
     if (group.length === 1) {
       const first = group[0];
@@ -354,20 +302,16 @@ export class TrajectoryCompressor {
     return { role: 'system', content };
   }
 
-  /**
-   * Trích xuất summary ngắn gọn từ content dài.
-   */
   private extractSummary(content: string, maxLength = 150): string {
-    // Loại bỏ code blocks
+    
     let cleaned = content.replace(/```[\s\S]*?```/g, '[code]');
-    // Loại bỏ multiple newlines
+    
     cleaned = cleaned.replace(/\n{2,}/g, '\n');
-    // Loại bỏ leading whitespace
+    
     cleaned = cleaned.trim();
 
     if (cleaned.length <= maxLength) return cleaned;
 
-    // Cắt tại câu gần nhất
     const truncated = cleaned.slice(0, maxLength);
     const lastSentenceEnd = Math.max(
       truncated.lastIndexOf('.'),
@@ -383,9 +327,6 @@ export class TrajectoryCompressor {
     return `${truncated  }...`;
   }
 
-  /**
-   * Truncate một message để fit trong token budget.
-   */
   private truncateMessage(message: ChatMessage, maxTokens: number): ChatMessage {
     const maxChars = Math.max(100, maxTokens * 3); // rough: 1 token ≈ 3 chars
     if (message.content.length <= maxChars) return message;
@@ -396,23 +337,14 @@ export class TrajectoryCompressor {
     };
   }
 
-  /**
-   * Kiểm tra content có match bất kỳ pattern nào không.
-   */
   private matchesPatterns(content: string, patterns: RegExp[]): boolean {
     return patterns.some((pattern) => pattern.test(content));
   }
 
-  /**
-   * Ước tính token count cho 1 message.
-   */
   private estimateTokensSingle(message: ChatMessage): number {
     return Math.ceil(message.content.length / 3) + 4;
   }
 
-  /**
-   * Ước tính tổng token count.
-   */
   private estimateTokensTotal(messages: ChatMessage[]): number {
     let total = 0;
     for (const msg of messages) {

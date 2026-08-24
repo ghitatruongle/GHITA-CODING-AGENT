@@ -1,10 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - AI Engine v1.1.0 Track 4 P48: tool approval, two-phase
-// ==============================================================================
-// Collect-tool-approvals: tool calls are queued (phase 1), then approved or
-// denied per call (phase 2) with session defaults per role — deny by default.
-// ==============================================================================
-
 export type ApprovalDecision = 'approved' | 'denied';
 
 export type SessionDefault = 'ask' | 'approve-all' | 'deny-all';
@@ -41,7 +34,6 @@ export class ToolApprovalManager {
     this.timeoutMs = options.timeoutMs ?? 60_000;
   }
 
-  /** Phase 1: collect a tool call for approval. */
   request(
     name: string,
     args: Record<string, unknown>,
@@ -67,7 +59,6 @@ export class ToolApprovalManager {
     return req;
   }
 
-  /** Phase 2a: approve a pending call. */
   approve(id: string, by = 'user'): boolean {
     const req = this.requests.get(id);
     if (!req || req.state !== 'pending') return false;
@@ -77,7 +68,6 @@ export class ToolApprovalManager {
     return true;
   }
 
-  /** Phase 2b: deny a pending call. */
   deny(id: string, by = 'user'): boolean {
     const req = this.requests.get(id);
     if (!req || req.state !== 'pending') return false;

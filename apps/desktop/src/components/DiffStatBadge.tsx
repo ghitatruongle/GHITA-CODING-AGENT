@@ -1,9 +1,5 @@
-// ==============================================================================
-// v1.1.1 Track 8: DiffStatBadge — "+added -removed" chip, native-first
-// ==============================================================================
 // Shared by EditProposalTray rows and the CodeView header. Renders the JS
 // stat instantly, then the native (off-thread) result when available.
-// ==============================================================================
 
 import type { CSSProperties } from 'react';
 import { useLineDiffStat } from '../hooks/useLineDiffStat';

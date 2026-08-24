@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Marketplace v1.1.0 Track 3 P42: supply-chain scan
-// ==============================================================================
 // Scans a plugin directory before it enters the catalog: computes a content
 // hash, optionally queries an external hash database (VirusTotal-style), and
 // runs local heuristics. Produces a severity report.
-// ==============================================================================
 
 import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -129,8 +125,12 @@ export async function scanPlugin(
     const external = await options.lookupHash(hash, pluginId);
     if (external) verdict = external;
   } else if (env.VT_API_KEY) {
-    // Placeholder for a VirusTotal-style API call; tests inject lookupHash.
-    verdict = 'unknown';
+    // A VirusTotal-style lookup is not implemented yet — say so loudly
+    // instead of silently ignoring the operator's configured key.
+    console.warn(
+      `[supply-chain] VT_API_KEY is set but external hash lookup is not implemented; ` +
+        `verdict for "${pluginId}" stays "unknown" (heuristic scan only).`,
+    );
   }
 
   const critical = findings.some((f) => f.severity === 'critical');

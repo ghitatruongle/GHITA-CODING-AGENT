@@ -1,8 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 3.4: Teams & Projects Management
 // Team-based access control, internal users, project management
 // Reference: LiteLLM proxy/management/
-// ==============================================================================
 
 import { randomBytes } from 'node:crypto';
 

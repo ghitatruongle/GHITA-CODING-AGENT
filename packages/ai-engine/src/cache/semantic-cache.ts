@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Qdrant Semantic Cache
-// ==============================================================================
 // Vector similarity cache backed by Qdrant with LRUCache fallback.
 // Uses embedding cosine similarity for semantic cache hits.
 // Falls back to in-memory LRUCache when Qdrant is unavailable.
-// ==============================================================================
 
 import * as crypto from 'node:crypto';
 import { LRUCache } from './lru-cache.js';

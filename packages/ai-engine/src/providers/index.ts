@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 1: Provider Barrel Export
-// ==============================================================================
-
 // --- Providers ---
 export { BaseProvider } from './base.js';
 export { OpenAIProvider } from './openai.js';
@@ -19,7 +15,6 @@ export { TogetherProvider } from './together.js';
 export { PerplexityProvider } from './perplexity.js';
 export { AzureOpenAIProvider } from './azure-openai.js';
 
-// --- Phase 6: defineVendor + new providers ---
 export { defineVendor, type VendorSpec } from './base-extended.js';
 export { KimiProvider } from './kimi.js';
 export { MiniMaxProvider } from './minimax.js';

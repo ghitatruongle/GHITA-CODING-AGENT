@@ -1,6 +1,4 @@
-// ==============================================================================
 // Wave 2b — channel plugin registry
-// ==============================================================================
 
 import { describe, it, expect, vi } from 'vitest';
 import { ChannelPluginRegistry, defineChannelEntry } from '../src/channel-plugin-contract.js';

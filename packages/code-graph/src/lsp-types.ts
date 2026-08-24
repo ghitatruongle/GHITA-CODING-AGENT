@@ -1,8 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Track 3 (v1.1.5-beta1): LSP Types
-// ==============================================================================
 // Core types for LSP client communication, diagnostics ledger, and deferred feedback.
-// ==============================================================================
 
 export enum LspDiagnosticSeverity {
   Error = 1,

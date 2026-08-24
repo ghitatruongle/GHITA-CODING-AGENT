@@ -81,7 +81,6 @@ for (const [pkg, meta] of floors) {
   );
   if (status === 'FAIL') failed++;
 
-  // v1.1.0 Track 12 G4: branch floor (nếu khai báo trong tier config).
   if (meta.branchFloor !== undefined && actualBranches !== undefined) {
     const okB = actualBranches + 1e-9 >= meta.branchFloor;
     console.log(

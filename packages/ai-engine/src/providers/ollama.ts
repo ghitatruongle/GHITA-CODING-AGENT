@@ -1,8 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Ollama Provider v2 (Local Models)
-// v1.1.5-beta1 Track 4.2: Added format (JSON schema), tools, think support
-// ==============================================================================
-
 import type { AIStreamChunk } from '@ghita/shared';
 import { OLLAMA_DEFAULT_URL } from '@ghita/shared';
 import type {
@@ -78,7 +73,6 @@ export class OllamaProvider extends BaseProvider {
     }
   }
 
-  /** Build extended request body with format/tools/think (Track 4.2). */
   private buildRequestBody(
     model: string,
     messages: ChatMessage[],

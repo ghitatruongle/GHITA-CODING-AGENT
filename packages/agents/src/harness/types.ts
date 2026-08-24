@@ -1,9 +1,7 @@
-// ==============================================================================
 // v0.4.9 A3: Agent Work Loop Harness — Types
 //
 // A five-dimension / fifteen-check evaluation model for agent task episodes,
 // with explicit evidence states and evidence-bounded score ceilings.
-// ==============================================================================
 
 /** Five stable review dimensions. */
 export type WorkLoopDimension =

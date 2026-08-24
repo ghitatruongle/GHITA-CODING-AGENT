@@ -1,8 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - MiddlewarePipeline Unit Tests (Phase 12)
 // 35 test cases covering registration, pre/post model hooks, pre/post tool
 // hooks, error handling, dry-run, timeout, metrics, and stats.
-// ==============================================================================
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { MiddlewarePipeline } from '../src/middleware/pipeline.js';

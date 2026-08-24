@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Voice Activity Detection (Phase 34)
 // Energy-threshold based VAD for audio streams
-// ==============================================================================
 
 import type { AudioChunk } from './types.js';
 

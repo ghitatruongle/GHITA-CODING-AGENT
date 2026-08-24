@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Text-to-Speech Tests
-// ==============================================================================
-
 import { describe, it, expect, vi } from 'vitest';
 import { TextToSpeech, SilentTtsProvider } from './tts.js';
 

@@ -1,11 +1,7 @@
-// ==============================================================================
-// GHITA CODING AGENT - v1.1.5-beta1 Track 7.3: Skill Description Optimizer
-// ------------------------------------------------------------------------------
 // Quantitative tooling for skill descriptions: optimize triggering accuracy,
 // variance benchmark reports, and eval-viewer data generation.
 //
 // Pattern: anthropics skill-creator description-optimizer, variance benchmark.
-// ==============================================================================
 
 export interface DescriptionCandidate {
   original: string;

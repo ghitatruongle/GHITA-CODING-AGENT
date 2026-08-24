@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Agents v1.1.0 Track 5 P64: remote job status (mobile)
-// ==============================================================================
 // Data layer for mobile remote control: lists running jobs, allows resume/
 // approve decisions from the phone (the desktop app consumes these events).
-// ==============================================================================
 
 import type { AgentLifecycleManager, ManagedRun } from './lifecycle.js';
 

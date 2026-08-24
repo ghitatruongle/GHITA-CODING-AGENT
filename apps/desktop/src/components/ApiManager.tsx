@@ -1,7 +1,4 @@
-﻿// ==============================================================================
-// GHITA CODING AGENT — API Manager (Composition Root)
 // State management, config loading, event handlers
-// ==============================================================================
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from '../i18n';
@@ -72,7 +69,7 @@ export function ApiManager() {
   // Persist config
   useEffect(() => {
     if (!isConfigLoaded) return;
-    // deep-review fix (Lỗi 1): surface save failures instead of swallowing
+    
     // them — a silent catch left users believing their API key was stored.
     saveApiConfig(serializeApiKeysState(keys)).catch((e) => {
       console.error('[ApiManager] Failed to persist API config:', e);
@@ -109,7 +106,7 @@ export function ApiManager() {
       };
       if (input) input.value = '';
       setKeys(nextKeys);
-      // deep-review fix (Lỗi 1): await the save and report failures.
+      
       saveApiConfig(serializeApiKeysState(nextKeys))
         .then(() => {})
         .catch((e) => {

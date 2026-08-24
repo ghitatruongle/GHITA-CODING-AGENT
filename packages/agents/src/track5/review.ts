@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Agents v1.1.0 Track 5 P60: PR review pipeline
-// ==============================================================================
 // Claude-Code-style review: gate check → 4 parallel reviewer roles → second
 // validation pass over each finding (blocks false positives) → report.
-// ==============================================================================
 
 export interface ReviewContext {
   title: string;

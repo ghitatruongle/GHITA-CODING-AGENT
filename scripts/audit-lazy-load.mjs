@@ -1,11 +1,6 @@
 #!/usr/bin/env node
-// ==============================================================================
-// GHITA CODING AGENT - Lazy-load audit (v1.1.0 Track 9 B6)
-// ------------------------------------------------------------------------------
-// Rà sidecar server.mjs: đếm static imports của các module nặng và số điểm
-// lazy-load (dynamic import) hiện có → báo cáo mức độ lazy-load.
+
 // Usage: node scripts/audit-lazy-load.mjs
-// ==============================================================================
 
 import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Base Provider
-// ==============================================================================
-
 import type { AIProviderType, AIStreamChunk } from '@ghita/shared';
 import type {
   AIProvider,
@@ -27,7 +23,7 @@ export abstract class BaseProvider implements AIProvider {
 
   constructor(config: ProviderConfig) {
     this.config = config;
-    // Phase 1.1: Initialize multi-key manager
+    
     const keys =
       config.apiKeys && config.apiKeys.length > 0
         ? config.apiKeys

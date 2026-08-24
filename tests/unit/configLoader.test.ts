@@ -15,7 +15,7 @@ describe('ConfigLoader (Dynamic Settings Profile Loader)', () => {
   });
 
   it('nên tự động khởi tạo cấu hình mặc định khi file không tồn tại', () => {
-    // Giả lập file không tồn tại
+    
     vi.spyOn(fs, 'existsSync').mockReturnValue(false);
     const writeSpy = vi.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
 
@@ -23,7 +23,7 @@ describe('ConfigLoader (Dynamic Settings Profile Loader)', () => {
     const config = loader.load();
 
     expect(fs.existsSync).toHaveBeenCalled();
-    expect(writeSpy).toHaveBeenCalled(); // Nên tự động lưu mặc định xuống file
+    expect(writeSpy).toHaveBeenCalled(); 
     expect(config.agentModels).toHaveProperty('openai-gpt-4o');
     expect(config.agentRouting.Plan).toBe('anthropic-sonnet');
   });
@@ -113,7 +113,7 @@ describe('ConfigLoader (Dynamic Settings Profile Loader)', () => {
 
   it('nên tự động khôi phục cấu hình mặc định nếu file json bị hỏng định dạng', () => {
     vi.spyOn(fs, 'existsSync').mockReturnValue(true);
-    vi.spyOn(fs, 'readFileSync').mockReturnValue('{"invalid-json": '); // Bị thiếu ngoặc nhọn đóng
+    vi.spyOn(fs, 'readFileSync').mockReturnValue('{"invalid-json": '); 
 
     const writeSpy = vi.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
 
@@ -121,7 +121,7 @@ describe('ConfigLoader (Dynamic Settings Profile Loader)', () => {
     const config = loader.load();
 
     expect(fs.readFileSync).toHaveBeenCalled();
-    expect(writeSpy).toHaveBeenCalled(); // Nên tự động lưu mặc định để khôi phục cấu hình lỗi
+    expect(writeSpy).toHaveBeenCalled(); 
     expect(config.agentModels).toHaveProperty('openai-gpt-4o');
   });
 });

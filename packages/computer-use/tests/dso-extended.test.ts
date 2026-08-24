@@ -1,8 +1,4 @@
-// =============================================================================
-// GHITA CODING AGENT — Phase 12: DSO Extended Tests
-// Bổ sung: multi-container, port protocols, env vars, edge cases,
 // SandboxLogger advanced, destroy edge cases, stats computation
-// =============================================================================
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DSOOrchestrator } from '../src/sandbox/dsoOrchestrator.js';
@@ -15,9 +11,7 @@ import type {
 } from '../src/sandbox/types.js';
 import { GHITA_SANDBOX_LABEL, DEFAULT_RESOURCE_LIMITS } from '../src/sandbox/types.js';
 
-// =============================================================================
 // Mock Dockerode
-// =============================================================================
 
 let mockCallCount = 0;
 
@@ -87,9 +81,7 @@ vi.mock('dockerode', () => {
   };
 });
 
-// =============================================================================
 // DSOOrchestrator — Multi-Container Tests
-// =============================================================================
 
 describe('DSOOrchestrator — multi-container', () => {
   let dso: DSOOrchestrator;
@@ -136,9 +128,7 @@ describe('DSOOrchestrator — multi-container', () => {
   });
 });
 
-// =============================================================================
 // Port Mapping Edge Cases
-// =============================================================================
 
 describe('DSOOrchestrator — port mapping', () => {
   let dso: DSOOrchestrator;
@@ -224,9 +214,7 @@ describe('DSOOrchestrator — port mapping', () => {
   });
 });
 
-// =============================================================================
 // Volume Mounts Edge Cases
-// =============================================================================
 
 describe('DSOOrchestrator — volume mounts', () => {
   let dso: DSOOrchestrator;
@@ -278,9 +266,7 @@ describe('DSOOrchestrator — volume mounts', () => {
   });
 });
 
-// =============================================================================
 // Environment Variables
-// =============================================================================
 
 describe('DSOOrchestrator — env vars', () => {
   let dso: DSOOrchestrator;
@@ -352,9 +338,7 @@ describe('DSOOrchestrator — env vars', () => {
   });
 });
 
-// =============================================================================
 // Container Command
-// =============================================================================
 
 describe('DSOOrchestrator — command', () => {
   let dso: DSOOrchestrator;
@@ -390,9 +374,7 @@ describe('DSOOrchestrator — command', () => {
   });
 });
 
-// =============================================================================
 // Destroy Edge Cases
-// =============================================================================
 
 describe('DSOOrchestrator — destroy edge cases', () => {
   let dso: DSOOrchestrator;
@@ -442,9 +424,7 @@ describe('DSOOrchestrator — destroy edge cases', () => {
   });
 });
 
-// =============================================================================
 // Resource Limits Edge Cases
-// =============================================================================
 
 describe('DSOOrchestrator — resource limits', () => {
   let dso: DSOOrchestrator;
@@ -507,9 +487,7 @@ describe('DSOOrchestrator — resource limits', () => {
   });
 });
 
-// =============================================================================
 // Network Edge Cases
-// =============================================================================
 
 describe('DSOOrchestrator — network edge cases', () => {
   let dso: DSOOrchestrator;
@@ -544,9 +522,7 @@ describe('DSOOrchestrator — network edge cases', () => {
   });
 });
 
-// =============================================================================
 // Stats Edge Cases
-// =============================================================================
 
 describe('DSOOrchestrator — stats', () => {
   let dso: DSOOrchestrator;
@@ -592,9 +568,7 @@ describe('DSOOrchestrator — stats', () => {
   });
 });
 
-// =============================================================================
 // Cleanup Orphans — Edge Cases
-// =============================================================================
 
 describe('DSOOrchestrator — cleanupOrphans edge cases', () => {
   let dso: DSOOrchestrator;
@@ -647,9 +621,7 @@ describe('DSOOrchestrator — cleanupOrphans edge cases', () => {
   });
 });
 
-// =============================================================================
 // SandboxLogger — Advanced Tests
-// =============================================================================
 
 describe('SandboxLogger — advanced', () => {
   let logger: SandboxLogger;
@@ -863,9 +835,7 @@ describe('SandboxLogger — advanced', () => {
   });
 });
 
-// =============================================================================
 // Types & Constants
-// =============================================================================
 
 describe('DSO Types & Constants', () => {
   it('GHITA_SANDBOX_LABEL should be correct', () => {

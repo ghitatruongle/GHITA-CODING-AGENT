@@ -1,9 +1,7 @@
 #!/usr/bin/env node
-// ==============================================================================
-// GHITA CODING AGENT — iOS Development Build Script
+
 // Builds the iOS app for ad-hoc testing (no App Store signing required).
 // Run: node scripts/ios-sign.mjs [--release]
-// ==============================================================================
 
 import { execSync } from 'node:child_process';
 import { existsSync } from 'node:fs';

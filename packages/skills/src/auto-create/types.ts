@@ -1,10 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Skills Auto-Creation Types
-// ==============================================================================
-
 import type { Skill, SkillCategory, SkillParameter } from '@ghita/shared';
 
-/** Đại diện cho một bước trong trajectory */
 export interface TrajectoryStep {
   toolName: string;
   input: Record<string, unknown>;
@@ -14,7 +9,6 @@ export interface TrajectoryStep {
   timestamp: number;
 }
 
-/** Quá trình thực hiện tác vụ của Agent */
 export interface TaskTrajectory {
   id: string;
   description: string;
@@ -25,7 +19,6 @@ export interface TaskTrajectory {
   endTime: number;
 }
 
-/** Ứng cử viên Skill được phát hiện từ Trajectory */
 export interface SkillCandidate {
   name: string;
   description: string;
@@ -39,7 +32,6 @@ export interface SkillCandidate {
   sourceTrajectoryId: string;
 }
 
-/** Template Skill được lưu cục bộ */
 export interface SkillTemplate extends Skill {
   version: string;
   createdAt: number;
@@ -50,7 +42,6 @@ export interface SkillTemplate extends Skill {
   }>;
 }
 
-/** Đề xuất cải tiến Skill đã tồn tại */
 export interface SkillImprovement {
   skillId: string;
   currentVersion: string;
@@ -60,7 +51,6 @@ export interface SkillImprovement {
   confidence: number; // 0.0 - 1.0
 }
 
-/** Lịch sử phiên bản của Skill */
 export interface SkillVersion {
   version: string;
   template: SkillTemplate;
@@ -69,11 +59,10 @@ export interface SkillVersion {
   previousVersion?: string;
 }
 
-/** Cấu hình hệ thống tự tạo và tối ưu hóa Skill */
 export interface AutoCreateConfig {
-  minConfidence: number; // Ngưỡng confidence tối thiểu (ví dụ: 0.6)
-  minSteps: number; // Số bước tối thiểu (ví dụ: 3)
-  maxSteps: number; // Số bước tối đa (ví dụ: 20)
-  autoSaveThreshold: number; // Tự động lưu không cần hỏi nếu confidence >= ngưỡng này (ví dụ: 0.85)
+  minConfidence: number; 
+  minSteps: number; 
+  maxSteps: number; 
+  autoSaveThreshold: number; 
   enabledCategories: SkillCategory[];
 }

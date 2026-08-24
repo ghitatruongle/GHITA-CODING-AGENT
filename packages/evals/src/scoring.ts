@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Evals: evidence-based scoring
-// ------------------------------------------------------------------------------
 // Computes a 0..100 score from evidence collected per task. Scoring is
 // evidence-bound: levels map to weights (outcome-supported > artifact >
 // observed), and the expected-marker check produces the strongest evidence.
-// ==============================================================================
 
 import type { EvalDimension, EvalStep, Evidence, EvidenceLevel, RunOutcome } from './types.js';
 import { EVAL_DIMENSIONS } from './types.js';

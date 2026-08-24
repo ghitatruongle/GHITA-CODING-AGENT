@@ -1,7 +1,3 @@
-// ==============================================================================
-// v1.1.5-beta1 Track 1.5 — Exec Policy pre-execution check tests
-// ==============================================================================
-
 import { describe, expect, it } from 'vitest';
 import {
   checkCommand,

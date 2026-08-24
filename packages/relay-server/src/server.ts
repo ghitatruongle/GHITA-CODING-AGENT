@@ -1,6 +1,4 @@
-// ==============================================================================
 // @ghita/relay-server -- Relay Server
-// ==============================================================================
 
 import type { RelayConfig, RelayMessage } from './types.js';
 import { RoomManager } from './room-manager.js';

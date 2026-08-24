@@ -1,11 +1,9 @@
-// ==============================================================================
 // v0.4.9 A4: Instinct Registry
 //
 // Instincts are auto-behaviors that suggest a skill to run when the working
 // context matches a trigger (file type, error pattern, task type, or keyword).
 // Complements the event-driven OpenClawTriggerEngine and the agents-side
 // prompt InstinctEngine.
-// ==============================================================================
 
 /** What kind of context an instinct reacts to. */
 export interface InstinctTriggers {
@@ -101,7 +99,7 @@ export const BUILTIN_INSTINCTS: Instinct[] = [
  * InstinctRegistry — evaluates context and returns skills to auto-suggest,
  * sorted by priority with conflict resolution.
  *
- * Sử dụng:
+
  *   const reg = new InstinctRegistry();
  *   const fired = reg.evaluate({ activeFile: 'a.ts', taskType: 'refactor' });
  *   const skillIds = reg.suggestedSkills(fired);

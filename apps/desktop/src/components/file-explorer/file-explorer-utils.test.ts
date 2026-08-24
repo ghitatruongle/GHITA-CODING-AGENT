@@ -1,6 +1,4 @@
-// ==============================================================================
 // Tests for File Explorer utilities (rename path + language/binary detection)
-// ==============================================================================
 
 import { describe, it, expect } from 'vitest';
 import { renamePath, detectLanguage, isBinaryFile } from './file-explorer-utils';

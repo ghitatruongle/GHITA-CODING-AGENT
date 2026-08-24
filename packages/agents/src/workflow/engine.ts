@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Workflow Agent Engine
-// ==============================================================================
-
 export interface WorkflowStep {
   id: string;
   name: string;

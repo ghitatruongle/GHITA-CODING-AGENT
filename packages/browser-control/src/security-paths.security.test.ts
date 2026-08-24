@@ -1,6 +1,4 @@
-// ==============================================================================
 // Browser-control fail-closed paths (v0.1.5 P1.2)
-// ==============================================================================
 
 import { describe, it, expect } from 'vitest';
 import { BrowserController } from '../src/index.js';

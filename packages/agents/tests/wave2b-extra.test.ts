@@ -1,6 +1,4 @@
-// ==============================================================================
 // Wave 2b — filesystem storage + workflow engine
-// ==============================================================================
 
 import { describe, it, expect } from 'vitest';
 import { mkdtempSync, rmSync } from 'node:fs';

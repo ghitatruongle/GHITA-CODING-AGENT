@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Shared Input Primitive
-// ==============================================================================
-
 import { type InputHTMLAttributes, forwardRef } from 'react';
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {

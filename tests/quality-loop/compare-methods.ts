@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Search Method Comparison Script
-// Phase 4 Task 9: Compare F1-Score and Execution Time
 //   between PageRank and Regex Search
 //
 // Usage: npx tsx tests/quality-loop/compare-methods.ts
-// ==============================================================================
 
 import fs from 'fs';
 import path from 'path';

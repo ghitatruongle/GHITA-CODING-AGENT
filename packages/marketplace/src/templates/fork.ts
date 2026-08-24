@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Template Clone & Fork Workflow (Phase 36)
-// ==============================================================================
-
 import type { AgentTemplate, TemplateFork, TemplateDiff } from './types.js';
 
 /**

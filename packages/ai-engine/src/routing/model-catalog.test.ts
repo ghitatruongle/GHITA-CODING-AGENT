@@ -1,7 +1,3 @@
-// ==============================================================================
-// v1.1.5-beta1 Track 4.3 — Model Catalog + Failover Tests
-// ==============================================================================
-
 import { describe, expect, it } from 'vitest';
 import { ModelCatalog, createDefaultCatalog } from './model-catalog.js';
 import type { ModelEntry } from './model-catalog.js';

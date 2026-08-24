@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Agents critical-path tests (v0.1.5)
-// ==============================================================================
-
 import { describe, it, expect, vi } from 'vitest';
 import { ReActAgent } from '../src/react/agent.js';
 import type { CreateReActAgentInput, ReActTool } from '../src/react/types.js';

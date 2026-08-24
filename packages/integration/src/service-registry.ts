@@ -1,6 +1,4 @@
-// ==============================================================================
 // @ghita/integration -- Service Registry
-// ==============================================================================
 
 import type { ServiceDefinition, ServiceHealth } from './types.js';
 

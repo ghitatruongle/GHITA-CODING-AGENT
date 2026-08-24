@@ -1,9 +1,5 @@
-// =============================================================================
-// GHITA CODING AGENT - Phase 12: SkillGuard (Content Hash + Trusted Repos)
-// =============================================================================
 // Verifies skill integrity via SHA-256 content hashes and checks
 // whether skills originate from trusted repositories.
-// =============================================================================
 
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';

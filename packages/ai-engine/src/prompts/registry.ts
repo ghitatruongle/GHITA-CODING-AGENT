@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Prompt Registry & Loader
-// ==============================================================================
-
 import * as fs from 'fs';
 import * as path from 'path';
 import { parseYaml } from './yaml-parser.js';

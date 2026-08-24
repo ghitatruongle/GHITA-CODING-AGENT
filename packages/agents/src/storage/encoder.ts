@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Encoder-Backed Storage Backend
-// ==============================================================================
-
 import type { StorageBackend, EncoderFn, DecoderFn } from './types.js';
 
 export interface EncoderStorageOptions<T> {

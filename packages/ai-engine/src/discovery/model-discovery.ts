@@ -1,8 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Model Discovery
-// Phase 1.3: Auto-discover models from provider APIs, cache with TTL
-// ==============================================================================
-
 import type { ModelInfo, DiscoveryResult, DiscoveryConfig, AuthStyle } from './types.js';
 
 const DEFAULT_TTL_MS = 3_600_000; // 1 hour

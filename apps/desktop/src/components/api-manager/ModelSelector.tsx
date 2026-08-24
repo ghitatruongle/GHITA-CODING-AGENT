@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Model Selector (input + datalist + fetch button)
-// ==============================================================================
-
 import { type ProviderConfig } from '../api/providersConfig';
 import { type ApiKeyEntry, type ProviderId } from './api-manager-utils';
 

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Marketplace Barrel Export
-// ==============================================================================
-
 export { SkillCatalogClient } from './catalog.js';
 export { SkillInstaller } from './installer.js';
 export { SkillRatingsStore } from './ratings.js';

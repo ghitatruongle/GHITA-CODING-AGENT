@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ProviderRegistry } from '../../packages/ai-engine/src/registry.js';
 import type { ProviderConfig } from '../../packages/ai-engine/src/types.js';
 
-// Mock các methods kết nối mạng thực tế của base providers
 vi.mock('../../packages/ai-engine/src/providers/openai.js', () => {
   return {
     OpenAIProvider: class {
@@ -28,7 +27,7 @@ vi.mock('../../packages/ai-engine/src/providers/ollama.js', () => {
     OllamaProvider: class {
       type = 'ollama';
       name = 'Ollama';
-      isReady = async () => false; // Giả sử chưa sẵn sàng để test trạng thái
+      isReady = async () => false; 
     },
   };
 });
@@ -42,7 +41,7 @@ describe('ProviderRegistry', () => {
 
   describe('Đăng ký & Truy xuất cơ bản', () => {
     it('nên đăng ký và lấy được provider thủ công', () => {
-      // Mock một provider tối giản
+      
       const mockProvider: any = {
         type: 'custom',
         name: 'Mock Custom',
@@ -120,7 +119,7 @@ describe('ProviderRegistry', () => {
 
   describe('getStatus (Thu thập trạng thái)', () => {
     it('nên thu thập chính xác trạng thái sẵn sàng của các providers', async () => {
-      // Đăng ký 2 provider, 1 cái ready (Custom) và 1 cái ko ready (Ollama)
+      
       registry.registerFromConfig({
         type: 'custom',
         name: 'Custom',

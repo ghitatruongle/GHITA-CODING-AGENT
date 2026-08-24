@@ -1,8 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Enterprise Infrastructure Module
-// Phase 3: Security, Auth, Guardrails, Observability, Alerting
-// ==============================================================================
-
 // --- 3.1 API Key Authentication ---
 export { APIKeyManager } from './auth.js';
 export type {

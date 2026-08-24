@@ -1,10 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - EventStream Types (Phase 7)
-// ==============================================================================
-// Public type surface for the EventStream subscriber model used by Phase 7.
 // Events are serializable to plain JSON dicts so they can cross the
 // Tauri WebSocket bridge and be persisted to disk for rewind/replay.
-// ==============================================================================
 
 /** Top-level event categories emitted by the engine. */
 export type StreamEventType =
@@ -61,7 +56,7 @@ export interface EventStreamConfig {
   bufferSize?: number;
   /** If true, persist every event to disk via the writer (default: false) */
   persist?: boolean;
-  /** Optional rewind writer (used by SessionManager in Phase 24) */
+  
   rewindWriter?: RewindWriter;
   /** If true, exceptions in subscribers are swallowed and logged (default: true) */
   swallowErrors?: boolean;
@@ -69,7 +64,6 @@ export interface EventStreamConfig {
   maxSubscribers?: number;
 }
 
-/** Minimal interface for the rewind writer. Implemented in Phase 24. */
 export interface RewindWriter {
   append(event: StreamEvent): void | Promise<void>;
   rewind(toSeq: number): Promise<StreamEvent[]>;

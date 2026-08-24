@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Memory v1.1.0 Track 6 P70: auto-capture hooks
-// ==============================================================================
 // Session hooks (SessionStart, UserPrompt, PreTool, PostTool, PostCompact)
 // that auto-capture activity into the memory journal with a 5-minute dedup
 // window (agentmemory pattern).
-// ==============================================================================
 
 import { createHash } from 'node:crypto';
 

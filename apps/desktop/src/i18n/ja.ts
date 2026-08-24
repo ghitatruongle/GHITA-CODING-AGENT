@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Japanese Translations (日本語)
-// ==============================================================================
-
 import type { TranslationKeys } from './types';
 
 export const ja: TranslationKeys = {
@@ -35,7 +31,7 @@ export const ja: TranslationKeys = {
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v1.1.5-beta2',
+    version: 'v1.1.5',
     deviceReconnected: 'デバイスに再接続しました: {{name}}',
     devicePaired: 'デバイスのペアリングに成功しました: {{name}}',
     commandReceived: 'デバイスからコマンドを受信しました: {{action}}',
@@ -527,7 +523,7 @@ export const ja: TranslationKeys = {
     noContainersDesc:
       'AIがテストまたは安全でない操作を実行する必要がある場合、隔離されたDockerコンテナが自動的に起動します。',
   },
-  // Phase 7: Notification System (Q3 2026)
+  
   notification: {
     ariaLabel: '通知',
     title: '通知',
@@ -536,7 +532,7 @@ export const ja: TranslationKeys = {
     unreadBadge: '{{count}}',
     dismiss: '通知を閉じる',
   },
-  // Phase 8: Voice I/O (Q3 2026)
+  
   voice: {
     start: '音声入力を開始',
     stop: '停止',
@@ -544,7 +540,7 @@ export const ja: TranslationKeys = {
     unsupported: '音声入力はサポートされていません',
     unsupportedHint: 'この環境では音声認識は利用できません',
   },
-  // Phase 9: Monitoring Dashboard (Q3 2026)
+  
   monitoring: {
     title: 'モニタリング',
     loading: 'モニタリングを読み込み中…',
@@ -566,7 +562,7 @@ export const ja: TranslationKeys = {
     lastSeen: '最終確認',
     refresh: '更新',
   },
-  // Phase 10: Quota & Rate Limiting (Q3 2026)
+  
   quota: {
     title: 'クォータとレート制限',
     loading: 'クォータを読み込み中…',
@@ -590,7 +586,7 @@ export const ja: TranslationKeys = {
     refresh: '更新',
     budgetUsage: '予算使用状況',
   },
-  // Phase 11: Code Knowledge Graph (Q3 2026)
+  
   codeGraph: {
     title: 'コードナレッジグラフ',
     workspacePath: 'ワークスペースパス',

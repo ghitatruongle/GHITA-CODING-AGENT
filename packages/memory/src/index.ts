@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Memory Package
-// ==============================================================================
-
 import type { MemoryEntry, MemorySearchResult } from '@ghita/shared';
 import { CrossSessionSearch } from './search.js';
 import type { SessionRecord, CrossSessionResult } from './search.js';
@@ -10,7 +6,6 @@ import type { NudgeSuggestion, NudgeConfig } from './nudge.js';
 import { TieredMemoryStore } from './tieredStore.js';
 import type { TieredMemoryStoreConfig } from './tieredStore.js';
 
-// --- Phase 4: Knowledge / RAG exports ---
 export { KnowledgeEngine } from './knowledge/knowledge.js';
 export type {
   KnowledgeDocument,
@@ -31,7 +26,6 @@ export {
   ContextEnrichedPromptBuilder,
 } from './knowledge/graph.js';
 
-// --- Phase 4: LLM Guardrail exports ---
 export { LLMGuardrail } from './guardrail/guardrail.js';
 export type { AuditLogEntry } from './guardrail/guardrail.js';
 export type {
@@ -45,7 +39,7 @@ export type {
   GuardrailConfig,
 } from './guardrail/types.js';
 
-export const MEMORY_VERSION = '1.1.5-beta2';
+export const MEMORY_VERSION = '1.1.5';
 
 export interface RememberInput {
   type: MemoryEntry['type'];
@@ -207,7 +201,6 @@ export type {
 export { MemoryNudgeEngine } from './nudge.js';
 export type { NudgeSuggestion, NudgeConfig, NudgePattern } from './nudge.js';
 
-// --- Phase 19: SQLite FTS5 Memory Indexer & Rust Cosine similarity Addon ---
 export { RustMemoryAddon, cosineSimilarityJS } from './semantic/rustAddon.js';
 export type {
   ChatLogEntry,
@@ -219,7 +212,6 @@ export type {
   AddonStats,
 } from './semantic/rustAddon.js';
 
-// --- Phase 14: Memory Compaction & Indexing ---
 export { MemoryCompactor } from './semantic/compact.js';
 export type {
   CompactableEntry,
@@ -230,7 +222,6 @@ export type {
   CompactSchedule,
 } from './semantic/compact.js';
 
-// --- Phase 22: memoryFreshness (decay) exports ---
 export {
   calculateDecayScore,
   getNamespaceOverview,
@@ -239,7 +230,6 @@ export {
   MemoryFreshnessTracker,
 } from './freshness.js';
 
-// v1.1.0 Track 1 P21: standard MCP server
 export { createMemoryMCPServer } from './mcp-server.js';
 export type { MemoryLike, MemoryMCPServerConfig } from './mcp-server.js';
 export type {
@@ -249,8 +239,6 @@ export type {
   MultiSignalRetrievalOptions,
 } from './freshness.js';
 
-// --- Phase 30: Memory Compression ---
 export * from './compression/index.js';
 
-// ── v1.1.0 Track 6: capture hooks, contradiction, provenance ──
 export * from './track6/index.js';

@@ -1,8 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Skill Ratings Store
-// Phase 2.3: Ratings, download tracking
-// ==============================================================================
-
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';

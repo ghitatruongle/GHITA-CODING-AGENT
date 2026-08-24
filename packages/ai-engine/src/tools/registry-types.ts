@@ -1,12 +1,7 @@
-// ==============================================================================
-// GHITA CODING AGENT - Tool Registry Types
-// ==============================================================================
 // Type definitions for the Composio-pattern tool registry.
-// ==============================================================================
 
 import type { BuiltInTool } from './index.js';
 
-/** JSON Schema đơn giản cho tool parameters */
 export interface ToolParameterSchema {
   type: 'object';
   properties: Record<string, ToolPropertySpec>;
@@ -22,17 +17,16 @@ export interface ToolPropertySpec {
   items?: ToolPropertySpec;
 }
 
-/** Một tool entry trong registry */
 export interface ToolDefinition extends BuiltInTool {
-  /** Capability tags để group/search (vd: 'file', 'web', 'saas:gmail', 'dev:git') */
+  
   tags: string[];
-  /** App/service nguồn (vd: 'builtin', 'composio:gmail', 'custom') */
+  
   source: ToolSource;
-  /** Phiên bản schema, bump khi breaking change */
+  
   version: string;
-  /** Optional rate limit (calls/phút) */
+  
   rateLimit?: number;
-  /** Optional: tool có cần user approval không */
+  
   requiresApproval?: boolean;
 }
 
@@ -63,7 +57,6 @@ export type ToolSource =
   | 'composio:miro'
   | string; // custom source id
 
-/** Kết quả execute tool */
 export interface ToolExecutionResult {
   ok: boolean;
   output: string;

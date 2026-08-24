@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Mobile Screen Component Tests (Phase 19 Bonus)
-// ==============================================================================
-
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MobileScreen } from './MobileScreen.js';

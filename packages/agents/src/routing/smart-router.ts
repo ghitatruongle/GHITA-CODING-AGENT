@@ -1,6 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - v1.1.5-beta1 Track 2.5: Smart Per-turn Router
-// ------------------------------------------------------------------------------
 // Heuristic classifier that routes each turn to an appropriate model tier
 // based on complexity (pattern: openclaude smart-routing). Simple turns go
 // to cheaper/faster models; complex turns go to stronger ones. The classifier
@@ -9,7 +6,6 @@
 // This is complementary to the existing bandit router (which selects among
 // providers within a role); the smart router classifies the REQUEST first,
 // then the bandit picks the best provider within that tier.
-// ==============================================================================
 
 /** Model tier classification for a single turn. */
 export type TurnComplexity = 'simple' | 'moderate' | 'complex';

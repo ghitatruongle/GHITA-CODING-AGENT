@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — Code View (VSCode-style)
 // File Explorer sidebar + Multi-tab Monaco editor + real file read/write
-// ==============================================================================
 
 import { useState, Suspense, lazy, useCallback, useRef, useEffect } from 'react';
 import { FileExplorer } from '../components/FileExplorer';
@@ -65,7 +62,6 @@ export function CodeView() {
   // Active file
   const activeFile = openFiles.find((f) => f.path === activePath);
 
-  // deep-review fix (BUG-2): never fire a pending auto-save after CodeView
   // unmounts — the debounced handleSave could otherwise run on stale state.
   useEffect(() => {
     return () => {
@@ -263,7 +259,7 @@ export function CodeView() {
     try {
       await fsWriteText(file.path, contentToSave, cache.encoding);
       cache.originalContent = contentToSave;
-      // P1-2 (deep review pass #2): read the latest openFiles from the store
+      
       // to avoid the stale-closure resurrection race.
       setOpenFiles(
         useAppStore.getState().codeOpenFiles.map((f) => {
@@ -299,7 +295,7 @@ export function CodeView() {
 
       const file = openFiles.find((f) => f.path === activePath);
       if (file && file.modified !== isModified) {
-        // P1-2 (deep review pass #2): read the latest openFiles from the store
+        
         // to avoid the stale-closure resurrection race.
         setOpenFiles(
           useAppStore
@@ -344,7 +340,7 @@ export function CodeView() {
         continue;
       }
       try {
-        // deep-review fix (BUG-11): snapshot the content BEFORE the write and
+        
         // compare against the live cache afterwards — the previous
         // `cache.content === cache.content` tautology always evaluated true.
         const contentToSave = cache.content;
@@ -356,9 +352,9 @@ export function CodeView() {
       }
     }
     if (savedContents.size > 0) {
-      // P1-2 (deep review pass #2): read the latest openFiles from the store
+      
       // (avoid stale-closure) AND re-check whether the user typed during the
-      // multi-write loop (P1-3 parity with single-file handleSave).
+      
       setOpenFiles(
         useAppStore.getState().codeOpenFiles.map((f) => {
           if (!savedContents.has(f.path)) return f;

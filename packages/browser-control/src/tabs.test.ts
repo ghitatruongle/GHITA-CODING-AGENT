@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Tab Manager Tests
-// ==============================================================================
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TabManager, MemoryTabStorage } from './tabs.js';
 

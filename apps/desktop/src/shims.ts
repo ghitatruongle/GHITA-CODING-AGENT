@@ -237,7 +237,7 @@ export const randomUUID = () =>
   typeof crypto !== 'undefined' && crypto.randomUUID
     ? crypto.randomUUID()
     : (() => {
-        // deep-review fix (L7): the previous Math.random-based fallback
+        
         // produced weak, non-crypto UUIDs. Use the Web Crypto API's random
         // values when available (then set the v4 bits), falling back to
         // Math.random only as a last resort.

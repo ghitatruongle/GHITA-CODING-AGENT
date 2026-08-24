@@ -1,7 +1,5 @@
 #!/usr/bin/env node
-// ==============================================================================
-// GHITA CODING AGENT - MCP interop check (v1.1.0 Track 1 P24)
-// ------------------------------------------------------------------------------
+
 // Builds the four GHITA MCP servers (codegraph, browser, memory, skills) and
 // verifies a standard SDK client can list tools and call them — proving the
 // servers speak the standard Model Context Protocol. Uses the in-memory
@@ -11,7 +9,6 @@
 // Prereq: pnpm --filter @ghita/mcp --filter @ghita/code-graph \
 //             --filter @ghita/browser-control --filter @ghita/memory \
 //             --filter @ghita/skills build
-// ==============================================================================
 
 import { createLinkedPair, createMCPClient } from '../packages/mcp/dist/index.js';
 import { CodeKnowledgeGraph, CodeGraphMCPServer } from '../packages/code-graph/dist/index.js';

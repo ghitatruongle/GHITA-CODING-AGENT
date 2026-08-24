@@ -1,6 +1,4 @@
-// ==============================================================================
 // Instinct Engine Unit Tests
-// ==============================================================================
 
 import { describe, it, expect } from 'vitest';
 import { InstinctEngine, BUILTIN_INSTINCTS } from '../src/instincts/instinct-engine.js';

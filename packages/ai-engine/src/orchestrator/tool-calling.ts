@@ -1,8 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Orchestrator Tool-Calling Module
-// ==============================================================================
 // MCP tools, built-in tools, hooks delegation, and context management.
-// ==============================================================================
 
 import type {
   OrchestratorContext,

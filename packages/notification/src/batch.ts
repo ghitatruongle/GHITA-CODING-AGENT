@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Batch Notification Delivery (Phase 35)
 // Debounced batch delivery with coalescing
-// ==============================================================================
 
 import type { Notification, NotificationPreferences, ChannelDelivery } from './types.js';
 import type { ChannelRouter } from './channel.js';

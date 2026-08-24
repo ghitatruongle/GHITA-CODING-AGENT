@@ -1,6 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Terminal (xterm.js + Rust Native PTY via Tauri IPC)
-// ==============================================================================
 // Architecture:
 //   Frontend (xterm.js) --Tauri IPC (invoke + events)--> Rust PTY --> Shell
 //
@@ -9,7 +6,6 @@
 // - Native Rust PTY via Tauri invoke commands
 // - Multiple terminal tabs with independent sessions
 // - Shell toggle (cmd.exe / PowerShell / bash / sh)
-// ==============================================================================
 
 import { useEffect, useRef, useState, useCallback, memo } from 'react';
 import type { Terminal as TerminalType } from '@xterm/xterm';
@@ -40,9 +36,7 @@ async function loadXterm() {
 }
 void loadXterm();
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 type ShellType = 'cmd' | 'powershell' | 'bash' | 'sh';
 
@@ -64,17 +58,13 @@ interface TerminalTab {
   shell: ShellType;
 }
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 function generateTabId(): string {
   return `term_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
 }
 
-// ---------------------------------------------------------------------------
 // xterm.js Terminal Pane (Rust PTY via Tauri IPC)
-// ---------------------------------------------------------------------------
 
 function XtermPane({
   tabId,
@@ -130,14 +120,19 @@ function XtermPane({
     }
   }, [visible]);
 
-  // Initialize xterm.js and create Rust PTY session
+  // Initialize xterm.js and create Rust PTY session.
+  // Font prefs, scrollback and cwd are captured at construction time via refs:
+  // they must NOT be effect deps, otherwise a settings change or a cwd sync
+  // would kill and recreate every live PTY tab (losing shell state).
+  const constructionRef = useRef({ shell, tabId, cwd, terminalFontSize, terminalFontFamily, lowRamMode });
   useEffect(() => {
     if (!containerRef.current || !TerminalImpl || !FitAddonImpl) return;
+
+    const { shell: initShell, tabId: currentTabId, cwd: initCwd, terminalFontSize: initFontSize, terminalFontFamily: initFontFamily, lowRamMode: initLowRam } = constructionRef.current;
 
     let active = true;
     let unlistenData: (() => void) | null = null;
     let unlistenExit: (() => void) | null = null;
-    const currentTabId = tabId;
 
     // Clean existing DOM children to prevent duplicate stacked terminals
     containerRef.current.innerHTML = '';
@@ -145,8 +140,8 @@ function XtermPane({
     const TerminalCtor = TerminalImpl as unknown as typeof TerminalType;
     const term = new TerminalCtor({
       cursorBlink: true,
-      fontSize: terminalFontSize,
-      fontFamily: terminalFontFamily,
+      fontSize: initFontSize,
+      fontFamily: initFontFamily,
       theme: {
         background: '#0a0a1a',
         foreground: '#e0e0e0',
@@ -170,8 +165,8 @@ function XtermPane({
         brightWhite: '#ffffff',
       },
       convertEol: true,
-      // v1.0.0 RAM optimization (O06): cap scrollback tighter in low-RAM mode.
-      scrollback: lowRamMode ? 1000 : 5000,
+      // Cap scrollback tighter in low-RAM mode.
+      scrollback: initLowRam ? 1000 : 5000,
     });
 
     const FitAddonCtor = FitAddonImpl as unknown as typeof FitAddonType;
@@ -188,7 +183,7 @@ function XtermPane({
     fitRef.current = fit;
 
     // Write welcome banner
-    term.writeln(`\x1b[38;5;141m⚡ GHITA Terminal\x1b[0m — ${SHELL_CONFIGS[shell].name}`);
+    term.writeln(`\x1b[38;5;141m⚡ GHITA Terminal\x1b[0m — ${SHELL_CONFIGS[initShell].name}`);
     term.writeln('');
 
     // Create Rust PTY session via Tauri IPC
@@ -196,10 +191,10 @@ function XtermPane({
       try {
         await invoke('terminal_create', {
           id: currentTabId,
-          shellType: shell,
+          shellType: initShell,
           cols: term.cols,
           rows: term.rows,
-          cwd: cwd || undefined,
+          cwd: initCwd || undefined,
         });
 
         if (!active) {
@@ -217,6 +212,13 @@ function XtermPane({
             term.write(e.payload.data);
           }
         });
+        // Cleanup may have run while we were awaiting — dispose the fresh
+        // listener now or it would leak and retain this disposed terminal.
+        if (!active) {
+          unlistenData();
+          unlistenData = null;
+          return;
+        }
 
         // Listen for PTY process exit
         unlistenExit = await listen<{ id: string; exitCode: number | null }>(
@@ -230,6 +232,13 @@ function XtermPane({
             }
           },
         );
+        if (!active) {
+          unlistenExit();
+          unlistenExit = null;
+          unlistenData?.();
+          unlistenData = null;
+          return;
+        }
 
         // Send user input to Rust PTY
         term.onData((data: string) => {
@@ -280,13 +289,15 @@ function XtermPane({
       term.dispose();
       termRef.current = null;
       fitRef.current = null;
-      if (unlistenData) unlistenData();
-      if (unlistenExit) unlistenExit();
+      // Always run the unlisteners if the async setup resolved after cleanup —
+      // otherwise the Tauri listeners leak and retain the disposed xterm.
+      unlistenData?.();
+      unlistenExit?.();
     };
-    // Font/scrollback prefs are read at construction time only — listed so
-    // exhaustive-deps is satisfied; the session is intentionally NOT recreated
-    // when they change (font prefs are applied live by the effect above).
-  }, [shell, tabId, cwd, terminalFontSize, terminalFontFamily, lowRamMode]);
+    // constructionRef is intentionally NOT a dep: font/scrollback/cwd changes
+    // apply to NEW tabs (or live via the font effect above), never by
+    // recreating running PTY sessions. Re-run only when the tab re-keys.
+  }, [shell, tabId]);
 
   return (
     <div
@@ -303,9 +314,7 @@ function XtermPane({
   );
 }
 
-// ---------------------------------------------------------------------------
 // Main Terminal Component (with tabs + xterm.js)
-// ---------------------------------------------------------------------------
 
 function TerminalInner() {
   const { t } = useTranslation();

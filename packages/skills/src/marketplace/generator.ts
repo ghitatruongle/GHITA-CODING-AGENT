@@ -1,13 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Dynamic Skill Generator
-// Phase 9 (Update 0.0.3 beta2): Generate skill code from manifest + template
-// ==============================================================================
-
 import type { SkillManifest } from './types.js';
 
-// ----------------------------------------------------------------------------
 // Generator types
-// ----------------------------------------------------------------------------
 
 export type TemplateId = 'http-api' | 'cli-wrapper' | 'data-transform' | 'browser-task';
 
@@ -40,9 +33,7 @@ export interface GenerationResult {
   detectedTemplate: TemplateId;
 }
 
-// ----------------------------------------------------------------------------
 // Detection
-// ----------------------------------------------------------------------------
 
 export function detectTemplate(manifest: SkillManifest): TemplateId {
   const tag = (manifest.tags ?? []).join(' ').toLowerCase();
@@ -53,9 +44,7 @@ export function detectTemplate(manifest: SkillManifest): TemplateId {
   return 'data-transform';
 }
 
-// ----------------------------------------------------------------------------
 // Code generators
-// ----------------------------------------------------------------------------
 
 function renderManifest(manifest: SkillManifest, indent: string): string {
   const entries = Object.entries(manifest)
@@ -177,9 +166,7 @@ function renderSmokeTest(
   ].join('\n');
 }
 
-// ----------------------------------------------------------------------------
 // Top-level generate
-// ----------------------------------------------------------------------------
 
 export function generateSkill(
   manifest: SkillManifest,

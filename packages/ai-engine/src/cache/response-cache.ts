@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Response Cache Engine (Phase 26)
 // Unified caching layer: LRU + TTL + Semantic Dedup + Cache Warming
-// ==============================================================================
 
 import * as crypto from 'node:crypto';
 import { LRUCache } from './lru-cache.js';

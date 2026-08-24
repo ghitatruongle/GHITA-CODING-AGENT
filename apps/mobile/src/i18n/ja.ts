@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Japanese dictionary for Mobile App (日本語)
-// ==============================================================================
-
 import type { TranslationKeys } from './types';
 
 export const ja: TranslationKeys = {
@@ -71,7 +67,7 @@ export const ja: TranslationKeys = {
     pairErrApiKeyMissing:
       'クラウド検出APIキーが設定されていません。手動でIPアドレスを入力してください。',
     pairErrCloudDisabled:
-      'クラウド検出は一時的に無効です。Wi-FiタブでIPを手動入力するか、Bluetoothで直接接続してください。',
+      'クラウド検出は一時的に無効です。Wi-FiタブでコンピューターのIPアドレスを手動入力してください。',
     noCodeFromServer: 'サーバーからペアリングコードを取得できませんでした。',
   },
   remote: {

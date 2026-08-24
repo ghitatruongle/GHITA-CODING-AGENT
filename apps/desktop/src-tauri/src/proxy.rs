@@ -195,9 +195,22 @@ async fn handle_proxy_request(
     // Build the request using reqwest
     let mut builder = body_client.request(method, &full_url);
 
-    // Copy original request headers, skipping Host since reqwest will auto-populate it
+    // Copy original request headers, skipping hop-by-hop headers and ambient
+    // credentials — the preview proxy must never relay cookies/auth tokens to
+    // an arbitrary user- or agent-configured upstream.
+    const SKIPPED_HEADERS: [&str; 8] = [
+        "host",
+        "cookie",
+        "authorization",
+        "proxy-authorization",
+        "connection",
+        "keep-alive",
+        "transfer-encoding",
+        "upgrade",
+    ];
     for (key, value) in headers.iter() {
-        if key != http::header::HOST {
+        let name = key.as_str().to_ascii_lowercase();
+        if !SKIPPED_HEADERS.contains(&name.as_str()) {
             builder = builder.header(key.clone(), value.clone());
         }
     }

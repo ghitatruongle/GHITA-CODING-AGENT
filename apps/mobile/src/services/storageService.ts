@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — AsyncStorage Service
 // Persistent storage for mobile app settings & paired devices
-// ==============================================================================
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Keychain from 'react-native-keychain';

@@ -1,8 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 3.10: Observability
 // Langfuse, Datadog, Prometheus, OpenTelemetry integrations
 // Reference: LiteLLM integrations/
-// ==============================================================================
 
 import { randomBytes } from 'node:crypto';
 

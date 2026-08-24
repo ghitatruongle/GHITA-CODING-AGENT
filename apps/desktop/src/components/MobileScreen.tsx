@@ -1,13 +1,9 @@
-// ==============================================================================
-// GHITA CODING AGENT - Mobile Screen Component (Phase 19 Bonus — Update 0.0.3)
-// ==============================================================================
 // React component that displays mobile device screen and handles touch input.
 // - Connects to Tauri backend via invoke('mobile_adb_*')
 // - Auto-refresh screenshot at configurable interval
 // - Click/tap on screen image translates to device coordinates (DPI aware)
 // - Visual feedback: ripple animation on tap
 // - Multi-device selector
-// ==============================================================================
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';

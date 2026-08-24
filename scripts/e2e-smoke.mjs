@@ -1,14 +1,9 @@
 #!/usr/bin/env node
-// ==============================================================================
-// GHITA CODING AGENT - E2E integration smoke (v1.1.0 Track 11 F6)
-// ------------------------------------------------------------------------------
-// Chạy 4 luồng integration không cần GUI (headless, dùng artifact đã build):
-//   [1] ingest CLI trên fixture markdown
+
 //   [2] evals suite internal (fixture adapter)
-//   [3] security scanner trên fixture có secret
+
 //   [4] MCP interop (codegraph/browser/memory/skills qua SDK)
 // Usage: node scripts/e2e-smoke.mjs
-// ==============================================================================
 
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
@@ -56,7 +51,6 @@ async function main() {
     failures.push(`evals-internal: ${e instanceof Error ? e.message : e}`);
   }
 
-  // [3] security scanner (in-process API — tránh quirk child-process)
   try {
     const { SecurityScanner } = await import('../packages/security/dist/index.js');
     const scanner = new SecurityScanner();
@@ -71,7 +65,6 @@ async function main() {
     failures.push(`security-scanner: ${e instanceof Error ? e.message : e}`);
   }
 
-  // [4] MCP interop (đã có script)
   try {
     const out = run([join(root, 'scripts', 'mcp-interop-check.mjs')]);
     const ok = out.includes('all servers OK');

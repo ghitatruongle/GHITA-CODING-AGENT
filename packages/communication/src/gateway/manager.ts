@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Gateway Manager
-// ==============================================================================
-
 import type { CommunicationGateway, GatewayConfig, GatewayMessage, GatewayType } from './types.js';
 import { TelegramGateway } from './telegram.js';
 import { DiscordGateway } from './discord.js';

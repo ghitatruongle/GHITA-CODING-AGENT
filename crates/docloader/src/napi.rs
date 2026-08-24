@@ -1,9 +1,6 @@
-// ==============================================================================
-// ghita-docloader — NAPI bindings (feature "addon")
-// ==============================================================================
-// Exposes loadDocumentJs / detectMimeTypeJs to Node.js via napi-rs.
-// Uses dyn-symbols for Windows compatibility (no libnode.dll link requirement).
-// ==============================================================================
+//! ghita-docloader — NAPI bindings (feature "addon")
+//! Exposes loadDocumentJs / detectMimeTypeJs to Node.js via napi-rs.
+//! Uses dyn-symbols for Windows compatibility (no libnode.dll link requirement).
 
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
@@ -20,7 +17,10 @@ pub fn load_document_js(path: String, data: Buffer) -> Result<JsObject> {
     obj.set_named_property("content", env.create_string_from_std(result.content)?)?;
     obj.set_named_property("mimeType", env.create_string_from_std(result.mime_type)?)?;
     obj.set_named_property("sizeBytes", env.create_uint32(result.size_bytes as u32)?)?;
-    obj.set_named_property("source", env.create_string_from_std(result.source.to_string())?)?;
+    obj.set_named_property(
+        "source",
+        env.create_string_from_std(result.source.to_string())?,
+    )?;
     Ok(obj)
 }
 
@@ -36,3 +36,34 @@ pub fn extract_text_js(data: Buffer, mime: String) -> Result<String> {
     Ok(extract_text(data.as_ref(), &mime))
 }
 
+/// Extract text from a PDF buffer natively (pdf-extract / lopdf parser).
+/// Available when the addon is built — the `pdf` feature is part of `addon`.
+#[napi]
+pub fn extract_pdf_js(data: Buffer) -> Result<String> {
+    #[cfg(feature = "pdf")]
+    {
+        crate::extract_pdf(data.as_ref()).map_err(|e| napi::Error::from_reason(e))
+    }
+    #[cfg(not(feature = "pdf"))]
+    {
+        Err(napi::Error::from_reason(
+            "docloader was built without the pdf feature",
+        ))
+    }
+}
+
+/// Extract text from a DOCX buffer natively (zip inflate + w:t parsing).
+/// Available when the addon is built — the `docx` feature is part of `addon`.
+#[napi]
+pub fn extract_docx_js(data: Buffer) -> Result<String> {
+    #[cfg(feature = "docx")]
+    {
+        crate::extract_docx(data.as_ref()).map_err(|e| napi::Error::from_reason(e))
+    }
+    #[cfg(not(feature = "docx"))]
+    {
+        Err(napi::Error::from_reason(
+            "docloader was built without the docx feature",
+        ))
+    }
+}

@@ -1,15 +1,8 @@
-// ==============================================================================
-// GHITA CODING AGENT - Markdown CI Gate
-// Phase 16 (Update 0.0.3 beta2): broken-link checker, accessibility, CI gate
-// ==============================================================================
-
 import { readFile, readdir, stat } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import type { Dirent } from 'node:fs';
 
-// ----------------------------------------------------------------------------
 // Issue types
-// ----------------------------------------------------------------------------
 
 export type GateSeverity = 'error' | 'warning' | 'info';
 
@@ -41,9 +34,7 @@ export interface GateOptions {
   validateLink?: (link: string, fromFile: string) => Promise<LinkCheckResult> | LinkCheckResult;
 }
 
-// ----------------------------------------------------------------------------
 // Glob helpers (minimal subset: ** and *)
-// ----------------------------------------------------------------------------
 
 function matchesAny(path: string, patterns: string[]): boolean {
   return patterns.some((p) => matchGlob(p, path));
@@ -70,9 +61,7 @@ function joinFn(a: string, b: string): string {
   return `${a  }/${  b}`;
 }
 
-// ----------------------------------------------------------------------------
 // File discovery
-// ----------------------------------------------------------------------------
 
 async function listMarkdownFiles(
   root: string,
@@ -108,9 +97,7 @@ async function listMarkdownFiles(
   return out;
 }
 
-// ----------------------------------------------------------------------------
 // Link extraction
-// ----------------------------------------------------------------------------
 
 export interface ExtractedLink {
   raw: string;
@@ -142,9 +129,7 @@ export function extractLinks(markdown: string): ExtractedLink[] {
   return out;
 }
 
-// ----------------------------------------------------------------------------
 // Heading extraction
-// ----------------------------------------------------------------------------
 
 export function extractHeadings(markdown: string): Map<string, number> {
   const map = new Map<string, number>();
@@ -194,9 +179,7 @@ export function slugify(heading: string): string {
     .replace(/^-|-$/g, '');
 }
 
-// ----------------------------------------------------------------------------
 // Default link validator
-// ----------------------------------------------------------------------------
 
 async function defaultLinkValidator(
   href: string,
@@ -262,9 +245,7 @@ async function defaultLinkValidator(
   }
 }
 
-// ----------------------------------------------------------------------------
 // Markdown CI Gate
-// ----------------------------------------------------------------------------
 
 export interface GateRunResult {
   filesScanned: number;

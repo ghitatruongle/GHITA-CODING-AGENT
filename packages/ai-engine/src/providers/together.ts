@@ -1,7 +1,5 @@
-// ==============================================================================
 // v0.4.9 A5: Together AI Provider — OpenAI-compatible via defineVendor
 // Open-model inference (refer_project/ai-framework/litellm routing pattern).
-// ==============================================================================
 
 import { defineVendor } from './base-extended.js';
 import { BaseProvider } from './base.js';

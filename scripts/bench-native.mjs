@@ -1,11 +1,8 @@
 #!/usr/bin/env node
-// ==============================================================================
-// GHITA CODING AGENT - Native addon benchmark (v1.1.0 Track 8 A12)
-// ------------------------------------------------------------------------------
+
 // Measures the compiled napi addons (secscan / retrieval / codegraph) against
 // the JS baseline in docs/perf-baseline.json. Skips addons that are not built.
 // Usage: node scripts/bench-native.mjs [--json]
-// ==============================================================================
 
 import { performance } from 'node:perf_hooks';
 import { readFileSync } from 'node:fs';

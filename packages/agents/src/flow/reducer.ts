@@ -1,13 +1,9 @@
-// ==============================================================================
-// GHITA CODING AGENT - Reducer Pattern (Phase 5 — Update 0.0.3)
-// ==============================================================================
 // Implements the Redux-style reducer pattern for thread/event processing.
 // - Pure function: processEvent(state, event) -> newState
 // - Event types: message, tool_call, error
 // - Idempotency: same eventId processed twice yields identical state
 // - Replay: events can be replayed in order to reconstruct any prior state
 // - Thread resume: HTTP-style resume handler at POST /threads/:id/resume
-// ==============================================================================
 
 // ----- Event Types -----
 

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - AI Gateway Server
-// ==============================================================================
-
 import { createServer, type IncomingMessage, type ServerResponse, type Server } from 'http';
 import { timingSafeEqual } from 'node:crypto';
 import type { Orchestrator } from '../orchestrator.js';

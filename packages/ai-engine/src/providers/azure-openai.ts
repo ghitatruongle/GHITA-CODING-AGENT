@@ -1,4 +1,3 @@
-// ==============================================================================
 // v0.4.9 A5: Azure OpenAI Provider
 //
 // Azure exposes OpenAI models under deployment-scoped URLs with an `api-key`
@@ -8,7 +7,6 @@
 // URL:  {baseUrl}/openai/deployments/{deployment}/chat/completions?api-version=...
 // Auth: header `api-key: <key>`
 // The Azure "deployment" name is supplied as the model (options.model / config).
-// ==============================================================================
 
 import type { AIProviderType, AIStreamChunk } from '@ghita/shared';
 import type { ChatMessage, ChatOptions, ChatResponse, ProviderConfig } from '../types.js';

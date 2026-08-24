@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Shared Badge Primitive
-// ==============================================================================
-
 import { type HTMLAttributes } from 'react';
 
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {

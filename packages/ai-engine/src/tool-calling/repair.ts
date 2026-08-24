@@ -1,11 +1,7 @@
-// ==============================================================================
-// GHITA CODING AGENT - AI Engine v1.1.0 Track 4 P49: tool-call argument repair
-// ==============================================================================
 // Repairs malformed tool-call arguments (broken JSON, type mismatches, missing
 // required fields) before execution — mirroring the AI SDK tool-call-repair
 // pattern. Safe: never invents values; fills typed defaults when the schema
 // declares the field required and the value is missing.
-// ==============================================================================
 
 export interface ToolArgSchema {
   type?: 'object';

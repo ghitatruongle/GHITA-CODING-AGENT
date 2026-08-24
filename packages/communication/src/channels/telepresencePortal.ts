@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 18: Omnichannel Live Telepresence Portal
-// ==============================================================================
 // WebSocket server for secure telepresence stream, OTP challenge, payload encryption,
 // image compression, and mobile command resolution.
-// ==============================================================================
 
 import { createServer, type Server as HttpServer, type IncomingMessage } from 'node:http';
 import * as crypto from 'node:crypto';

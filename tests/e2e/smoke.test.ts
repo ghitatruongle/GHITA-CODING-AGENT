@@ -1,15 +1,10 @@
-// ==============================================================================
-// GHITA CODING AGENT - E2E Smoke Test Suite (Phase 46)
 // Quick validation that core systems boot and respond correctly
-// ==============================================================================
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import * as http from 'node:http';
 import { EventEmitter } from 'node:events';
 
-// ---------------------------------------------------------------------------
 // Smoke Test: Core System Health Checks
-// ---------------------------------------------------------------------------
 
 interface HealthCheckResult {
   service: string;
@@ -62,9 +57,7 @@ class SmokeTestRunner {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Mock Server for Testing
-// ---------------------------------------------------------------------------
 
 function createMockServer(port: number): http.Server {
   const server = http.createServer((req, res) => {
@@ -93,9 +86,7 @@ function createMockServer(port: number): http.Server {
   return server;
 }
 
-// ---------------------------------------------------------------------------
 // Tests
-// ---------------------------------------------------------------------------
 
 describe('Phase 46 - Smoke Test Suite', () => {
   let server: http.Server;
@@ -161,9 +152,7 @@ describe('Phase 46 - Smoke Test Suite', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // API Integration Tests
-// ---------------------------------------------------------------------------
 
 describe('Phase 46 - API Integration Tests', () => {
   let server: http.Server;

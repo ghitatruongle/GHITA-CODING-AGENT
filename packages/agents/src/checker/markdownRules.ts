@@ -1,11 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 11: Source-Controlled Markdown CI Checks Gates
-// ==============================================================================
-// Quét quy tắc markdown `.ghita/checks/*.md` trong luồng CI (như cấm dùng any type)
-// Chặn lưu tệp vi phạm quy định code sạch qua middleware.
-// Tham chiếu: Continue (markdown checks)
-// ==============================================================================
-
 import fs from 'fs';
 import * as path from 'path';
 import ts from 'typescript';
@@ -29,9 +21,6 @@ export interface CheckIssue {
   message: string;
 }
 
-/**
- * Trình phân tích quy tắc markdown và quét mã nguồn tĩnh (AST / Regex)
- */
 export class MarkdownRulesChecker {
   private rules: MarkdownRule[] = [];
 
@@ -40,9 +29,6 @@ export class MarkdownRulesChecker {
     this.loadRules(dir);
   }
 
-  /**
-   * Tải và phân tích toàn bộ quy tắc *.md
-   */
   public loadRules(dir: string): void {
     this.rules = [];
     if (!fs.existsSync(dir)) return;
@@ -64,9 +50,6 @@ export class MarkdownRulesChecker {
     }
   }
 
-  /**
-   * Phân tích tệp markdown ra đối tượng cấu trúc Rule
-   */
   private parseRuleMarkdown(defaultId: string, content: string): MarkdownRule | null {
     const lines = content.split('\n');
     let severity: 'error' | 'warning' = 'error';
@@ -113,16 +96,12 @@ export class MarkdownRulesChecker {
     };
   }
 
-  /**
-   * Kiểm tra xem tệp tin có khớp mẫu glob hay không (Hỗ trợ đơn giản *.ts và tương đương)
-   */
   private matchFilePattern(filePath: string, patterns: string[]): boolean {
     const normalized = filePath.replace(/\\/g, '/');
     return patterns.some((pattern) => {
       const cleanPattern = pattern.trim().replace(/\\/g, '/');
       if (cleanPattern === '**/*' || cleanPattern === '*') return true;
 
-      // Mẫu đuôi extension như **/*.ts
       if (cleanPattern.startsWith('**/')) {
         const suffix = cleanPattern.substring(2); // e.g. "/*.ts"
         if (suffix.startsWith('/*.')) {
@@ -134,16 +113,12 @@ export class MarkdownRulesChecker {
     });
   }
 
-  /**
-   * Quét tệp tin dựa trên các quy tắc đã nạp
-   */
   public checkFile(filePath: string, content: string): CheckIssue[] {
     const issues: CheckIssue[] = [];
 
     for (const rule of this.rules) {
       if (!this.matchFilePattern(filePath, rule.files)) continue;
 
-      // 1. Quét AST nếu cấu hình astCheck
       if (
         rule.astCheck === 'any-keyword' &&
         (filePath.endsWith('.ts') || filePath.endsWith('.tsx'))
@@ -167,13 +142,12 @@ export class MarkdownRulesChecker {
         visitor(sourceFile);
       }
 
-      // 2. Quét biểu thức chính quy Regex nếu có Pattern
       if (rule.pattern) {
         try {
           const regex = new RegExp(rule.pattern, 'g');
           let match;
           while ((match = regex.exec(content)) !== null) {
-            // Tìm số dòng tương ứng vị trí khớp
+            
             const index = match.index;
             const linesBefore = content.substring(0, index).split('\n');
             const line = linesBefore.length;
@@ -204,10 +178,6 @@ export class MarkdownRulesChecker {
     return this.rules;
   }
 
-  /**
-   * Tự động sinh đề xuất sửa đổi chuẩn cú pháp (Tác vụ 5)
-   * Thay thế các từ khóa 'any' không an toàn bằng 'unknown'
-   */
   public generateFix(content: string): string {
     const sourceFile = ts.createSourceFile('temp.ts', content, ts.ScriptTarget.Latest, true);
     const replacements: { start: number; end: number; text: string }[] = [];
@@ -224,7 +194,6 @@ export class MarkdownRulesChecker {
     };
     visitor(sourceFile);
 
-    // Sắp xếp các đề xuất thay thế theo thứ tự ngược để tránh lệch vị trí offset
     replacements.sort((a, b) => b.start - a.start);
 
     let fixed = content;
@@ -234,9 +203,6 @@ export class MarkdownRulesChecker {
     return fixed;
   }
 
-  /**
-   * Sinh chuỗi diff hiển thị dòng trước và sau sửa đổi
-   */
   public generateDiff(original: string, fixed: string): string {
     const originalLines = original.split('\n');
     const fixedLines = fixed.split('\n');
@@ -254,12 +220,9 @@ export class MarkdownRulesChecker {
   }
 }
 
-/**
- * Middleware Agent chèn rào chắn preTool kiểm duyệt quy tắc code sạch (Tác vụ 3)
- */
 export class MarkdownChecksMiddleware implements AgentMiddleware {
   readonly name = 'MarkdownChecksMiddleware';
-  readonly priority = 6; // Chạy ngay sau AST-Lock
+  readonly priority = 6; 
 
   private checker: MarkdownRulesChecker;
   private rulesDir: string;
@@ -269,9 +232,6 @@ export class MarkdownChecksMiddleware implements AgentMiddleware {
     this.checker = new MarkdownRulesChecker(this.rulesDir);
   }
 
-  /**
-   * Pre-tool hook: Chặn ghi file nếu vi phạm quy chuẩn code sạch
-   */
   async preTool(
     toolName: string,
     args: Record<string, unknown>,
@@ -297,23 +257,20 @@ export class MarkdownChecksMiddleware implements AgentMiddleware {
 
     if (!targetPath || !newContent) return;
 
-    // Chuyển relative sang absolute path nếu cần
     const resolvedPath = path.isAbsolute(targetPath) ? targetPath : path.resolve(targetPath);
 
-    // Nạp lại rules để phản ánh thay đổi mới nhất
     this.checker.loadRules(this.rulesDir);
     const issues = this.checker.checkFile(resolvedPath, newContent);
 
     const errors = issues.filter((i) => i.severity === 'error');
     if (errors.length > 0) {
-      // Ghi nhận log vi phạm (Tác vụ 7)
+      
       this.logViolations(resolvedPath, errors);
 
       const errorDetail = errors
         .map((e) => `- [Dòng ${e.line}, Cột ${e.column}] Lỗi [${e.ruleId}]: ${e.message}`)
         .join('\n');
 
-      // Tự động sinh diff đề xuất sửa đổi chuẩn cú pháp (Tác vụ 5)
       const proposedFix = this.checker.generateFix(newContent);
       const proposedDiff = this.checker.generateDiff(newContent, proposedFix);
       const diffSection = proposedDiff
@@ -328,9 +285,6 @@ export class MarkdownChecksMiddleware implements AgentMiddleware {
     return { proceed: true };
   }
 
-  /**
-   * Lưu log vi phạm xuống file log tĩnh (Tác vụ 7)
-   */
   private logViolations(filePath: string, errors: CheckIssue[]): void {
     try {
       const logDir = path.join(process.cwd(), '.ghita');

@@ -1,12 +1,8 @@
-// ==============================================================================
-// GHITA CODING AGENT - Skills v1.1.0 Track 2: multi-harness export (P35)
-// ==============================================================================
 // Exports skills to standard SKILL.md layout for other harnesses:
 // claude-code → .claude/skills/<name>/SKILL.md
 // codex/cursor  → .agents/skills/<name>/SKILL.md
 // vercel        → skills/<name>/SKILL.md (canonical)
 // ghita         → skills/<name>/SKILL.md (canonical)
-// ==============================================================================
 
 import type { SkillDefinition } from '../types.js';
 

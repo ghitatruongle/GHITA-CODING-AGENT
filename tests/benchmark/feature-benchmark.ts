@@ -1,11 +1,7 @@
-// ==============================================================================
-// GHITA CODING AGENT — Feature Benchmark Suite
-// ==============================================================================
 // Benchmark runner for AST-Lock, SCTI trajectory self-healing, and DebateEngine.
 // Compares each feature against a naive baseline and reports speedup/accuracy.
 //
 // Usage: npx tsx tests/benchmark/feature-benchmark.ts [--json]
-// ==============================================================================
 
 import { execSync } from 'child_process';
 

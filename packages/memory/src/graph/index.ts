@@ -1,7 +1,3 @@
-/**
- * Phase 23 — Graph sub-module public API.
- */
-
 export type {
   Association,
   AssociationType,

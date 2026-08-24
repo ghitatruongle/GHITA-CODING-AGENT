@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — Pairing Screen (Composition Root)
 // Wi-Fi & Bluetooth pairing with desktop via IP/Cloud Discovery
-// ==============================================================================
 
 import React, { useState, useCallback, useRef } from 'react';
 import {

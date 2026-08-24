@@ -1,10 +1,8 @@
-// ==============================================================================
 // v0.4.9 A3: Agent Work Loop Harness — Evaluator
 //
 // Resolves dimension scores under evidence-bounded ceilings and produces a
 // finding-bound review. This is a runtime guardrail/reporting aid, not the full
 // human review process it is modeled on.
-// ==============================================================================
 
 import type {
   CheckResult,
@@ -64,15 +62,12 @@ export function checkToDimension(checkId: WorkLoopCheckId): WorkLoopDimension {
 /**
  * WorkLoopEvaluator — resolves an Agent Work Loop review from check results.
  *
- * Sử dụng:
+
  *   const review = new WorkLoopEvaluator().evaluate(episode, findings);
  *   console.log(review.loopEffectiveness, review.dimensions);
  */
 export class WorkLoopEvaluator {
-  /**
-   * Đánh giá một Task Episode. Điểm mỗi dimension bị chặn trần theo evidence
-   * mạnh nhất; findings không tự sinh/triệt tiêu điểm.
-   */
+  
   evaluate(episode: TaskEpisode, findings: WorkLoopFinding[] = []): WorkLoopReview {
     const byCheck = new Map<WorkLoopCheckId, CheckResult>();
     for (const check of episode.checks) byCheck.set(check.checkId, check);

@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Mock Payment Provider (Phase 38)
 // Simulates a payment gateway for testing without external dependencies
-// ==============================================================================
 
 import { randomUUID } from 'node:crypto';
 import type { Currency, PaymentIntent, PaymentProvider, PaymentStatus } from './types.js';

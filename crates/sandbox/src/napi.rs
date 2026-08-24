@@ -1,10 +1,7 @@
-// ==============================================================================
-// GHITA CODING AGENT — Sandbox NAPI addon (v1.1.5-beta2 Track 2)
-// ------------------------------------------------------------------------------
-// napi surface behind the `addon` feature — loaded by @ghita/native-bridge
-// under the name `sandbox`. Mirrors the secscan/retrieval/codegraph addon
-// pattern (dyn-symbols, no libnode.dll at link time).
-// ==============================================================================
+//! GHITA CODING AGENT — Sandbox NAPI addon
+//! napi surface behind the `addon` feature — loaded by @ghita/native-bridge
+//! under the name `sandbox`. Mirrors the secscan/retrieval/codegraph addon
+//! pattern (dyn-symbols, no libnode.dll at link time).
 #![expect(dead_code)]
 
 use crate::{spawn_sandboxed as spawn_core, SandboxOptions, SandboxProfile};

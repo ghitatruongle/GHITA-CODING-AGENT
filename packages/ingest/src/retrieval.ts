@@ -1,16 +1,9 @@
-// ==============================================================================
-// GHITA CODING AGENT - @ghita/ingest retriever suite (P69 + Track 8 A4)
-// ==============================================================================
 // Hybrid (BM25+vector RRF), MMR diversity and parent-document retrieval over
 // an indexed chunk collection. Fully offline-testable with fakes.
-// v1.1.0 Track 8 A4: BM25Index — inverted index (DF precomputed) thay vì quét
-// O(N²) từng query (đo: 10k chunks 4230 ms → ~1 ms).
-// ==============================================================================
 
 import { loadNative } from '@ghita/native-bridge';
 import type { Chunk, RetrieverResult, VectorProvider } from './types.js';
 
-/** v1.1.0 Track 8 A9: retrieval native addon surface (via @ghita/native-bridge). */
 interface RetrievalNative {
   Bm25Index: new (
     chunks: Array<{ id: number; text: string }>,
@@ -22,7 +15,6 @@ interface RetrievalNative {
   };
 }
 
-/** Bridge cho retrieval addon — load một lần (native-first, JS fallback). */
 const retrievalBridge = () =>
   loadNative<RetrievalNative>('retrieval', undefined as unknown as RetrievalNative);
 
@@ -66,7 +58,6 @@ export class BM25Index {
     }
   }
 
-  /** Score all chunks for a query (DF precomputed — một lần quét). */
   query(query: string, topK?: number): RetrieverResult[] {
     const terms = tokenize(query);
     const scores = new Map<number, number>();
@@ -177,7 +168,7 @@ export class HybridRetriever {
     private readonly vectors: VectorProvider,
     private readonly options: HybridRetrieverOptions & { useNative?: boolean } = {},
   ) {
-    // v1.1.0 Track 8 A9: native BM25 leg khi addon có sẵn (bỏ qua khi useNative=false).
+    
     const bridge = options.useNative === false ? undefined : retrievalBridge();
     this.native =
       bridge?.native && typeof bridge.impl.Bm25Index === 'function'
@@ -221,7 +212,6 @@ export class HybridRetriever {
       });
   }
 
-  /** BM25 leg: native (inverted index) khi có addon, ngược lại JS. */
   private bm25Scores(query: string): Map<string, number> {
     if (this.native) {
       const result = this.native.index.query(query, this.chunks.length);
@@ -237,7 +227,6 @@ export class HybridRetriever {
     return bm25Score(query, this.chunks);
   }
 
-  /** True khi đang dùng native addon cho leg BM25. */
   usingNative(): boolean {
     return this.native !== null;
   }

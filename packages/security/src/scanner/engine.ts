@@ -1,10 +1,8 @@
-// ==============================================================================
 // v0.4.9 A1: Security Scanner — Local Scan Engine
 //
 // A deterministic, fully-offline scanner: it walks a repository (skipping
 // artifact/dependency dirs), applies the line-based rule set, and emits
 // findings/coverage documents with a 0–100 score.
-// ==============================================================================
 
 import { createHash, randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
@@ -22,7 +20,6 @@ import type {
 } from './models.js';
 import { DEFAULT_SCANNER_RULES } from './rules.js';
 
-/** v1.1.0 Track 8 A7: native secscan addon surface (via @ghita/native-bridge). */
 interface SecscanNative {
   scanFast(
     content: string,
@@ -30,7 +27,6 @@ interface SecscanNative {
   ): { lines: Uint32Array; ruleIndices: Uint32Array; evidence: string[] };
 }
 
-/** Thư mục luôn bị loại khỏi scan (artifact/dependency dirs). */
 const DEFAULT_EXCLUDED_DIRS = new Set([
   'node_modules',
   'dist',
@@ -43,7 +39,6 @@ const DEFAULT_EXCLUDED_DIRS = new Set([
   'out',
 ]);
 
-/** Chỉ quét file text có đuôi nằm trong danh sách này. */
 const SCANNABLE_EXTENSIONS = new Set([
   '.ts',
   '.tsx',
@@ -71,18 +66,18 @@ const SCANNABLE_EXTENSIONS = new Set([
 const MAX_EVIDENCE_LENGTH = 200;
 
 export interface ScannerOptions {
-  /** Rule set tùy chỉnh (mặc định: DEFAULT_SCANNER_RULES). */
+  
   rules?: ScannerRule[];
-  /** Bỏ qua file lớn hơn ngưỡng này (mặc định 1 MiB). */
+  
   maxFileSizeBytes?: number;
-  /** Giới hạn số file quét (bảo hiểm cho repo lớn; mặc định 20 000). */
+  
   maxFiles?: number;
-  /** Tên thư mục loại trừ bổ sung. */
+  
   excludeDirs?: string[];
 }
 
 export interface ScanOptions {
-  /** 'repository' = quét toàn bộ root; hoặc danh sách path con. */
+  
   target?: 'repository' | readonly string[];
   signal?: AbortSignal;
 }
@@ -101,16 +96,15 @@ export class InvalidScanTargetError extends Error {
 }
 
 /**
- * SecurityScanner — quét mã nguồn local theo rule, trả về findings/coverage
- * documents theo cấu trúc SARIF-like tiện tiêu thụ downstream.
+
  *
- * Sử dụng:
+
  *   const scanner = new SecurityScanner();
  *   const report = await scanner.scan('/path/to/repo');
  *   console.log(report.summary.score, report.findings.findings.length);
  */
 export class SecurityScanner {
-  /** v1.1.0 Track 8 A7: ép dùng JS fast path (test parity / debug). */
+  
   static forceJsScanFast = false;
 
   private readonly rules: ScannerRule[];
@@ -125,9 +119,6 @@ export class SecurityScanner {
     this.excludedDirs = new Set([...DEFAULT_EXCLUDED_DIRS, ...(options.excludeDirs ?? [])]);
   }
 
-  /**
-   * Quét repository hoặc danh sách path con.
-   */
   async scan(repository: string, options: ScanOptions = {}): Promise<ScanReport> {
     const startedAt = Date.now();
     const scanId = randomUUID();
@@ -208,9 +199,6 @@ export class SecurityScanner {
     };
   }
 
-  /**
-   * Quét một chuỗi nội dung (dùng cho scan in-memory / test).
-   */
   scanContent(relPath: string, content: string, sink?: ScanFinding[]): ScanFinding[] {
     const findings = sink ?? [];
     const ext = extname(relPath).toLowerCase();
@@ -219,8 +207,6 @@ export class SecurityScanner {
     );
     if (applicable.length === 0) return findings;
 
-    // v1.1.0 Track 8 A3: lazy line iteration — không dựng toàn bộ mảng dòng
-    // (giảm RAM đáng kể trên file lớn; giữ nguyên ngữ nghĩa per-line/per-rule).
     let lineStart = 0;
     let lineNo = 1;
     while (lineStart <= content.length) {
@@ -243,11 +229,6 @@ export class SecurityScanner {
     return findings;
   }
 
-  /**
-   * v1.1.0 Track 8 A3 (fast path): quét bằng MỘT alternation regex trên toàn
-   * buffer (không tách dòng) — nhanh hơn đáng kể trên file lớn, vẫn giữ
-   * ruleId + số dòng cho từng finding.
-   */
   scanContentFast(relPath: string, content: string, sink?: ScanFinding[]): ScanFinding[] {
     const findings = sink ?? [];
     const ext = extname(relPath).toLowerCase();
@@ -256,7 +237,6 @@ export class SecurityScanner {
     );
     if (applicable.length === 0) return findings;
 
-    // v1.1.0 Track 8 A7: native fast path qua @ghita/native-bridge (secscan addon).
     if (!SecurityScanner.forceJsScanFast) {
       const bridge = loadNative<SecscanNative>('secscan', undefined as unknown as SecscanNative);
       if (bridge.native && typeof bridge.impl.scanFast === 'function') {
@@ -290,7 +270,7 @@ export class SecurityScanner {
     let lineNo = 1;
     let lastIndex = 0;
     while ((match = combined.exec(content)) !== null) {
-      // Cập nhật số dòng theo số ký tự xuống dòng giữa match trước và match này.
+      
       lineNo += countNewlines(content, lastIndex, match.index);
       lastIndex = match.index;
       const matchedText = match[0];
@@ -392,7 +372,6 @@ export class SecurityScanner {
     return [...seen];
   }
 
-  /** Duyệt cây thư mục, trả về số file bị bỏ qua (không quét được). */
   private async collectFiles(dir: string, sink: string[], signal?: AbortSignal): Promise<number> {
     let skipped = 0;
     throwIfAborted(signal);
@@ -424,7 +403,6 @@ function fingerprint(ruleId: string, path: string, evidence: string): string {
     .digest('hex');
 }
 
-/** Đếm số ký tự '\n' trong khoảng [start, end) — dùng cho fast scan. */
 function countNewlines(content: string, start: number, end: number): number {
   let count = 0;
   for (let i = start; i < end; i++) {
@@ -445,7 +423,6 @@ function countBySeverity(findings: ScanFinding[]): Record<FindingSeverityLevel, 
   return counts;
 }
 
-/** Điểm 0–100, cùng trọng số với AuditRunner (critical trừ nặng nhất). */
 function computeScore(counts: Record<FindingSeverityLevel, number>): number {
   const penalty = counts.critical * 25 + counts.high * 10 + counts.medium * 4 + counts.low;
   return Math.max(0, 100 - penalty);
@@ -476,4 +453,31 @@ function throwIfAborted(signal?: AbortSignal): void {
   if (signal?.aborted === true) {
     throw signal.reason ?? new Error('The scan was aborted.');
   }
+}
+
+/**
+ * Redact exact byte/char spans produced by a scanner (e.g. secscan
+ * `match_starts`/`match_ends` or regex match indices). Spans are applied in
+ * reverse order so earlier offsets stay valid. Adjacent spans separated only
+ * by whitespace collapse into a single replacement to keep output readable.
+ */
+export function redactSpanned(
+  content: string,
+  spans: Array<{ start: number; end: number }>,
+  replacement = '[REDACTED]',
+): string {
+  if (spans.length === 0) return content;
+  const sorted = [...spans]
+    .filter((s) => s.start >= 0 && s.end > s.start && s.end <= content.length)
+    .sort((a, b) => b.start - a.start);
+
+  let out = content;
+  let lastStart = Number.POSITIVE_INFINITY;
+  for (const span of sorted) {
+    // Skip spans swallowed by an already-applied (later, longer) replacement.
+    if (span.end > lastStart) continue;
+    out = out.slice(0, span.start) + replacement + out.slice(span.end);
+    lastStart = span.start;
+  }
+  return out;
 }

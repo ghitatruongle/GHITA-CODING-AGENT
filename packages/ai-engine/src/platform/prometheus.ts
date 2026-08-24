@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Docker, K8s, Prometheus & Terraform Configurations
-// ==============================================================================
-
 export const DOCKERFILE_TEMPLATE = `
 FROM node:20-alpine AS builder
 WORKDIR /app

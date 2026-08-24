@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Router Module Index (Phase 2)
 // Public API for the Adaptive Router subsystem
-// ==============================================================================
 
 // --- Adaptive Router (complexity-based model selection) ---
 export { AdaptiveRouter } from './adaptive.js';

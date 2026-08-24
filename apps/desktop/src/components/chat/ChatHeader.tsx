@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — Chat Header Component
 // Connection status, session controls, and model selector.
-// ==============================================================================
 
 import React from 'react';
 import { useAppStore } from '../../stores/appStore';

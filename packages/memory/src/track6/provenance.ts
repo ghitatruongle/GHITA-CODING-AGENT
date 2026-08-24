@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Memory v1.1.0 Track 6 P72: provenance & rollback
-// ==============================================================================
 // Records where each memory came from (agent, namespace, source, snapshot)
 // and supports git-style rollback to a previous version.
-// ==============================================================================
 
 import { createHash } from 'node:crypto';
 

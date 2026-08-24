@@ -21,7 +21,7 @@ export function AddressToolbar(props: {
   handleAddressClick: () => void;
   handleRefresh: () => void;
   navigateTo: (url: string) => void;
-  // deep-review fix (M9): history navigation handled by the panel hook
+  
   // instead of the (cross-origin) iframe contentWindow.
   goBack: () => void;
   goForward: () => void;
@@ -155,7 +155,7 @@ export function AddressToolbar(props: {
               onChange={(e) => setAddressInput(e.target.value)}
               onFocus={handleAddressClick}
               onBlur={() => {
-                // Khi blur mà không submit thì reset về URL hiện tại
+                
                 setTimeout(() => {
                   setIsEditing(false);
                   setAddressInput(activeTab?.displayUrl || '');

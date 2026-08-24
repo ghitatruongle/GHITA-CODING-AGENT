@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Communication Types (Server-Side)
-// ==============================================================================
-
 import type { DeviceInfo } from '@ghita/shared';
 
 // --- Server Configuration ---

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Do-Not-Disturb Scheduler (Phase 35)
-// ==============================================================================
-
 import { randomUUID } from 'node:crypto';
 import type { DndSchedule, NotificationPreferences } from './types.js';
 

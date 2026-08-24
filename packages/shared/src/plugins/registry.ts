@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Plugin Registry
-// ==============================================================================
-
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { homedir } from 'node:os';

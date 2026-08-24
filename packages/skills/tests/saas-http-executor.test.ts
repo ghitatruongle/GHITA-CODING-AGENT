@@ -1,6 +1,4 @@
-// ==============================================================================
 // v0.4.9: Real SaaS HTTP executor tests
-// ==============================================================================
 
 import { describe, it, expect, vi } from 'vitest';
 import { executeRealSaaSAction, type FetchLike } from '../src/registry/saas-http-executor.js';

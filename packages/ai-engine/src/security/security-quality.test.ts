@@ -1,7 +1,3 @@
-// ==============================================================================
-// v1.1.5-beta1 Track 5.3-5.6 — Security Quality Tests
-// ==============================================================================
-
 import { describe, expect, it } from 'vitest';
 import { verifyFix } from './fix-rescan.js';
 import {

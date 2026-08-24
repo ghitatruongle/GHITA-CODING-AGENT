@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - WebSocket Channel (Topic-Based Demux) (Phase 29)
-// ==============================================================================
-
 import type { ChannelMessage, ChannelHandler, ChannelSubscriptionOptions } from './types.js';
 
 const DEFAULT_OPTIONS: ChannelSubscriptionOptions = {

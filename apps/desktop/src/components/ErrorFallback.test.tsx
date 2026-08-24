@@ -1,7 +1,4 @@
 // @vitest-environment happy-dom
-// ==============================================================================
-// GHITA CODING AGENT — ErrorFallback Unit Tests
-// ==============================================================================
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';

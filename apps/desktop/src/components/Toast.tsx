@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Toast Notification Wrapper
-// ==============================================================================
-
 import { Toaster } from 'react-hot-toast';
 
 export function Toast() {

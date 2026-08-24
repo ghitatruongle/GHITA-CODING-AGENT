@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - WASM Parser Downloader
-// ==============================================================================
-
 import fs from 'fs';
 import path from 'path';
 import * as url from 'url';
@@ -17,7 +13,6 @@ try {
   // ignore
 }
 
-// Thư mục tài nguyên chứa các parser WASM
 const DEFAULT_PARSERS_DIR = __dirname ? path.resolve(__dirname, '../../resources/parsers') : '';
 const CDN_BASE_URL = 'https://unpkg.com/tree-sitter-wasms@0.1.11/out';
 
@@ -35,9 +30,6 @@ export class WasmParserDownloader {
     }
   }
 
-  /**
-   * Chuẩn hóa tên ngôn ngữ sang định dạng tương thích với tệp WASM của tree-sitter
-   */
   public normalizeLanguageName(lang: string): string {
     const l = lang.toLowerCase().trim();
     if (l === 'c++' || l === 'cpp') return 'cpp';
@@ -52,17 +44,12 @@ export class WasmParserDownloader {
     return l;
   }
 
-  /**
-   * Đảm bảo tree-sitter.wasm runtime có sẵn cục bộ
-   * Lấy từ web-tree-sitter node_modules hoặc tải về từ unpkg nếu cần
-   */
   public async ensureRuntimeWasm(): Promise<string> {
     const targetPath = path.join(this.parsersDir, 'tree-sitter.wasm');
     if (fs.existsSync(targetPath)) {
       return targetPath;
     }
 
-    // Thử sao chép từ node_modules/web-tree-sitter/tree-sitter.wasm
     try {
       const nodeModulesWasm = path.resolve(
         __dirname,
@@ -76,16 +63,12 @@ export class WasmParserDownloader {
       console.warn('Không thể sao chép tree-sitter.wasm từ node_modules:', err);
     }
 
-    // Nếu không có, tải về từ CDN unpkg của web-tree-sitter
     const url = 'https://unpkg.com/web-tree-sitter@0.22.4/tree-sitter.wasm';
     console.info(`Đang tải tree-sitter.wasm từ ${url}...`);
     await this.downloadFile(url, targetPath);
     return targetPath;
   }
 
-  /**
-   * Tải và cache tệp WASM của một ngôn ngữ
-   */
   public async getLanguageWasm(lang: string): Promise<string> {
     const normalized = this.normalizeLanguageName(lang);
     const filename = `tree-sitter-${normalized}.wasm`;
@@ -106,7 +89,7 @@ export class WasmParserDownloader {
     try {
       await this.downloadFile(url, targetPath);
     } catch (err) {
-      // Hỗ trợ fallback tải từ cdnjs hoặc unpkg khác nếu cần
+      
       console.error(`Không thể tải WASM parser cho ${normalized}:`, err);
       throw new Error(`Failed to load WASM parser for language: ${normalized}`);
     }
@@ -114,9 +97,6 @@ export class WasmParserDownloader {
     return targetPath;
   }
 
-  /**
-   * Tải tệp tin bằng API native fetch
-   */
   private async downloadFile(url: string, destPath: string): Promise<void> {
     const res = await fetch(url);
     if (!res.ok) {

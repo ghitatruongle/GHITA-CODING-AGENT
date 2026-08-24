@@ -1,8 +1,3 @@
-// =============================================================================
-// GHITA CODING AGENT - DSO Orchestrator Unit Tests
-// Kiểm thử Dynamic Sandbox Orchestrator (Docker-based sandbox)
-// =============================================================================
-
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DSOOrchestrator } from '../src/sandbox/dsoOrchestrator.js';
 import { SandboxLogger } from '../src/sandbox/sandboxLogger.js';
@@ -14,9 +9,7 @@ import type {
 } from '../src/sandbox/types.js';
 import { GHITA_SANDBOX_LABEL, DEFAULT_RESOURCE_LIMITS } from '../src/sandbox/types.js';
 
-// =============================================================================
 // Mock Dockerode
-// =============================================================================
 
 const mockContainer = {
   id: 'abc123def456',
@@ -81,9 +74,7 @@ vi.mock('dockerode', () => {
   };
 });
 
-// =============================================================================
 // Tests: DSOOrchestrator
-// =============================================================================
 
 describe('DSOOrchestrator', () => {
   let dso: DSOOrchestrator;
@@ -92,10 +83,6 @@ describe('DSOOrchestrator', () => {
     vi.clearAllMocks();
     dso = new DSOOrchestrator();
   });
-
-  // ===========================================================================
-  // Tác vụ 1: Tạo Docker Bridge Network
-  // ===========================================================================
 
   describe('createNetwork', () => {
     it('nên tạo Docker Bridge Network thành công', async () => {
@@ -135,10 +122,6 @@ describe('DSOOrchestrator', () => {
       await expect(dso.createNetwork('fail-net')).rejects.toThrow('Failed to create network');
     });
   });
-
-  // ===========================================================================
-  // Tác vụ 2: Spawn Service Container
-  // ===========================================================================
 
   describe('spawnContainer', () => {
     const baseConfig: SandboxServiceConfig = {
@@ -200,10 +183,6 @@ describe('DSOOrchestrator', () => {
     });
   });
 
-  // ===========================================================================
-  // Tác vụ 3-4: Volume & Port
-  // ===========================================================================
-
   describe('volumes & ports', () => {
     it('nên cấu hình volume mounts đúng', async () => {
       const config: SandboxServiceConfig = {
@@ -258,10 +237,6 @@ describe('DSOOrchestrator', () => {
     });
   });
 
-  // ===========================================================================
-  // Tác vụ 6: Cleanup Orphan Containers
-  // ===========================================================================
-
   describe('cleanupOrphans', () => {
     it('nên trả về 0 nếu không có orphan containers', async () => {
       mockDocker.listContainers.mockResolvedValueOnce([]);
@@ -290,13 +265,12 @@ describe('DSOOrchestrator', () => {
     });
 
     it('nên bỏ qua container của sandbox hiện tại', async () => {
-      // Tạo container trước để có sandboxId
+      
       await dso.spawnContainer({
         image: 'node:22-alpine',
         name: 'test',
       });
 
-      // Lấy sandboxId từ labels
       const callArgs = mockDocker.createContainer.mock.calls[0][0];
       const currentSandboxId = callArgs.Labels[GHITA_SANDBOX_LABEL];
 
@@ -314,10 +288,6 @@ describe('DSOOrchestrator', () => {
       expect(mockContainer.stop).not.toHaveBeenCalled();
     });
   });
-
-  // ===========================================================================
-  // Tác vụ 9: Resource Limits
-  // ===========================================================================
 
   describe('resource limits', () => {
     it('nên cấu hình resource limits đúng (2 CPU, 2GB RAM)', async () => {
@@ -362,10 +332,8 @@ describe('DSOOrchestrator', () => {
     });
   });
 
-  // ===========================================================================
   // Stats & Monitoring
-  // ===========================================================================
-
+  
   describe('getStats', () => {
     it('nên trả về thống kê tài nguyên đúng', async () => {
       const stats = await dso.getStats('abc123');
@@ -380,13 +348,11 @@ describe('DSOOrchestrator', () => {
     });
   });
 
-  // ===========================================================================
   // Destroy & Cleanup
-  // ===========================================================================
-
+  
   describe('destroy', () => {
     it('nên stop và remove container', async () => {
-      // Spawn trước
+      
       await dso.spawnContainer({
         image: 'node:22-alpine',
         name: 'to-destroy',
@@ -404,7 +370,7 @@ describe('DSOOrchestrator', () => {
 
   describe('destroyAll', () => {
     it('nên destroy tất cả containers và networks', async () => {
-      // Tạo network + container
+      
       await dso.createNetwork('main');
       await dso.spawnContainer({
         image: 'node:22-alpine',
@@ -419,10 +385,8 @@ describe('DSOOrchestrator', () => {
     });
   });
 
-  // ===========================================================================
   // Container Management
-  // ===========================================================================
-
+  
   describe('getContainers', () => {
     it('nên trả về danh sách rỗng ban đầu', () => {
       expect(dso.getContainers()).toEqual([]);
@@ -459,9 +423,7 @@ describe('DSOOrchestrator', () => {
   });
 });
 
-// =============================================================================
 // Tests: SandboxLogger
-// =============================================================================
 
 describe('SandboxLogger', () => {
   let logger: SandboxLogger;

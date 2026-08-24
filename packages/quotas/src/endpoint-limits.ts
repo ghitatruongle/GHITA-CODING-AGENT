@@ -1,7 +1,5 @@
-// ==============================================================================
 // Pre-configured endpoint rate limits for common GHITA API routes.
 // Use with RateLimiter.registerLimit() to quickly set up per-endpoint limits.
-// ==============================================================================
 
 export interface EndpointRule {
   /** Unique limit identifier (used as `limitId` in RateLimiter.check) */

@@ -1,6 +1,4 @@
-// ==============================================================================
 // @ghita/integration -- GhitaCore (Facade)
-// ==============================================================================
 
 import { EventBus } from './event-bus.js';
 import { ServiceRegistry } from './service-registry.js';

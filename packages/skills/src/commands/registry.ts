@@ -1,8 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Slash Command Registry
-// Phase 2.2: Extended with flags, parsed args, history, custom commands
-// ==============================================================================
-
 export interface SlashCommandFlag {
   name: string; // e.g. '--verbose'
   short?: string; // e.g. '-v'
@@ -30,29 +25,24 @@ export class SlashCommandRegistry {
   private commands = new Map<string, SlashCommand>();
   private history: string[] = [];
 
-  /** Đăng ký command */
   register(command: SlashCommand): void {
     this.commands.set(command.trigger, command);
   }
 
-  /** Đăng ký nhiều commands */
   registerMany(commands: SlashCommand[]): void {
     for (const cmd of commands) {
       this.register(cmd);
     }
   }
 
-  /** Xóa command */
   unregister(trigger: string): boolean {
     return this.commands.delete(trigger);
   }
 
-  /** Lấy command theo trigger */
   get(trigger: string): SlashCommand | undefined {
     return this.commands.get(trigger);
   }
 
-  /** Resolve input thành command + args */
   resolve(input: string): { command: SlashCommand; args: string; parsedArgs: ParsedArgs } | null {
     const trimmed = input.trim();
     for (const [trigger, command] of this.commands) {
@@ -65,7 +55,6 @@ export class SlashCommandRegistry {
     return null;
   }
 
-  /** Tìm commands matching prefix (cho autocomplete) */
   search(prefix: string, limit = 10): SlashCommand[] {
     const results: SlashCommand[] = [];
     const lower = prefix.toLowerCase();
@@ -84,17 +73,14 @@ export class SlashCommandRegistry {
     return results.slice(0, limit);
   }
 
-  /** Lấy tất cả commands */
   getAll(): SlashCommand[] {
     return [...this.commands.values()];
   }
 
-  /** Kiểm tra input có phải slash command không */
   isSlashCommand(input: string): boolean {
     return input.trim().startsWith('/');
   }
 
-  /** Thêm vào history */
   pushHistory(input: string): void {
     if (input.trim()) {
       this.history.push(input.trim());
@@ -102,7 +88,6 @@ export class SlashCommandRegistry {
     }
   }
 
-  /** Lấy history */
   getHistory(): readonly string[] {
     return this.history;
   }
@@ -122,7 +107,6 @@ export class SlashCommandRegistry {
     return { entry: this.history[newIndex] ?? '', index: newIndex };
   }
 
-  /** Parse arguments với flags */
   private parseArgs(input: string, flags?: SlashCommandFlag[]): ParsedArgs {
     const result: ParsedArgs = { positional: [], flags: {} };
 

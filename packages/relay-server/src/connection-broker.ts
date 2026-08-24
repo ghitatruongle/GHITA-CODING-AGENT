@@ -1,6 +1,4 @@
-// ==============================================================================
 // @ghita/relay-server -- Connection Broker
-// ==============================================================================
 
 export class ConnectionBroker {
   private readonly connections = new Map<string, { connectedAt: number; roomId?: string }>();

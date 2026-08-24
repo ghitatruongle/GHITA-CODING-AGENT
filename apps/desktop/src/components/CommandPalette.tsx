@@ -1,16 +1,11 @@
-// ==============================================================================
-// GHITA CODING AGENT — Command Palette (Ctrl+P)
 // VS Code-inspired fuzzy-search command palette
-// ==============================================================================
 
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '../i18n';
 import { useAppStore, type TabId } from '../stores/appStore';
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 interface CommandAction {
   id: string;
@@ -22,9 +17,7 @@ interface CommandAction {
   execute: () => void;
 }
 
-// ---------------------------------------------------------------------------
 // Simple fuzzy match (substring + camelCase-aware)
-// ---------------------------------------------------------------------------
 
 function fuzzyMatch(query: string, text: string): boolean {
   const q = query.toLowerCase();
@@ -47,9 +40,7 @@ function fuzzyScore(query: string, text: string): number {
   return 10;
 }
 
-// ---------------------------------------------------------------------------
 // Main Component
-// ---------------------------------------------------------------------------
 
 export function CommandPalette() {
   const { t } = useTranslation();
@@ -241,9 +232,7 @@ export function CommandPalette() {
   );
 }
 
-// ---------------------------------------------------------------------------
 // Hooks
-// ---------------------------------------------------------------------------
 
 function useBuildCommands({
   t,

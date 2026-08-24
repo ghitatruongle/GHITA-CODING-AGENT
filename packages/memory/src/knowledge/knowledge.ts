@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Knowledge / RAG Engine
-// ==============================================================================
-
 import type {
   KnowledgeDocument,
   KnowledgeChunk,
@@ -11,7 +7,7 @@ import type {
   KnowledgeSearchResult,
   EmbeddingFunction,
 } from './types.js';
-import { cosineSimilarityJS } from '../semantic/rustAddon.js';
+import { cosineSimilarityJS, getNativeCosine } from '../semantic/rustAddon.js';
 
 const TOKEN_PATTERN = /[\p{L}\p{N}_-]+/gu;
 
@@ -303,7 +299,11 @@ export class KnowledgeEngine {
       if (!doc) continue;
       if (options.type && doc.type !== options.type) continue;
 
-      const score = cosineSimilarityJS(queryEmbedding, chunk.embedding);
+      // Native SIMD cosine when the memory addon is present, JS fallback otherwise.
+      const nativeCosine = getNativeCosine();
+      const score = nativeCosine
+        ? nativeCosine(queryEmbedding, chunk.embedding)
+        : cosineSimilarityJS(queryEmbedding, chunk.embedding);
       if (score >= minScore) {
         results.push({ chunk, score, document: doc });
       }

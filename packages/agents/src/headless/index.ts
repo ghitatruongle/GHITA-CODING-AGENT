@@ -1,4 +1,3 @@
-// v1.1.5-beta1 Track 1.3: headless / CI mode.
 export {
   runHeadless,
   type HeadlessOptions,

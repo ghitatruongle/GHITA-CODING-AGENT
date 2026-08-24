@@ -1,5 +1,5 @@
 /**
- * Phase 23 — Connection Path (BFS / Dijkstra)
+
  *
  * Computes the shortest association path between two entities in a
  * weighted graph. BFS is used when all edges are unweighted;

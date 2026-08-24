@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Middleware Pipeline Pattern
-// ==============================================================================
-
 import type {
   AIProvider,
   ChatMessage,
@@ -141,9 +137,7 @@ export function composeMiddlewares<T>(
   };
 }
 
-// ------------------------------------------------------------------------------
 // 2.8 Middleware for Embedding + Image
-// ------------------------------------------------------------------------------
 
 export type EmbeddingMiddleware = (
   params: { text: string; options?: { model?: string }; provider: AIProvider },
@@ -270,9 +264,7 @@ export function wrapImageModel(
   };
 }
 
-// ------------------------------------------------------------------------------
 // 2.7 Provider Wrapper
-// ------------------------------------------------------------------------------
 
 export interface IProviderMiddlewares {
   chat?: ChatMiddleware[];

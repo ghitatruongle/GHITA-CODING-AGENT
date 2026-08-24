@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - @ghita/mcp server (official SDK, guarded tools)
-// ==============================================================================
-
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';

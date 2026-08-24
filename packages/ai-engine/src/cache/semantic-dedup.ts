@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Semantic Deduplication via Cosine Similarity (Phase 26)
-// ==============================================================================
-
 import type { SemanticDedupConfig, EmbeddingProvider } from './types.js';
 
 const DEFAULT_CONFIG: SemanticDedupConfig = {
@@ -151,11 +147,15 @@ export class SemanticDedup {
   }
 
   /**
-   * Bulk load entries (e.g., from warm source).
+   * Bulk load entries (e.g., from warm source). Embeds in bounded-parallel
+   * batches instead of one-at-a-time — cache warming no longer serializes
+   * every network round-trip.
    */
   async bulkAdd(items: Array<{ key: string; embedding?: number[] }>): Promise<void> {
-    for (const item of items) {
-      await this.add(item.key, item.embedding);
+    const CONCURRENCY = 8;
+    for (let i = 0; i < items.length; i += CONCURRENCY) {
+      const batch = items.slice(i, i + CONCURRENCY);
+      await Promise.all(batch.map((item) => this.add(item.key, item.embedding)));
     }
   }
 

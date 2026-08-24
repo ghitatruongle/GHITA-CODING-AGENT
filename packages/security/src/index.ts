@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Security Audit, Governance & Sandbox — Public API (v1.1.5-beta2)
-// ==============================================================================
-
 export { InputSanitizer } from './input-sanitizer.js';
 export { CorsAuditor } from './cors-auditor.js';
 export { SecretRotator, maskKey } from './secret-rotator.js';
@@ -30,7 +26,6 @@ export type {
   ScanSummary,
 } from './scanner/index.js';
 
-// v0.4.9 A2 & v1.1.5-beta2 Track 2: Agent governance (PolicyEngine + OWASP Agentic Top 10 + ExecPolicy)
 export {
   PolicyEngine,
   PolicyViolationError,
@@ -59,7 +54,6 @@ export type {
   ExecPolicyVerdict,
 } from './governance/index.js';
 
-// v1.1.5-beta2 Track 2: Sandbox Process Runner
 export {
   SandboxRunner,
   type SandboxProfileType,
@@ -79,4 +73,4 @@ export type {
   RotationEvent,
 } from './types.js';
 
-export const SECURITY_VERSION = '1.1.5-beta2';
+export const SECURITY_VERSION = '1.1.5';

@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - AHPI (Automatic Hot-Path Instrumentation)
-// ==============================================================================
 // Profiles JS/TS execution at function boundary level using AST-like brace parsing.
 // Generates a performance heatmap (Red: slow, Orange: warning, Green: fast).
-// ==============================================================================
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';

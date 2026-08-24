@@ -1,6 +1,4 @@
-// ==============================================================================
 // Wave 2 — communication pairing / guardrail / SSRF helpers
-// ==============================================================================
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PairingManager } from '../src/pairing.js';

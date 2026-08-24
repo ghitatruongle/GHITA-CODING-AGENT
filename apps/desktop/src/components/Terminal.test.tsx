@@ -1,8 +1,6 @@
 // @vitest-environment happy-dom
-// ==============================================================================
-// GHITA CODING AGENT — Terminal Unit Tests (Rust PTY via Tauri IPC)
+
 // Covers: shell toggle, tab management, PTY lifecycle, cwd reactivity, cleanup
-// ==============================================================================
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -109,10 +107,8 @@ describe('Terminal', () => {
     mockListen.mockResolvedValue(() => {});
   });
 
-  // ────────────────────────────────────────────────────────────────────────
   //  Shell toggle
-  // ────────────────────────────────────────────────────────────────────────
-
+  
   describe('shell toggle', () => {
     it('shows PowerShell by default on Windows', async () => {
       render(<Terminal />);
@@ -139,10 +135,8 @@ describe('Terminal', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
   //  Unix/Linux shell toggle
-  // ────────────────────────────────────────────────────────────────────────
-
+  
   describe('Unix/Linux shell toggle', () => {
     beforeEach(() => {
       mockIsWindows = false;
@@ -173,10 +167,8 @@ describe('Terminal', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
   //  Tab management
-  // ────────────────────────────────────────────────────────────────────────
-
+  
   describe('tab management', () => {
     it('starts with one tab labeled "Terminal 1"', async () => {
       render(<Terminal />);
@@ -197,7 +189,6 @@ describe('Terminal', () => {
       render(<Terminal />);
       await waitForShellButton('PowerShell');
 
-      // × button should not appear when there's only one tab
       expect(screen.queryByText('×')).not.toBeInTheDocument();
     });
 
@@ -209,7 +200,6 @@ describe('Terminal', () => {
       fireEvent.click(screen.getByText('+'));
       expect(screen.getByText('Terminal 2')).toBeInTheDocument();
 
-      // Close the second tab (second × button)
       const closeButtons = screen.getAllByText('×');
       expect(closeButtons.length).toBe(2);
       fireEvent.click(closeButtons[1] as Element);
@@ -220,10 +210,8 @@ describe('Terminal', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
   //  CWD reactivity
-  // ────────────────────────────────────────────────────────────────────────
-
+  
   describe('cwd reactivity', () => {
     it('passes cwd to terminal_create on initial render', async () => {
       render(<Terminal />);
@@ -267,10 +255,8 @@ describe('Terminal', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
   //  Cleanup ordering
-  // ────────────────────────────────────────────────────────────────────────
-
+  
   describe('cleanup ordering', () => {
     it('calls terminal_kill before dispose on unmount', async () => {
       const { unmount } = render(<Terminal />);
@@ -296,10 +282,8 @@ describe('Terminal', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
   //  PTY lifecycle (Tauri IPC)
-  // ────────────────────────────────────────────────────────────────────────
-
+  
   describe('PTY lifecycle', () => {
     it('calls terminal_create when xterm is ready', async () => {
       render(<Terminal />);

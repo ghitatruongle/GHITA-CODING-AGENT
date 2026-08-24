@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Filesystem Storage Backend
-// ==============================================================================
-
 import type { StorageBackend, SerializedEntry } from './types.js';
 
 export interface FileSystemStorageOptions {

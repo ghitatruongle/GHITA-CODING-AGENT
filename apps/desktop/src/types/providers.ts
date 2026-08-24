@@ -1,7 +1,4 @@
-// =============================================================================
-// GHITA CODING AGENT — Shared Provider Types
 // Single source of truth for ProviderId and PROVIDER_LABELS.
-// =============================================================================
 
 export type ProviderId =
   | 'openai'

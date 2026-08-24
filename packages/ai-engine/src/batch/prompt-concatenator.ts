@@ -1,26 +1,19 @@
-// ==============================================================================
-// GHITA CODING AGENT - Token-Efficient Prompt Concatenation (Phase 27)
 // Merges multiple ChatMessage lists into a single prompt that can be sent
 // to a provider in one round-trip, then splits the response back.
-// ==============================================================================
 
 import type { ChatMessage, ChatResponse } from '../types.js';
 import type { BatchRequest, ConcatenatedPrompt, ConcatenationStrategy } from './types.js';
 import { estimateMessagesTokens } from '../utils/token-counter.js';
 
-// ---------------------------------------------------------------------------
 // System preamble used to tell the model it should produce a structured
 // response covering N sub-requests.
-// ---------------------------------------------------------------------------
 
 const SYSTEM_PREAMBLE = `You are a batch assistant. The user will send you multiple independent requests separated by delimiters. Respond to EACH request in order, in the SAME format and ORDER. Use the exact delimiter "---RESPONSE_N---" (N = 1,2,3,...) BEFORE each response, and "---END_N---" AFTER each response. Do not add commentary, summaries, or anything outside the delimiters.`;
 
 const RESPONSE_OPEN = (i: number) => `---RESPONSE_${i}---`;
 const RESPONSE_CLOSE = (i: number) => `---END_${i}---`;
 
-// ---------------------------------------------------------------------------
 // Public API
-// ---------------------------------------------------------------------------
 
 /**
  * Concatenate multiple requests into a single prompt.
@@ -87,9 +80,7 @@ export function concatenateRequests(
   };
 }
 
-// ---------------------------------------------------------------------------
 // Internal: Build the concatenated message list
-// ---------------------------------------------------------------------------
 
 function buildMessages(requests: BatchRequest[], strategy: ConcatenationStrategy): ChatMessage[] {
   const out: ChatMessage[] = [];
@@ -145,9 +136,7 @@ function escapeXml(s: string): string {
     .replace(/'/g, '&apos;');
 }
 
-// ---------------------------------------------------------------------------
 // Internal: Trim to fit token budget (drop lowest-priority / oldest)
-// ---------------------------------------------------------------------------
 
 interface TrimmedResult {
   requests: BatchRequest[];
@@ -179,9 +168,7 @@ function trimToTokenBudget(
   return { requests: kept, messages: buildMessages(kept, strategy) };
 }
 
-// ---------------------------------------------------------------------------
 // Split a concatenated model response back into per-request results
-// ---------------------------------------------------------------------------
 
 export interface SplitResult {
   id: string;

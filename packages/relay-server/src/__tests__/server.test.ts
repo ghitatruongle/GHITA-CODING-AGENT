@@ -1,6 +1,4 @@
-// ==============================================================================
 // @ghita/relay-server -- Comprehensive Tests
-// ==============================================================================
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { RelayServer } from '../server.js';
@@ -8,9 +6,7 @@ import { RoomManager } from '../room-manager.js';
 import { ConnectionBroker } from '../connection-broker.js';
 import { RateLimiter } from '../rate-limiter.js';
 
-// ============================================================
 // RateLimiter
-// ============================================================
 
 describe('RateLimiter', () => {
   let limiter: RateLimiter;
@@ -49,9 +45,7 @@ describe('RateLimiter', () => {
   });
 });
 
-// ============================================================
 // RoomManager
-// ============================================================
 
 describe('RoomManager', () => {
   let manager: RoomManager;
@@ -115,9 +109,7 @@ describe('RoomManager', () => {
   });
 });
 
-// ============================================================
 // ConnectionBroker
-// ============================================================
 
 describe('ConnectionBroker', () => {
   let broker: ConnectionBroker;
@@ -155,9 +147,7 @@ describe('ConnectionBroker', () => {
   });
 });
 
-// ============================================================
 // RelayServer
-// ============================================================
 
 describe('RelayServer', () => {
   let server: RelayServer;

@@ -1,19 +1,11 @@
-﻿// ==============================================================================
-// GHITA CODING AGENT - Tool Catalog (200+ Composio-pattern definitions)
-// ==============================================================================
-// Skeleton definitions cho 200+ tools. Moi tool co metadata day du, handler la
-// stub tra ve status 'requires_credentials'. When tich hop that voi SaaS app,
-// handler se thay the bang implementation.
-// ==============================================================================
+// Metadata-only SaaS action catalog: every entry carries full metadata but no
+// executable handler (loadComposioCatalog registers nothing). Wiring a real
+// integration requires a live adapter plus user credentials.
 
 import type { CatalogGroup } from './registry-types.js';
 import type { ToolRegistry } from './registry.js';
 
-// ----------------------------------------------------------------------------
-// 200+ tool catalog definitions
-// ----------------------------------------------------------------------------
-
-/** 200+ tool catalog grouped by app/category */
+/** Metadata-only tool catalog grouped by app/category. */
 export const TOOL_CATALOG: CatalogGroup[] = [
   {
     app: 'discord',

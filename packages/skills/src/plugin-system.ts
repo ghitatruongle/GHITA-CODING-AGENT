@@ -1,13 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Plugin Manifest & Lifecycle Manager
-// Phase 7 (Update 0.0.3 beta2): Plugin + Sandbox Hardening
-// ==============================================================================
-
 import type { SkillCategory, SkillResult } from '@ghita/shared';
 
-// ----------------------------------------------------------------------------
 // Manifest Types
-// ----------------------------------------------------------------------------
 
 export type PluginTrust = 'builtin' | 'verified' | 'community' | 'untrusted';
 
@@ -70,9 +63,7 @@ export interface PluginImportFn {
   }>;
 }
 
-// ----------------------------------------------------------------------------
 // Trust Policy
-// ----------------------------------------------------------------------------
 
 const PERMISSION_CATALOG: Record<
   string,
@@ -98,9 +89,7 @@ const TRUST_MAX_RISK: Record<PluginTrust, 'low' | 'medium' | 'high'> = {
 
 const RISK_ORDER: Record<'low' | 'medium' | 'high', number> = { low: 0, medium: 1, high: 2 };
 
-// ----------------------------------------------------------------------------
 // Manifest Validation
-// ----------------------------------------------------------------------------
 
 const ID_RE = /^@?[a-z0-9][a-z0-9._-]{0,63}\/[a-z0-9][a-z0-9._-]{0,63}$/;
 const SEMVER_RE = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
@@ -161,9 +150,7 @@ export function validateManifest(
   return errors.length === 0 ? { ok: true } : { ok: false, errors };
 }
 
-// ----------------------------------------------------------------------------
 // Plugin Manager
-// ----------------------------------------------------------------------------
 
 export class PluginManager {
   private records = new Map<string, PluginRecord>();

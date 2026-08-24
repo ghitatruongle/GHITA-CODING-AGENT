@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Mobile ADB Operator Tests (Phase 19 — Update 0.0.3)
-// ==============================================================================
-
 import { describe, it, expect } from 'vitest';
 import {
   MobileAdbOperator,

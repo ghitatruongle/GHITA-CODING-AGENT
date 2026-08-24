@@ -1,9 +1,6 @@
-// ==============================================================================
-// ghita-secscan — SARIF 2.1.0 output with partialFingerprints (Track 8.2/5.2)
-// ==============================================================================
-// Generates SARIF JSON with sticky class-hash fingerprints so dismissed
-// findings don't reappear after code movement. Std-only core.
-// ==============================================================================
+//! ghita-secscan — SARIF 2.1.0 output with partialFingerprints
+//! Generates SARIF JSON with sticky class-hash fingerprints so dismissed
+//! findings don't reappear after code movement. Std-only core.
 
 use std::fmt::Write;
 
@@ -95,9 +92,14 @@ pub fn build_sarif_json(findings: &[SarifFinding], tool_name: &str, tool_version
     out.push_str(r#","results":["#);
 
     for (i, f) in findings.iter().enumerate() {
-        if i > 0 { out.push(','); }
+        if i > 0 {
+            out.push(',');
+        }
         let class_hash = compute_class_hash(&f.rule_id, &f.file_path, &f.context_lines);
-        let rule_and_path = format!("{:08x}", fnv1a32(format!("{}:{}", f.rule_id, f.file_path).as_bytes()));
+        let rule_and_path = format!(
+            "{:08x}",
+            fnv1a32(format!("{}:{}", f.rule_id, f.file_path).as_bytes())
+        );
         // Normalize path separators for the URI, then escape for JSON.
         let path = json_escape(&f.file_path.replace('\\', "/"));
         write!(out,
@@ -116,8 +118,16 @@ mod tests {
 
     #[test]
     fn class_hash_is_deterministic() {
-        let h1 = compute_class_hash("sqli", "api.ts", &["const q = req.query.id".into(), "db.exec(q)".into()]);
-        let h2 = compute_class_hash("sqli", "api.ts", &["const q = req.query.id".into(), "db.exec(q)".into()]);
+        let h1 = compute_class_hash(
+            "sqli",
+            "api.ts",
+            &["const q = req.query.id".into(), "db.exec(q)".into()],
+        );
+        let h2 = compute_class_hash(
+            "sqli",
+            "api.ts",
+            &["const q = req.query.id".into(), "db.exec(q)".into()],
+        );
         assert_eq!(h1, h2);
         assert_eq!(h1.len(), 8);
     }
@@ -131,16 +141,14 @@ mod tests {
 
     #[test]
     fn sarif_json_is_valid_structure() {
-        let findings = vec![
-            SarifFinding {
-                rule_id: "sk-key".into(),
-                message: "API key found".into(),
-                file_path: "config.ts".into(),
-                line: 42,
-                level: SarifLevel::Error,
-                context_lines: vec!["const key = 'sk-abc'".into()],
-            },
-        ];
+        let findings = vec![SarifFinding {
+            rule_id: "sk-key".into(),
+            message: "API key found".into(),
+            file_path: "config.ts".into(),
+            line: 42,
+            level: SarifLevel::Error,
+            context_lines: vec!["const key = 'sk-abc'".into()],
+        }];
         let json = build_sarif_json(&findings, "ghita-secscan", "1.1.5-beta1");
         assert!(json.contains("\"version\":\"2.1.0\""));
         assert!(json.contains("\"classHash\""));

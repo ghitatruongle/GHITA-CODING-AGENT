@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Layout Preset Manager Tests
-// ==============================================================================
-
 import { describe, it, expect, beforeEach } from 'vitest';
 import { LayoutPresetManager } from './layout-preset.js';
 

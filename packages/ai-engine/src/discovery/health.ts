@@ -1,8 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Provider Health Check
-// Phase 10.3: Active probing + circuit breaker + integration with ModelDiscovery
-// ==============================================================================
-
 import type { DiscoveryConfig } from './types.js';
 import { ModelDiscovery } from './model-discovery.js';
 
@@ -265,9 +260,7 @@ export class ProviderHealthCheck {
   }
 }
 
-// ----------------------------------------------------------------------------
 // Singleton helper
-// ----------------------------------------------------------------------------
 
 let _defaultHealth: ProviderHealthCheck | null = null;
 

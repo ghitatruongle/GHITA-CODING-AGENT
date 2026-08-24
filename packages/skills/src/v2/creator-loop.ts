@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Skills v1.1.0 Track 2: skill-creator eval loop (P33)
-// ==============================================================================
 // Draft → test prompts → eval → optimize description (trigger accuracy),
 // mirroring the Anthropic skill-creator eval loop.
-// ==============================================================================
 
 export interface SkillDraft {
   id: string;

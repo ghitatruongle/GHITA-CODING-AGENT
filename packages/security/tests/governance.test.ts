@@ -1,4 +1,3 @@
-// ==============================================================================
 // v0.4.9 A2: Agent Governance Unit Tests
 //
 // Covers:
@@ -6,7 +5,6 @@
 //   • glob tool matching + resource regex matching
 //   • enforce() throwing PolicyViolationError
 //   • OWASP Agentic Top 10 heuristic checks
-// ==============================================================================
 
 import { describe, it, expect } from 'vitest';
 import {

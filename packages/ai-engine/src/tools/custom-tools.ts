@@ -1,11 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Custom Tool Builder
-// ==============================================================================
-// Cho phép user định nghĩa tool từ JSON Schema + handler function, validate
-// arguments trước khi execute, và register vào ToolRegistry.
-// Pattern lấy cảm hứng Composio: declarative tool definition + runtime wiring.
-// ==============================================================================
-
 import { getDefaultRegistry } from './registry.js';
 import type {
   ToolDefinition,
@@ -14,9 +6,7 @@ import type {
   ToolSource,
 } from './registry.js';
 
-// ----------------------------------------------------------------------------
 // Validation helpers
-// ----------------------------------------------------------------------------
 
 export class ToolValidationError extends Error {
   constructor(
@@ -74,9 +64,7 @@ export function validateArgs(
   }
 }
 
-// ----------------------------------------------------------------------------
 // CustomTool class
-// ----------------------------------------------------------------------------
 
 export interface CustomToolOptions {
   name: string;
@@ -90,7 +78,7 @@ export interface CustomToolOptions {
 }
 
 /**
- * Wrapper cho custom tool. Cung cấp builder API:
+
  *   const tool = new CustomTool({...}).withHandler(async (args) => '...');
  *   registry.register(tool.toDefinition());
  */
@@ -127,7 +115,6 @@ export class CustomTool {
     this.requiresApproval = options.requiresApproval ?? false;
   }
 
-  /** Gắn handler function */
   withHandler(handler: (args: Record<string, unknown>) => Promise<string>): this {
     this.handler = handler;
     return this;
@@ -151,7 +138,6 @@ export class CustomTool {
     return this;
   }
 
-  /** Convert sang ToolDefinition để register */
   toDefinition(): ToolDefinition {
     if (!this.handler) {
       throw new Error(
@@ -177,11 +163,8 @@ export class CustomTool {
   }
 }
 
-// ----------------------------------------------------------------------------
 // Schema builder helpers
-// ----------------------------------------------------------------------------
 
-/** Shorthand: tạo ToolPropertySpec */
 export function param(
   type: ToolPropertySpec['type'],
   description: string,
@@ -190,7 +173,6 @@ export function param(
   return { type, description, ...opts };
 }
 
-/** Shorthand: tạo ToolParameterSchema */
 export function schema(
   properties: Record<string, ToolPropertySpec>,
   required: string[] = [],
@@ -198,11 +180,8 @@ export function schema(
   return { type: 'object', properties, required };
 }
 
-// ----------------------------------------------------------------------------
 // Builder functions
-// ----------------------------------------------------------------------------
 
-/** Define custom tool từ options + handler. Auto-register vào default registry. */
 export function defineCustomTool(
   options: CustomToolOptions,
   handler: (args: Record<string, unknown>) => Promise<string>,
@@ -212,7 +191,6 @@ export function defineCustomTool(
   return tool;
 }
 
-/** Tạo tool từ declarative config (dùng cho config-driven setup) */
 export interface DeclarativeTool {
   name: string;
   description: string;
@@ -228,7 +206,6 @@ export interface DeclarativeTool {
     | { type: 'function'; fn: (args: Record<string, unknown>) => Promise<string> };
 }
 
-/** Expand template string với args (vd: "https://api.example.com/{id}") */
 function expandTemplate(template: string, args: Record<string, unknown>): string {
   return template.replace(/\{(\w+)\}/g, (_, key) => {
     const v = args[key];
@@ -237,7 +214,6 @@ function expandTemplate(template: string, args: Record<string, unknown>): string
   });
 }
 
-/** Compile declarative tool thành CustomTool */
 export function compileDeclarativeTool(spec: DeclarativeTool): CustomTool {
   let handler: (args: Record<string, unknown>) => Promise<string>;
   switch (spec.handler.type) {
@@ -268,7 +244,7 @@ export function compileDeclarativeTool(spec: DeclarativeTool): CustomTool {
       handler = async (handlerArgs) => {
         const command = expandTemplate(shellHandler.commandTemplate, handlerArgs);
         const { spawn } = await import('node:child_process');
-        // Parse thành argv để tránh shell injection
+        
         const argv = command.trim().split(/\s+/).filter(Boolean);
         let program = argv[0];
         let spawnArgs = argv.slice(1);
@@ -332,7 +308,6 @@ export function compileDeclarativeTool(spec: DeclarativeTool): CustomTool {
   }).withHandler(handler);
 }
 
-/** Register declarative tool vào default registry */
 export function registerDeclarativeTool(spec: DeclarativeTool): CustomTool {
   const tool = compileDeclarativeTool(spec);
   getDefaultRegistry().register(tool.toDefinition());

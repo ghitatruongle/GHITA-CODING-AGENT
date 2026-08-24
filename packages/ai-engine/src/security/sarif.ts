@@ -1,19 +1,13 @@
-// ==============================================================================
-// GHITA CODING AGENT - v1.1.5-beta1 Track 5.2: SARIF Output + Safe Fence
-// ------------------------------------------------------------------------------
 // SARIF 2.1.0 output with partialFingerprints and class-hash for sticky
 // findings (dismiss once, never reappear). Plus safe_fence utility for
 // rendering markdown containing LLM/attacker-controlled content without
 // fence escape injection.
 //
 // Pattern: strix sarif.py + writer.py, codex-security schemas.
-// ==============================================================================
 
 import type { ValidationReceipt } from './validation-ladder.js';
 
-// ---------------------------------------------------------------------------
 // SARIF 2.1.0 Types (subset)
-// ---------------------------------------------------------------------------
 
 export interface SarifLog {
   $schema: string;
@@ -46,9 +40,7 @@ export interface SarifResult {
   properties?: Record<string, unknown>;
 }
 
-// ---------------------------------------------------------------------------
 // Class-hash: stable fingerprint across edits
-// ---------------------------------------------------------------------------
 
 /**
  * Compute a class-hash fingerprint for a finding. This hash is based on
@@ -77,9 +69,7 @@ function fnv1a32(str: string): string {
   return (hash >>> 0).toString(16).padStart(8, '0');
 }
 
-// ---------------------------------------------------------------------------
 // SARIF Builder
-// ---------------------------------------------------------------------------
 
 export interface SarifBuilderOptions {
   toolName?: string;
@@ -163,9 +153,7 @@ export function buildSarifLog(
   };
 }
 
-// ---------------------------------------------------------------------------
 // Safe Fence: prevent markdown injection from untrusted content
-// ---------------------------------------------------------------------------
 
 /**
  * Wraps untrusted content in a fenced code block that cannot be escaped

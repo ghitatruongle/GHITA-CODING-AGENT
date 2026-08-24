@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Throttle Utility
-// ==============================================================================
-
 /**
  * Creates a throttled function that only invokes the provided function at most once
  * per every `limit` milliseconds. The throttled function will execute on the leading

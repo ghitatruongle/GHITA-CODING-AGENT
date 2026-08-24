@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Screen Capture
 // Captures desktop screen and streams as base64 JPEG over Socket.io
-// ==============================================================================
 
 import type { ScreenStreamConfig } from './types.js';
 

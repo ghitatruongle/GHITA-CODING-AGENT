@@ -1,6 +1,4 @@
-// ==============================================================================
 // @ghita/a11y -- Type Definitions
-// ==============================================================================
 
 export type WcagLevel = 'A' | 'AA' | 'AAA';
 export type A11ySeverity = 'info' | 'warning' | 'error' | 'critical';

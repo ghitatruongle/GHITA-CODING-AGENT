@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Composio SaaS Integration (50+ Apps)
-// ==============================================================================
 // Multi-account credential management, rate limiting, webhooks, and
 // action execution for 50+ SaaS applications.
-// ==============================================================================
 
 import {
   SAAS_APPS,

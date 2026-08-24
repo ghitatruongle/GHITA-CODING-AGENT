@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Revenue Sharing Types (Phase 38)
-// ==============================================================================
-
 /** Supported payment providers */
 export type PaymentProvider = 'stripe' | 'paypal' | 'lemonsqueezy' | 'paddle';
 

@@ -1,12 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Subagent Delegation Types (Phase 6)
-// ===============================================================================
-
 import type { Agent, AgentRole, AgentTask } from '@ghita/shared';
 
-// ---------------------------------------------------------------------------
 // Spawn Input & Result
-// ---------------------------------------------------------------------------
 
 export interface SubagentSpawnInput {
   name: string;
@@ -36,9 +30,7 @@ export interface SubagentSpawnResult {
   outputContext?: Record<string, unknown>;
 }
 
-// ---------------------------------------------------------------------------
 // Sub-agent State Tracking
-// ---------------------------------------------------------------------------
 
 export interface SubagentState {
   id: string;
@@ -52,9 +44,7 @@ export interface SubagentState {
   tags: string[];
 }
 
-// ---------------------------------------------------------------------------
 // Spawner Configuration
-// ---------------------------------------------------------------------------
 
 export interface SpawnerConfig {
   /** Maximum concurrent sub-agents (default: 5) */
@@ -71,9 +61,7 @@ export interface SpawnerConfig {
   onError?: (state: SubagentState, error: Error) => void;
 }
 
-// ---------------------------------------------------------------------------
 // Inter-Agent Communication (Channel)
-// ---------------------------------------------------------------------------
 
 export interface ChannelMessage {
   id: string;
@@ -92,9 +80,7 @@ export interface ChannelSubscription {
   handler: (message: ChannelMessage) => void | Promise<void>;
 }
 
-// ---------------------------------------------------------------------------
 // Parent-Child State Sync
-// ---------------------------------------------------------------------------
 
 export interface StateSnapshot {
   agentId: string;

@@ -1,6 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - v1.1.5-beta1 Track 1.2: Hook Manager
-// ------------------------------------------------------------------------------
 // Loads `.ghita/hooks.json`, validates rules, and dispatches events with:
 //   - depth guard   : re-entrant dispatch (hook → http → sidecar → dispatch)
 //                     stops at maxDepth instead of recursing forever
@@ -9,7 +6,6 @@
 //   - fail-open     : action errors never wedge the agent loop by default
 // Blocking semantics: shell exit code 2, or stdout/response JSON
 // `{"decision":"block"|"ask","reason":"…"}`.
-// ==============================================================================
 
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';

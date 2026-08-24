@@ -1,7 +1,3 @@
-// ==============================================================================
-// v1.1.5-beta1 Track 1.2 + 1.4 — Hook system & untrusted wrapping tests
-// ==============================================================================
-
 import { describe, expect, it } from 'vitest';
 import { createServer } from 'node:http';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';

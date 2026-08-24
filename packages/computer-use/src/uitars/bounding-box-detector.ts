@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - UI-TARS Multimodal Bounding Box Target Detector
-// ==============================================================================
 // Analyzes screenshot vision payloads and extracts pixel Bounding Box coordinates
 // [xMin, yMin, xMax, yMax] for UI elements (buttons, inputs, icons) to click precisely.
-// ==============================================================================
 
 export interface UITarget {
   label: string;

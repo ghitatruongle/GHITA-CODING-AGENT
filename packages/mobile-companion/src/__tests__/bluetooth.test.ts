@@ -1,6 +1,4 @@
-// ==============================================================================
 // @ghita/mobile-companion -- Comprehensive Tests
-// ==============================================================================
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { BluetoothPairing } from '../bluetooth.js';
@@ -8,9 +6,7 @@ import { NetworkDiscovery } from '../network-discovery.js';
 import { PushNotificationBridge } from '../push-bridge.js';
 import { detectCapabilities } from '../device-capabilities.js';
 
-// ============================================================
 // BluetoothPairing
-// ============================================================
 
 describe('BluetoothPairing', () => {
   let bt: BluetoothPairing;
@@ -19,10 +15,19 @@ describe('BluetoothPairing', () => {
     bt = new BluetoothPairing();
   });
 
-  it('pairs with valid 6-digit PIN', async () => {
+  it('pairs with valid 6-digit PIN after discovery', async () => {
+    // pair() only accepts devices that were actually discovered (Track 3:
+    // blind pairing would fake success for unknown ids).
+    bt.addDiscoveredDevice({ id: 'device-1', name: 'PC', rssi: -40, paired: false });
     const result = await bt.pair('device-1', '123456');
     expect(result).toBe(true);
     expect(bt.isPaired('device-1')).toBe(true);
+  });
+
+  it('refuses to pair an undiscovered device', async () => {
+    await expect(bt.pair('ghost-device', '123456')).rejects.toThrow(
+      'was never discovered',
+    );
   });
 
   it('rejects invalid PIN length', async () => {
@@ -34,12 +39,15 @@ describe('BluetoothPairing', () => {
   });
 
   it('unpairs device', async () => {
+    bt.addDiscoveredDevice({ id: 'device-1', name: 'PC', rssi: -40, paired: false });
     await bt.pair('device-1', '123456');
     await bt.unpair('device-1');
     expect(bt.isPaired('device-1')).toBe(false);
   });
 
   it('returns paired devices list', async () => {
+    bt.addDiscoveredDevice({ id: 'd1', name: 'A', rssi: -50, paired: false });
+    bt.addDiscoveredDevice({ id: 'd2', name: 'B', rssi: -60, paired: false });
     await bt.pair('d1', '123456');
     await bt.pair('d2', '654321');
     expect(bt.getPairedDevices()).toEqual(['d1', 'd2']);
@@ -58,9 +66,7 @@ describe('BluetoothPairing', () => {
   });
 });
 
-// ============================================================
 // NetworkDiscovery
-// ============================================================
 
 describe('NetworkDiscovery', () => {
   let nd: NetworkDiscovery;
@@ -96,9 +102,7 @@ describe('NetworkDiscovery', () => {
   });
 });
 
-// ============================================================
 // PushNotificationBridge
-// ============================================================
 
 describe('PushNotificationBridge', () => {
   let bridge: PushNotificationBridge;
@@ -133,9 +137,7 @@ describe('PushNotificationBridge', () => {
   });
 });
 
-// ============================================================
 // detectCapabilities
-// ============================================================
 
 describe('detectCapabilities', () => {
   it('detects Android', () => {

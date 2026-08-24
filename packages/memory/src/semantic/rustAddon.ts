@@ -1,6 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 14: Rust Semantic Memory Addon (Enhanced)
-// ==============================================================================
 // SQLite FTS5 full-text indexer + Rust cosine similarity addon with:
 // - FTS5 virtual table for instant keyword search
 // - Cosine similarity via Rust N-API or JS fallback
@@ -9,11 +6,8 @@
 // - Hybrid search combining FTS5 + vector similarity
 // - Auto-vacuum & old-log purge (configurable retention)
 // - Statistics tracking for observability
-// ==============================================================================
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 export interface ChatLogEntry {
   id: string;
@@ -96,9 +90,7 @@ export interface AddonStats {
   fallbackDbActive: boolean;
 }
 
-// ---------------------------------------------------------------------------
 // Internal type abstractions for SQLite
-// ---------------------------------------------------------------------------
 
 type StatementResultLike = { changes?: number };
 type StatementLike = {
@@ -141,9 +133,7 @@ try {
   runtimeRequire = typeof require !== 'undefined' ? require : null;
 }
 
-// ---------------------------------------------------------------------------
 // Shared cosine similarity (standalone, usable by all modules)
-// ---------------------------------------------------------------------------
 
 /**
  * Pure-JS cosine similarity between two vectors.
@@ -169,12 +159,51 @@ export function cosineSimilarityJS(a: number[], b: number[]): number {
   return dot / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
-// ---------------------------------------------------------------------------
+// Lazily-probed SIMD cosine from the ghita-memory-napi addon. Callers should
+// fall back to cosineSimilarityJS when this returns null — previously the JS
+// path was hardcoded even though the native binding shipped in the same
+// package.
+let nativeCosine: ((a: number[], b: number[]) => number) | null | undefined;
+
+export function getNativeCosine(): ((a: number[], b: number[]) => number) | null {
+  if (nativeCosine !== undefined) return nativeCosine;
+  try {
+    if (!runtimeRequire) {
+      nativeCosine = null;
+      return null;
+    }
+    const candidates = [
+      '../../rust-napi/index.node',
+      '../../rust-napi/index.win32-x64-gnu.node',
+      '../rust-napi/index.node',
+      './rust/index.node',
+    ];
+    for (const candidate of candidates) {
+      try {
+        const mod = runtimeRequire(candidate) as RustBindingsLike;
+        if (mod && typeof mod.cosineSimilarity === 'function') {
+          nativeCosine = mod.cosineSimilarity;
+          return nativeCosine;
+        }
+      } catch {
+        // try the next candidate
+      }
+    }
+  } catch {
+    // ignore probe failures
+  }
+  nativeCosine = null;
+  return null;
+}
+
 // RustMemoryAddon
-// ---------------------------------------------------------------------------
 
 export class RustMemoryAddon {
   private db: DatabaseLike | null = null;
+  // Cached prepared statements for the per-message hot path (see indexChatMessage).
+  private stmtInsertChat: StatementLike | null = null;
+  private stmtDeleteFts: StatementLike | null = null;
+  private stmtInsertFts: StatementLike | null = null;
   private isFallbackDb = true;
   private mockDbLogs: ChatLogEntry[] = [];
 
@@ -218,7 +247,7 @@ export class RustMemoryAddon {
       dbPath: isString ? config : (configObj?.dbPath ?? ':memory:'),
       maxCacheSizeBytes: configObj?.maxCacheSizeBytes ?? 100 * 1024 * 1024,
       enableFts5: configObj?.enableFts5 ?? true,
-      vacuumIntervalWrites: configObj?.vacuumIntervalWrites ?? 10,
+      vacuumIntervalWrites: configObj?.vacuumIntervalWrites ?? 500,
       retentionDays: configObj?.retentionDays ?? 30,
       maxVectorEntries: configObj?.maxVectorEntries ?? 50_000,
     };
@@ -228,16 +257,22 @@ export class RustMemoryAddon {
     this.stats.fallbackDbActive = this.isFallbackDb;
   }
 
-  // -----------------------------------------------------------------------
   // Database initialization
-  // -----------------------------------------------------------------------
-
+  
   private initDatabase(dbPath: string): void {
     try {
       if (!runtimeRequire) throw new Error('require not available');
       const DatabaseCtor = runtimeRequire('better-sqlite3') as new (p: string) => DatabaseLike;
       if (DatabaseCtor) {
         this.db = new DatabaseCtor(dbPath);
+
+        // WAL + NORMAL sync turn per-message fsyncs into sub-ms appends.
+        // auto_vacuum=INCREMENTAL (set before table creation) lets
+        // autoVacuum() run cheap `PRAGMA incremental_vacuum` instead of the
+        // old full-file VACUUM that froze the event loop mid-conversation.
+        this.db.exec(
+          'PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA auto_vacuum = INCREMENTAL;',
+        );
 
         this.db.exec(`
           CREATE TABLE IF NOT EXISTS old_chats (
@@ -326,18 +361,25 @@ export class RustMemoryAddon {
     }
   }
 
-  // -----------------------------------------------------------------------
   // Chat log indexing
-  // -----------------------------------------------------------------------
-
+  
   /** Insert or update a single chat message in both relational and FTS5 tables */
   async indexChatMessage(msg: ChatLogEntry): Promise<void> {
     if (!this.isFallbackDb && this.db) {
-      const stmt1 = this.db.prepare(`
-        INSERT OR REPLACE INTO old_chats (id, session_id, role, content, timestamp, symbol_attached)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `);
-      stmt1.run(
+      // Prepared once and reused — re-preparing per message costs 3 extra
+      // parses/compiles on the hot chat path.
+      if (!this.stmtInsertChat) {
+        this.stmtInsertChat = this.db.prepare(`
+          INSERT OR REPLACE INTO old_chats (id, session_id, role, content, timestamp, symbol_attached)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `);
+        this.stmtDeleteFts = this.db.prepare('DELETE FROM old_chats_fts WHERE id = ?');
+        this.stmtInsertFts = this.db.prepare(`
+          INSERT INTO old_chats_fts (id, session_id, role, content, timestamp)
+          VALUES (?, ?, ?, ?, ?)
+        `);
+      }
+      this.stmtInsertChat.run(
         msg.id,
         msg.session_id,
         msg.role,
@@ -347,13 +389,8 @@ export class RustMemoryAddon {
       );
 
       if (this.config.enableFts5) {
-        const delFts = this.db.prepare('DELETE FROM old_chats_fts WHERE id = ?');
-        delFts.run(msg.id);
-        const stmt2 = this.db.prepare(`
-          INSERT INTO old_chats_fts (id, session_id, role, content, timestamp)
-          VALUES (?, ?, ?, ?, ?)
-        `);
-        stmt2.run(msg.id, msg.session_id, msg.role, msg.content, msg.timestamp);
+        this.stmtDeleteFts?.run(msg.id);
+        this.stmtInsertFts?.run(msg.id, msg.session_id, msg.role, msg.content, msg.timestamp);
       }
     } else {
       const idx = this.mockDbLogs.findIndex((l) => l.id === msg.id);
@@ -404,10 +441,8 @@ export class RustMemoryAddon {
     this.stats.totalIndexed += msgs.length;
   }
 
-  // -----------------------------------------------------------------------
   // FTS5 keyword search
-  // -----------------------------------------------------------------------
-
+  
   /** Full-text search using FTS5 or fallback token matching */
   async searchFTS5(query: string, limit = 10): Promise<ChatLogEntry[]> {
     this.stats.totalSearches++;
@@ -465,10 +500,6 @@ export class RustMemoryAddon {
       .map((x) => x.log)
       .slice(0, limit);
   }
-
-  // -----------------------------------------------------------------------
-  // Vector embedding index (Phase 14)
-  // -----------------------------------------------------------------------
 
   /** Store a vector embedding in the index */
   storeEmbedding(entry: VectorEntry): void {
@@ -620,10 +651,6 @@ export class RustMemoryAddon {
     return oldestId;
   }
 
-  // -----------------------------------------------------------------------
-  // Hybrid search (Phase 14) — combines FTS5 + vector similarity
-  // -----------------------------------------------------------------------
-
   /**
    * Hybrid search that merges FTS5 keyword results with vector similarity.
    * The hybrid score = alpha * normalizedFtsRank + (1-alpha) * vectorScore.
@@ -678,10 +705,8 @@ export class RustMemoryAddon {
     return merged.sort((a, b) => b.hybridScore - a.hybridScore).slice(0, limit);
   }
 
-  // -----------------------------------------------------------------------
   // Cosine similarity (Rust or JS fallback)
-  // -----------------------------------------------------------------------
-
+  
   /** Compute cosine similarity between two vectors */
   cosineSimilarity(a: number[], b: number[]): number {
     if (this.rustBindings?.cosineSimilarity) {
@@ -694,10 +719,8 @@ export class RustMemoryAddon {
     return cosineSimilarityJS(a, b);
   }
 
-  // -----------------------------------------------------------------------
   // RAM cache
-  // -----------------------------------------------------------------------
-
+  
   cacheEmbedding(key: string, vector: number[]): void {
     const sizeBytes = key.length * 2 + vector.length * 8 + 64;
 
@@ -748,14 +771,14 @@ export class RustMemoryAddon {
     this.ramCacheSizeBytes = 0;
   }
 
-  // -----------------------------------------------------------------------
   // Maintenance
-  // -----------------------------------------------------------------------
-
+  
   async autoVacuum(): Promise<void> {
     if (!this.isFallbackDb && this.db) {
       try {
-        this.db.exec('VACUUM');
+        // Cheap incremental step — the old full-file `VACUUM` rewrote the
+        // entire database under an exclusive lock, freezing the event loop.
+        this.db.exec('PRAGMA incremental_vacuum(512);');
       } catch {
         /* ignore */
       }
@@ -827,10 +850,8 @@ export class RustMemoryAddon {
     }
   }
 
-  // -----------------------------------------------------------------------
   // Statistics
-  // -----------------------------------------------------------------------
-
+  
   getStats(): AddonStats {
     return { ...this.stats };
   }

@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Skills v1.1.0 Track 2: 3-layer discovery (P32)
-// ==============================================================================
 // Discovers skills from user < workspace < project layers with shadow rules:
 // a shallower layer shadows (wins over) deeper layers on the same skill id.
-// ==============================================================================
 
 import { existsSync, readdirSync, readFileSync, type Dirent } from 'node:fs';
 import { join } from 'node:path';

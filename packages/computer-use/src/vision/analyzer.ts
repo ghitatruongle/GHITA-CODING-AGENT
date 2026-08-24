@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Vision Screenshot Analyzer
-// ==============================================================================
-
 import fs from 'fs';
 import path from 'path';
 import os from 'os';

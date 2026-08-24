@@ -12,7 +12,6 @@ const CHARS_PER_TOKEN: Record<string, number> = {
   default: 4,
 };
 
-// v1.1.5-beta2 Track 1.4: Native tokenizer bridge (tiktoken-rs via napi)
 interface TokenizerNative {
   countTokensJs(text: string, family?: string): number;
   countMessagesTokensJs(

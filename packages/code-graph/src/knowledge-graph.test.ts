@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Knowledge Graph Tests
-// ==============================================================================
-
 import { describe, it, expect, beforeEach } from 'vitest';
 import { KnowledgeGraph } from './knowledge-graph.js';
 import type { CodeNode } from './types.js';

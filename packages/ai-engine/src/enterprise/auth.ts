@@ -1,8 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 3.1: API Key Authentication
 // API keys, JWT tokens, custom auth, proxy auth layer
 // Reference: LiteLLM proxy_auth/
-// ==============================================================================
 
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 

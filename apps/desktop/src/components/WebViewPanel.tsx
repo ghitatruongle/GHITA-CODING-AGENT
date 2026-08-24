@@ -26,7 +26,7 @@ export function WebViewPanel() {
     switchTab,
     handleIframeLoad,
     handleRefresh,
-    // deep-review fix (M9): history navigation.
+    
     goBack,
     goForward,
   } = useWebViewPanel();

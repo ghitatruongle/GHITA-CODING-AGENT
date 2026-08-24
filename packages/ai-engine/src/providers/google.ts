@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Google Gemini Provider
-// ==============================================================================
-
 import type { AIStreamChunk } from '@ghita/shared';
 import type {
   ChatMessage,

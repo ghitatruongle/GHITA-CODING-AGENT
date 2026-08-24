@@ -1,6 +1,4 @@
-// ==============================================================================
 // Quota & Rate Limiting Dashboard
-// ==============================================================================
 
 import { useState, useCallback } from 'react';
 import { RateLimiter } from '../../../../packages/quotas/src/index.js';

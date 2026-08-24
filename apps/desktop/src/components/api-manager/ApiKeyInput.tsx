@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — API Key Input (multi-key management)
-// ==============================================================================
-
 import { type ProviderConfig } from '../api/providersConfig';
 import { type ApiKeyEntry, type KeyRotationStrategy } from './api-manager-utils';
 

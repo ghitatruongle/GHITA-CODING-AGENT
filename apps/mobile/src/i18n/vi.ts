@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Vietnamese dictionary for Mobile App (Optimized)
-// ==============================================================================
-
 import type { TranslationKeys } from './types';
 
 export const vi: TranslationKeys = {
@@ -71,7 +67,7 @@ export const vi: TranslationKeys = {
     pairErrApiKeyMissing:
       'Chưa cấu hình API Key cho Cloud Discovery. Vui lòng nhập địa chỉ IP thủ công.',
     pairErrCloudDisabled:
-      'Cloud Discovery đang tạm thời bị vô hiệu hóa. Vui lòng nhập địa chỉ IP thủ công ở tab Wi-Fi hoặc kết nối Bluetooth trực tiếp tới máy tính.',
+      'Cloud Discovery đang tạm thời bị vô hiệu hóa. Vui lòng nhập địa chỉ IP của máy tính thủ công ở tab Wi-Fi.',
     noCodeFromServer: 'Không thể lấy mã ghép đôi từ máy chủ.',
   },
   remote: {

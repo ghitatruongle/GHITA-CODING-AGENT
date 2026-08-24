@@ -37,9 +37,7 @@ export function isUrlAllowed(url: string, policy: DomainPolicy = DEFAULT_DOMAIN_
   return policy.defaultAction === 'allow';
 }
 
-// ---------------------------------------------------------------------------
 // Popup auto-close
-// ---------------------------------------------------------------------------
 
 export interface PopupDecision {
   shouldClose: boolean;
@@ -87,9 +85,7 @@ export function evaluatePopup(
   return { shouldClose: true, reason: `unknown external domain: ${popupHost}` };
 }
 
-// ---------------------------------------------------------------------------
 // Sensitive-data redaction
-// ---------------------------------------------------------------------------
 
 export interface RedactionResult {
   redacted: string;

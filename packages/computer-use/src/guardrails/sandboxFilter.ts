@@ -1,9 +1,3 @@
-// =============================================================================
-// GHITA CODING AGENT - Phase 13: Shell Command Blacklist Security Guardrails
-// Phân tích tĩnh lệnh terminal để chặn đứng các câu lệnh nhạy cảm
-// Thừa kế logic direct-execution.ts của Composio
-// =============================================================================
-
 import { randomBytes } from 'node:crypto';
 import type {
   ThreatSeverity,
@@ -17,10 +11,6 @@ import type {
 } from './types.js';
 import { DEFAULT_SECURITY_CONFIG, SECURITY_ERROR_PREFIX } from './types.js';
 
-// =============================================================================
-// Tác vụ 2: Blacklist regex patterns (từ Composio)
-// =============================================================================
-
 interface BlacklistRule {
   pattern: RegExp;
   type: ThreatType;
@@ -28,10 +18,6 @@ interface BlacklistRule {
   description: string;
 }
 
-/**
- * Danh sách cấm mặc định — kế thừa từ Composio direct-execution.ts
- * Mở rộng thêm các pattern nguy hiểm cho môi trường GHITA
- */
 const BUILTIN_BLACKLIST: BlacklistRule[] = [
   // Git conflict markers and malformed commands
   {
@@ -40,7 +26,7 @@ const BUILTIN_BLACKLIST: BlacklistRule[] = [
     severity: 'critical',
     description: 'Git conflict markers / malformed command',
   },
-  // ── Tác vụ 1: Destructive commands ──
+  
   {
     pattern: /\brm\s+(-[rRf]+\s+|--recursive\s+)(\/|~|\*|[A-Za-z]:\\|\.\.)/,
     type: 'destructive-command',
@@ -98,7 +84,6 @@ const BUILTIN_BLACKLIST: BlacklistRule[] = [
     description: 'Potential fork bomb pattern (while true fork)',
   },
 
-  // ── Tác vụ 4: Remote execution (curl|sh, wget|sh) ──
   {
     pattern: /\bcurl\b[^|]*\|\s*(sh|bash|zsh|dash|ksh)/,
     type: 'remote-execution',
@@ -227,24 +212,16 @@ const BUILTIN_BLACKLIST: BlacklistRule[] = [
   },
 ];
 
-// =============================================================================
-// Tác vụ 3: Shell parser — phát hiện base64 encoded commands
-// =============================================================================
-
-/**
- * Kiểm tra chuỗi có phải base64 encoded command không
- */
 function isBase64EncodedCommand(s: string): boolean {
-  // Loại bỏ whitespace và ký tự đặc biệt
+  
   const cleaned = s.trim();
 
-  // Kiểm tra format base64 cơ bản
   if (!/^[A-Za-z0-9+/]+=*$/.test(cleaned)) return false;
-  if (cleaned.length < 8) return false; // Quá ngắn
+  if (cleaned.length < 8) return false; 
 
   try {
     const decoded = Buffer.from(cleaned, 'base64').toString('utf-8');
-    // Kiểm tra decoded có chứa lệnh shell không
+    
     const shellIndicators = [
       /\bsh\b/,
       /\bbash\b/,
@@ -274,10 +251,6 @@ function isBase64EncodedCommand(s: string): boolean {
   }
 }
 
-/**
- * Phát hiện base64 encoded payload trong lệnh
- * Ví dụ: echo Y3VybCBodHRwOi8vZXZpbC5zaCB8IHNo | base64 -d | sh
- */
 function detectBase64Threats(command: string): ThreatDetection[] {
   const threats: ThreatDetection[] = [];
 
@@ -341,17 +314,9 @@ function detectBase64Threats(command: string): ThreatDetection[] {
   return threats;
 }
 
-// =============================================================================
-// Tác vụ 5: Binary execution detection
-// =============================================================================
-
-/**
- * Phát hiện thực thi binary không rõ nguồn gốc
- */
 function detectBinaryExecution(command: string): ThreatDetection[] {
   const threats: ThreatDetection[] = [];
 
-  // Chạy file binary từ /tmp, /dev/shm, hoặc thư mục tạm
   const tmpExecPattern = /(?:\/tmp|\/dev\/shm|\/var\/tmp)\/[^\s]+\b/;
   const tmpMatch = tmpExecPattern.exec(command);
   if (
@@ -367,12 +332,11 @@ function detectBinaryExecution(command: string): ThreatDetection[] {
     });
   }
 
-  // chmod +x trên file không rõ
   const chmodExecPattern = /\bchmod\s+[+]?x\s+([^;\s]+)/;
   const chmodMatch = chmodExecPattern.exec(command);
   if (chmodMatch) {
     const target = chmodMatch[1] || '';
-    // Chỉ cảnh báo nếu target không phải script thông thường
+    
     if (!/\.(sh|bash|py|js|ts|rb|pl)$/.test(target)) {
       threats.push({
         type: 'binary-execution',
@@ -387,19 +351,6 @@ function detectBinaryExecution(command: string): ThreatDetection[] {
   return threats;
 }
 
-// =============================================================================
-// SandboxSecurityFilter — Lớp chính
-// =============================================================================
-
-/**
- * SandboxSecurityFilter — Bộ lọc bảo mật lệnh terminal
- *
- * Tác vụ 1: Viết bộ lọc tĩnh terminal
- * Tác vụ 2: So khớp blacklist regex từ Composio
- * Tác vụ 3: Phát hiện base64 encoded commands
- * Tác vụ 5: Cấm binary không rõ nguồn gốc
- * Tác vụ 10: Tùy chỉnh blacklist qua YAML
- */
 export class SandboxSecurityFilter {
   private config: SecurityBlacklistConfig;
   private customRules: BlacklistRule[];
@@ -416,20 +367,12 @@ export class SandboxSecurityFilter {
     this.customRules = this.compileCustomPatterns(this.config.customPatterns);
   }
 
-  /**
-   * Tác vụ 8: Đăng ký callback cho approval modal (Tauri GUI hoặc OLT remote)
-   */
   setApprovalCallback(callback: ApprovalCallback): void {
     this.approvalCallback = callback;
   }
 
-  // =========================================================================
-  // Tác vụ 2: So khớp câu lệnh với Blacklist
-  // =========================================================================
-
   /**
-   * Kiểm tra lệnh terminal có an toàn không
-   * @param cmd Lệnh terminal cần kiểm tra
+
    * @returns SecurityValidationResult
    */
   validateCommand(cmd: string): SecurityValidationResult {
@@ -505,76 +448,44 @@ export class SandboxSecurityFilter {
     return this.validateCommand(cmd);
   }
 
-  // =========================================================================
-  // Tác vụ 6: Phê duyệt qua GUI / OLT
-  // =========================================================================
-
-  /**
-   * Validate và xin phê duyệt nếu cần
-   * Nếu lệnh nguy hiểm nhưng kỹ sư approve => cho phép
-   */
   async validateAndMaybeApprove(cmd: string): Promise<{
     allowed: boolean;
     result: SecurityValidationResult;
   }> {
     const result = this.validateCommand(cmd);
 
-    // An toàn — cho phép ngay
     if (result.safe) {
       return { allowed: true, result };
     }
 
-    // Critical — chặn đứng, không cho approve
     const maxSeverity = this.getMaxSeverity(result.threats);
     if (maxSeverity === 'critical') {
       this.logEntry(result, false, 'local');
       return { allowed: false, result };
     }
 
-    // High/Medium — xin phê duyệt qua callback
     if (result.requiresApproval && this.approvalCallback) {
       const approved = await this.approvalCallback.requestApproval(cmd, result.threats);
       this.logEntry(result, approved, 'local');
       return { allowed: approved, result };
     }
 
-    // Không có callback => chặn
     this.logEntry(result, false, 'local');
     return { allowed: false, result };
   }
 
-  // =========================================================================
-  // Tác vụ 7: Logs bảo mật
-  // =========================================================================
-
-  /**
-   * Lấy tất cả security logs
-   */
   getLogs(): SecurityLogEntry[] {
     return [...this.logs];
   }
 
-  /**
-   * Lấy các lệnh bị chặn gần đây
-   */
   getBlockedCommands(limit = 50): SecurityLogEntry[] {
     return this.logs.filter((l) => !l.result.safe && l.approved !== true).slice(-limit);
   }
 
-  /**
-   * Xóa logs cũ
-   */
   clearLogs(): void {
     this.logs = [];
   }
 
-  // =========================================================================
-  // Tác vụ 10: Cấu hình YAML tùy chỉnh
-  // =========================================================================
-
-  /**
-   * Cập nhật cấu hình từ .ghita/security-blacklist.yaml
-   */
   updateConfig(config: Partial<SecurityBlacklistConfig>): void {
     this.config = { ...this.config, ...config };
     if (config.customPatterns) {
@@ -582,26 +493,18 @@ export class SandboxSecurityFilter {
     }
   }
 
-  /**
-   * Thêm whitelist entry
-   */
   addToWhitelist(command: string): void {
     if (!this.config.whitelist.includes(command)) {
       this.config.whitelist.push(command);
     }
   }
 
-  /**
-   * Xóa whitelist entry
-   */
   removeFromWhitelist(command: string): void {
     this.config.whitelist = this.config.whitelist.filter((w) => w !== command);
   }
 
-  // =========================================================================
   // Private helpers
-  // =========================================================================
-
+  
   private isWhitelisted(cmd: string): boolean {
     return this.config.whitelist.some((w) => cmd.startsWith(w));
   }
@@ -657,9 +560,6 @@ export class SandboxSecurityFilter {
   }
 }
 
-/**
- * Factory function tạo filter mặc định
- */
 export function createSecurityFilter(
   config?: Partial<SecurityBlacklistConfig>,
 ): SandboxSecurityFilter {

@@ -1,6 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - TauriOperator (Phase 1 Rust Backend)
-// ==============================================================================
 //
 // TauriOperator is the production desktop driver that delegates ALL native
 // operations to the Rust backend compiled into the Tauri binary. Compared to
@@ -22,7 +19,6 @@
 //     const op = new TauriOperator();
 //     const capture = await op.screenshot({ maxEdge: 1920 });
 //   }
-// ==============================================================================
 
 import type {
   Operator,
@@ -40,9 +36,7 @@ import type {
 } from '../index.js';
 import { undoDpiScale } from './utils.js';
 
-// ---------------------------------------------------------------------------
 // Tauri IPC bridge
-// ---------------------------------------------------------------------------
 
 /**
  * Thin wrapper around Tauri's invoke that gracefully handles the case where
@@ -87,9 +81,7 @@ export async function isTauriAvailable(): Promise<boolean> {
   }
 }
 
-// ---------------------------------------------------------------------------
 // TauriOperator
-// ---------------------------------------------------------------------------
 
 export class TauriOperator implements Operator {
   readonly kind: OperatorKind = 'nutjs' as const; // re-use 'nutjs' kind for compat
@@ -201,9 +193,7 @@ export class TauriOperator implements Operator {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Factory helpers
-// ---------------------------------------------------------------------------
 
 /**
  * Best-effort factory: returns a TauriOperator if the Tauri Rust backend is

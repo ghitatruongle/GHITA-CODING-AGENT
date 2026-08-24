@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Mobile Type Definitions
-// ==============================================================================
-
 // Re-export shared types used by mobile app
 export type {
   Platform,

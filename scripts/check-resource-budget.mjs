@@ -1,12 +1,8 @@
 #!/usr/bin/env node
-// ==============================================================================
-// GHITA CODING AGENT - Resource budget gate (v1.1.0 Track 9 B10)
-// ------------------------------------------------------------------------------
+
 // Validates docs/resource-budget.json + runs the BudgetRegistry against the
-// caps (sample usage = 0 → mọi module trong budget). CI gate: exit 1 khi cap
-// sai hoặc module thiếu.
+
 // Usage: node scripts/check-resource-budget.mjs [--verbose]
-// ==============================================================================
 
 import { readFileSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
@@ -36,7 +32,6 @@ function main() {
     problems.push('targets missing desktopRssMb/sidecarRssMb');
   }
 
-  // Deny-default: module không đăng ký phải bị từ chối.
   if (registry.account('unknown.module', 1) !== false) {
     problems.push('unregistered module not denied (deny-default violated)');
   }

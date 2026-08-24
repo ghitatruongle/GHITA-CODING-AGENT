@@ -1,6 +1,4 @@
-// ==============================================================================
 // Wave 4 — ship agents coverage to 55% (runtime / AP / cron / SDK)
-// ==============================================================================
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import {

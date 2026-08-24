@@ -1,12 +1,8 @@
-// ==============================================================================
-// GHITA CODING AGENT - v1.1.5-beta1 Track 6.2: PreCompact Re-injection
-// ------------------------------------------------------------------------------
 // Hook that runs before memory compaction to inject relevant memories into
 // the context window. This ensures that after compaction, the agent can still
 // answer questions requiring facts from older entries that were compacted away.
 //
 // Pattern: agentmemory PreCompact re-injection.
-// ==============================================================================
 
 export interface PreCompactContext {
   /** Current messages in the conversation. */

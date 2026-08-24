@@ -1,7 +1,5 @@
-// ==============================================================================
 // v0.4.9 A5: xAI (Grok) Provider — OpenAI-compatible via defineVendor
 // Inspired by LiteLLM's unified provider routing (refer_project/ai-framework/litellm).
-// ==============================================================================
 
 import { defineVendor } from './base-extended.js';
 import { BaseProvider } from './base.js';

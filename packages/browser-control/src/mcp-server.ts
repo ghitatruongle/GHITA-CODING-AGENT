@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Browser-Control MCP Server (standard @ghita/mcp)
-// ==============================================================================
-
 import { createMCPServer, type GhitaMCPServer, type ToolDefinition } from '@ghita/mcp';
 
 /** Structural surface of BrowserController used by the server. */

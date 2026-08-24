@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - SQLite Symbol Cache
-// ==============================================================================
-
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
@@ -26,7 +22,6 @@ export class SymbolCache {
   constructor(customDbPath?: string) {
     const dbPath = customDbPath || DEFAULT_DB_PATH;
 
-    // Đảm bảo thư mục cha của dbPath tồn tại
     const dir = path.dirname(dbPath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
@@ -36,9 +31,6 @@ export class SymbolCache {
     this.initializeTable();
   }
 
-  /**
-   * Tạo bảng cache nếu chưa tồn tại
-   */
   private initializeTable() {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS file_cache (
@@ -50,18 +42,10 @@ export class SymbolCache {
     `);
   }
 
-  /**
-   * Tính mã MD5 của nội dung văn bản
-   */
   public calculateHash(content: string): string {
     return crypto.createHash('md5').update(content).digest('hex');
   }
 
-  /**
-   * Lấy danh sách Symbol tag từ cache nếu file chưa thay đổi
-   * @param filePath Đường dẫn tuyệt đối của file
-   * @param currentHash Mã băm hiện tại của file
-   */
   public getCachedSymbols(filePath: string, currentHash: string): SymbolTag[] | null {
     try {
       const stmt = this.db.prepare('SELECT hash, symbols FROM file_cache WHERE filePath = ?');
@@ -76,12 +60,6 @@ export class SymbolCache {
     return null;
   }
 
-  /**
-   * Ghi kết quả bóc tách symbols mới vào SQLite cache
-   * @param filePath Đường dẫn tuyệt đối của file
-   * @param hash Mã băm nội dung file
-   * @param symbols Danh sách Symbol tags
-   */
   public saveCachedSymbols(filePath: string, hash: string, symbols: SymbolTag[]): void {
     try {
       const stmt = this.db.prepare(`
@@ -94,9 +72,6 @@ export class SymbolCache {
     }
   }
 
-  /**
-   * Đóng kết nối cơ sở dữ liệu
-   */
   public close(): void {
     try {
       this.db.close();

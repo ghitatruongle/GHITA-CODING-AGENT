@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Feature Request Voting (Phase 40)
-// ==============================================================================
-
 import { randomUUID } from 'node:crypto';
 import type { FeatureRequest } from './types.js';
 

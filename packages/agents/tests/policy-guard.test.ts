@@ -1,10 +1,8 @@
-// ==============================================================================
 // v0.4.9 A2: ReActAgent Policy Guard Integration Tests
 //
 // Verifies the deny-default policy guard hook blocks tool execution before it
 // runs and feeds the denial reason back to the model, while allowed calls
 // execute normally.
-// ==============================================================================
 
 import { describe, it, expect, vi } from 'vitest';
 import { ReActAgent } from '../src/react/agent.js';

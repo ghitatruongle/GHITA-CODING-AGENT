@@ -15,7 +15,6 @@ describe('FallbackManager & Cost Tracker', () => {
       fs.mkdirSync(tempDir, { recursive: true });
     }
 
-    // Thiết lập cấu hình budget mẫu cho kiểm thử
     const budgetYaml = `budget:
   max_cost_per_session: 0.1
   max_cost_per_day: 0.5
@@ -114,7 +113,7 @@ describe('FallbackManager & Cost Tracker', () => {
   });
 
   it('should throw error when cost budget limit is reached', async () => {
-    // Đặt cost hiện tại vượt quá $0.1
+    
     manager.logCost({
       sessionId: (manager as any).sessionId,
       provider: 'openai',
@@ -140,7 +139,6 @@ describe('FallbackManager & Cost Tracker', () => {
   it('should failover to next model when primary model returns rate limit error', async () => {
     const errorMsg = 'HTTP 429: Too many requests';
 
-    // Cuộc gọi đầu tiên trả về lỗi Rate Limit, cuộc gọi thứ hai thành công
     const callFn = vi
       .fn()
       .mockRejectedValueOnce(new Error(errorMsg))
@@ -159,7 +157,6 @@ describe('FallbackManager & Cost Tracker', () => {
     expect(response.model).toBe('model-secondary');
     expect(callFn).toHaveBeenCalledTimes(2);
 
-    // Kiểm tra SQLite lưu log failover chính xác
     const logs = (manager as any).db
       .prepare('SELECT * FROM cost_logs ORDER BY timestamp ASC')
       .all();

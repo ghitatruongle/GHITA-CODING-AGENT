@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Engagement Analytics (Phase 39)
-// ==============================================================================
-
 import type { EngagementEvent, TimeRange } from './types.js';
 
 /**

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Tab Bar
-// ==============================================================================
-
 import { useMemo } from 'react';
 import { useAppStore, type TabId } from '../stores/appStore';
 import { useTranslation } from '../i18n';

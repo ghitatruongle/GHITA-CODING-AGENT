@@ -1,13 +1,10 @@
-// ==============================================================================
-// ghita-codegraph — PageRank, Traversal, Cycles & Blast Radius + AST (v1.1.5-beta2)
-// ==============================================================================
-// Flat CSR Graph computations in native Rust:
-// - PageRank (power iteration with dangling mass distribution)
-// - Callers / Callees BFS graph traversal
-// - Blast Radius transitive impact analysis
-// - Tarjan's Strongly Connected Components (SCC) for Cycle Detection
-// - Tree-sitter AST symbol & import parsing
-// ==============================================================================
+//! ghita-codegraph — PageRank, Traversal, Cycles & Blast Radius + AST
+//! Flat CSR Graph computations in native Rust:
+//! - PageRank (power iteration with dangling mass distribution)
+//! - Callers / Callees BFS graph traversal
+//! - Blast Radius transitive impact analysis
+//! - Tarjan's Strongly Connected Components (SCC) for Cycle Detection
+//! - Tree-sitter AST symbol & import parsing
 
 pub mod ast;
 
@@ -34,12 +31,7 @@ pub struct BlastRadiusResult {
 }
 
 /// PageRank (power iteration) with dangling-mass distribution.
-pub fn pagerank(
-    n: usize,
-    edges: &CsrGraph,
-    damping: f32,
-    iterations: usize,
-) -> Vec<f32> {
+pub fn pagerank(n: usize, edges: &CsrGraph, damping: f32, iterations: usize) -> Vec<f32> {
     if n == 0 {
         return Vec::new();
     }
@@ -208,7 +200,9 @@ pub fn blast_radius(
     }
 }
 
-/// Tarjan's algorithm for finding Strongly Connected Components (cycles) in a directed graph.
+/// Tarjan's algorithm for finding Strongly Connected Components (cycles) in a
+/// directed graph. Iterative via an explicit frame stack — the recursive form
+/// overflowed the thread stack on very deep dependency chains.
 pub fn find_cycles(n: usize, edges: &CsrGraph) -> Vec<Vec<u32>> {
     let mut adj: Vec<Vec<u32>> = vec![Vec::new(); n];
     for i in 0..edges.from.len() {
@@ -219,72 +213,87 @@ pub fn find_cycles(n: usize, edges: &CsrGraph) -> Vec<Vec<u32>> {
         }
     }
 
-    struct TarjanContext<'a> {
-        adj: &'a [Vec<u32>],
-        indices: Vec<i32>,
-        lowlinks: Vec<i32>,
-        on_stack: Vec<bool>,
-        stack: Vec<u32>,
-        index: i32,
-        sccs: Vec<Vec<u32>>,
+    struct Frame {
+        node: u32,
+        child_idx: usize,
     }
 
-    fn strongconnect(u: u32, ctx: &mut TarjanContext) {
-        let u_idx = u as usize;
-        ctx.indices[u_idx] = ctx.index;
-        ctx.lowlinks[u_idx] = ctx.index;
-        ctx.index += 1;
-        ctx.stack.push(u);
-        ctx.on_stack[u_idx] = true;
+    let mut indices = vec![-1i32; n];
+    let mut lowlinks = vec![-1i32; n];
+    let mut on_stack = vec![false; n];
+    let mut stack: Vec<u32> = Vec::new();
+    let mut index = 0i32;
+    let mut sccs: Vec<Vec<u32>> = Vec::new();
+    let mut call_stack: Vec<Frame> = Vec::new();
 
-        for &v in &ctx.adj[u_idx] {
-            let v_idx = v as usize;
-            if v_idx >= ctx.indices.len() {
-                continue;
-            }
-            if ctx.indices[v_idx] == -1 {
-                strongconnect(v, ctx);
-                ctx.lowlinks[u_idx] = ctx.lowlinks[u_idx].min(ctx.lowlinks[v_idx]);
-            } else if ctx.on_stack[v_idx] {
-                ctx.lowlinks[u_idx] = ctx.lowlinks[u_idx].min(ctx.indices[v_idx]);
-            }
+    for start in 0..n as u32 {
+        if indices[start as usize] != -1 {
+            continue;
         }
+        // "Enter" the start node.
+        indices[start as usize] = index;
+        lowlinks[start as usize] = index;
+        index += 1;
+        stack.push(start);
+        on_stack[start as usize] = true;
+        call_stack.push(Frame {
+            node: start,
+            child_idx: 0,
+        });
 
-        if ctx.lowlinks[u_idx] == ctx.indices[u_idx] {
-            let mut scc = Vec::new();
-            while let Some(w) = ctx.stack.pop() {
-                let w_idx = w as usize;
-                ctx.on_stack[w_idx] = false;
-                scc.push(w);
-                if w == u {
-                    break;
+        while let Some(frame) = call_stack.last_mut() {
+            let u = frame.node;
+            let u_idx = u as usize;
+
+            if frame.child_idx < adj[u_idx].len() {
+                let v = adj[u_idx][frame.child_idx];
+                frame.child_idx += 1;
+                let v_idx = v as usize;
+                if v_idx >= indices.len() {
+                    continue;
+                }
+                if indices[v_idx] == -1 {
+                    // Recurse into v.
+                    indices[v_idx] = index;
+                    lowlinks[v_idx] = index;
+                    index += 1;
+                    stack.push(v);
+                    on_stack[v_idx] = true;
+                    call_stack.push(Frame {
+                        node: v,
+                        child_idx: 0,
+                    });
+                } else if on_stack[v_idx] {
+                    lowlinks[u_idx] = lowlinks[u_idx].min(indices[v_idx]);
+                }
+            } else {
+                // All children processed — "return" from u.
+                call_stack.pop();
+                if let Some(parent) = call_stack.last() {
+                    let p_idx = parent.node as usize;
+                    lowlinks[p_idx] = lowlinks[p_idx].min(lowlinks[u_idx]);
+                }
+
+                if lowlinks[u_idx] == indices[u_idx] {
+                    let mut scc = Vec::new();
+                    while let Some(w) = stack.pop() {
+                        on_stack[w as usize] = false;
+                        scc.push(w);
+                        if w == u {
+                            break;
+                        }
+                    }
+                    // An SCC is a cycle if it has >1 node, or a single node with self-loop.
+                    if scc.len() > 1 || (scc.len() == 1 && adj[u_idx].contains(&u)) {
+                        scc.reverse();
+                        sccs.push(scc);
+                    }
                 }
             }
-            // An SCC is a cycle if it has >1 node, or a single node with self-loop.
-            if scc.len() > 1 || (scc.len() == 1 && ctx.adj[u_idx].contains(&u)) {
-                scc.reverse();
-                ctx.sccs.push(scc);
-            }
         }
     }
 
-    let mut ctx = TarjanContext {
-        adj: &adj,
-        indices: vec![-1; n],
-        lowlinks: vec![-1; n],
-        on_stack: vec![false; n],
-        stack: Vec::new(),
-        index: 0,
-        sccs: Vec::new(),
-    };
-
-    for i in 0..n {
-        if ctx.indices[i] == -1 {
-            strongconnect(i as u32, &mut ctx);
-        }
-    }
-
-    ctx.sccs
+    sccs
 }
 
 // ---------------------------------------------------------------------------
@@ -318,14 +327,32 @@ mod tests {
 
     #[test]
     fn single_node_graph() {
-        let rank = pagerank(1, &CsrGraph { from: vec![], to: vec![], weight: vec![] }, 0.85, 10);
+        let rank = pagerank(
+            1,
+            &CsrGraph {
+                from: vec![],
+                to: vec![],
+                weight: vec![],
+            },
+            0.85,
+            10,
+        );
         assert_eq!(rank.len(), 1);
         assert!((rank[0] - 1.0).abs() < 1e-6);
     }
 
     #[test]
     fn empty_graph_is_safe() {
-        let rank = pagerank(0, &CsrGraph { from: vec![], to: vec![], weight: vec![] }, 0.85, 5);
+        let rank = pagerank(
+            0,
+            &CsrGraph {
+                from: vec![],
+                to: vec![],
+                weight: vec![],
+            },
+            0.85,
+            5,
+        );
         assert!(rank.is_empty());
     }
 

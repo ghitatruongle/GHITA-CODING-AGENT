@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Instinct Engine (ECC & Superpowers Inspired)
-// ==============================================================================
 // Context-aware rules and instincts automatically evaluated and injected into
 // agent system prompts when matching file extensions, frameworks, or project patterns.
-// ==============================================================================
 
 export interface InstinctRule {
   id: string;

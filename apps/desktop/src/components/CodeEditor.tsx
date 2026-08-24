@@ -1,12 +1,8 @@
-// ==============================================================================
-// GHITA CODING AGENT — Phase 18: Code Editor (Monaco + Diagnostics + Diff View)
-// ==============================================================================
 // Enhanced Monaco editor with:
 // - Diagnostic markers (error, warning, info, hint) with gutter icons
 // - Inline diff view (original vs modified) with syntax highlighting
 // - Problem panel showing all diagnostics with filtering
 // - Configurable theme and keybindings
-// ==============================================================================
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Editor, { DiffEditor, type OnMount, type DiffOnMount } from '@monaco-editor/react';
@@ -14,9 +10,16 @@ import { useTranslation } from '../i18n';
 import { useAppStore } from '../stores/appStore';
 import { MonacoLspBridge, type Monaco } from '../lib/monacoLsp';
 
-// ---------------------------------------------------------------------------
+// Monaco is HEAVY (~2 MB of JS plus five language workers). Importing its
+// setup from the entry chunk delayed first paint of every non-editor view;
+// instead it is configured once here, right before the first editor mounts.
+let monacoSetupPromise: Promise<unknown> | null = null;
+function ensureMonacoSetup(): Promise<unknown> {
+  if (!monacoSetupPromise) monacoSetupPromise = import('../lib/monaco-setup');
+  return monacoSetupPromise;
+}
+
 // Types
-// ---------------------------------------------------------------------------
 
 export interface Diagnostic {
   /** Line number (1-based) */
@@ -35,9 +38,6 @@ export interface Diagnostic {
   code?: string;
 }
 
-// ---------------------------------------------------------------------------
-// Monaco theme — registered once at module load (P2-3, deep review pass #2)
-// ---------------------------------------------------------------------------
 // The previous code called `defineTheme('ghita-dark', …)` inside both
 // handleMount and handleDiffMount with different rule sets, so toggling
 // between editor and diff mode would replace the theme definition with the
@@ -113,9 +113,8 @@ interface CodeEditorProps {
   onEditorMount?: (editor: unknown, monaco: unknown) => void;
 }
 
-// ---------------------------------------------------------------------------
 // Word count helper (status bar)
-// ---------------------------------------------------------------------------
+
 function wordCount(text: string): number {
   const t = text.trim();
   if (!t) return 0;
@@ -123,9 +122,7 @@ function wordCount(text: string): number {
   return t.split(/\s+/).filter(Boolean).length;
 }
 
-// ---------------------------------------------------------------------------
 // Severity helpers
-// ---------------------------------------------------------------------------
 
 const SEVERITY_MAP = {
   error: { monaco: 8, color: '#ef4444', icon: '✕', label: 'Error' },
@@ -134,9 +131,7 @@ const SEVERITY_MAP = {
   hint: { monaco: 1, color: '#22c55e', icon: '💡', label: 'Hint' },
 } as const;
 
-// ---------------------------------------------------------------------------
 // Problem Panel Component
-// ---------------------------------------------------------------------------
 
 function ProblemPanel({
   diagnostics,
@@ -240,9 +235,7 @@ function ProblemPanel({
   );
 }
 
-// ---------------------------------------------------------------------------
 // Code Editor Component
-// ---------------------------------------------------------------------------
 
 function CodeEditorInner({
   value,
@@ -350,7 +343,7 @@ function CodeEditorInner({
     bracketPairColorization: { enabled: true },
     padding: { top: 12 },
     smoothScrolling: !lowRamMode,
-    // v1.0.0 fix (lỗi 3 — cursor không hiển thị): `smooth` blinking and the
+    
     // smooth caret animation are unreliable in WebView2 and could leave the
     // caret invisible. Use the classic `blink` caret (solid in low-RAM mode),
     // widen it slightly, and always render the line highlight so the user can
@@ -369,7 +362,7 @@ function CodeEditorInner({
 
   // Track cursor position for the status bar (v1.0.0). These hooks MUST live
   // above the diff-view early return so they run on every render.
-  // deep-review fix (BUG-10): kept in state (not a ref read during render) —
+  
   // reading a ref in JSX is a side-effect-prone anti-pattern. The functional
   // updater bails out when the position is unchanged so cursor movement does
   // not cause useless re-renders.
@@ -417,6 +410,22 @@ function CodeEditorInner({
     ro.observe(rootRef.current);
     return () => ro.disconnect();
   }, []);
+
+  // Monaco is configured lazily on first editor mount (see ensureMonacoSetup).
+  const [monacoReady, setMonacoReady] = useState(false);
+  useEffect(() => {
+    let active = true;
+    void ensureMonacoSetup().then(() => {
+      if (active) setMonacoReady(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Hold both editor modes on the loading placeholder until the bundled
+  // Monaco runtime + workers are wired up.
+  if (!monacoReady) return <div style={{ height: '100%' }}>{isLoading}</div>;
 
   // --- Diff View Mode ---
   if (originalValue !== undefined) {

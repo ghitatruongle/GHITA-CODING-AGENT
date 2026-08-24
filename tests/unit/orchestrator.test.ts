@@ -6,7 +6,6 @@ import type {
   ChatResponse,
 } from '../../packages/ai-engine/src/types.js';
 
-// Mock các class providers
 const mockChatFn = vi.fn();
 const mockIsReadyFn = vi.fn();
 
@@ -108,11 +107,8 @@ describe('Orchestrator (AI Multi-Provider Coordinator)', () => {
       };
       mockChatFn.mockResolvedValue(mockResult);
 
-      // Thử với role 'researcher' -> nên gọi Anthropic
       await orchestrator.chat([{ role: 'user', content: 'test' }], { agentRole: 'researcher' });
 
-      // Kiểm tra xem Anthropic provider có được resolve và gọi chat không
-      // Ở đây mockChatFn được dùng chung, chúng ta có thể kiểm tra provider được chọn thông qua registry
       const resolved = (orchestrator as any).resolveProvider(undefined, 'researcher');
       expect(resolved.type).toBe('anthropic');
 
@@ -123,7 +119,7 @@ describe('Orchestrator (AI Multi-Provider Coordinator)', () => {
     it('nên ưu tiên preferred provider truyền trực tiếp trước default provider', () => {
       const orchestrator = new Orchestrator(config);
       const resolved = (orchestrator as any).resolveProvider('google', 'researcher');
-      expect(resolved.type).toBe('google'); // preferred 'google' thắng routing 'anthropic'
+      expect(resolved.type).toBe('google'); 
     });
   });
 
@@ -154,7 +150,6 @@ describe('Orchestrator (AI Multi-Provider Coordinator)', () => {
         finishReason: 'stop',
       };
 
-      // Lần 1 ném ra lỗi, lần 2 trả về response thành công
       mockChatFn
         .mockRejectedValueOnce(new Error('API Rate Limit'))
         .mockResolvedValueOnce(expectedResponse);
@@ -174,8 +169,6 @@ describe('Orchestrator (AI Multi-Provider Coordinator)', () => {
         finishReason: 'stop',
       };
 
-      // OpenAI (primary) lỗi hoàn toàn cả 2 lần retry
-      // Anthropic (fallback) sẽ được gọi và trả về thành công
       mockChatFn
         .mockRejectedValueOnce(new Error('OpenAI Down 1')) // OpenAI trial 1
         .mockRejectedValueOnce(new Error('OpenAI Down 2')) // OpenAI trial 2 (retry)
@@ -190,7 +183,6 @@ describe('Orchestrator (AI Multi-Provider Coordinator)', () => {
     it('nên ném ra lỗi của provider chính nếu cả primary và fallback đều thất bại', async () => {
       const orchestrator = new Orchestrator(config);
 
-      // Cả OpenAI và Anthropic đều bị lỗi
       mockChatFn
         .mockRejectedValueOnce(new Error('OpenAI Fatal Error')) // OpenAI trial 1
         .mockRejectedValueOnce(new Error('OpenAI Fatal Error')) // OpenAI trial 2
@@ -198,7 +190,7 @@ describe('Orchestrator (AI Multi-Provider Coordinator)', () => {
 
       await expect(orchestrator.chat([{ role: 'user', content: 'hello' }])).rejects.toThrow(
         'OpenAI Fatal Error',
-      ); // Trả về lỗi của primary provider
+      ); 
     });
   });
 
@@ -220,7 +212,6 @@ describe('Orchestrator (AI Multi-Provider Coordinator)', () => {
     it('nên tự động chuyển đổi sang provider dự phòng khi stream của primary provider bị lỗi ngay từ đầu', async () => {
       const orchestrator = new Orchestrator(config);
 
-      // Mock class OpenAI chatStream ném ra lỗi
       const openaiProvider = orchestrator.getRegistry().get('openai') as any;
       openaiProvider.chatStream = async function* () {
         throw new Error('OpenAI Stream failed');
@@ -233,7 +224,6 @@ describe('Orchestrator (AI Multi-Provider Coordinator)', () => {
         chunks.push(chunk);
       }
 
-      // Anthropic (fallback) được gọi
       expect(chunks.length).toBe(2);
       expect(chunks[0]?.content).toBe('anthropic stream chunk');
       expect(chunks[0]?.provider).toBe('anthropic');

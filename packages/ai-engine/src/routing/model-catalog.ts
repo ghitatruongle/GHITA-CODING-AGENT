@@ -114,10 +114,8 @@ export class ModelCatalog {
     return [...this.models.values()].filter((m) => m[key]);
   }
 
-  // ---------------------------------------------------------------------------
   // Failover + Round-Robin
-  // ---------------------------------------------------------------------------
-
+  
   /**
    * Select the next model from a failover group using round-robin.
    * Skips models whose providers are in the `downProviders` set.
@@ -184,9 +182,7 @@ export class ModelCatalog {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Default catalog data (populated at module load)
-// ---------------------------------------------------------------------------
 
 /** Create a pre-populated ModelCatalog with common models. */
 export function createDefaultCatalog(): ModelCatalog {

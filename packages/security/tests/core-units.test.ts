@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Security package unit tests (v0.1.5 coverage blitz)
-// ==============================================================================
-
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   InputSanitizer,

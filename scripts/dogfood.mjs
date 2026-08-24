@@ -1,8 +1,6 @@
 #!/usr/bin/env node
-// ==============================================================================
-// GHITA CODING AGENT — release dogfood for v0.3.6
+
 // Run: pnpm dogfood
-// ==============================================================================
 
 import { execSync } from 'node:child_process';
 

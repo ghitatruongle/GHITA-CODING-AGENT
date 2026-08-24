@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Speech-to-Text (Phase 34 + Real Provider Support)
-// ==============================================================================
-
 import type { SttRequest, SttResult, SttListener } from './types.js';
 
 export type SttProvider = 'whisper-api' | 'local-stub';
@@ -34,7 +30,9 @@ export class SpeechToText {
   private readonly timeoutMs: number;
 
   constructor(config?: SpeechToTextConfig) {
-    this.provider = config?.provider ?? 'local-stub';
+    // No fabricated fallback: the default is the real Whisper API. Opting
+    // into "local-stub" (offline test transcripts) must be explicit.
+    this.provider = config?.provider ?? 'whisper-api';
     this.apiKey = config?.apiKey;
     this.baseUrl = config?.baseUrl ?? 'https://api.openai.com/v1';
     this.timeoutMs = config?.timeoutMs ?? 30_000;
@@ -56,7 +54,13 @@ export class SpeechToText {
   async transcribe(req: SttRequest): Promise<SttResult> {
     let result: SttResult;
 
-    if (this.provider === 'whisper-api' && this.apiKey) {
+    if (this.provider === 'whisper-api') {
+      if (!this.apiKey) {
+        throw new Error(
+          '[voice] Whisper STT requires an API key — construct SpeechToText with { apiKey }, ' +
+            'or explicitly pass provider "local-stub" for offline testing.',
+        );
+      }
       result = await this.transcribeViaWhisperApi(req);
     } else {
       result = this.transcribeLocal(req);
@@ -72,10 +76,8 @@ export class SpeechToText {
     return result;
   }
 
-  // ---------------------------------------------------------------------------
   // Real Whisper API integration
-  // ---------------------------------------------------------------------------
-
+  
   private async transcribeViaWhisperApi(req: SttRequest): Promise<SttResult> {
     const durationMs = this.computeDuration(req);
 
@@ -134,10 +136,8 @@ export class SpeechToText {
     }
   }
 
-  // ---------------------------------------------------------------------------
   // Local deterministic stub (for testing / offline)
-  // ---------------------------------------------------------------------------
-
+  
   private transcribeLocal(req: SttRequest): SttResult {
     const modelConfidence: Record<string, number> = {
       tiny: 0.5,

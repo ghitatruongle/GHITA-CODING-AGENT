@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - E2E Tests: Desktop-Mobile Communication Sync
-// ==============================================================================
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EventEmitter } from 'node:events';
 import { SOCKET_EVENTS } from '../../packages/shared/src/constants.js';

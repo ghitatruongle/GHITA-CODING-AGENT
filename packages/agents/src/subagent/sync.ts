@@ -1,22 +1,15 @@
-// ==============================================================================
-// GHITA CODING AGENT - Parent-Child State Synchronization (Phase 6)
 // Snapshot, diff, merge and auto-sync for parent-child agent hierarchies
-// ==============================================================================
 
 import type { StateSnapshot, StateDiff, SyncConfig } from './types.js';
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 /** Deep equality check for primitive values (shallow for objects) */
 function isPrimitive(value: unknown): boolean {
   return value === null || (typeof value !== 'object' && typeof value !== 'function');
 }
 
-// ---------------------------------------------------------------------------
 // StateSyncManager
-// ---------------------------------------------------------------------------
 
 export class StateSyncManager {
   /** Per-agent snapshot history */
@@ -39,10 +32,8 @@ export class StateSyncManager {
     };
   }
 
-  // -----------------------------------------------------------------------
   // Hierarchy Management
-  // -----------------------------------------------------------------------
-
+  
   /**
    * Register a parent-child relationship.
    */
@@ -94,10 +85,8 @@ export class StateSyncManager {
     return set !== undefined && set.size > 0;
   }
 
-  // -----------------------------------------------------------------------
   // Snapshot Management
-  // -----------------------------------------------------------------------
-
+  
   /**
    * Take a snapshot of an agent's current state data.
    */
@@ -154,10 +143,8 @@ export class StateSyncManager {
     return this.versionCounter.get(agentId) ?? 0;
   }
 
-  // -----------------------------------------------------------------------
   // Diff Computation
-  // -----------------------------------------------------------------------
-
+  
   /**
    * Compute the diff between two snapshots of the same agent.
    */
@@ -220,10 +207,8 @@ export class StateSyncManager {
     };
   }
 
-  // -----------------------------------------------------------------------
   // Sync Operations
-  // -----------------------------------------------------------------------
-
+  
   /**
    * Sync a child's state to its parent.
    * Takes a snapshot of the child, computes the diff from previous,
@@ -334,10 +319,8 @@ export class StateSyncManager {
     return merged;
   }
 
-  // -----------------------------------------------------------------------
   // Auto-Sync
-  // -----------------------------------------------------------------------
-
+  
   /**
    * Start automatic periodic sync for a child agent.
    * The syncFn is called at the configured interval to produce state data.
@@ -377,10 +360,8 @@ export class StateSyncManager {
     }
   }
 
-  // -----------------------------------------------------------------------
   // Cleanup
-  // -----------------------------------------------------------------------
-
+  
   /**
    * Remove all state data for an agent.
    */
@@ -411,10 +392,8 @@ export class StateSyncManager {
     this.parentOf.clear();
   }
 
-  // -----------------------------------------------------------------------
   // Private Helpers
-  // -----------------------------------------------------------------------
-
+  
   private computeDiff(from: StateSnapshot, to: StateSnapshot): StateDiff {
     return this.diffData(to.agentId, from.data, to.data, from.version, to.version);
   }

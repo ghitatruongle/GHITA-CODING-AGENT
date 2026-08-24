@@ -1,7 +1,3 @@
-// ==============================================================================
-// Phase 33: Overage Billing — hook & invoice generation
-// ==============================================================================
-
 import type { OverageEvent, OveragePolicy } from './types.js';
 
 export interface InvoiceLineItem {
@@ -27,9 +23,9 @@ export interface OverageBillingOptions {
 }
 
 /**
- * OverageBilling — lưu trữ invoice + gọi billing hook khi overage xảy ra.
+
  *
- * Sử dụng:
+
  *   const billing = new OverageBilling({ onBill: async (item) => await stripe.invoices.create(...) });
  *   const policy: OveragePolicy = { ..., onOverage: (e) => billing.handleOverage(e) };
  */
@@ -44,9 +40,6 @@ export class OverageBilling {
     this.onBill = options.onBill;
   }
 
-  /**
-   * Xử lý overage event từ QuotaManager.
-   */
   async handleOverage(event: OverageEvent): Promise<InvoiceLineItem> {
     const item: InvoiceLineItem = {
       userId: event.userId,
@@ -73,9 +66,6 @@ export class OverageBilling {
     return item;
   }
 
-  /**
-   * Tạo policy mặc định trỏ về instance này.
-   */
   defaultPolicy(pricePer1k: number, options: Partial<OveragePolicy> = {}): OveragePolicy {
     return {
       allowOverage: true,
@@ -89,16 +79,10 @@ export class OverageBilling {
     };
   }
 
-  /**
-   * Lấy tất cả invoice.
-   */
   listInvoices(userId?: string): InvoiceLineItem[] {
     return userId ? this.invoices.filter((i) => i.userId === userId) : [...this.invoices];
   }
 
-  /**
-   * Tổng billed (USD).
-   */
   totalBilledAmount(): number {
     return this.totalBilled;
   }

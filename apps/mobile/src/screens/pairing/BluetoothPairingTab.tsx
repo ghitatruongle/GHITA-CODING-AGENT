@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — BluetoothPairingTab Component
 // Bluetooth pairing: manual PC name input + device discovery list
-// ==============================================================================
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';

@@ -1,17 +1,11 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 1: SSE Stream Encoder & Response Buffer
-// ==============================================================================
 // Handles Server-Sent Events encoding/decoding for POST /chat/stream endpoints
 // and provides a robust ResponseBuffer for assembling partial JSON chunks.
-// ==============================================================================
 
 import type { AIStreamChunk } from '@ghita/shared';
 import type { SSEStreamEvent, SSEEventType, ResponseBufferState } from './types.js';
 import { TokenCalculator } from '../utils/streaming.js';
 
-// ---------------------------------------------------------------------------
 // SSE Encoder — converts AIStreamChunk → SSE text/event-stream frames
-// ---------------------------------------------------------------------------
 
 /**
  * Encodes stream events into SSE wire format.
@@ -106,9 +100,7 @@ export class SSEEncoder {
   }
 }
 
-// ---------------------------------------------------------------------------
 // SSE Decoder — parses SSE wire format back into SSEStreamEvent[]
-// ---------------------------------------------------------------------------
 
 export class SSEDecoder {
   private buffer = '';
@@ -172,9 +164,7 @@ export class SSEDecoder {
   }
 }
 
-// ---------------------------------------------------------------------------
 // ResponseBuffer — accumulates partial JSON chunks from streaming responses
-// ---------------------------------------------------------------------------
 
 /**
  * A robust response buffer that assembles partial JSON/text from SSE streams.
@@ -363,9 +353,7 @@ export class ResponseBuffer {
   }
 }
 
-// ---------------------------------------------------------------------------
 // AsyncGenerator → SSE stream bridge
-// ---------------------------------------------------------------------------
 
 /**
  * Converts an AsyncGenerator<AIStreamChunk> into an async iterable of SSE-encoded strings.

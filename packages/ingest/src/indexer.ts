@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - @ghita/ingest indexer (P67/P68)
-// ==============================================================================
 // Incremental indexer: discovers → loads → chunks with hash-dedup, optional
 // secret redaction (P73), progress + abort support. Output feeds the memory
 // KnowledgeEngine via a pluggable sink.
-// ==============================================================================
 
 import {
   isDirectory,

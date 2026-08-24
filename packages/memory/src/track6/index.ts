@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Memory v1.1.0 Track 6: public entry
-// ==============================================================================
-
 export { MemoryCaptureHooks } from './hooks.js';
 export type { CaptureHook, CaptureEvent, CaptureSink, DedupOptions } from './hooks.js';
 
@@ -17,7 +13,6 @@ export type {
 export { ProvenanceStore, snapshotHash } from './provenance.js';
 export type { Namespace, ProvenanceRecord } from './provenance.js';
 
-// ── v1.1.5-beta1 Track 6: Memory v2 ──
 export { ConsolidationEngine, DreamLock, DEFAULT_CONSOLIDATION_CONFIG } from './consolidation.js';
 export type {
   ConsolidatedMemoryTier,

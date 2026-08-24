@@ -1,13 +1,9 @@
-// ==============================================================================
-// GHITA CODING AGENT - v1.1.5-beta1 Track 6.4: Document Loader (JS fallback)
-// ------------------------------------------------------------------------------
 // JS-side document loader for pdf/docx/html-readability with mime detection.
 // When the native crate (crates/docloader) is available, this module delegates
 // to it via @ghita/native-bridge. Otherwise, it provides a pure-JS fallback
 // using text extraction heuristics.
 //
 // Pattern: open-agent doc_loader.rs AsyncTask napi.
-// ==============================================================================
 
 export interface DocLoadResult {
   content: string;

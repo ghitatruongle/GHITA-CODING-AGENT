@@ -1,15 +1,15 @@
-// ==============================================================================
-// GHITA CODING AGENT - Payment Provider (Phase 38)
-// ==============================================================================
-
 import { randomUUID } from 'node:crypto';
 import type { PaymentIntent, PaymentProvider, PaymentStatus } from './types.js';
 
 /**
- * Provider-agnostic payment abstraction.
- * Real implementation would call Stripe/PayPal/etc; this is a deterministic stub.
+ * Provider-agnostic payment abstraction — SIMULATION ONLY.
+ * No money ever moves: capture/refund mutate an in-memory ledger. A real
+ * implementation must call Stripe/PayPal/etc and be audited before shipping.
  */
 export class PaymentGateway {
+  /** Always true for this implementation — callers can assert against it. */
+  readonly simulated = true as const;
+
   private intents = new Map<string, PaymentIntent>();
   private provider: PaymentProvider;
   private readonly apiKey: string;
@@ -17,6 +17,12 @@ export class PaymentGateway {
   constructor(opts: { provider: PaymentProvider; apiKey: string }) {
     this.provider = opts.provider;
     this.apiKey = opts.apiKey;
+    if (typeof console !== 'undefined') {
+      console.warn(
+        '[marketplace] PaymentGateway is SIMULATED: intents never reach a real ' +
+          'payment provider and no funds move. Do not use for real revenue.',
+      );
+    }
   }
 
   /**

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Shortcut Registry Tests
-// ==============================================================================
-
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ShortcutRegistry } from './shortcut.js';
 

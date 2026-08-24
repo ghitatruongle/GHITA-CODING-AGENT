@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Knowledge / RAG Types
-// ==============================================================================
-
 export interface KnowledgeDocument {
   /** Unique document ID */
   id: string;
@@ -86,8 +82,6 @@ export interface KnowledgeSearchResult {
 }
 
 export type EmbeddingFunction = (text: string) => Promise<number[]>;
-
-// --- Phase 15: Knowledge Graph RAG ---
 
 export interface GraphNode {
   id: string;

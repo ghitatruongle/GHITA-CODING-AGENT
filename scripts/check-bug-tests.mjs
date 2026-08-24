@@ -1,12 +1,6 @@
 #!/usr/bin/env node
-// ==============================================================================
-// GHITA CODING AGENT - Bug→test mapping gate (v1.1.0 Track 11 F4 / Track 12 G1)
-// ------------------------------------------------------------------------------
-// Đọc docs/code-review-findings.md: mọi finding có status "fixed" PHẢI có
-// TestFile tồn tại trên đĩa — exit 1 nếu thiếu. Findings "closed-verified"
-// không cần TestFile.
+
 // Usage: node scripts/check-bug-tests.mjs [--verbose]
-// ==============================================================================
 
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';

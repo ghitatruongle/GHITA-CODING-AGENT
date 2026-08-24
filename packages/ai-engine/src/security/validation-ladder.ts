@@ -1,6 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - v1.1.5-beta1 Track 5.1: Validation Ladder
-// ------------------------------------------------------------------------------
 // After a security scan produces candidate findings, each finding must pass
 // through a validation ladder before being included in the final report.
 // A ValidationReceipt records the method, evidence, proof gaps, and disposition
@@ -15,7 +12,6 @@
 //   4. confirmed      — manual review or automated verification passed
 //
 // Pattern: codex-security skills/validation, strix validation receipts.
-// ==============================================================================
 
 export type ValidationMethod = 'static' | 'heuristic' | 'poc' | 'confirmed';
 

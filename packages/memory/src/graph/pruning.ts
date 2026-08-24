@@ -1,5 +1,5 @@
 /**
- * Phase 23 — Memory Pruning (Cohesion + Freshness)
+
  *
  * Two-pronged pruning strategy:
  *   1. Cohesion: small/weakly-connected communities are demoted.

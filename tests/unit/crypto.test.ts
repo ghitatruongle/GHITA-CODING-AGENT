@@ -19,7 +19,6 @@ describe('CryptoHelper (AES-256-CBC Cryptography Helper)', () => {
 
     expect(enc1).not.toBe(enc2);
 
-    // Cả hai bản mã khác nhau nhưng giải mã đều ra giá trị ban đầu
     expect(CryptoHelper.decrypt(enc1, SECRET_KEY)).toBe(RAW_API_KEY);
     expect(CryptoHelper.decrypt(enc2, SECRET_KEY)).toBe(RAW_API_KEY);
   });

@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Layout Preset System (Phase 33)
 // Save/load/switch workspace layouts
-// ==============================================================================
 
 import type { WindowGeometry, WindowRole } from './types.js';
 

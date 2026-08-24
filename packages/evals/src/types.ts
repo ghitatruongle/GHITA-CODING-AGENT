@@ -1,9 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Evals: shared types
-// ==============================================================================
-// Evidence-based evaluation model (v1.1.0 Track 1, P01).
 // Mirrors the 5-dimension Agent Work Loop harness (packages/agents harness).
-// ==============================================================================
 
 export const EVALS_VERSION = '1.1.0';
 

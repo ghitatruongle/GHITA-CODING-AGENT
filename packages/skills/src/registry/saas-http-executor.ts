@@ -1,11 +1,9 @@
-// ==============================================================================
 // v0.4.9: Real SaaS HTTP execution
 //
 // Performs genuine REST calls for common SaaS actions when an access token is
 // available, instead of returning fabricated data. Anything without a real
 // handler returns { handled: false } so the caller can fall back to the
 // (explicitly flagged) simulator.
-// ==============================================================================
 
 /** Minimal fetch signature so this module is testable without a network. */
 export type FetchLike = (

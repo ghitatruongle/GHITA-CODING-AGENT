@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Adaptive Reasoning Controller Tests (v1.1.5-beta2 Track 4)
-// ==============================================================================
-
 import { describe, it, expect } from 'vitest';
 import { AdaptiveReasoningController } from './reasoning-budget.js';
 

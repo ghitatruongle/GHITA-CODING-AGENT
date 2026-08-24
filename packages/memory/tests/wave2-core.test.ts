@@ -1,6 +1,4 @@
-// ==============================================================================
 // Wave 2 — memory embeddings / graph path / tiered store public API
-// ==============================================================================
 
 import { describe, it, expect } from 'vitest';
 import { getDeterministicMockEmbedding, TieredMemoryStore } from '../src/tieredStore.js';

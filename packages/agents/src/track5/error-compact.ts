@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Agents v1.1.0 Track 5 P63: error compaction
-// ==============================================================================
 // Classifies errors into a compact taxonomy and formats them for direct
 // context append (12-factor factor-09: compact errors into context so the
 // model can self-correct — no noisy logs).
-// ==============================================================================
 
 export type ErrorCategory =
   | 'timeout'

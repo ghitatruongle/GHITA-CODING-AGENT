@@ -1,8 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - KnowledgeEngine Unit Tests
 // 30 test cases covering ingestion, chunking, deduplication, token search,
 // semantic search, source management, query context, and document management.
-// ==============================================================================
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { KnowledgeEngine } from '../src/knowledge/knowledge.js';

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - OpenAI Agents SDK Adapter
-// ==============================================================================
-
 import type { BaseMessage } from '../messages/message.js';
 import { HumanMessage, AIMessage, SystemMessage } from '../messages/message.js';
 import type {

@@ -1,4 +1,3 @@
-// ==============================================================================
 // v0.4.9 A10: Skill Pack Importer
 //
 // Imports a *pack* (collection) of external SKILL.md skills at once, validating
@@ -7,7 +6,6 @@
 //
 // Only skills under MIT-compatible licenses are imported; others are reported
 // as skipped so licensing stays clean.
-// ==============================================================================
 
 import type { SkillDefinition } from '../types.js';
 import { importFromSkillMd } from '../importers/universal-importer.js';
@@ -69,7 +67,7 @@ function normalizeLicense(license: string | undefined): string | undefined {
 /**
  * SkillPackImporter — validate + convert a collection of SKILL.md skills.
  *
- * Sử dụng:
+
  *   const importer = new SkillPackImporter();
  *   const result = importer.importPack(COMMUNITY_ESSENTIALS);
  *   registry.registerAll(result.imported);

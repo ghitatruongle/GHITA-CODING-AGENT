@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Phase 17: Composio SaaS Integration Unit Tests
-// ==============================================================================
-
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ComposioSkillAdapter } from '../src/registry/composioAdapter.js';
 
@@ -13,9 +9,8 @@ describe('ComposioSkillAdapter', () => {
     vi.clearAllMocks();
   });
 
-  // ==============================================================================
   // 1. Credentials Management & Centralized Syncing
-  // ==============================================================================
+  
   describe('Credentials Loading & Syncing', () => {
     it('should set and retrieve SaaS credentials correctly', () => {
       adapter.setCredential({
@@ -64,9 +59,8 @@ describe('ComposioSkillAdapter', () => {
     });
   });
 
-  // ==============================================================================
   // 2. OAuth Token Auto-Refresher Interceptors
-  // ==============================================================================
+  
   describe('OAuth Token Auto-Refresher Interceptor', () => {
     it('should NOT refresh token if expiresAt is in the far future', async () => {
       const farFuture = Date.now() + 2 * 60 * 60 * 1000; // 2 hours
@@ -104,9 +98,8 @@ describe('ComposioSkillAdapter', () => {
     });
   });
 
-  // ==============================================================================
   // 3. SaaS Action Mappings (All 10 default apps)
-  // ==============================================================================
+  
   describe('Simulated Default Actions Execution', () => {
     beforeEach(() => {
       // Setup credentials for all test apps
@@ -273,9 +266,8 @@ describe('ComposioSkillAdapter', () => {
     });
   });
 
-  // ==============================================================================
   // 4. Faulty SaaS Tools Auto-Isolation
-  // ==============================================================================
+  
   describe('Faulty Tools Auto-Isolation Mechanism', () => {
     beforeEach(() => {
       adapter.setCredential({ appId: 'slack', accessToken: 'slack_token' });

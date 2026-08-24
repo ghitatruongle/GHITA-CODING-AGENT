@@ -9,9 +9,9 @@ import {
 } from '../src/index.js';
 
 describe('Phase 25 OAuth Handoff + toolkitSlug Discovery', () => {
-  // ==============================================================================
+  
   // 1. OAuth Handoff & PKCE Tests
-  // ==============================================================================
+  
   describe('OAuthHandoffManager', () => {
     let oauth: OAuthHandoffManager;
 
@@ -106,9 +106,8 @@ describe('Phase 25 OAuth Handoff + toolkitSlug Discovery', () => {
     });
   });
 
-  // ==============================================================================
   // 2. Keychain Store Tests (AES-256-GCM + file fallback)
-  // ==============================================================================
+  
   describe('KeychainStore', () => {
     const testFilePath = path.join(__dirname, `test-keychain-${Date.now()}.enc`);
     let originalEnvPassword: string | undefined;
@@ -191,9 +190,8 @@ describe('Phase 25 OAuth Handoff + toolkitSlug Discovery', () => {
     });
   });
 
-  // ==============================================================================
   // 3. Permission Gate Manager & Dialog Prompt tests
-  // ==============================================================================
+  
   describe('PermissionGateManager', () => {
     let gate: PermissionGateManager;
 
@@ -266,9 +264,8 @@ describe('Phase 25 OAuth Handoff + toolkitSlug Discovery', () => {
     });
   });
 
-  // ==============================================================================
   // 4. toolkitSlug Discovery tests
-  // ==============================================================================
+  
   describe('discoverToolkitSlug', () => {
     it('should match exact app IDs', () => {
       const app = discoverToolkitSlug('slack');

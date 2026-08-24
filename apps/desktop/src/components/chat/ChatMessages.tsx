@@ -1,18 +1,13 @@
-// ==============================================================================
-// GHITA CODING AGENT — Chat Messages Component
 // Message list with auto-scroll, streaming indicator, and embedded cards.
-// ==============================================================================
 
 import { memo, useRef, useCallback, useEffect, useState } from 'react';
 import { ComputerUsePreviewComponent, MarkdownMessage } from '../ChatMessageContent';
 import type { ChatMessage } from '../../hooks/useChatSessions';
 import { useAppStore } from '../../stores/appStore';
 
-// ----------------------------------------------------------------------------
 // MessageBubble — memoized per message so a streaming update to one message
 // (or appending a new one) never forces every past message to re-render and
 // re-parse its markdown on each 50ms flush.
-// ----------------------------------------------------------------------------
 
 const MessageBubble = memo(function MessageBubble({
   msg,
@@ -51,7 +46,14 @@ const MessageBubble = memo(function MessageBubble({
           boxShadow: msg.role === 'user' ? 'var(--shadow-glow)' : 'none',
         }}
       >
-        <MarkdownMessage content={msg.content} />
+        {msg.isStreaming ? (
+          // While streaming, render raw text — a full markdown re-parse per
+          // 50ms flush is O(n²) over the response length. The final markdown
+          // renders once when the stream completes.
+          <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</span>
+        ) : (
+          <MarkdownMessage content={msg.content} />
+        )}
 
         {msg.imageAttachment && (
           <img

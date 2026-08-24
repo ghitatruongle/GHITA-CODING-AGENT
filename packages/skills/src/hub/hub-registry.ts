@@ -1,6 +1,3 @@
-// =============================================================================
-// GHITA CODING AGENT - Phase 12: Hub Registry (Enhanced Skill Hub)
-// =============================================================================
 // Orchestrates SkillMeta storage, lock.json, SkillGuard, and AuditLog
 // into a unified hub registry. Extends the basic SkillHub with:
 //   - Content-hash verification
@@ -8,7 +5,6 @@
 //   - Audit logging
 //   - Trust level resolution
 //   - Auto-register into tools/registry
-// =============================================================================
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - WebSocket Multiplexer Types (Phase 29)
-// ==============================================================================
-
 /** WebSocket connection state */
 export type WsConnectionState =
   | 'connecting'

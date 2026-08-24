@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — Chat Model Selector Hook
 // Manages dynamic model list loading, provider selection, and dropdown state.
-// ==============================================================================
 
 import { useState, useEffect, useRef } from 'react';
 import { type DynamicModelOption, loadModelOptions } from '../../utils/buildModelOptions';

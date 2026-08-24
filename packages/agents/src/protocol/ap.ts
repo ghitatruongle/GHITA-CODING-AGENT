@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Agent Protocol (AP) Standard Server Implementation
-// ==============================================================================
-
 import { generateUUID } from '@ghita/shared';
 
 export interface APTask {

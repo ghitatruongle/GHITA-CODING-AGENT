@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — File Explorer (Composition Root)
 // State management, directory loading, event handlers
-// ==============================================================================
 
 import { useState, useEffect, useCallback } from 'react';
 import { open } from '@tauri-apps/plugin-dialog';
@@ -236,7 +233,7 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
     async (dirPath: string) => {
       const name = prompt(t('fileExplorer.newFilePrompt'));
       if (!name) return;
-      // deep-review fix (M6): reject separators and traversal names — the raw
+      
       // name was previously concatenated into the path, so `..\..\Users\me\x`
       // could write anywhere on disk. Mirrors the renamePath validator.
       if (name.trim() === '' || /[\\/]/.test(name) || name === '.' || name === '..') {
@@ -263,7 +260,7 @@ export function FileExplorer({ onFileOpen, rootPath }: FileExplorerProps) {
     async (dirPath: string) => {
       const name = prompt(t('fileExplorer.newFolderPrompt'));
       if (!name) return;
-      // deep-review fix (M6): same traversal guard as handleNewFile.
+      
       if (name.trim() === '' || /[\\/]/.test(name) || name === '.' || name === '..') {
         toast.error(t('fileExplorer.renameInvalid'));
         return;

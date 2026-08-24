@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Cron Scheduler Types
-// ==============================================================================
-
 export interface ScheduledTaskConfig {
   id: string;
   expression: string; // "*/5 * * * *" or natural language "every 5 minutes", "daily at 8:00"
@@ -18,4 +14,6 @@ export interface ScheduledTask {
   runCount: number;
   status: 'active' | 'paused' | 'completed';
   intervalId?: ReturnType<typeof setInterval>;
+  /** Minute key of the last cron-triggered run — prevents multi-fire within one minute. */
+  lastCronKey?: string;
 }

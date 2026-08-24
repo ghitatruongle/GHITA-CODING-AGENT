@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Action Parser for UI-TARS and Multimodal LLMs
-// ==============================================================================
-
 import type { ActionInputs, PredictionParsed } from './vision/types.js';
 
 export const MAX_RATIO = 2.5;

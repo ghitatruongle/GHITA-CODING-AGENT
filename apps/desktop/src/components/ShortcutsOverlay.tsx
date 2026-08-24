@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT — v1.0.0 Shortcuts overlay (press `?`)
-// ==============================================================================
 // A searchable reference of every keyboard shortcut, grouped by category.
 // Opened with `?` (when not typing in an input) and closed with Esc.
-// ==============================================================================
 
 import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -115,7 +111,6 @@ export function ShortcutsOverlay({ open, onClose }: ShortcutsOverlayProps) {
     if (open) setQuery('');
   }, [open]);
 
-  // deep-review fix (BUG-6): Esc closes the overlay (standard modal UX).
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (e: KeyboardEvent) => {

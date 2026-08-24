@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Marketplace v1.1.0 Track 3 P40: catalog tiers
-// ==============================================================================
 // Tiered catalog: .system (auto-installed core), .curated (community vetted),
 // .experimental (community, unvetted), quarantine zone for flagged plugins.
-// ==============================================================================
 
 import type { PluginManifest } from '../types.js';
 

@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Revenue Manager Facade (Phase 38)
 // Composes Payment + Split + Tax + Ledger into a unified revenue pipeline
-// ==============================================================================
 
 import type {
   Currency,

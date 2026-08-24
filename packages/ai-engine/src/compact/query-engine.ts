@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - OpenClaude Auto-Compacting QueryEngine
-// ==============================================================================
 // Automatically compacts and summarizes long conversation history when context
 // usage crosses 80% threshold, saving up to 70% of prompt token costs.
-// ==============================================================================
 
 import type { AIMessage } from '@ghita/shared';
 

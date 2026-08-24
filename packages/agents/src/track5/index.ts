@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Agents v1.1.0 Track 5: public entry
-// ==============================================================================
-
 export { RequestHumanInputManager, buildRequestHumanInputTool } from './hitl.js';
 export type { HumanInputRequest, Urgency, RequestHumanInputManagerOptions } from './hitl.js';
 

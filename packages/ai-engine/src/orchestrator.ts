@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - AI Orchestrator (Facade)
-// ==============================================================================
 // Thin facade that composes sub-modules: chat, tool-calling, embedding.
 // Constructor initializes all modules; public methods delegate to sub-modules.
-// ==============================================================================
 
 import type { AIProviderType, AIStreamChunk } from '@ghita/shared';
 import { retry } from '@ghita/shared';
@@ -70,20 +66,17 @@ export class Orchestrator {
   private _defaultProvider: AIProviderType | null = null;
   private _fallbackOrder: AIProviderType[] = [];
 
-  // Phase 5-7 modules
   readonly mcpClient: MCPClient;
   readonly hookRunner: HookRunner;
   readonly builtInTools: BuiltInTool[];
   readonly contextManager: ContextManager;
   readonly permissionManager: PermissionManager;
 
-  // Phase 8 modules
   readonly costTracker: CostTracker;
   readonly budgetManager: BudgetManager;
   private costMiddleware: ReturnType<typeof createCostMiddleware>;
   readonly semanticCache: SemanticCache;
 
-  // Phase 1.3+1.4: Discovery & Smart Routing
   readonly modelDiscovery: ModelDiscovery;
   readonly smartRouter: SmartRouter | null = null;
 
@@ -290,20 +283,21 @@ export class Orchestrator {
   // --- Status & Config ---
 
   async testAll(): Promise<Array<{ type: AIProviderType; ok: boolean; error?: string }>> {
-    const results: Array<{ type: AIProviderType; ok: boolean; error?: string }> = [];
-    for (const provider of this._registry.getAll()) {
-      try {
-        const ok = await provider.test();
-        results.push({ type: provider.type, ok });
-      } catch (error) {
-        results.push({
-          type: provider.type,
-          ok: false,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-    }
-    return results;
+    // Parallel health checks: sequential awaits made the total wait the SUM of
+    // per-provider latencies.
+    return Promise.all(
+      this._registry.getAll().map(async (provider) => {
+        try {
+          return { type: provider.type, ok: await provider.test() };
+        } catch (error) {
+          return {
+            type: provider.type,
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+          };
+        }
+      }),
+    );
   }
 
   async getStatus(): Promise<OrchestratorStatus> {

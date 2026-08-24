@@ -1,7 +1,5 @@
-// ==============================================================================
 // v0.4.9 A5: Perplexity Provider — OpenAI-compatible via defineVendor
 // Online search-augmented models (refer_project/ai-framework/litellm pattern).
-// ==============================================================================
 
 import { defineVendor } from './base-extended.js';
 import { BaseProvider } from './base.js';

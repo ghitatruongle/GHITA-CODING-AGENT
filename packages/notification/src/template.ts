@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Notification Template Engine (Phase 35)
 // Variable interpolation with nested access, defaults, and pluralization
-// ==============================================================================
 
 /** Template context: flat or nested values for interpolation */
 export type TemplateContext = Record<string, string | number | boolean | Record<string, unknown>>;

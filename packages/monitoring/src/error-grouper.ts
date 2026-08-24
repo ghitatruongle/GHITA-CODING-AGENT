@@ -1,20 +1,12 @@
-// ==============================================================================
-// Phase 32: Error Grouper — gom nhóm error theo fingerprint
-// ==============================================================================
-
 import type { CapturedError, ErrorGroup } from './types.js';
 
 export interface ErrorGrouperOptions {
-  /** Số group tối đa giữ trong memory */
+  
   maxGroups?: number;
-  /** Số event tối đa giữ lại trong mỗi group */
+  
   maxEventsPerGroup?: number;
 }
 
-/**
- * ErrorGrouper — gom nhóm các error giống nhau để giảm noise.
- * Dùng fingerprint (hash của type+message+stack top) làm key.
- */
 export class ErrorGrouper {
   private readonly groups = new Map<string, ErrorGroup>();
   private readonly maxGroups: number;
@@ -27,9 +19,6 @@ export class ErrorGrouper {
     this.maxEventsPerGroup = options.maxEventsPerGroup ?? 100;
   }
 
-  /**
-   * Ingest một error event vào group tương ứng (tạo mới nếu chưa có).
-   */
   ingest(event: CapturedError): ErrorGroup {
     this.totalErrors++;
     const existing = this.groups.get(event.fingerprint);
@@ -60,16 +49,10 @@ export class ErrorGrouper {
     return group;
   }
 
-  /**
-   * Lấy group theo fingerprint.
-   */
   get(fingerprint: string): ErrorGroup | undefined {
     return this.groups.get(fingerprint);
   }
 
-  /**
-   * Lấy tất cả group, sắp xếp theo count giảm dần.
-   */
   list(sortBy: 'count' | 'lastSeen' | 'firstSeen' = 'count'): ErrorGroup[] {
     const arr = Array.from(this.groups.values());
     return arr.sort((a, b) => {
@@ -79,32 +62,20 @@ export class ErrorGrouper {
     });
   }
 
-  /**
-   * Lấy top N group theo count.
-   */
   top(n: number): ErrorGroup[] {
     return this.list('count').slice(0, n);
   }
 
-  /**
-   * Xóa group theo fingerprint.
-   */
   forget(fingerprint: string): boolean {
     return this.groups.delete(fingerprint);
   }
 
-  /**
-   * Xóa tất cả group.
-   */
   clear(): void {
     this.groups.clear();
     this.totalErrors = 0;
     this.droppedGroups = 0;
   }
 
-  /**
-   * Lấy stats tổng quan.
-   */
   stats(): { totalErrors: number; groupCount: number; droppedGroups: number; uniqueUsers: number } {
     const userSet = new Set<string>();
     for (const g of this.groups.values()) {
@@ -118,9 +89,6 @@ export class ErrorGrouper {
     };
   }
 
-  /**
-   * LRU eviction: xóa group có count thấp nhất + lastSeen cũ nhất.
-   */
   private evictIfNeeded(): void {
     if (this.groups.size <= this.maxGroups) return;
     const sorted = Array.from(this.groups.entries()).sort((a, b) => {

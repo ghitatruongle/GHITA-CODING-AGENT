@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Agents v1.1.0 Track 5 P62: flow persistence + HITL
-// ==============================================================================
 // SQLite (or memory) per-node flow state with idempotent resume, plus a
 // blocking `withHumanFeedback` helper for human-in-the-loop inside flows
 // (crewai Flow persistence pattern).
-// ==============================================================================
 
 import Database from 'better-sqlite3';
 import type { RequestHumanInputManager } from './hitl.js';

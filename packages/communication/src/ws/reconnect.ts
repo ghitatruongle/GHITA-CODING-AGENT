@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - WebSocket Reconnect Strategy (Phase 29)
-// ==============================================================================
-
 import type { ReconnectConfig } from './types.js';
 
 const DEFAULT_RECONNECT_CONFIG: ReconnectConfig = {

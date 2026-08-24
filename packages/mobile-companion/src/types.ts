@@ -1,6 +1,4 @@
-// ==============================================================================
 // @ghita/mobile-companion -- Type Definitions
-// ==============================================================================
 
 export interface BluetoothDevice {
   readonly id: string;

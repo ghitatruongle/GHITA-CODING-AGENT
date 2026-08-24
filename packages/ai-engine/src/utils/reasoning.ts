@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Reasoning & Thinking Block Extraction
-// ==============================================================================
-
 export interface ExtractedReasoning {
   content: string; // Text content after stripping <think> blocks
   reasoning: string; // The extracted thinking block content

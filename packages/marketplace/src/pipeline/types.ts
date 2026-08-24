@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Skill Publishing Pipeline Types (Phase 37)
-// ==============================================================================
-
 /** Semver version components */
 export interface SemverVersion {
   major: number;

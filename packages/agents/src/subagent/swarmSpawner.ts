@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Sub-Agent Swarm Parallel Spawner
-// ==============================================================================
 // Spawns multiple sub-agents in parallel across isolated contexts and aggregates
 // their execution results into a unified summary.
-// ==============================================================================
 
 export interface SwarmTask {
   id: string;

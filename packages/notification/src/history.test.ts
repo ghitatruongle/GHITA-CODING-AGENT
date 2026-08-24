@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Notification History Tests
-// ==============================================================================
-
 import { describe, it, expect, beforeEach } from 'vitest';
 import { NotificationHistory } from './history.js';
 import type { Notification } from './types.js';

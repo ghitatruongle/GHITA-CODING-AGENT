@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Anthropic Provider
-// ==============================================================================
-
 import type { AIStreamChunk } from '@ghita/shared';
 import type { ChatMessage, ChatOptions, ChatResponse, ProviderConfig } from '../types.js';
 import { BaseProvider } from './base.js';
@@ -36,7 +32,6 @@ export class AnthropicProvider extends BaseProvider {
     const apiKey = this.getApiKey();
     const model = this.getModel(options);
 
-    // Tách system message ra khỏi messages
     const systemMsgs = messages.filter((m) => m.role === 'system');
     const systemContent = systemMsgs.map((m) => m.content).join('\n\n');
     const body: Record<string, unknown> = {
@@ -152,7 +147,14 @@ export class AnthropicProvider extends BaseProvider {
             const args = JSON.parse(call.argumentsText || '{}') as unknown;
             if (!args || typeof args !== 'object' || Array.isArray(args) || !call.name) return [];
             return [{ id: call.id, name: call.name, arguments: args as Record<string, unknown> }];
-          } catch {
+          } catch (err) {
+            // Malformed tool-call JSON must be surfaced — silently dropping it
+            // makes the agent loop proceed as if no tool had been called.
+            console.warn(
+              `[anthropic] Dropping malformed tool-call arguments for "${call.name}":`,
+              err instanceof Error ? err.message : err,
+              call.argumentsText.slice(0, 200),
+            );
             return [];
           }
         });
@@ -237,6 +239,9 @@ export class AnthropicProvider extends BaseProvider {
         }
       }
     } finally {
+      // Cancel the HTTP body when the consumer breaks early — releaseLock()
+      // alone leaves the upstream connection and stream open.
+      void reader.cancel().catch(() => {});
       reader.releaseLock();
     }
   }

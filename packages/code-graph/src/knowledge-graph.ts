@@ -1,8 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 13: Knowledge Graph
-// ==============================================================================
 // In-memory graph structure with adjacency lists, traversal, and cycle detection.
-// ==============================================================================
 
 import type {
   CodeNode,
@@ -29,10 +25,8 @@ export class KnowledgeGraph {
     };
   }
 
-  // ---------------------------------------------------------------------------
   // Mutation
-  // ---------------------------------------------------------------------------
-
+  
   /**
    * Add or update a node in the graph.
    */
@@ -146,10 +140,8 @@ export class KnowledgeGraph {
     }
   }
 
-  // ---------------------------------------------------------------------------
   // Queries
-  // ---------------------------------------------------------------------------
-
+  
   /** Get a node by id */
   getNode(id: string): CodeNode | undefined {
     return this.graph.nodes.get(id);
@@ -214,7 +206,7 @@ export class KnowledgeGraph {
   }
 
   /**
-   * Track 3 (3.1): Get callers of a function/method/symbol.
+
    * Traverses incoming edges with kind 'call' or 'references'.
    */
   getCallers(symbolIdOrName: string): CodeNode[] {
@@ -238,7 +230,7 @@ export class KnowledgeGraph {
   }
 
   /**
-   * Track 3 (3.1): Get callees of a function/method/symbol.
+
    * Traverses outgoing edges with kind 'call' or 'references'.
    */
   getCallees(symbolIdOrName: string): CodeNode[] {
@@ -262,7 +254,7 @@ export class KnowledgeGraph {
   }
 
   /**
-   * Track 3 (3.1): Calculate blast radius (impact report) when a symbol changes.
+
    * Traverses upstream reverse-dependencies up to maxDepth.
    */
   getImpact(symbolIdOrName: string, maxDepth = 3): ImpactReport {
@@ -343,9 +335,6 @@ export class KnowledgeGraph {
     };
   }
 
-  /**
-   * Track 3 (3.1): Explore neighborhood subgraph around a symbol or file.
-   */
   explore(
     startSymbolOrFile: string,
     options: { depth?: number; kinds?: CodeNode['kind'][] } = {},
@@ -436,9 +425,6 @@ export class KnowledgeGraph {
     };
   }
 
-  /**
-   * Track 3 (3.1): Detailed graph status.
-   */
   status(): GraphStatus {
     const nodes = [...this.graph.nodes.values()];
     const edges = this.graph.edges;
@@ -491,10 +477,8 @@ export class KnowledgeGraph {
     };
   }
 
-  // ---------------------------------------------------------------------------
   // Traversal
-  // ---------------------------------------------------------------------------
-
+  
   /**
    * BFS traversal from a starting node, following outgoing edges.
    * Returns nodes in BFS order up to maxDepth.
@@ -632,10 +616,8 @@ export class KnowledgeGraph {
     return cycles;
   }
 
-  // ---------------------------------------------------------------------------
   // Serialization
-  // ---------------------------------------------------------------------------
-
+  
   /** Export the graph as JSON-serializable object */
   toJSON(): { nodes: CodeNode[]; edges: CodeEdge[] } {
     return {
@@ -660,10 +642,8 @@ export class KnowledgeGraph {
     this.graph.reverseAdjacency.clear();
   }
 
-  // ---------------------------------------------------------------------------
   // Internal helpers
-  // ---------------------------------------------------------------------------
-
+  
   private findModuleNode(filePath: string): string | undefined {
     for (const [id, node] of this.graph.nodes) {
       if (node.kind === 'module' && node.filePath === filePath) {

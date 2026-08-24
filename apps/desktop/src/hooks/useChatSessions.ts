@@ -127,9 +127,7 @@ export function useChatSessions() {
     return () => {
       active = false;
     };
-    // persist/t are stable (useCallback/translation context) — listed for
-    // exhaustive-deps; the effect must still run exactly once on mount.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- persist/t are stable callbacks; the effect must run exactly once on mount
   }, []);
 
   useEffect(() => {
@@ -161,7 +159,7 @@ export function useChatSessions() {
               newTitle = txt.length > 25 ? `${txt.substring(0, 25)}...` : txt;
             }
           }
-          // deep-review fix (M7): bound what gets persisted. The full message
+          
           // list (including multi-MB base64 image attachments) was serialized
           // unboundedly into a single JSON file that grew without limit and
           // was fully parsed on startup. Keep the latest 200 messages per

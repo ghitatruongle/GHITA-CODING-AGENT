@@ -1,6 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Native filesystem access (frontend wrapper)
-// ==============================================================================
 // These calls go through the Rust-side native fs commands (std::fs), which are
 // NOT subject to the Tauri plugin-fs scope. This is what lets the file explorer
 // and code editor open/edit files in ANY folder the user navigates to, without

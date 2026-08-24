@@ -1,12 +1,6 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
-// ==============================================================================
-// GHITA CODING AGENT - Advanced Workflow Engine
-// Phase 16 (Update 0.0.3 beta2): retry, rollback, conditional, parallel, timeout
-// ==============================================================================
+/* eslint-disable @typescript-eslint/no-non-null-assertion -- non-null invariants are guaranteed by construction before access */
 
-// ----------------------------------------------------------------------------
 // Advanced step definition
-// ----------------------------------------------------------------------------
 
 export type StepStatus = 'pending' | 'running' | 'success' | 'failed' | 'skipped' | 'rolled-back';
 
@@ -83,9 +77,7 @@ export interface AdvancedWorkflowOptions {
   overallTimeoutMs?: number;
 }
 
-// ----------------------------------------------------------------------------
 // Result / Status types
-// ----------------------------------------------------------------------------
 
 export interface WorkflowRunResult {
   state: Record<string, unknown>;
@@ -97,9 +89,7 @@ export interface WorkflowRunResult {
   >;
 }
 
-// ----------------------------------------------------------------------------
 // Helpers
-// ----------------------------------------------------------------------------
 
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -124,9 +114,7 @@ function nextBackoff(attempt: number, policy: RetryPolicy): number {
   return Math.min(base, policy.maxBackoffMs ?? 30_000);
 }
 
-// ----------------------------------------------------------------------------
 // Engine
-// ----------------------------------------------------------------------------
 
 export class AdvancedWorkflowEngine {
   readonly name: string;

@@ -1,11 +1,7 @@
-// ==============================================================================
-// GHITA CODING AGENT — v1.0.0 Antigravity Edit Review Tray
-// ==============================================================================
 // Floating queue of every pending AI edit proposal (agent run + chat "Apply").
 // Each row shows the file, +/- line stats and jumps to the diff on click.
 // Accept All / Reject All batch-answer both remote (agent-gate) and local
 // proposals so a multi-file agent run can be reviewed in one place.
-// ==============================================================================
 
 import { useCallback, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
@@ -65,7 +61,7 @@ export function EditProposalTray({ activePath, onJumpTo }: EditProposalTrayProps
     async (p: EditProposal, accepted: boolean) => {
       if (p.remoteId) {
         const res = await respondRemote(p.remoteId, accepted);
-        // deep-review fix (BUG-A): only trust success when the sidecar acked;
+        
         // a 'stale' proposal means the run ended and the file was NOT written.
         if (res === 'offline') {
           toast.error('Sidecar server is not connected.');

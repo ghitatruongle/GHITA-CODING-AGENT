@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — usePairingSocket Hook
 // Socket connection and pairing logic extracted from PairingScreen
-// ==============================================================================
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Alert } from 'react-native';

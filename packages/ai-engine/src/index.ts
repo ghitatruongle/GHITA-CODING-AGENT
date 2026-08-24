@@ -1,6 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - AI Engine Package Entry
-// ==============================================================================
 //
 // The AI Engine is the central intelligence layer of GHITA CODING AGENT.
 // It provides:
@@ -29,7 +26,6 @@
 //
 // @packageDocumentation
 // @module @ghita/ai-engine
-// ==============================================================================
 
 /**
  * Core type definitions for AI providers, chat messages, and orchestration.
@@ -86,7 +82,6 @@ export type {
   ProviderMetrics,
 } from './routing/types.js';
 
-// ── v1.1.0 Track 4: adaptive bandit router + model roles ──
 export { AdaptiveBanditRouter, betaSample, REQUEST_BUCKETS } from './routing/adaptive-router.js';
 export type {
   RequestBucket,
@@ -102,10 +97,10 @@ export {
   MODEL_ROLES,
   qualifyModelId,
 } from './routing/model-roles.js';
-// v1.1.5-beta1 Track 4.3: Model Catalog + Failover
+
 export { ModelCatalog, createDefaultCatalog } from './routing/model-catalog.js';
 export type { ModelEntry, FailoverGroup } from './routing/model-catalog.js';
-// v1.1.5-beta1 Track 4.4: Router v2
+
 export {
   classifyTier,
   tierToBuckets,
@@ -117,14 +112,13 @@ export type {
   ComplexityClassifierOptions,
   RouterV2Options,
 } from './routing/router-v2.js';
-// v1.1.5-beta1 Track 4.5: Model Middleware
+
 export {
   createExtractReasoningMiddleware,
   createSimulateStreamingMiddleware,
   createRepairedParseMiddleware,
 } from './middleware/model-middleware.js';
 
-// v1.1.5-beta1 Track 4.6: Progressive Tool Disclosure
 export {
   shouldUseProgressiveDisclosure,
   createBridgeTools,
@@ -284,7 +278,6 @@ export type {
  */
 export { PermissionManager } from './security/permissions.js';
 
-// v1.1.5-beta1 Track 5: Security & Quality Loop
 export {
   createReceipt,
   attachReceipt,
@@ -325,7 +318,6 @@ export type {
 /** Types representing tool execution permission levels. */
 export type { PermissionLevel, ToolPermission } from './security/permissions.js';
 
-// --- Security Checkers & Safety Hooks (Phase 12 Enhanced) ---
 // SecurityChecker and security types are exported above in the Hooks section
 
 /** Standard error classes representing LLM network, verification, and runtime faults. */
@@ -375,7 +367,6 @@ export {
 } from './utils/cost.js';
 export type { ModelPricing, BudgetOptions } from './utils/cost.js';
 
-// ── v1.1.0 Track 4 P52: syncable model pricing database ──
 export { ModelPricingDB, DEFAULT_MODEL_PRICES, estimateCost } from './cost/model-prices.js';
 export type { ModelPrice, PriceSyncFetcher, PriceLookup } from './cost/model-prices.js';
 
@@ -617,7 +608,6 @@ export type {
   AlertingConfig,
 } from './enterprise/index.js';
 
-/** Anti-slop output filtration: flags and replaces overused cliché phrases in LLM outputs. */
 export {
   AntiSlopFilter,
   createAntiSlopStreamMiddleware,
@@ -686,10 +676,10 @@ export { DeployConfigGenerator } from './platform/prometheus.js';
 
 /** Memory caching systems with local LRU, embedding deduplication, and pre-warming. */
 export { LRUCache, SemanticDedup, CacheWarmer, ResponseCacheEngine } from './cache/index.js';
-// ── v1.1.0 Track 4 P53: distributed + dual-mode caches ──
+
 export { DistributedCache, ObjectStoreCache, DualModeCache } from './cache/distributed.js';
 export type { ObjectStore, DualCacheOptions } from './cache/distributed.js';
-// ── v1.1.0 Track 4 P48/P49: tool approvals + argument repair ──
+
 export { ToolApprovalManager, canExecute } from './tool-calling/approvals.js';
 export type {
   ApprovalDecision,
@@ -740,7 +730,6 @@ export {
 export { LiteLLMGateway, type ProviderKeyPair } from './gateway/litellm-gateway.js';
 export { ClaudeCodeTerminalLoop, type TerminalFramingConfig } from './claude-code/terminal-loop.js';
 
-// --- Track 4 (v1.1.5-beta2): Multi-Engine AI Pipeline & Adaptive Reasoning ---
 export {
   AdaptiveReasoningController,
   type ReasoningBudgetRequest,

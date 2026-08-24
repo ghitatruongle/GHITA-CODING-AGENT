@@ -1,8 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Model Discovery Types
-// Phase 1.3
-// ==============================================================================
-
 export interface ModelInfo {
   id: string;
   name: string;

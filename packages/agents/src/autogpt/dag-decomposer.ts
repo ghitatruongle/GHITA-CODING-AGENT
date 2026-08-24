@@ -1,8 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - AutoGPT Goal Decomposition DAG Task Graph
-// ==============================================================================
 // Decomposes complex user goals into a Directed Acyclic Graph (DAG) of dependent tasks.
-// ==============================================================================
 
 export interface DAGTaskNode {
   id: string;

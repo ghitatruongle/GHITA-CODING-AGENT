@@ -1,6 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — VS Code Sidecar: entry point
-// ==============================================================================
 //
 // Wires up:
 //   1. Status bar item
@@ -10,7 +7,6 @@
 //
 // Pure helpers (debounce, payload builders, mergeConfig, status bar model) live
 // in sync.ts so they can be unit-tested in Node.
-// ==============================================================================
 
 import * as vscode from 'vscode';
 import { io } from 'socket.io-client';
@@ -34,9 +30,7 @@ import {
   type SyncStats,
 } from './sync';
 
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 
 let socket: Socket | null = null;
 let statusBarItem: vscode.StatusBarItem | undefined;
@@ -45,9 +39,7 @@ let reconnectAttempts = 0;
 let debouncer: Debouncer | null = null;
 let syncStats: SyncStats = emptyStats();
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 function log(message: string): void {
   outputChannel?.appendLine(`[${new Date().toISOString()}] ${message}`);
@@ -82,8 +74,28 @@ function connectSocket(): Promise<boolean> {
     const config = getConfig();
     const url = buildSocketUrl(config);
 
+    // Tear down any previous attempt first — repeated connect calls used to
+    // leak sockets with duplicated handlers and multiply reconnect counters.
+    if (socket) {
+      try {
+        socket.removeAllListeners();
+        socket.disconnect();
+      } catch {
+        // Ignore — socket may already be gone
+      }
+      socket = null;
+    }
+
     log(`Connecting to GHITA Core Daemon at ${url}`);
     updateStatusBar('connecting');
+
+    let settled = false;
+    const settle = (value: boolean) => {
+      if (!settled) {
+        settled = true;
+        resolve(value);
+      }
+    };
 
     const newSocket = io(url, {
       reconnection: true,
@@ -97,7 +109,7 @@ function connectSocket(): Promise<boolean> {
       reconnectAttempts = 0;
       updateStatusBar('connected');
       log('Connected to GHITA Core Daemon.');
-      resolve(true);
+      settle(true);
     });
 
     newSocket.on('disconnect', (reason: string) => {
@@ -116,6 +128,7 @@ function connectSocket(): Promise<boolean> {
         'error',
         `Failed to reconnect after ${config.maxRetries} attempts. Click to retry.`,
       );
+      settle(false);
     });
 
     newSocket.on('file:changed', (payload: { filePath: string; content: string }) => {
@@ -253,9 +266,7 @@ async function syncWorkspace(): Promise<void> {
   );
 }
 
-// ---------------------------------------------------------------------------
 // Activation
-// ---------------------------------------------------------------------------
 
 export function activate(context: vscode.ExtensionContext): void {
   log('GHITA CODING AGENT VS Code Sidecar is activating...');

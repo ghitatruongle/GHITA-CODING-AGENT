@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Audio Ring Buffer (Phase 34)
 // Fixed-size ring buffer for audio chunk accumulation
-// ==============================================================================
 
 import type { AudioChunk } from './types.js';
 

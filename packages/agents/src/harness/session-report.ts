@@ -1,9 +1,7 @@
-// ==============================================================================
 // v0.4.9 A3: Agent Work Loop Harness — Session Evidence Report
 //
 // Renders a WorkLoopReview into a durable, reader-safe Markdown report. No raw
 // prompts, commands, paths, or secrets are emitted — only bounded summaries.
-// ==============================================================================
 
 import type { WorkLoopReview } from './types.js';
 

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Evals & Integrated Search
-// ==============================================================================
-
 import type { Orchestrator } from '../orchestrator.js';
 
 export interface EvalResult {
@@ -22,9 +18,6 @@ export class LLMEvaluator {
     this.orchestrator = orchestrator;
   }
 
-  /**
-   * Đánh giá câu trả lời của LLM bằng phương pháp LLM-as-a-Judge
-   */
   async evaluate(input: string, output: string, reference?: string): Promise<EvalResult> {
     const prompt = `Bạn là một chuyên gia đánh giá độc lập (LLM Judge). Hãy đánh giá chất lượng câu trả lời của trợ lý dựa trên câu hỏi đầu vào và câu trả lời tham chiếu (nếu có).
 
@@ -92,9 +85,6 @@ export class IntegratedSearchClient {
     this.tavilyApiKey = options?.tavilyApiKey || process.env.TAVILY_API_KEY;
   }
 
-  /**
-   * Tìm kiếm thông tin qua Google Search hoặc Tavily API
-   */
   async search(query: string): Promise<Array<{ title: string; url: string; snippet: string }>> {
     if (this.tavilyApiKey) {
       try {

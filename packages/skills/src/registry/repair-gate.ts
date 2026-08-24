@@ -1,11 +1,7 @@
-// ==============================================================================
-// GHITA CODING AGENT - Tool Auto-Repair Gate
-// ==============================================================================
-
 import { AIToolCallRepairError } from '@ghita/ai-engine';
 
 export interface RepairLLMProvider {
-  /** Hàm sinh ra đoạn JSON fix tham số dựa vào lỗi */
+  
   fixArguments(
     toolName: string,
     schema: Record<string, unknown>,
@@ -28,9 +24,6 @@ export class ToolRepairGate {
     this.llmProvider = options.llmProvider;
   }
 
-  /**
-   * Bọc một lệnh thực thi tool và tự động sửa args nếu bị lỗi validation.
-   */
   async executeWithRepair<TResult>(
     toolName: string,
     schema: Record<string, unknown>,
@@ -61,7 +54,7 @@ export class ToolRepairGate {
         const errorMessage = error instanceof Error ? error.message : String(error);
 
         try {
-          // Gửi LLM để fix
+          
           currentArgs = await this.llmProvider.fixArguments(
             toolName,
             schema,
@@ -69,7 +62,7 @@ export class ToolRepairGate {
             errorMessage,
           );
         } catch (repairError) {
-          // Nếu việc gọi LLM để sửa cũng lỗi, gộp chung và văng ra luôn
+          
           toolErrors.push(repairError);
           throw new AIToolCallRepairError(
             JSON.stringify(currentArgs),

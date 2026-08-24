@@ -1,8 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Multi-Key Manager
-// Phase 1.1: Key rotation, failover, health tracking
-// ==============================================================================
-
 import type { KeyRotationStrategy } from './types.js';
 
 export interface KeyEntry {

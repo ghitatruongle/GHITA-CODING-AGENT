@@ -1,8 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - ReconnectStrategy Unit Tests (Phase 29)
 // 20 test cases covering exponential backoff, jitter, max attempts,
 // abort, reset, scheduling, and lifecycle.
-// ==============================================================================
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ReconnectStrategy } from '../src/ws/reconnect.js';

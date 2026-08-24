@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Cache Module Barrel Export
-// ==============================================================================
-
 // --- Base Cache (legacy async interface) ---
 export type { BaseCache } from './base-cache.js';
 export { InMemoryCache } from './base-cache.js';

@@ -1,13 +1,6 @@
 #!/usr/bin/env node
-// ==============================================================================
-// GHITA CODING AGENT - Runtime audit (v1.1.0 Track 10 R5/R6)
-// ------------------------------------------------------------------------------
-// R5 concurrency/async: setInterval/setTimeout không cleanup, promise không
-//   catch, thiếu AbortSignal, `void` bỏ promise.
-// R6 boundary: split('/') thay vì sep, toLowerCase trên path, indexOf('\n'),
-//   hardcode Windows path, so sánh chuỗi không trim.
+
 // Usage: node scripts/audit-runtime.mjs
-// ==============================================================================
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';

@@ -1,7 +1,3 @@
-// ==============================================================================
-// v1.1.5-beta1 Track 1.3 — Headless/CI mode tests (scripted LLM, no network)
-// ==============================================================================
-
 import { describe, expect, it } from 'vitest';
 import { runHeadless } from '../src/headless/runner.js';
 import type { HeadlessEvent } from '../src/headless/runner.js';

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Community Features Types (Phase 40)
-// ==============================================================================
-
 /** Forum thread */
 export interface ForumThread {
   /** Thread ID */

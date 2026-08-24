@@ -1,8 +1,7 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 3.8: Secret Detection
 // 55+ credential pattern detectors for API keys, tokens, passwords
 // Reference: LiteLLM enterprise/
-// ==============================================================================
+
+import { loadNative } from '@ghita/native-bridge';
 
 // --- Types ---
 
@@ -501,6 +500,38 @@ const SECRET_PATTERNS: SecretPattern[] = [
   },
 ];
 
+// --- Native fast path (secscan addon) ---
+
+type SecscanNativeLike = {
+  scanFast?: (
+    content: string,
+    rules: Array<{ id: string; pattern: string; negative?: string | null }>,
+  ) => { lines?: Uint32Array } | undefined;
+};
+
+let secscanNative: SecscanNativeLike | null | undefined;
+
+function getSecscanNative(): SecscanNativeLike | null {
+  if (secscanNative !== undefined) return secscanNative;
+  try {
+    const bridge = loadNative<SecscanNativeLike>(
+      'secscan',
+      undefined as unknown as SecscanNativeLike,
+    );
+    secscanNative =
+      bridge?.native && typeof bridge.impl?.scanFast === 'function' ? bridge.impl : null;
+  } catch {
+    secscanNative = null;
+  }
+  return secscanNative ?? null;
+}
+
+/**
+ * Regex-crate-compatible subset marker: look-around is not supported by the
+ * Rust regex engine, so those patterns stay JS-only.
+ */
+const HAS_LOOKAROUND = /\(\?[<=!]/;
+
 // --- Secret Detector ---
 
 export class SecretDetector {
@@ -514,6 +545,26 @@ export class SecretDetector {
 
   /** Detect secrets in content */
   detect(content: string): SecretDetectionResult {
+    // Native fast path: one combined-regex pass decides whether ANY known
+    // secret shape exists. Real-world content is usually secret-free, letting
+    // us skip the 80+ JS regex loop entirely. The JS path below stays the
+    // source of truth for exact spans and redaction. Rules are rebuilt from
+    // THIS instance's pattern list so customPatterns are covered too.
+    const secscan = getSecscanNative();
+    if (secscan?.scanFast) {
+      try {
+        const rules = this.patterns
+          .filter((p) => !HAS_LOOKAROUND.test(p.pattern.source))
+          .map((p, i) => ({ id: `r${i}`, pattern: p.pattern.source }));
+        const pre = secscan.scanFast(content, rules);
+        if ((pre?.lines?.length ?? 0) === 0) {
+          return { detected: false, findings: [], summary: 'No secrets detected' };
+        }
+      } catch {
+        // native unavailable or a pattern rejected by the regex crate — run JS
+      }
+    }
+
     const findings: SecretFinding[] = [];
 
     for (const { type, provider, pattern, confidence, description } of this.patterns) {

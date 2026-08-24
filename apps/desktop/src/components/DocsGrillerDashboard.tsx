@@ -1,16 +1,9 @@
-// =============================================================================
-// GHITA CODING AGENT — DocsGriller Dashboard Component (Phase 5 Task 6)
-// Hiển thị kết quả /grill-me: contradictions, Socratic questions, design decisions
-// =============================================================================
-
 import { useState, useCallback, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from '../i18n';
 import { useAppStore } from '../stores/appStore';
 
-// =============================================================================
 // Types
-// =============================================================================
 
 interface GrillContradiction {
   topic: string;
@@ -37,9 +30,7 @@ interface GrillSession {
   designDecisions: string[];
 }
 
-// =============================================================================
 // Sub-components
-// =============================================================================
 
 function SeverityBadge({ severity }: { severity: string }) {
   const colors: Record<string, { bg: string; text: string; border: string }> = {
@@ -75,9 +66,7 @@ function SeverityBadge({ severity }: { severity: string }) {
   );
 }
 
-// =============================================================================
 // Main Component
-// =============================================================================
 
 export function DocsGrillerDashboard() {
   const [session, setSession] = useState<GrillSession | null>(null);
@@ -87,7 +76,6 @@ export function DocsGrillerDashboard() {
   const { t } = useTranslation();
   const terminalCwd = useAppStore((s) => s.terminalCwd);
 
-  // P2-5 (deep review pass #2): resolve a relative docsPath against the
   // workspace cwd so the Rust side never sees a path that resolves against
   // an unrelated CWD. Absolute paths are passed unchanged.
   const resolvedDocsPath = useMemo(() => {

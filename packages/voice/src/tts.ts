@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Text-to-Speech (Phase 34)
-// ==============================================================================
-
 import type { AudioChunk, TtsRequest, TtsResult, TtsListener } from './types.js';
 
 /** A TTS provider implementation. */

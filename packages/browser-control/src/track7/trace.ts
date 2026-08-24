@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Browser v1.1.0 Track 7 P81: trace-light
-// ==============================================================================
 // Per-action trace records (target, before/after snapshot hashes, outcome) —
 // feeds the Dashboard timeline view.
-// ==============================================================================
 
 export interface ActionTrace {
   id: string;

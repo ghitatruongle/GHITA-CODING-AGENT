@@ -1,8 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT — AI Provider Configuration Data
 // Static registry of all supported AI providers (endpoints, models, parsers).
 // Extracted from ApiManager.tsx to separate data from presentation.
-// ==============================================================================
 
 import {
   formatModelLabel as formatModelLabelUtil,
@@ -259,7 +256,7 @@ export const PROVIDERS: ProviderConfig[] = [
       return (d.data ?? []).map((m) => m.id).sort();
     },
   },
-  // Phase 1.2: New providers
+  
   {
     id: 'cerebras',
     name: 'Cerebras',

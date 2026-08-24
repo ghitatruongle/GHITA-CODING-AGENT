@@ -1,6 +1,4 @@
-// ==============================================================================
 // Tests for the AI edit-proposal store
-// ==============================================================================
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useEditProposalStore } from './editProposalStore';

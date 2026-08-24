@@ -1,14 +1,8 @@
-// ==============================================================================
-// GHITA CODING AGENT - Resource budgets (v1.1.0 Track 9 B2/B3/B4/B5/B7/B9)
-// ==============================================================================
 // Deny-default per-module caps: BudgetRegistry (bytes), MemoryMonitor (sampler
 // + alerts), and bounded structures for chat history, terminal scrollback and
 // mobile screen preview.
-// ==============================================================================
 
 import { performance } from 'node:perf_hooks';
-
-// ── Budget registry (deny-default: module không đăng ký → không vượt cap) ──
 
 export interface BudgetCap {
   /** Module key, e.g. "ai-engine.cache", "code-graph.index". */
@@ -55,6 +49,9 @@ export class BudgetRegistry {
         this.usage.set(module, cap.maxBytes);
       }
       this.violationLog.push({ module, usedBytes: next, maxBytes: cap.maxBytes, at: now() });
+      // Cap the log itself: the budget enforcer must not become an
+      // unbounded memory consumer.
+      if (this.violationLog.length > 500) this.violationLog.shift();
       return false;
     }
     return true;
@@ -108,7 +105,7 @@ export interface MemorySample {
 export interface MemoryMonitorOptions {
   /** Sampling interval ms (default 30_000). */
   intervalMs?: number;
-  /** Heap cap in bytes → onAlert khi vượt (default 400 MB). */
+  
   heapCapBytes?: number;
   /** Rss cap in bytes (default 1.2 GB). */
   rssCapBytes?: number;
@@ -226,7 +223,7 @@ export class ScrollbackBudget {
   push(line: string): boolean {
     const next = this.bytes + line.length;
     if (this.lines.length >= this.options.maxLines || next > this.options.maxBytes) {
-      return false; // deny-default: không vượt cap
+      return false; 
     }
     this.lines.push(line);
     this.bytes = next;
@@ -270,4 +267,4 @@ export class ScreenPreviewBudget {
   }
 }
 
-export const RESOURCE_BUDGET_VERSION = '1.1.5-beta2';
+export const RESOURCE_BUDGET_VERSION = '1.1.5';

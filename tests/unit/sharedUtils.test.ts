@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Unit Tests for Shared Utilities
-// ==============================================================================
-
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import {
   generateUUID,
@@ -36,9 +32,8 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-// ----------------------------------------------------------------------------
 // generateUUID
-// ----------------------------------------------------------------------------
+
 describe('generateUUID()', () => {
   it('should return a string', () => {
     const id = generateUUID();
@@ -80,9 +75,8 @@ describe('generateUUID()', () => {
   });
 });
 
-// ----------------------------------------------------------------------------
 // getPlatform
-// ----------------------------------------------------------------------------
+
 describe('getPlatform()', () => {
   it('should detect React Native via navigator.product', () => {
     vi.stubGlobal('navigator', { product: 'ReactNative', userAgent: '' });
@@ -140,9 +134,8 @@ describe('getPlatform()', () => {
   });
 });
 
-// ----------------------------------------------------------------------------
 // isDesktop / isMobile / isWindows / isLinux (platform wrappers)
-// ----------------------------------------------------------------------------
+
 describe('isDesktop()', () => {
   it('should return true on Windows', () => {
     vi.stubGlobal('navigator', undefined);
@@ -219,9 +212,8 @@ describe('isLinux()', () => {
   });
 });
 
-// ----------------------------------------------------------------------------
 // generateId
-// ----------------------------------------------------------------------------
+
 describe('generateId()', () => {
   it('should return a string', () => {
     expect(typeof generateId()).toBe('string');
@@ -248,9 +240,8 @@ describe('generateId()', () => {
   });
 });
 
-// ----------------------------------------------------------------------------
 // generatePairingCode
-// ----------------------------------------------------------------------------
+
 describe('generatePairingCode()', () => {
   it('should return a string of length 6', () => {
     const code = generatePairingCode();
@@ -275,9 +266,8 @@ describe('generatePairingCode()', () => {
   });
 });
 
-// ----------------------------------------------------------------------------
 // truncate
-// ----------------------------------------------------------------------------
+
 describe('truncate()', () => {
   it('should return the original string if within maxLength', () => {
     expect(truncate('hello', 10)).toBe('hello');
@@ -301,9 +291,8 @@ describe('truncate()', () => {
   });
 });
 
-// ----------------------------------------------------------------------------
 // capitalize
-// ----------------------------------------------------------------------------
+
 describe('capitalize()', () => {
   it('should capitalize the first letter', () => {
     expect(capitalize('hello')).toBe('Hello');
@@ -326,9 +315,8 @@ describe('capitalize()', () => {
   });
 });
 
-// ----------------------------------------------------------------------------
 // camelToKebab / kebabToCamel
-// ----------------------------------------------------------------------------
+
 describe('camelToKebab()', () => {
   it('should convert camelCase to kebab-case', () => {
     expect(camelToKebab('helloWorld')).toBe('hello-world');
@@ -374,9 +362,8 @@ describe('kebabToCamel()', () => {
   });
 });
 
-// ----------------------------------------------------------------------------
 // clamp
-// ----------------------------------------------------------------------------
+
 describe('clamp()', () => {
   it('should return value when within bounds', () => {
     expect(clamp(5, 0, 10)).toBe(5);
@@ -399,9 +386,8 @@ describe('clamp()', () => {
   });
 });
 
-// ----------------------------------------------------------------------------
 // randomInt
-// ----------------------------------------------------------------------------
+
 describe('randomInt()', () => {
   it('should return an integer', () => {
     const val = randomInt(0, 100);
@@ -432,9 +418,8 @@ describe('randomInt()', () => {
   });
 });
 
-// ----------------------------------------------------------------------------
 // chunk
-// ----------------------------------------------------------------------------
+
 describe('chunk()', () => {
   it('should split array into chunks of given size', () => {
     const result = chunk([1, 2, 3, 4, 5, 6], 2);
@@ -473,9 +458,8 @@ describe('chunk()', () => {
   });
 });
 
-// ----------------------------------------------------------------------------
 // unique
-// ----------------------------------------------------------------------------
+
 describe('unique()', () => {
   it('should remove duplicates from array', () => {
     expect(unique([1, 2, 2, 3, 1, 4])).toEqual([1, 2, 3, 4]);
@@ -498,9 +482,8 @@ describe('unique()', () => {
   });
 });
 
-// ----------------------------------------------------------------------------
 // groupBy
-// ----------------------------------------------------------------------------
+
 describe('groupBy()', () => {
   it('should group elements by key function', () => {
     const items = [
@@ -534,9 +517,8 @@ describe('groupBy()', () => {
   });
 });
 
-// ----------------------------------------------------------------------------
 // pick / omit
-// ----------------------------------------------------------------------------
+
 describe('pick()', () => {
   it('should pick specified keys from object', () => {
     const obj = { a: 1, b: 2, c: 3 };
@@ -587,9 +569,8 @@ describe('omit()', () => {
   });
 });
 
-// ----------------------------------------------------------------------------
 // sleep
-// ----------------------------------------------------------------------------
+
 describe('sleep()', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -621,9 +602,8 @@ describe('sleep()', () => {
   });
 });
 
-// ----------------------------------------------------------------------------
 // retry
-// ----------------------------------------------------------------------------
+
 describe('retry()', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -702,9 +682,8 @@ describe('retry()', () => {
   });
 });
 
-// ----------------------------------------------------------------------------
 // isValidUrl
-// ----------------------------------------------------------------------------
+
 describe('isValidUrl()', () => {
   it('should return true for valid http URL', () => {
     expect(isValidUrl('http://example.com')).toBe(true);
@@ -731,9 +710,8 @@ describe('isValidUrl()', () => {
   });
 });
 
-// ----------------------------------------------------------------------------
 // isValidApiKey
-// ----------------------------------------------------------------------------
+
 describe('isValidApiKey()', () => {
   it('should return true for valid API key', () => {
     expect(isValidApiKey('test-abc123def456')).toBe(true);
@@ -761,9 +739,8 @@ describe('isValidApiKey()', () => {
   });
 });
 
-// ----------------------------------------------------------------------------
 // formatDate
-// ----------------------------------------------------------------------------
+
 describe('formatDate()', () => {
   it('should format a Date object as YYYY-MM-DD HH:mm:ss', () => {
     const date = new Date('2025-06-15T10:30:45.000Z');
@@ -781,9 +758,8 @@ describe('formatDate()', () => {
   });
 });
 
-// ----------------------------------------------------------------------------
 // getRelativeTime
-// ----------------------------------------------------------------------------
+
 describe('getRelativeTime()', () => {
   beforeEach(() => {
     vi.useFakeTimers();

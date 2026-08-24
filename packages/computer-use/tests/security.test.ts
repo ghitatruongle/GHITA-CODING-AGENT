@@ -1,8 +1,3 @@
-// =============================================================================
-// GHITA CODING AGENT - Phase 13: Security Guardrails Unit Tests
-// Giả lập Agent chạy 20 câu lệnh phá hoại nguy hiểm
-// =============================================================================
-
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   SandboxSecurityFilter,
@@ -17,10 +12,6 @@ import type {
   SecurityBlacklistConfig,
 } from '../src/guardrails/index.js';
 import { DEFAULT_SECURITY_CONFIG } from '../src/guardrails/index.js';
-
-// =============================================================================
-// Tác vụ 9: Test Suite — 20 câu lệnh phá hoại nguy hiểm
-// =============================================================================
 
 describe('SandboxSecurityFilter', () => {
   let filter: SandboxSecurityFilter;
@@ -149,8 +140,6 @@ describe('SandboxSecurityFilter', () => {
     });
   });
 
-  // ── Tác vụ 3: Base64 obfuscation detection ──
-
   describe('Tác vụ 3: Base64 obfuscation detection', () => {
     it('18. Chặn base64 decoded pipe to shell', () => {
       const result = filter.validateCommand(
@@ -178,8 +167,6 @@ describe('SandboxSecurityFilter', () => {
       expect(result.safe).toBe(false);
     });
   });
-
-  // ── Tác vụ 5: Binary execution detection ──
 
   describe('Tác vụ 5: Binary execution detection', () => {
     it('Chặn thực thi binary từ /tmp', () => {
@@ -228,8 +215,6 @@ describe('SandboxSecurityFilter', () => {
     });
   });
 
-  // ── Tác vụ 10: Whitelist ──
-
   describe('Tác vụ 10: Whitelist configuration', () => {
     it('Whitelist bỏ qua kiểm tra', () => {
       filter.addToWhitelist('rm -rf node_modules');
@@ -244,8 +229,6 @@ describe('SandboxSecurityFilter', () => {
       expect(filter.validateCommand('rm -rf /').safe).toBe(false);
     });
   });
-
-  // ── Tác vụ 10: Custom patterns ──
 
   describe('Tác vụ 10: Custom YAML patterns', () => {
     it('Custom pattern chặn lệnh theo cấu hình', () => {
@@ -267,8 +250,6 @@ describe('SandboxSecurityFilter', () => {
     });
   });
 });
-
-// ── Tác vụ 6: Approval callback ──
 
 describe('Approval callback (Tác vụ 6 & 8)', () => {
   it('Yêu cầu phê duyệt cho lệnh high severity', async () => {
@@ -305,7 +286,6 @@ describe('Approval callback (Tác vụ 6 & 8)', () => {
     const filter = new SandboxSecurityFilter({ requireApprovalForHigh: true });
     filter.setApprovalCallback(mockCallback);
 
-    // Verify validateCommand trước
     const check = filter.validateCommand('rm -rf /');
     expect(check.safe).toBe(false);
     expect(check.threats.length).toBeGreaterThan(0);
@@ -318,8 +298,6 @@ describe('Approval callback (Tác vụ 6 & 8)', () => {
     expect(mockCallback.requestApproval).not.toHaveBeenCalled();
   });
 });
-
-// ── Tác vụ 7: Security Logger ──
 
 describe('SecurityLogger (Tác vụ 7)', () => {
   let loggerAvailable = true;
@@ -488,10 +466,6 @@ describe('createSecurityFilter factory', () => {
     expect(r3.safe).toBe(false);
   });
 });
-
-// =============================================================================
-// NÂNG CẤP: Edge Cases
-// =============================================================================
 
 describe('Edge cases — input handling', () => {
   let filter: SandboxSecurityFilter;

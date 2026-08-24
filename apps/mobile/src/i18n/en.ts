@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — English dictionary for Mobile App (Optimized)
-// ==============================================================================
-
 import type { TranslationKeys } from './types';
 
 export const en: TranslationKeys = {
@@ -71,7 +67,7 @@ export const en: TranslationKeys = {
     pairErrApiKeyMissing:
       'Cloud Discovery API Key is not configured. Please use a manual IP address.',
     pairErrCloudDisabled:
-      'Cloud Discovery is temporarily disabled. Please enter a manual IP address in the Wi-Fi tab or connect via Bluetooth directly to the computer.',
+      'Cloud Discovery is temporarily disabled. Please enter the computer’s IP address manually in the Wi-Fi tab.',
     noCodeFromServer: 'Could not retrieve pairing code from the server.',
   },
   remote: {

@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Agents v1.1.0 Track 5 P57: fanout swarm (1 prompt → N)
-// ==============================================================================
 // Runs one prompt across N isolated worktrees in parallel, then compares the
 // results. Uses the WorktreeManager for isolation and an injectable agent
 // runner (offline tests use a fake).
-// ==============================================================================
 
 import type { WorktreeInfo } from './worktree.js';
 

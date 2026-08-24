@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Agents v1.1.0 Track 5 P36: lifecycle API
-// ==============================================================================
 // Unified launch/pause/resume/enumerate for agent runs (12-factor + oh-my-pi
 // pattern). Bridges to the run-journal so states are consistent across the
 // desktop app and mobile remote control.
-// ==============================================================================
 
 export type RunState = 'idle' | 'running' | 'paused' | 'completed' | 'error' | 'cancelled';
 

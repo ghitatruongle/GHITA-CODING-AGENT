@@ -1,15 +1,11 @@
 #!/usr/bin/env node
-// ==============================================================================
-// GHITA CODING AGENT - v1.1.5-beta1 Track 1.3: Headless / CI entrypoint
-// ------------------------------------------------------------------------------
+
 // Runs a scripted agent task with no UI and streams JSON-lines events.
 //   node scripts/headless.mjs -p "summarize this repo" [--max-turns 5]
 //     [--tools get_date,read_file] [--fork-session <id>] [--output-format text]
 // Exit codes: 0 success · 1 runtime error · 2 exhausted (no final answer).
 // The CLI uses a scripted dry-run LLM so CI can exercise the full event stream
 // without network or API keys; real provider wiring lands with ai-engine
-// integration (Track 4) — headlessRunner tests cover the scripted contract.
-// ==============================================================================
 
 import { parseArgs } from 'node:util';
 import { runHeadless } from '@ghita/agents';

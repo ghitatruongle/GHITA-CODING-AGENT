@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Web Search Tool (Multi-Engine)
-// ==============================================================================
-
 export interface SearchResult {
   title: string;
   url: string;

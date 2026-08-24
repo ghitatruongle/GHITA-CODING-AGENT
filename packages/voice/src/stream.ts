@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Audio Streaming Pipeline (Phase 34)
-// ==============================================================================
-
 import type { AudioChunk, AudioListener } from './types.js';
 
 /**

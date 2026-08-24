@@ -24,7 +24,6 @@ export function useDevicesView() {
   const [codeCountdown, setCodeCountdown] = useState(300);
   const [lanEnabled, setLanEnabled] = useState(false);
 
-  // deep-review fix (L5): guard delayed callbacks against firing after the
   // view unmounts (setState on an unmounted component).
   const mountedRef = useRef(true);
   useEffect(() => {
@@ -45,6 +44,36 @@ export function useDevicesView() {
       }
     };
     loadLan();
+  }, []);
+
+  // Pairing requires explicit desktop confirmation; the sidecar auto-denies
+  // the request when no decision arrives within its timeout window.
+  useEffect(() => {
+    let disposed = false;
+    let cleanup: (() => void) | undefined;
+    void (async () => {
+      try {
+        const { getSharedSocket } = await import('../../utils/sharedSocket');
+        const sock = await getSharedSocket();
+        if (!sock || disposed) return;
+        const handler = (data: { requestId?: string; deviceName?: string }) => {
+          const approved = window.confirm(
+            `Allow "${data?.deviceName ?? 'Unknown device'}" to pair with GHITA Desktop?`,
+          );
+          sock.emit('pairing_decision', { requestId: data?.requestId, approved });
+        };
+        sock.on('pairing_request', handler);
+        cleanup = () => {
+          sock.off('pairing_request', handler);
+        };
+      } catch (e) {
+        console.error('Failed to listen for pairing requests:', e);
+      }
+    })();
+    return () => {
+      disposed = true;
+      cleanup?.();
+    };
   }, []);
 
   const handleToggleLan = async () => {
@@ -178,7 +207,7 @@ export function useDevicesView() {
 
   const handleUnpairDevice = async (deviceId: string) => {
     try {
-      // deep-review fix (L2): URL-encode the device id so ids containing
+      
       // reserved characters cannot corrupt the query string.
       const response = await fetch(
         `http://127.0.0.1:${port}/unpair?deviceId=${encodeURIComponent(deviceId)}`,

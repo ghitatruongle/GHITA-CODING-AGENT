@@ -1,10 +1,8 @@
-// ==============================================================================
 // v0.4.9 A5: New Provider Unit Tests
 //
 // Verifies the registry instantiates the five new dedicated providers with
 // correct identity/models, and that AzureOpenAIProvider builds the correct
 // deployment-scoped URL + api-key header and parses responses.
-// ==============================================================================
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { ProviderRegistry } from '../src/registry.js';

@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 13: SQLite Graph Store
-// ==============================================================================
 // Persistent storage adapter using better-sqlite3 for the code knowledge graph.
 // Stores nodes, edges, and supports full-text search via FTS5.
-// ==============================================================================
 
 import Database from 'better-sqlite3';
 import type {
@@ -28,10 +24,8 @@ export class SQLiteGraphStore implements GraphStore {
     this.initialize();
   }
 
-  // ---------------------------------------------------------------------------
   // Schema setup
-  // ---------------------------------------------------------------------------
-
+  
   private initialize(): void {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS nodes (
@@ -106,10 +100,8 @@ export class SQLiteGraphStore implements GraphStore {
     }
   }
 
-  // ---------------------------------------------------------------------------
   // Write operations
-  // ---------------------------------------------------------------------------
-
+  
   upsertNodes(nodes: CodeNode[]): void {
     const stmt = this.db.prepare(`
       INSERT OR REPLACE INTO nodes
@@ -186,10 +178,8 @@ export class SQLiteGraphStore implements GraphStore {
     tx();
   }
 
-  // ---------------------------------------------------------------------------
   // Read operations
-  // ---------------------------------------------------------------------------
-
+  
   loadNodes(): CodeNode[] {
     const rows = this.db.prepare('SELECT * FROM nodes').all() as NodeRow[];
     return rows.map(rowToNode);
@@ -325,10 +315,6 @@ export class SQLiteGraphStore implements GraphStore {
     return { nodes: nodeRow?.cnt ?? 0, edges: edgeRow?.cnt ?? 0, files: fileRow?.cnt ?? 0 };
   }
 
-  // ---------------------------------------------------------------------------
-  // Track 3 (3.2): Content-Addressed Index & Branch Tags
-  // ---------------------------------------------------------------------------
-
   getCachedParseResult(contentHash: string): ContentCacheEntry | null {
     const row = this.db
       .prepare('SELECT * FROM content_cache WHERE content_hash = ?')
@@ -404,10 +390,8 @@ export class SQLiteGraphStore implements GraphStore {
     this.db.close();
   }
 
-  // ---------------------------------------------------------------------------
   // Internal
-  // ---------------------------------------------------------------------------
-
+  
   private hasFTS5(): boolean {
     try {
       this.db.prepare('SELECT 1 FROM nodes_fts LIMIT 0').get();
@@ -427,9 +411,7 @@ export class SQLiteGraphStore implements GraphStore {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Row type helpers
-// ---------------------------------------------------------------------------
 
 interface NodeRow {
   id: string;

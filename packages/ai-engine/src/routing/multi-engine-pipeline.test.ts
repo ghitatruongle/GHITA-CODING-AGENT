@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — MultiEnginePipeline Tests (v1.1.5-beta2 Track 4)
-// ==============================================================================
-
 import { describe, it, expect, vi } from 'vitest';
 import { MultiEnginePipeline } from './multi-engine-pipeline.js';
 import { ModelCatalog } from './model-catalog.js';

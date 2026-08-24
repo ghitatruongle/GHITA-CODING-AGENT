@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Notification Template Tests
-// ==============================================================================
-
 import { describe, it, expect } from 'vitest';
 import { NotificationTemplate } from './template.js';
 

@@ -1,7 +1,3 @@
-// ==============================================================================
-// Phase 33: Usage Tracker — ghi nhận usage event
-// ==============================================================================
-
 import type { UsageRecord, QuotaConfig, ModelPricing } from './types.js';
 
 const DEFAULT_PRICING: Record<string, ModelPricing> = {
@@ -17,9 +13,9 @@ const DEFAULT_PRICING: Record<string, ModelPricing> = {
 };
 
 /**
- * UsageTracker — ghi nhận và truy vấn usage records.
+
  *
- * Sử dụng:
+
  *   tracker.record({ userId, provider, model, promptTokens, completionTokens });
  *   const summary = tracker.summary('user-1', periodStart, periodEnd);
  */
@@ -39,9 +35,6 @@ export class UsageTracker {
     this.onLog = config.logger;
   }
 
-  /**
-   * Ghi nhận 1 usage event.
-   */
   record(
     input: Omit<UsageRecord, 'id' | 'costUsd' | 'totalTokens' | 'timestamp'> & {
       timestamp?: number;
@@ -74,9 +67,6 @@ export class UsageTracker {
     return record;
   }
 
-  /**
-   * Lấy records theo user trong khoảng thời gian.
-   */
   query(
     userId: string,
     periodStart: number,
@@ -93,9 +83,6 @@ export class UsageTracker {
     });
   }
 
-  /**
-   * Tính tổng quan cho user trong khoảng.
-   */
   summary(userId: string, periodStart: number, periodEnd: number) {
     const records = this.query(userId, periodStart, periodEnd);
     const byProvider: Record<string, { requests: number; tokens: number; cost: number }> = {};
@@ -132,16 +119,10 @@ export class UsageTracker {
     };
   }
 
-  /**
-   * Lấy tất cả records (cho dashboard).
-   */
   all(): UsageRecord[] {
     return [...this.records];
   }
 
-  /**
-   * Xóa records của user.
-   */
   forget(userId: string): number {
     let n = 0;
     for (let i = this.records.length - 1; i >= 0; i--) {
@@ -153,9 +134,6 @@ export class UsageTracker {
     return n;
   }
 
-  /**
-   * Clear tất cả.
-   */
   clear(): void {
     this.records.length = 0;
     this.idCounter = 0;
@@ -168,9 +146,6 @@ export class UsageTracker {
     this.pricing[model] = pricing;
   }
 
-  /**
-   * Tính cost cho 1 lần sử dụng.
-   */
   calculateCost(model: string, promptTokens: number, completionTokens: number): number {
     const p = this.pricing[model] ?? { promptPer1k: 0.001, completionPer1k: 0.002 };
     return (promptTokens / 1000) * p.promptPer1k + (completionTokens / 1000) * p.completionPer1k;

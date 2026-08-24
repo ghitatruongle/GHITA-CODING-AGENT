@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Orchestrator Types (shared context for decomposition)
-// ==============================================================================
-
 import type { AIProviderType, AIStreamChunk } from '@ghita/shared';
 import type {
   AIProvider,

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Event Stream Manager
-// ==============================================================================
-
 import type { AgentEvent, AgentEventType } from './types.js';
 import { logger } from '../logger.js';
 

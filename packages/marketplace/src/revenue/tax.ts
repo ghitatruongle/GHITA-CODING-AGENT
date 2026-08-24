@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Tax Reporting (Phase 38)
-// ==============================================================================
-
 import { randomUUID } from 'node:crypto';
 import type { Payout, TaxReport } from './types.js';
 

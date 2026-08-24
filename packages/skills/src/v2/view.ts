@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Skills v1.1.0 Track 2: v2 view wiring (P36)
-// ==============================================================================
 // Data-layer wiring for the desktop Skills view: renders each skill as a row
 // with v2 metadata (version, license, allowed-tools, sandbox, lock status).
-// ==============================================================================
 
 import type { SkillDefinition } from '../types.js';
 

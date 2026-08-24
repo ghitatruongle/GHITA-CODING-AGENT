@@ -1,5 +1,5 @@
 /**
- * Phase 20 — GUI-Agent-Only Control Strategy
+
  *
  * Pure pixel-based automation. Uses a screenshot pipeline + a vision model
  * to locate the target element, then issues coordinate-based actions

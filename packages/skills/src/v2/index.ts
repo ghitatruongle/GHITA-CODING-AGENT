@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Skills v1.1.0 Track 2: v2 public entry
-// ==============================================================================
-
 export {
   validateSkillV2,
   parseV2Manifest,
@@ -73,7 +69,6 @@ export type {
 export { toSkillListView } from './view.js';
 export type { SkillViewRow, LockLookup } from './view.js';
 
-// ── v1.1.5-beta1 Track 7: Skills & Marketplace v3 ──
 export {
   ENGINEERING_SKILL_CHAIN,
   DEFAULT_SKILL_PACK_CONFIG,

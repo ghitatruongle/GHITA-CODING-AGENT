@@ -1,13 +1,9 @@
-// ==============================================================================
-// GHITA CODING AGENT — SSRF IPv4 Range Blocking Unit Tests
-// ==============================================================================
 // Tests for InputSanitizer.isSafeUrl() SSRF protection:
 //   - CGNAT 100.64.0.0/10 (shared address space)
 //   - Link-local 169.254.0.0/16 (APIPA)
 //   - Multicast 224.0.0.0/4
 //   - Plus all other private/reserved ranges
 //   - Public addresses should be allowed
-// ==============================================================================
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { InputSanitizer } from '../src/input-sanitizer.js';
@@ -24,9 +20,8 @@ describe('InputSanitizer — SSRF IPv4 Range Blocking', () => {
   const check = (hostname: string): boolean =>
     sanitizer.isSafeUrl(`https://${hostname}/path`);
 
-  // -------------------------------------------------------------------------
   // 1. CGNAT 100.64.0.0/10 (100.64.0.0 – 100.127.255.255)
-  // -------------------------------------------------------------------------
+  
   describe('CGNAT 100.64.0.0/10', () => {
     it('should block 100.64.0.0 (start of CGNAT range)', () => {
       expect(check('100.64.0.0')).toBe(false);
@@ -57,9 +52,8 @@ describe('InputSanitizer — SSRF IPv4 Range Blocking', () => {
     });
   });
 
-  // -------------------------------------------------------------------------
   // 2. Link-Local 169.254.0.0/16 (169.254.0.0 – 169.254.255.255)
-  // -------------------------------------------------------------------------
+  
   describe('Link-Local 169.254.0.0/16', () => {
     it('should block 169.254.0.0 (start of link-local)', () => {
       expect(check('169.254.0.0')).toBe(false);
@@ -87,9 +81,8 @@ describe('InputSanitizer — SSRF IPv4 Range Blocking', () => {
     });
   });
 
-  // -------------------------------------------------------------------------
   // 3. Multicast 224.0.0.0/4 (224.0.0.0 – 239.255.255.255)
-  // -------------------------------------------------------------------------
+  
   describe('Multicast 224.0.0.0/4', () => {
     it('should block 224.0.0.0 (start of multicast range)', () => {
       expect(check('224.0.0.0')).toBe(false);
@@ -108,9 +101,8 @@ describe('InputSanitizer — SSRF IPv4 Range Blocking', () => {
     });
   });
 
-  // -------------------------------------------------------------------------
   // 4. Reserved 240.0.0.0/4 (240.0.0.0 – 255.255.255.255)
-  // -------------------------------------------------------------------------
+  
   describe('Reserved 240.0.0.0/4', () => {
     it('should block 240.0.0.0 (start of reserved)', () => {
       expect(check('240.0.0.0')).toBe(false);
@@ -125,9 +117,8 @@ describe('InputSanitizer — SSRF IPv4 Range Blocking', () => {
     });
   });
 
-  // -------------------------------------------------------------------------
   // 5. Existing Private Ranges (regression checks)
-  // -------------------------------------------------------------------------
+  
   describe('Private/Loopback ranges (regression)', () => {
     // 0.0.0.0/8 — Current network
     it('should block 0.0.0.0', () => {
@@ -195,9 +186,8 @@ describe('InputSanitizer — SSRF IPv4 Range Blocking', () => {
     });
   });
 
-  // -------------------------------------------------------------------------
   // 6. Public Addresses Should Be Allowed
-  // -------------------------------------------------------------------------
+  
   describe('Public addresses should be allowed', () => {
     it('should allow 8.8.8.8 (Google DNS)', () => {
       expect(check('8.8.8.8')).toBe(true);
@@ -220,9 +210,8 @@ describe('InputSanitizer — SSRF IPv4 Range Blocking', () => {
     });
   });
 
-  // -------------------------------------------------------------------------
   // 7. Protocol & URL Validation
-  // -------------------------------------------------------------------------
+  
   describe('Protocol and URL validation', () => {
     it('should reject http: by default (only https: allowed)', () => {
       expect(sanitizer.isSafeUrl('http://8.8.8.8/')).toBe(false);

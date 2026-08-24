@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Navigation Type Definitions
-// ==============================================================================
-
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 // --- Root Stack ---

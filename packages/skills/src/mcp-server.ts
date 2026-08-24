@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Skills MCP Server (standard @ghita/mcp)
-// ==============================================================================
-
 import { createMCPServer, type GhitaMCPServer, type ToolDefinition } from '@ghita/mcp';
 
 /** Structural surface of a skill registry used by the server. */

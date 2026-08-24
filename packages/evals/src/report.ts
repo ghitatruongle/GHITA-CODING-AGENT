@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Evals: session evidence report (markdown + json)
-// ==============================================================================
-
 import type { EvalRun, RunOutcome } from './types.js';
 
 const DIM_LABEL: Record<string, string> = {

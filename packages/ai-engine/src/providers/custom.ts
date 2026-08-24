@@ -1,8 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Custom Provider (OpenAI-compatible endpoints)
-// Phase 1.1: Multi-key support, key reporting, provider type fix
-// ==============================================================================
-
 import { AI_PROVIDERS, type AIProviderType, type AIStreamChunk } from '@ghita/shared';
 import type { ChatMessage, ChatOptions, ChatResponse, ProviderConfig } from '../types.js';
 import { BaseProvider } from './base.js';

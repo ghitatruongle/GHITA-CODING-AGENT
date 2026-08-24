@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - v1.1.5-beta1 Track 2.6: RetryAgent + Reviewer-on-Submit
-// ==============================================================================
-
 import { createReActAgent } from './react/agent.js';
 import type { CreateReActAgentInput, ReActAgentRunResult } from './react/types.js';
 import { HumanMessage } from './messages/message.js';

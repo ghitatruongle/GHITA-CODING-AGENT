@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Discord Communication Gateway
-// ==============================================================================
-
 import WebSocket, { type RawData } from 'ws';
 import type { CommunicationGateway, GatewayMessage, GatewayType } from './types.js';
 
@@ -187,11 +183,18 @@ export class DiscordGateway implements CommunicationGateway {
     if (payload.op === 10) {
       const hello = payload.d as { heartbeat_interval?: number };
       const interval = hello.heartbeat_interval ?? 45_000;
+      // A second HELLO must not double the heartbeat — clear any surviving
+      // timer first or the gateway loops zombie heartbeats.
+      if (this.heartbeat) {
+        clearInterval(this.heartbeat);
+        this.heartbeat = undefined;
+      }
       this.sendGatewayPayload({ op: 1, d: this.sequence });
       this.heartbeat = setInterval(
         () => this.sendGatewayPayload({ op: 1, d: this.sequence }),
         interval,
       );
+      if (typeof this.heartbeat.unref === 'function') this.heartbeat.unref();
       this.identify();
       return;
     }

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Evals: public entry
-// ==============================================================================
-
 export { EVALS_VERSION } from './types.js';
 export type {
   AgentAdapter,

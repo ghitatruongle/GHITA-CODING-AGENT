@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Sandbox Runner Tests (v1.1.5-beta2 Track 2)
-// ==============================================================================
-
 import { describe, it, expect } from 'vitest';
 import { SandboxRunner } from '../src/sandbox/runner.js';
 import { registerNative, unregisterNative } from '@ghita/native-bridge';

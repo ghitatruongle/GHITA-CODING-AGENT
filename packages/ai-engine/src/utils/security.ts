@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - PreToolUse Security Hook & Scanner
-// ==============================================================================
-
 export interface SecurityScanResult {
   safe: boolean;
   reason?: string;
@@ -78,9 +74,7 @@ const MALICIOUS_PATTERNS: Array<{
 ];
 
 export class SecurityGuard {
-  /**
-   * Rà soát tính an toàn của một câu lệnh CLI / Bash trước khi chạy
-   */
+  
   static scanCommand(command: string): SecurityScanResult {
     const trimmed = command.trim();
     if (!trimmed) {
@@ -100,11 +94,8 @@ export class SecurityGuard {
     return { safe: true };
   }
 
-  /**
-   * Rà soát tham số của một Tool sử dụng
-   */
   static scanToolUse(toolName: string, args: Record<string, unknown>): SecurityScanResult {
-    // Nếu là tool chạy lệnh hệ thống (ví dụ: execute_command, run_bash, v.v.)
+    
     if (['execute_command', 'run_command', 'run_bash', 'terminal_run'].includes(toolName)) {
       const command = args?.command || args?.CommandLine || args?.cmd || '';
       if (typeof command === 'string') {
@@ -112,7 +103,6 @@ export class SecurityGuard {
       }
     }
 
-    // Rà soát đệ quy tất cả các thuộc tính dạng chuỗi của arguments
     const stringValues = this.extractStringValues(args);
     for (const val of stringValues) {
       const result = this.scanCommand(val);

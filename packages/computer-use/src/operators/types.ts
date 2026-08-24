@@ -1,6 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Operator Interface (Phase 18: Screenshot Pipeline)
-// ==============================================================================
 //
 // Operator is the abstract contract for any input/output driver that the
 // ComputerUseController can dispatch against. Concrete implementations include
@@ -22,7 +19,6 @@
 //   - screenshot() returns an image already encoded as base64 PNG by default
 //     (mimeType: 'image/png'); the cross-platform ScreenshotCapturer is the
 //     only place that talks to OS-level capture APIs.
-// ==============================================================================
 
 import type { MouseButton, Point, ScreenCapture, ScreenSize } from '../index.js';
 

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Computer Use Package
-// ==============================================================================
-
 import type { SkillDefinition } from '@ghita/skills';
 import type { SkillResult } from '@ghita/shared';
 import { ActionParser } from './actionParser.js';
@@ -17,7 +13,7 @@ export {
 } from './scanner/headlessSearch.js';
 export { UITarsBoundingBoxDetector, type UITarget } from './uitars/bounding-box-detector.js';
 
-export const COMPUTER_USE_VERSION = '1.1.5-beta2';
+export const COMPUTER_USE_VERSION = '1.1.5';
 
 export interface Point {
   x: number;

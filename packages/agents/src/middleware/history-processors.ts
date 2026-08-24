@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - v1.1.5-beta1 Track 2.2: History Processors Pipeline
-// ==============================================================================
-
 import type { BaseMessage } from '../messages/message.js';
 import { ToolMessage } from '../messages/message.js';
 

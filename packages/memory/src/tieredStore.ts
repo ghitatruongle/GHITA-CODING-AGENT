@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 15: AgentMemory Tiered Storage
-// ==============================================================================
-
 import type { MemoryEntry, MemorySearchResult } from '@ghita/shared';
 import { RustMemoryAddon } from './semantic/rustAddon.js';
 import {
@@ -17,9 +13,8 @@ export interface TieredMemoryStoreConfig {
   promotionImportanceThreshold?: number;
 }
 
-// ---------------------------------------------------------------------------
 // Database interface and bindings helper
-// ---------------------------------------------------------------------------
+
 type StatementResultLike = { changes?: number };
 type StatementLike = {
   run: (...args: unknown[]) => StatementResultLike;
@@ -36,9 +31,8 @@ declare const require: ((id: string) => unknown) | undefined;
 const runtimeRequire: ((id: string) => unknown) | null =
   typeof require !== 'undefined' ? require : null;
 
-// ---------------------------------------------------------------------------
 // Helper functions for mock embeddings
-// ---------------------------------------------------------------------------
+
 export function getDeterministicMockEmbedding(text: string, dimensions = 1536): number[] {
   const vector = new Array(dimensions).fill(0);
   let seed = 0;
@@ -259,10 +253,8 @@ export class TieredMemoryStore {
     });
   }
 
-  // -----------------------------------------------------------------------
   // Public API
-  // -----------------------------------------------------------------------
-
+  
   /**
    * Adds or updates a memory entry. Starts at Tier 1.
    */

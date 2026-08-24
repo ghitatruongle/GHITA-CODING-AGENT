@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Workspace Operations Tools
-// ==============================================================================
-
 import * as path from 'node:path';
 import * as fs from 'node:fs';
 import { spawn } from 'node:child_process';
@@ -187,6 +183,8 @@ export function ensureInSandbox(filePath: string, sandboxRoot?: string): string 
 /**
  * 1. list_dir tool implementation
  */
+const LIST_DIR_MAX_ENTRIES = 500;
+
 export async function listDirectory(args: { recursive?: boolean; path?: string }): Promise<string> {
   const targetDir = args.path ? ensureInSandbox(args.path) : ensureInSandbox('.');
 
@@ -197,10 +195,22 @@ export async function listDirectory(args: { recursive?: boolean; path?: string }
   }
 
   const results: FileEntry[] = [];
+  let truncated = false;
+  // Resolve the sandbox root once — the old loop re-ran existsSync/statSync/
+  // realpathSync for EVERY entry just to compute a relative path.
+  const sandboxRoot = ensureInSandbox('.');
 
-  function walk(currentDir: string) {
+  function walk(currentDir: string, depth = 0) {
+    if (results.length >= LIST_DIR_MAX_ENTRIES || (args.recursive && depth > 12)) {
+      truncated = true;
+      return;
+    }
     const entries = fs.readdirSync(currentDir, { withFileTypes: true });
     for (const entry of entries) {
+      if (results.length >= LIST_DIR_MAX_ENTRIES) {
+        truncated = true;
+        return;
+      }
       const fullPath = path.join(currentDir, entry.name);
       // Skip typical noise folders
       if (
@@ -214,12 +224,12 @@ export async function listDirectory(args: { recursive?: boolean; path?: string }
         continue;
       }
 
-      const relPath = path.relative(ensureInSandbox('.'), fullPath);
+      const relPath = path.relative(sandboxRoot, fullPath);
 
       if (entry.isDirectory()) {
         results.push({ path: relPath, isDirectory: true });
         if (args.recursive) {
-          walk(fullPath);
+          walk(fullPath, depth + 1);
         }
       } else if (entry.isFile()) {
         const stat = fs.statSync(fullPath);
@@ -229,13 +239,18 @@ export async function listDirectory(args: { recursive?: boolean; path?: string }
   }
 
   walk(targetDir);
-  return JSON.stringify(results, null, 2);
+  // Compact JSON — pretty-printing a multi-entry listing multiplied the
+  // payload shipped into the LLM context.
+  const suffix = truncated
+    ? `\n[Truncated at ${LIST_DIR_MAX_ENTRIES} entries — narrow the path or drop "recursive".]`
+    : '';
+  return JSON.stringify(results) + suffix;
 }
 
 /**
  * 2. read_file tool implementation
  */
-// v1.0.0 deep-review fix (M10): cap file reads at 5 MiB — the same limit the
+
 // frontend uses. Without this an agent reading a huge file would OOM the
 // sidecar; the cap mirrors the editor's truncated-preview behaviour.
 const READ_FILE_MAX_BYTES = 5 * 1024 * 1024;

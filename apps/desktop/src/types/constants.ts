@@ -1,7 +1,3 @@
-// =============================================================================
-// GHITA CODING AGENT — Shared constants
-// =============================================================================
-
 /** Default port for the sidecar server (matches Rust ServerState default) */
 export const DEFAULT_SERVER_PORT = 39001;
 

@@ -1,6 +1,4 @@
-// ==============================================================================
 // @ghita/i18n -- I18nManager
-// ==============================================================================
 
 import type { Locale, TranslationMessages, I18nConfig, FormatMessageOptions } from './types.js';
 

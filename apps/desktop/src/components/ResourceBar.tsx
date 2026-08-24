@@ -1,4 +1,3 @@
-/** Thanh tiến trình tài nguyên (CPU/RAM) */
 export function ResourceBar({
   label,
   value,

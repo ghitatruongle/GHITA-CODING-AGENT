@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Background Compression Job (Phase 30)
 // Periodic runner that orchestrates dedup → summarization → tier migration.
-// ==============================================================================
 
 import type {
   CompressionConfig,
@@ -17,9 +14,7 @@ import { EmbeddingDedup } from './embedding-dedup.js';
 import { MemorySummarizer } from './summarizer.js';
 import { TierManager } from './tier-manager.js';
 
-// ---------------------------------------------------------------------------
 // Background Job
-// ---------------------------------------------------------------------------
 
 export class BackgroundCompressionJob {
   private config: Required<CompressionConfig>;

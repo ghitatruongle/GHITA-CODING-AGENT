@@ -1,8 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Multi-Tab Session Manager
-// Phase 3 (Update 0.0.3 beta2): Tab switching, session persistence
-// ==============================================================================
-
 export type TabId = string;
 
 export interface TabInfo {

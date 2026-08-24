@@ -1,8 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - CrossSessionSearch Unit Tests (Phase 14)
 // 35 test cases covering indexing, search, vector search, hybrid search,
 // date/session filtering, summarization, and edge cases.
-// ==============================================================================
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { CrossSessionSearch } from '../src/search.js';

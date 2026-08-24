@@ -1,8 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - EventStream Unit Tests (Phase 7)
 // 35 test cases covering subscribe/unsubscribe, emit, replay, ring buffer,
 // WebSocket bridge, plugin hook, stats, error handling, dict conversion.
-// ==============================================================================
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { EventStream, event_to_dict, dict_to_event } from '../src/stream/event-stream.js';

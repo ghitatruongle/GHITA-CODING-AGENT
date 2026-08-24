@@ -1,6 +1,4 @@
-// ==============================================================================
 // Wave 3 — agents router / hub / channel / sync / debate
-// ==============================================================================
 
 import { describe, it, expect } from 'vitest';
 import { AgentRouter } from '../src/router/router.js';

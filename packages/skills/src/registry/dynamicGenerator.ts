@@ -1,27 +1,16 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 7: Dynamic Skill Generation Loop
-// ==============================================================================
-// Tự đúc kết hoạt động terminal thành công thành các tệp kỹ năng JSON động
-// Hỗ trợ che giấu thông tin mật, validate an toàn mã độc và đồng bộ hóa git
-// ==============================================================================
-
 import type { TaskTrajectory, TrajectoryStep, SkillTemplate } from '../auto-create/types.js';
 import type { SkillHub } from './hub.js';
 import type { SlashCommand } from '../commands/registry.js';
 
 export class DynamicSkillGenerator {
-  /**
-   * Che giấu thông tin nhạy cảm như token, mật khẩu, API keys
-   */
+  
   public sanitizeCommand(cmd: string): string {
     let sanitized = cmd;
 
-    // Che giấu API keys phổ biến
     sanitized = sanitized.replace(/(sk-[a-zA-Z0-9]{20,})/g, '[REDACTED]');
     sanitized = sanitized.replace(/(ghp_[a-zA-Z0-9]{20,})/g, '[REDACTED]');
     sanitized = sanitized.replace(/(AIzaSy[a-zA-Z0-9_-]{20,})/g, '[REDACTED]');
 
-    // Che giấu passwords trong lệnh gán hoặc query parameters
     sanitized = sanitized.replace(/(pass(?:word)?\s*=\s*)([a-zA-Z0-9_.-]+)/gi, '$1[REDACTED]');
     sanitized = sanitized.replace(/(?<!-)(-p\s*)([a-zA-Z0-9_.-]+)/gi, (match, p1, p2) => {
       if (/^(port|path|profile|protocol|phrase|prompt)/i.test(p2) && p1 === '-p') {
@@ -34,19 +23,14 @@ export class DynamicSkillGenerator {
     return sanitized;
   }
 
-  /**
-   * Quét an toàn mã độc cho shell
-   */
   public validateSkillSafety(jsonContent: string): { safe: boolean; error?: string } {
     try {
       const parsed = JSON.parse(jsonContent);
 
-      // Quét schema cơ bản
       if (!parsed.id || !parsed.name || !parsed.category || !parsed.steps) {
         return { safe: false, error: 'JSON Schema không đúng định dạng agentskills.io' };
       }
 
-      // Quét các lệnh độc hại trong steps
       const steps = parsed.steps as Array<{
         toolName: string;
         inputTemplate?: Record<string, unknown>;
@@ -85,9 +69,6 @@ export class DynamicSkillGenerator {
     }
   }
 
-  /**
-   * Ghi lại chuỗi câu lệnh terminal thành một TaskTrajectory thành công
-   */
   public recordSession(
     commands: string[],
     outputs: string,
@@ -113,9 +94,6 @@ export class DynamicSkillGenerator {
     };
   }
 
-  /**
-   * Sinh tệp JSON và đăng ký ngầm vào SkillHub Registry cục bộ
-   */
   public async generateAndRegister(
     commands: string[],
     _outputs: string,
@@ -149,16 +127,12 @@ export class DynamicSkillGenerator {
       throw new Error(`Đóng gói Skill thất bại vì lý do bảo mật: ${safetyCheck.error}`);
     }
 
-    // Đăng ký ngầm vào Registry
     hub.saveSkill(skillTemplate);
 
     return skillTemplate;
   }
 }
 
-/**
- * Slash command /skills-sync đồng bộ git các skill động
- */
 export function createSkillsSyncCommand(hub: SkillHub): SlashCommand {
   return {
     name: 'Skills Sync',
@@ -176,10 +150,8 @@ export function createSkillsSyncCommand(hub: SkillHub): SlashCommand {
           return '[SKILLS-SYNC] Không tìm thấy skill động tự tạo nào cần đồng bộ.';
         }
 
-        // Lấy hubPath từ hub
         const hubPath = (hub as unknown as { hubPath: string }).hubPath;
 
-        // P1-7 (deep review pass #2): use execFile with array args so the
         // hubPath is never interpreted as a shell string. The previous
         // `git add "${hubPath}/*.json"` was shell-injectable if hubPath
         // contained a quote or `; rm -rf /`.
@@ -193,7 +165,6 @@ export function createSkillsSyncCommand(hub: SkillHub): SlashCommand {
 
         await runGit(['commit', '-m', 'sync: push dynamically generated skills']);
 
-        // Thử git push, nếu lỗi (như chưa set remote) thì bắt exception
         try {
           await runGit(['push']);
           return `[SKILLS-SYNC] Đã đồng bộ thành công ${skills.length} skills động lên Git repository chung.`;

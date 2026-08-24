@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Agents v1.1.0 Track 5 P59: git-aware checkpoints
-// ==============================================================================
 // Auto-commit policy (ask | always | never) applied at checkpoint time —
 // mirrors aider's git integration while preserving the existing
 // `.ghita/checkpoints` flow.
-// ==============================================================================
 
 export type AutoCommitMode = 'ask' | 'always' | 'never';
 

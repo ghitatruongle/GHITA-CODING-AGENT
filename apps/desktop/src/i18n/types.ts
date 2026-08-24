@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — i18n Type Definitions
-// ==============================================================================
-
 /**
  * Canonical locale codes supported by the desktop app.
  * Adding a new language requires: a translation file under `apps/desktop/src/i18n/`,
@@ -464,7 +460,7 @@ export interface TranslationKeys {
     hide: string;
     show: string;
     fetch: string;
-    // Phase 1.1: Multi-key
+    
     addKey: string;
     removeKey: string;
     keyStrategy: string;
@@ -617,7 +613,7 @@ export interface TranslationKeys {
     noContainers: string;
     noContainersDesc: string;
   };
-  // Phase 7: Notification System (Q3 2026)
+  
   notification: {
     ariaLabel: string;
     title: string;
@@ -626,7 +622,7 @@ export interface TranslationKeys {
     unreadBadge: string;
     dismiss: string;
   };
-  // Phase 8: Voice I/O (Q3 2026)
+  
   voice: {
     start: string;
     stop: string;
@@ -634,7 +630,7 @@ export interface TranslationKeys {
     unsupported: string;
     unsupportedHint: string;
   };
-  // Phase 9: Monitoring Dashboard (Q3 2026)
+  
   monitoring: {
     title: string;
     loading: string;
@@ -656,7 +652,7 @@ export interface TranslationKeys {
     lastSeen: string;
     refresh: string;
   };
-  // Phase 10: Quota & Rate Limiting (Q3 2026)
+  
   quota: {
     title: string;
     loading: string;
@@ -680,7 +676,7 @@ export interface TranslationKeys {
     refresh: string;
     budgetUsage: string;
   };
-  // Phase 11: Code Knowledge Graph (Q3 2026)
+  
   codeGraph: {
     title: string;
     workspacePath: string;

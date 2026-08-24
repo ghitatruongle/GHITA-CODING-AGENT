@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Settings View (Tailwind Edition)
-// ==============================================================================
-
 import { useState } from 'react';
 import { useAppStore, type ThemeMode } from '../stores/appStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -129,7 +125,6 @@ export function SettingsView() {
     { value: 'error', label: t('settings.logError') },
   ];
 
-  // Phase 5: MCP & Hooks state
   const mcpServers = useAppStore(useShallow((s) => s.mcpServers));
   const setMcpServers = useAppStore((s) => s.setMcpServers);
   const hooks = useAppStore(useShallow((s) => s.hooks));

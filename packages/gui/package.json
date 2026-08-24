@@ -1,6 +1,6 @@
 {
   "name": "@ghita/gui",
-  "version": "1.1.5-beta2",
+  "version": "1.1.5",
   "private": true,
   "sideEffects": false,
   "description": "Tauri window management, persistence, tray, global shortcuts, theme switching cho GHITA Coding Agent",

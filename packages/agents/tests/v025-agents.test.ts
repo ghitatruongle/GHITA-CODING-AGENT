@@ -1,6 +1,4 @@
-// ==============================================================================
 // v0.2.5 Agents Modules Unit Tests
-// ==============================================================================
 
 import { describe, it, expect } from 'vitest';
 import { AutoRepairGate } from '../src/checker/autoRepairGate.js';

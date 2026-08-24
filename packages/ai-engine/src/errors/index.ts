@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Custom Error Hierarchy
-// ==============================================================================
-
 export class AIBaseError extends Error {
   readonly cause?: unknown;
 

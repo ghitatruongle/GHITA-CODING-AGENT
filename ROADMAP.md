@@ -1,7 +1,7 @@
 # 🗺️ GHITA CODING AGENT — Public Roadmap
 
-> **Current version:** v1.1.0
-> **Last updated:** 2026-08-10
+> **Current version:** v1.1.5
+> **Last updated:** 2026-08-23
 
 ---
 
@@ -38,25 +38,6 @@
 | 📦 Install    | `pnpm doctor` diagnostics                                     | ✅         |
 | 🌐 i18n       | All new keys in 6 locales (en/vi/zh/ru/ja/ko)                 | ✅         |
 
-## In progress — v0.6.0 Durable Agent Runtime
-
-This release turns the existing capability modules into one governed, resumable
-coding-agent runtime:
-
-- Native provider tool calls are normalized into a common ReAct loop.
-- Every real tool call is checked by deny-default governance at the execution boundary.
-- Agent runs are journaled atomically and can resume from a checkpoint with replay confirmation.
-- Code graph, repository map, browser skills, and workspace memory are available as governed tools.
-- Desktop and mobile pairing use separate authentication paths with hashed device credentials.
-- API keys live in the operating-system credential vault instead of plaintext configuration.
-- Rust formatting/tests and desktop packaging are blocking release gates.
-
-The release remains `-dev` until every gate in
-[`docs/release-plan-v0.6.0.md`](docs/release-plan-v0.6.0.md) passes on a clean clone
-and the cross-platform artifacts are produced by CI.
-
----
-
 ## ✅ Done — v0.1.5 Trust Hardening (2026-07-22)
 
 | Khu vực           | Tính năng                                 | Trạng thái |
@@ -80,7 +61,7 @@ and the cross-platform artifacts are produced by CI.
 | 🧠 AI Engine       | Multi-provider (OpenAI, Anthropic, Google, Ollama, LiteLLM) | ✅         |
 | 🧠 AI Engine       | Adaptive Router — complexity-based model selection          | ✅         |
 | 🧠 AI Engine       | Cost Tracking & Budget Alerts                               | ✅         |
-| 🧠 AI Engine       | Tool Registry + Composio (200+ tools)                       | ✅         |
+| 🧠 AI Engine       | Tool Registry + Composio catalog (metadata-only; executable handlers require a live adapter + credentials) | ✅         |
 | 🤖 Agents          | ReAct Runtime + DAG Flow Orchestrator                       | ✅         |
 | 🤖 Agents          | Sub-Agent Spawner (isolated context)                        | ✅         |
 | 🤖 Agents          | Agent Groups — specialized teams                            | ✅         |

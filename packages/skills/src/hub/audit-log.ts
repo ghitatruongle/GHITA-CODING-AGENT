@@ -1,9 +1,5 @@
-// =============================================================================
-// GHITA CODING AGENT - Phase 12: Audit Log
-// =============================================================================
 // Records all skill operations (create, update, delete, trust changes, etc.)
 // for accountability and debugging. Stored as append-only JSON array.
-// =============================================================================
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';

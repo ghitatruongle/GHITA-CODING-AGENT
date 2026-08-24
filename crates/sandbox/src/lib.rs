@@ -1,14 +1,12 @@
-// ==============================================================================
-// GHITA CODING AGENT — Sandboxed Process Execution (v1.1.5-beta2 Track 2)
-// ------------------------------------------------------------------------------
-// Zero-dependency sandboxed spawn with multi-platform enforcement tiers:
-//   - linux   : Landlock (kernel write-scoping via raw syscalls, NO_NEW_PRIVS)
-//   - macos   : Seatbelt (`sandbox-exec` SBPL profile wrapper)
-//   - windows : Windows Tier 2 Sandbox (Job Object containment with memory limits,
-//               active process limits, kill-on-close, and write-target policy)
-// All platforms additionally run the supervised core: workspace cwd lock,
-// environment scrubbing, deny-glob argument precheck and write-target policy.
-// ==============================================================================
+//! GHITA CODING AGENT — Sandboxed Process Execution
+//! Zero-dependency sandboxed spawn with multi-platform enforcement tiers:
+//! - linux   : Landlock (kernel write-scoping via raw syscalls, NO_NEW_PRIVS)
+//! - macos   : Seatbelt (`sandbox-exec` SBPL profile wrapper)
+//! - windows : Windows Tier 2 Sandbox (Job Object containment with memory limits,
+//!   active process limits, kill-on-close, and write-target policy)
+//!
+//! All platforms additionally run the supervised core: workspace cwd lock,
+//! environment scrubbing, deny-glob argument precheck and write-target policy.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -222,9 +220,8 @@ mod landlock {
     const LANDLOCK_ACCESS_FS_MAKE_BLOCK: u64 = 1 << 11;
     const LANDLOCK_ACCESS_FS_MAKE_SYM: u64 = 1 << 12;
 
-    const FS_READ_EXECUTE: u64 = LANDLOCK_ACCESS_FS_EXECUTE
-        | LANDLOCK_ACCESS_FS_READ_FILE
-        | LANDLOCK_ACCESS_FS_READ_DIR;
+    const FS_READ_EXECUTE: u64 =
+        LANDLOCK_ACCESS_FS_EXECUTE | LANDLOCK_ACCESS_FS_READ_FILE | LANDLOCK_ACCESS_FS_READ_DIR;
 
     const FS_WRITE: u64 = LANDLOCK_ACCESS_FS_WRITE_FILE
         | LANDLOCK_ACCESS_FS_REMOVE_DIR
@@ -556,8 +553,8 @@ fn seatbelt_profile(opts: &SandboxOptions) -> String {
 
 #[cfg(target_os = "windows")]
 mod win_job {
-    use std::os::windows::io::AsRawHandle;
     use crate::SandboxOptions;
+    use std::os::windows::io::AsRawHandle;
 
     #[repr(C)]
     #[derive(Default)]
@@ -627,14 +624,16 @@ mod win_job {
                     return None;
                 }
                 let mut info: ExtendedLimitInformation = core::mem::zeroed();
-                info.basic.limit_flags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE | JOB_OBJECT_LIMIT_ACTIVE_PROCESS;
+                info.basic.limit_flags =
+                    JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE | JOB_OBJECT_LIMIT_ACTIVE_PROCESS;
                 info.basic.active_process_limit = opts.process_limit.unwrap_or(64);
 
                 if let Some(mb) = opts.memory_limit_mb {
                     let mem_bytes = (mb as usize) * 1024 * 1024;
                     info.job_memory_limit = mem_bytes;
                     info.process_memory_limit = mem_bytes;
-                    info.basic.limit_flags |= JOB_OBJECT_LIMIT_JOB_MEMORY | JOB_OBJECT_LIMIT_PROCESS_MEMORY;
+                    info.basic.limit_flags |=
+                        JOB_OBJECT_LIMIT_JOB_MEMORY | JOB_OBJECT_LIMIT_PROCESS_MEMORY;
                 }
 
                 if SetInformationJobObject(
@@ -813,9 +812,18 @@ mod tests {
 
     #[test]
     fn profile_roundtrip() {
-        assert_eq!(SandboxProfile::parse("workspace"), Some(SandboxProfile::Workspace));
-        assert_eq!(SandboxProfile::parse("read-only"), Some(SandboxProfile::ReadOnly));
-        assert_eq!(SandboxProfile::parse("strict"), Some(SandboxProfile::Strict));
+        assert_eq!(
+            SandboxProfile::parse("workspace"),
+            Some(SandboxProfile::Workspace)
+        );
+        assert_eq!(
+            SandboxProfile::parse("read-only"),
+            Some(SandboxProfile::ReadOnly)
+        );
+        assert_eq!(
+            SandboxProfile::parse("strict"),
+            Some(SandboxProfile::Strict)
+        );
         assert_eq!(SandboxProfile::parse("bogus"), None);
     }
 

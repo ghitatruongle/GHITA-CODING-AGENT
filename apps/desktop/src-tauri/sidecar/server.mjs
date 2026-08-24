@@ -7,9 +7,10 @@ import { createServer } from 'node:http';
 import { request as httpsRequest } from 'node:https';
 import { Server } from 'socket.io';
 import { io as ioClient } from 'socket.io-client';
-import { randomBytes } from 'node:crypto';
+import { createCipheriv, createHash, randomBytes } from 'node:crypto';
 import { networkInterfaces, hostname, homedir } from 'node:os';
 import fs from 'node:fs';
+import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
 import { createRequire as sidecarCreateRequire } from 'node:module';
@@ -87,7 +88,10 @@ async function loadSecurity() {
 // --- Config ---
 let activePort = parseInt(process.env.GHITA_PORT || '8080', 10);
 const LAN_ENABLED = process.env.GHITA_LAN_ENABLED === '1';
-const HOST = process.env.GHITA_BIND_HOST || (LAN_ENABLED ? '0.0.0.0' : '127.0.0.1');
+// Bind host derives solely from the LAN toggle. The GHITA_BIND_HOST env var
+// is deliberately ignored so a manipulated environment cannot expose the
+// sidecar on all interfaces while LAN mode is off in the UI.
+const HOST = LAN_ENABLED ? '0.0.0.0' : '127.0.0.1';
 // SECURITY FIX (C2): Cloud discovery is DISABLED by default.
 // To opt-in, set GHITA_CLOUD_DISCOVERY=1 AND GHITA_CLOUD_DISCOVERY_TOKEN=<your-token>.
 // The hardcoded appKey has been removed. Do NOT enable without understanding the security implications:
@@ -98,6 +102,18 @@ const AUTO_LIBERATE_PORTS = process.env.GHITA_LIBERATE_PORTS === '1';
 
 function broadcast(event, data) {
   io.to(['desktop', 'paired-devices']).emit(event, data);
+}
+
+/// Emit only to trusted desktop sockets — paired devices must never see or
+/// answer security prompts (command approvals, pairing confirmations).
+function emitToDesktop(event, data) {
+  io.to('desktop').emit(event, data);
+}
+
+/// True when this HTTP request carries the valid desktop session token.
+function isDesktopHttpRequest(req) {
+  if (!SESSION_TOKEN) return isLoopbackRequest(req);
+  return req.headers['x-ghita-session-token'] === SESSION_TOKEN;
 }
 
 function normalizeAddress(address = '') {
@@ -160,6 +176,9 @@ const PAIRING_TTL_MS = 300_000; // 5 minutes
 // Pending approvals registry for terminal commands
 const pendingApprovals = new Map();
 const pairingAttempts = new Map();
+// Pairing requests awaiting explicit desktop confirmation.
+const pendingPairRequests = new Map();
+const PAIRING_CONFIRM_TIMEOUT_MS = 60000;
 const PAIRING_MAX_ATTEMPTS = 5;
 const PAIRING_LOCKOUT_MS = 5 * 60_000;
 
@@ -244,8 +263,8 @@ globalThis.approveCommandHandler = async (command) => {
       }
     }, APPROVAL_TIMEOUT_MS);
 
-    // Broadcast the command execution approval request to connected clients
-    broadcast('require_approval', {
+    // Broadcast the command execution approval request — desktop room only.
+    emitToDesktop('require_approval', {
       id: approvalId,
       command,
     });
@@ -266,8 +285,8 @@ globalThis.approveFileWriteHandler = async (operation, filePath) => {
       }
     }, APPROVAL_TIMEOUT_MS);
 
-    // Broadcast the file operation approval request to connected clients
-    broadcast('require_file_approval', {
+    // Broadcast the file operation approval request — desktop room only.
+    emitToDesktop('require_file_approval', {
       id: approvalId,
       operation, // 'write' or 'modify'
       filePath,
@@ -359,7 +378,8 @@ async function proposeEditToClient(toolName, input, runId) {
   let fileExisted = false;
   let originalContent = '';
   if (fs.existsSync(absPath)) {
-    const stat = fs.statSync(absPath);
+    // Async stat/read: a 5 MB read used to stall every socket on the loop.
+    const stat = await fsp.stat(absPath);
     if (!stat.isFile()) throw new Error(`Path is not a file: ${input.filePath}`);
     // v1.0.0 deep-review fix (BUG-3): refuse oversized files up front — the
     // agent gets a tool error it can self-correct from, no UI round-trip.
@@ -370,7 +390,7 @@ async function proposeEditToClient(toolName, input, runId) {
       );
     }
     fileExisted = true;
-    originalContent = fs.readFileSync(absPath, 'utf8');
+    originalContent = await fsp.readFile(absPath, 'utf8');
   }
 
   let proposedContent;
@@ -429,18 +449,18 @@ async function proposeEditToClient(toolName, input, runId) {
 }
 
 /** Store a pre-edit snapshot so a rejected/undone run can restore files. */
-function createEditCheckpoint(runId, absPath, fileExisted, originalContent) {
+async function createEditCheckpoint(runId, absPath, fileExisted, originalContent) {
   try {
     const root = getEffectiveWorkspaceRoot();
     const rel = path.relative(root, absPath);
     if (rel.startsWith('..') || path.isAbsolute(rel)) return;
     const target = path.join(root, '.ghita', 'checkpoints', runId, rel);
-    fs.mkdirSync(path.dirname(target), { recursive: true });
+    await fsp.mkdir(path.dirname(target), { recursive: true });
     if (fileExisted) {
-      fs.writeFileSync(target, originalContent, 'utf8');
+      await fsp.writeFile(target, originalContent, 'utf8');
     } else {
       // Marker: the file did not exist before the run (undo = delete).
-      fs.writeFileSync(`${target}.NEW_MARKER`, '', 'utf8');
+      await fsp.writeFile(`${target}.NEW_MARKER`, '', 'utf8');
     }
   } catch (err) {
     log(`Checkpoint creation failed for ${absPath}: ${err.message}`);
@@ -702,21 +722,25 @@ const httpServer = createServer((req, res) => {
   }
 
   if (req.url === '/health') {
+    // Basic liveness fields are public; pairing codes, device lists and host
+    // identity require the desktop session token — a loopback origin alone is
+    // NOT trust (any local process, or a proxied iframe, is a loopback client).
+    const authorized = isDesktopHttpRequest(req);
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(
       JSON.stringify({
         status: 'ok',
-        connectedDevices: getConnectedDeviceCount(),
-        pairedDevices: connectedDevices.size,
         uptime: process.uptime(),
-        localIP: getLocalIP(),
         port: activePort,
-        ...(isLoopback ? { pairingCode: getCode(), codeExpiresAt } : {}),
-        hostname: hostname()
-          .toUpperCase()
-          .replace(/[^A-Z0-9-]/g, ''),
-        ...(isLoopback
+        ...(authorized
           ? {
+              connectedDevices: getConnectedDeviceCount(),
+              pairedDevices: connectedDevices.size,
+              localIP: getLocalIP(),
+              ...(isLoopback ? { pairingCode: getCode(), codeExpiresAt } : {}),
+              hostname: hostname()
+                .toUpperCase()
+                .replace(/[^A-Z0-9-]/g, ''),
               devices: Array.from(connectedDevices.values()).map((d) => ({
                 id: d.id,
                 name: d.name,
@@ -1539,25 +1563,47 @@ function registerSocketEvents(socket, isCloud = false) {
         // generated code to a temp .tsx file and run a genuine `tsc --noEmit`
         // parse+type check. If tsc is unavailable we still return honest
         // "not verified" output instead of fabricating a passing build.
-        const { mkdtempSync, writeFileSync } = await import('node:fs');
+        const { mkdtemp, writeFile } = await import('node:fs/promises');
         const { tmpdir } = await import('node:os');
         const { join } = await import('node:path');
+        const { execFile } = await import('node:child_process');
+        const execFileAsync = (cmd, args, opts) =>
+          new Promise((resolve, reject) => {
+            execFile(cmd, args, opts, (err, stdout, stderr) => {
+              if (err) {
+                err.stdout = stdout;
+                err.stderr = stderr;
+                reject(err);
+              } else resolve(stdout);
+            });
+          });
 
         const realExecute = async (code) => {
           let dir = null;
           let tsxPath = null;
           try {
-            dir = mkdtempSync(join(tmpdir(), 'ghita-ralph-'));
+            dir = await mkdtemp(join(tmpdir(), 'ghita-ralph-'));
             tsxPath = join(dir, 'generated.tsx');
-            writeFileSync(tsxPath, code, 'utf8');
+            await writeFile(tsxPath, code, 'utf8');
             try {
               // Try a real TypeScript parse + type check. --isolatedModules off,
               // noEmit keeps it a pure check; tsc resolves the file directly.
-              const out = execSync(
-                `tsc --noEmit --jsx preserve --target ES2020 --module ESNext --skipLibCheck ${JSON.stringify(
+              // Async execFile — a 30s blocking tsc used to freeze every
+              // socket, heartbeat and chat stream on the sidecar event loop.
+              const out = await execFileAsync(
+                'tsc',
+                [
+                  '--noEmit',
+                  '--jsx',
+                  'preserve',
+                  '--target',
+                  'ES2020',
+                  '--module',
+                  'ESNext',
+                  '--skipLibCheck',
                   tsxPath,
-                )}`,
-                { stdio: 'pipe', encoding: 'utf8', timeout: 30_000, windowsHide: true },
+                ],
+                { timeout: 30_000, windowsHide: true },
               );
               return {
                 success: true,
@@ -1839,9 +1885,10 @@ function registerSocketEvents(socket, isCloud = false) {
     }
   });
 
-  // Command Approvals Handshake
+  // Command Approvals Handshake — desktop-only. A paired device must never be
+  // able to approve the shell commands its own agent_run requested.
   socket.on('approve_command', (data) => {
-    if (!getAuthorizedClient()) return;
+    if (!getAuthorizedClient({ allowDevice: false })) return;
 
     const id = data?.id;
     const resolve = pendingApprovals.get(id);
@@ -1853,7 +1900,7 @@ function registerSocketEvents(socket, isCloud = false) {
   });
 
   socket.on('reject_command', (data) => {
-    if (!getAuthorizedClient()) return;
+    if (!getAuthorizedClient({ allowDevice: false })) return;
 
     const id = data?.id;
     const resolve = pendingApprovals.get(id);
@@ -1861,6 +1908,18 @@ function registerSocketEvents(socket, isCloud = false) {
       log(`Command approval ID ${id} REJECTED by client.`);
       resolve(false);
       pendingApprovals.delete(id);
+    }
+  });
+
+  // Desktop-only confirmation for pending pairing requests. Knowing the
+  // pairing code must not be enough — a human at the desktop approves.
+  socket.on('pairing_decision', (data) => {
+    if (!isTrustedDesktopSocket(socket)) return;
+    const requestId = data?.requestId;
+    const resolve = pendingPairRequests.get(requestId);
+    if (resolve) {
+      pendingPairRequests.delete(requestId);
+      resolve({ approved: data?.approved === true, reason: 'desktop' });
     }
   });
 
@@ -2016,7 +2075,7 @@ function registerSocketEvents(socket, isCloud = false) {
                 if (!proposal.accepted) {
                   return `Permission Denied: The user reviewed the proposed diff for "${input.filePath}" and REJECTED it. Do not retry the identical edit unchanged — ask the user what to adjust, or take a different approach.`;
                 }
-                createEditCheckpoint(
+                await createEditCheckpoint(
                   runId,
                   proposal.absPath,
                   proposal.fileExisted,
@@ -2857,7 +2916,7 @@ io.on('connection', (socket) => {
 
   // Pairing sockets are isolated by the authentication middleware and can
   // perform only this code exchange until the server promotes them.
-  socket.on(EVENTS.PAIR, (data) => {
+  socket.on(EVENTS.PAIR, async (data) => {
     if (socket.data.authType !== 'pairing') {
       socket.emit(EVENTS.ERROR, { message: 'This connection is not authorized for pairing' });
       return;
@@ -2886,6 +2945,36 @@ io.on('connection', (socket) => {
     }
 
     clearPairingFailures(socket);
+
+    // A valid code alone must NOT promote the device — a proxied page or local
+    // process that harvested the code still needs a human approval at the
+    // desktop. The request is answered by the desktop-only `pairing_decision`
+    // handler and auto-denied after PAIRING_CONFIRM_TIMEOUT_MS.
+    const pairRequestId = `pair_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const decision = await new Promise((resolve) => {
+      pendingPairRequests.set(pairRequestId, resolve);
+      emitToDesktop('pairing_request', {
+        requestId: pairRequestId,
+        deviceName: data?.deviceName || `Mobile-${socket.id.slice(0, 6)}`,
+        platform: data?.platform || 'android',
+      });
+      setTimeout(() => {
+        if (pendingPairRequests.has(pairRequestId)) {
+          pendingPairRequests.delete(pairRequestId);
+          resolve({ approved: false, reason: 'timeout' });
+        }
+      }, PAIRING_CONFIRM_TIMEOUT_MS);
+    });
+    if (!decision.approved) {
+      socket.emit(EVENTS.ERROR, {
+        message:
+          decision.reason === 'timeout'
+            ? 'Pairing request timed out — no confirmation from the desktop.'
+            : 'Pairing was rejected on the desktop.',
+      });
+      return;
+    }
+
     const rawToken = randomBytes(32).toString('hex');
     const dId = deviceId || `device_${Date.now()}_${socket.id.slice(0, 6)}`;
     const device = {
@@ -2905,12 +2994,23 @@ io.on('connection', (socket) => {
     socket.data.deviceId = device.id;
     socket.join('paired-devices');
 
-    // The raw token is returned exactly once. Persistent storage contains only
-    // its SHA-256 digest; the mobile app stores the raw token in the Keychain.
+    // The raw device token never crosses the LAN in cleartext: it is sealed
+    // with AES-256-GCM under a key derived from the pairing code, which both
+    // sides already share. A passive sniffer therefore captures only ciphertext.
+    const salt = randomBytes(16);
+    const key = createHash('sha256').update(`${code}:${salt.toString('base64')}`).digest();
+    const nonce = randomBytes(12);
+    const seal = createCipheriv('aes-256-gcm', key, nonce);
+    const ciphertext = Buffer.concat([seal.update(rawToken, 'utf8'), seal.final(), seal.getAuthTag()]);
     socket.emit(EVENTS.PAIR_CONFIRM, {
       deviceName: 'GHITA Desktop',
       deviceId: device.id,
-      authToken: rawToken,
+      authTokenCipher: {
+        v: 1,
+        salt: salt.toString('base64'),
+        nonce: nonce.toString('base64'),
+        payload: ciphertext.toString('base64'),
+      },
     });
 
     regenerateCode();

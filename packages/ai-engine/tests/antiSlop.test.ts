@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Phase 10: Anti-Slop Unit Tests (50 test cases)
-// ==============================================================================
-
 import { describe, it, expect, beforeEach } from 'vitest';
 import { AntiSlopFilter, cleanSlop } from '../src/middleware/antiSlop.js';
 

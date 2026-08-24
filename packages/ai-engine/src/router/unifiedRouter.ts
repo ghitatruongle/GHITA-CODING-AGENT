@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Multi-LLM Provider Unified Router Gateway (Phase 15)
-// ==============================================================================
-
 import fs from 'fs';
 import path from 'path';
 import https from 'https';
@@ -92,9 +88,6 @@ export class UnifiedRouter implements AIProvider {
     return prov.models;
   }
 
-  /**
-   * Tải và phân tích cấu hình từ file .ghita/models.yaml
-   */
   public loadConfig(): void {
     try {
       if (!fs.existsSync(this.configPath)) {
@@ -113,7 +106,7 @@ export class UnifiedRouter implements AIProvider {
       }
 
       for (const config of configs) {
-        // Tự động giải mã API Key nếu được mã hóa AES (chứa prefix "iv:")
+        
         if (config.apiKey && config.apiKey.includes(':')) {
           try {
             config.apiKey = CryptoHelper.decrypt(config.apiKey, this.encryptionKey);
@@ -124,7 +117,6 @@ export class UnifiedRouter implements AIProvider {
           }
         }
 
-        // Đăng ký hoặc cập nhật provider
         this.registry.registerFromConfig(config);
       }
     } catch (err) {
@@ -177,9 +169,6 @@ export class UnifiedRouter implements AIProvider {
     return await primary.test();
   }
 
-  /**
-   * Gọi mô hình chat đồng bộ (không streaming) kèm theo theo dõi độ trễ và định dạng prompt
-   */
   async chat(messages: ChatMessage[], options?: ChatOptions): Promise<ChatResponse> {
     return this.fallbackManager.executeWithFailover(
       async (model: string) => {
@@ -205,9 +194,6 @@ export class UnifiedRouter implements AIProvider {
     );
   }
 
-  /**
-   * Gọi mô hình chat streaming, tự động định tuyến và chuẩn hóa dữ liệu chunk
-   */
   async *chatStream(messages: ChatMessage[], options?: ChatOptions): AsyncGenerator<AIStreamChunk> {
     // Check budgets first
     const currentSessionCost = this.fallbackManager.getSessionTotalCost();
@@ -358,9 +344,6 @@ export class UnifiedRouter implements AIProvider {
     return await provider.embedMany(texts, options);
   }
 
-  /**
-   * Ghi vết thời gian phản hồi của các mô hình
-   */
   private logLatency(
     provider: AIProviderType,
     model: string,
@@ -378,9 +361,6 @@ export class UnifiedRouter implements AIProvider {
     return [...this.latencyHistory];
   }
 
-  /**
-   * Giải quyết provider dựa trên options model, agentRole hoặc cấu hình mặc định
-   */
   public resolveProvider(options?: ChatOptions): AIProvider {
     let resolvedType: AIProviderType | null = null;
 
@@ -405,7 +385,7 @@ export class UnifiedRouter implements AIProvider {
     }
 
     if (!resolvedType && options?.agentRole) {
-      // Định tuyến thông minh theo vai trò
+      
       if (options.agentRole === 'Plan') resolvedType = 'anthropic';
       else if (options.agentRole === 'Explore') resolvedType = 'openai';
       else if (options.agentRole === 'UI') resolvedType = 'google';
@@ -444,15 +424,12 @@ export class UnifiedRouter implements AIProvider {
     return this.resolveProvider();
   }
 
-  /**
-   * Bọc/định dạng system prompt hoặc tin nhắn phù hợp với đích đến từng mô hình (Prompt Adapter)
-   */
   private adaptPrompts(messages: ChatMessage[], providerType: AIProviderType): ChatMessage[] {
-    // Với DeepSeek R1 hoặc các mô hình cụ thể đòi hỏi bọc cấu trúc đặc biệt
+    
     if (providerType === 'deepseek') {
       return messages.map((msg) => {
         if (msg.role === 'system') {
-          // Bọc chỉ dẫn suy luận cho DeepSeek
+          
           return {
             role: 'system',
             content: `${msg.content}\nPlease output your step-by-step thinking process between <think> and </think> tags.`,
@@ -465,36 +442,27 @@ export class UnifiedRouter implements AIProvider {
     return messages;
   }
 
-  /**
-   * Chuẩn hóa và làm sạch Response nhận được từ LLM API
-   */
   private adaptResponse(response: ChatResponse, providerType: AIProviderType): ChatResponse {
     if (providerType === 'deepseek') {
-      // Trích xuất hoặc chuẩn hóa phần suy luận nếu nằm ngoài content chính
+      
       return response;
     }
     return response;
   }
 
-  /**
-   * Chuẩn hóa chunk đầu ra khi streaming
-   */
   private adaptChunk(chunk: AIStreamChunk, providerType: AIProviderType): AIStreamChunk {
-    // Đảm bảo luôn gán đúng provider và model trong chunk đầu ra
+    
     return {
       ...chunk,
       provider: chunk.provider || providerType,
     };
   }
 
-  /**
-   * Chèn cấu hình keep-alive cho cuộc gọi
-   */
   private injectKeepAlive(
     options: ChatOptions | undefined,
     providerType: AIProviderType,
   ): ChatOptions | undefined {
-    // Chèn agent của unified router để giữ kết nối ổ định
+    
     const agent = providerType === 'ollama' ? this.httpAgent : this.httpsAgent;
     return {
       ...options,

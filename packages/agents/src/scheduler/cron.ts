@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Cron & Natural Language Scheduler
-// ==============================================================================
-
 import type { AgentManager } from '../index.js';
 import type { ScheduledTask, ScheduledTaskConfig } from './types.js';
 
@@ -12,7 +8,8 @@ export class CronScheduler {
   constructor(private readonly agentManager: AgentManager) {}
 
   /**
-   * Starts the global scheduler interval checker (polls every 10 seconds).
+   * Starts the global scheduler interval checker (polls every 10 seconds) and
+   * recreates interval timers for interval-based tasks (e.g. after stop/start).
    */
   start(): void {
     if (this.masterTimer) return;
@@ -20,6 +17,7 @@ export class CronScheduler {
     if (this.masterTimer && typeof this.masterTimer === 'object' && 'unref' in this.masterTimer) {
       this.masterTimer.unref();
     }
+    this.restartIntervalTimers();
   }
 
   /**
@@ -33,6 +31,25 @@ export class CronScheduler {
     for (const task of this.tasks.values()) {
       if (task.intervalId) {
         clearInterval(task.intervalId);
+        // Clear the stale handle: a truthy intervalId would make tick() skip
+        // the task forever even though its timer no longer exists.
+        task.intervalId = undefined;
+      }
+    }
+  }
+
+  /**
+   * Recreates setInterval timers for every active interval-based task that
+   * currently has none.
+   */
+  private restartIntervalTimers(): void {
+    for (const task of this.tasks.values()) {
+      if (task.status !== 'active' || task.intervalId) continue;
+      const intervalMs = this.parseNaturalLanguageToMs(task.config.expression);
+      if (!intervalMs) continue;
+      task.intervalId = setInterval(() => this.executeTask(task.config.id), intervalMs);
+      if (task.intervalId && typeof task.intervalId === 'object' && 'unref' in task.intervalId) {
+        task.intervalId.unref();
       }
     }
   }
@@ -101,12 +118,17 @@ export class CronScheduler {
    */
   private tick(): void {
     const now = new Date();
+    // One key per calendar minute — a cron match fires at most once per minute
+    // even though tick() runs every 10 seconds.
+    const minuteKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}`;
     for (const [id, task] of this.tasks.entries()) {
       if (task.status !== 'active') continue;
       if (task.intervalId) continue; // Already handled by interval timer
+      if (task.lastCronKey === minuteKey) continue; // Already fired this minute
 
       // Rough cron checker for standard specs like "0 8 * * *" (daily at 8am)
       if (this.matchesCron(task.config.expression, now)) {
+        task.lastCronKey = minuteKey;
         this.executeTask(id);
       }
     }

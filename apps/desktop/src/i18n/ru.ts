@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Russian Translations (Optimized)
-// ==============================================================================
-
 import type { TranslationKeys } from './types';
 
 export const ru: TranslationKeys = {
@@ -35,7 +31,7 @@ export const ru: TranslationKeys = {
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v1.1.5-beta2',
+    version: 'v1.1.5',
     deviceReconnected: 'Повторное подключение к устройству: {{name}}',
     devicePaired: 'Устройство успешно сопряжено: {{name}}',
     commandReceived: 'Команда получена от устройства: {{action}}',
@@ -471,7 +467,7 @@ export const ru: TranslationKeys = {
     hide: 'Скрыть ключ',
     show: 'Показать ключ',
     fetch: 'Получить',
-    // Phase 1.1: Multi-key
+    
     addKey: 'Добавить ключ',
     removeKey: 'Удалить',
     keyStrategy: 'Стратегия ротации ключей API',
@@ -535,7 +531,7 @@ export const ru: TranslationKeys = {
     noContainersDesc:
       'Изолированный контейнер Docker запустится автоматически, когда ИИ понадобится запустить тесты или потенциально небезопасные операции.',
   },
-  // Phase 7: Notification System (Q3 2026)
+  
   notification: {
     ariaLabel: 'Уведомления',
     title: 'Уведомления',
@@ -544,7 +540,7 @@ export const ru: TranslationKeys = {
     unreadBadge: '{{count}}',
     dismiss: 'Закрыть уведомление',
   },
-  // Phase 8: Voice I/O (Q3 2026)
+  
   voice: {
     start: 'Начать голосовой ввод',
     stop: 'Остановить прослушивание',
@@ -552,7 +548,7 @@ export const ru: TranslationKeys = {
     unsupported: 'Голосовой ввод не поддерживается',
     unsupportedHint: 'Распознавание речи недоступно в этой среде',
   },
-  // Phase 9: Monitoring Dashboard (Q3 2026)
+  
   monitoring: {
     title: 'Мониторинг',
     loading: 'Загрузка мониторинга…',
@@ -574,7 +570,7 @@ export const ru: TranslationKeys = {
     lastSeen: 'Последний раз',
     refresh: 'Обновить',
   },
-  // Phase 10: Quota & Rate Limiting (Q3 2026)
+  
   quota: {
     title: 'Квоты и лимиты',
     loading: 'Загрузка квот…',
@@ -598,7 +594,7 @@ export const ru: TranslationKeys = {
     refresh: 'Обновить',
     budgetUsage: 'Использование бюджета',
   },
-  // Phase 11: Code Knowledge Graph (Q3 2026)
+  
   codeGraph: {
     title: 'Граф кодовой базы',
     workspacePath: 'Путь к рабочей директории',

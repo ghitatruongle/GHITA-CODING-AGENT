@@ -1,10 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - IDE Types (Phase 17)
 // Extension types for CodeView, FileExplorer, EditorTabBar components.
-// KHÔNG augment shared/src/types.ts - file mới này chỉ chứa IDE-domain types.
-// ==============================================================================
 
-/** Một file đang mở trong editor tab */
 export interface EditorTab {
   /** Absolute path on disk */
   path: string;
@@ -12,62 +7,59 @@ export interface EditorTab {
   name: string;
   /** Language id (vd: 'typescript', 'rust', 'markdown') */
   language: string;
-  /** Current buffer content (đã sửa) */
+  
   content: string;
-  /** Last saved content (so sánh với content để biết dirty) */
+  
   savedContent: string;
   /** Cached icon hint (vd: 'file-code', 'file-text') */
   iconHint?: string;
   /** Truncated path for tooltip (vd: 'src/components/Foo.tsx') */
   displayPath?: string;
-  /** Có đang readonly (vd: file ngoài workspace) */
+  
   readonly?: boolean;
   /** Encoding (vd: 'utf-8', 'utf-16le') */
   encoding?: string;
 }
 
-/** Trạng thái của một file (chỉ s/dung cho FileExplorer) */
 export type FileEntryState = 'clean' | 'dirty' | 'saving' | 'error' | 'loading';
 
-/** Một entry trong FileExplorer tree */
 export interface FileExplorerNode {
   /** Absolute path */
   path: string;
   /** Display name */
   name: string;
-  /** Loại */
+  
   type: 'file' | 'directory' | 'symlink';
-  /** File size (bytes); undefined nếu là directory */
+  
   size?: number;
   /** Last modified (epoch ms) */
   modifiedAt?: number;
-  /** Children (chỉ với directory) */
+  
   children?: FileExplorerNode[];
-  /** Trạng thái dirty/loading (chỉ với file) */
+  
   state?: FileEntryState;
   /** Git status (optional) */
   gitStatus?: 'untracked' | 'modified' | 'added' | 'deleted' | 'renamed' | 'ignored';
-  /** Đang expand (cho directory) */
+  
   expanded?: boolean;
   /** Depth trong tree (root = 0) */
   depth: number;
-  /** Có đang được filter/search match không */
+  
   matched?: boolean;
 }
 
-/** Trạng thái của editor tab bar */
 export interface EditorTabBarState {
-  /** Tất cả tabs đang mở (theo thứ tự) */
+  
   tabs: EditorTab[];
-  /** Đường dẫn tab đang active */
+  
   activePath: string;
-  /** Số tabs dirty (modified) */
+  
   dirtyCount: number;
-  /** Max tabs cho phép (overflow → close oldest) */
+  
   maxTabs: number;
-  /** Có hiển thị close button trên tab không */
+  
   showCloseButton: boolean;
-  /** Có wrap tabs khi overflow không */
+  
   wrapTabs: boolean;
 }
 
@@ -125,10 +117,8 @@ export interface FileOperationLogEntry {
   error?: string;
 }
 
-/** Dirty file map (path → true nếu dirty) */
 export type DirtyFileMap = Map<string, boolean> | Record<string, boolean>;
 
-/** Helper: check if a file is dirty (handles cả Map và plain object) */
 export function isDirty(map: DirtyFileMap, path: string): boolean {
   if (map instanceof Map) return map.get(path) === true;
   return map[path] === true;
@@ -155,7 +145,6 @@ export function countDirty(map: DirtyFileMap): number {
   return Object.values(map).filter(Boolean).length;
 }
 
-/** Helper: detect language từ extension (subset Monaco language ids) */
 export function detectLanguageFromExt(filename: string): string {
   const ext = filename.split('.').pop()?.toLowerCase() ?? '';
   const map: Record<string, string> = {

@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — Remote Control Screen (Composition Root)
 // Main screen after pairing: screen preview, chat, quick actions
-// ==============================================================================
 
 import React from 'react';
 import {

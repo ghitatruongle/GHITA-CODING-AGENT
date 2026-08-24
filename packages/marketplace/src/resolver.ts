@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Dependency Resolver (Phase 31)
 // Resolves plugin dependency trees with conflict detection
-// ==============================================================================
 
 import { compareSemver, satisfiesRange } from './manifest.js';
 import type {

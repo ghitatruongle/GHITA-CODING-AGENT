@@ -51,9 +51,8 @@ function makeSkillMeta(overrides?: Partial<SkillMeta>): SkillMeta {
   return meta;
 }
 
-// =============================================================================
 // SkillGuard Tests
-// =============================================================================
+
 describe('SkillGuard', () => {
   beforeEach(() => makeTmpDir());
   afterEach(() => cleanTmpDir());
@@ -206,9 +205,8 @@ describe('SkillGuard', () => {
   });
 });
 
-// =============================================================================
 // LockManager Tests
-// =============================================================================
+
 describe('LockManager', () => {
   beforeEach(() => makeTmpDir());
   afterEach(() => cleanTmpDir());
@@ -409,9 +407,8 @@ describe('LockManager', () => {
   });
 });
 
-// =============================================================================
 // AuditLog Tests
-// =============================================================================
+
 describe('AuditLog', () => {
   beforeEach(() => makeTmpDir());
   afterEach(() => cleanTmpDir());
@@ -545,9 +542,8 @@ describe('AuditLog', () => {
   });
 });
 
-// =============================================================================
 // HubRegistry Tests (Integration)
-// =============================================================================
+
 describe('HubRegistry', () => {
   beforeEach(() => makeTmpDir());
   afterEach(() => cleanTmpDir());
@@ -838,9 +834,8 @@ describe('HubRegistry', () => {
   });
 });
 
-// =============================================================================
 // Skills Commands Tests
-// =============================================================================
+
 describe('Skills Commands', () => {
   beforeEach(() => makeTmpDir());
   afterEach(() => cleanTmpDir());

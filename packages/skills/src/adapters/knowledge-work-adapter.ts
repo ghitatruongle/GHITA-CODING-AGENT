@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Declarative Knowledge Work Plugin Adapter
-// ==============================================================================
 // Absorbed from Anthropic Knowledge Work Plugins reference project.
 // Parses declarative Markdown + JSON plugin manifests to extend GHITA Agent with
 // domain specialist capabilities (Cost Estimator, Legal License Compliance, DevOps).
-// ==============================================================================
 
 import type { SkillDefinition } from '../types.js';
 import { SKILLS_VERSION } from '../types.js';

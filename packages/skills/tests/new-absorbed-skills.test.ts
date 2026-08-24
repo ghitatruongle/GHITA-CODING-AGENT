@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Test Suite for Absorbed Skills (v0.3.7)
-// ==============================================================================
-
 import { describe, it, expect } from 'vitest';
 import {
   generateSlideDeck,

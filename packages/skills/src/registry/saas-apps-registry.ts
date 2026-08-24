@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - SaaS App Registry (50+ Apps)
-// ==============================================================================
 // Type definitions and the complete SaaS application registry.
 // Extracted from composioAdapter.ts for modularity.
-// ==============================================================================
 
 export type SaaSCategory =
   | 'crm'

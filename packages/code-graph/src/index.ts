@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 13 / Track 3 (v1.1.5-beta1): Code Knowledge Graph
-// ==============================================================================
-
 // --- Types ---
 export type {
   CodeNode,
@@ -40,7 +36,6 @@ export { CodeGraphMCPServer } from './mcp-server.js';
 export { IndexBudgetTracker, estimateNodeBytes, estimateEdgeBytes } from './budget.js';
 export type { IndexBudgetOptions, IndexBudgetState } from './budget.js';
 
-// --- Track 3.2: Content-Addressed Index & PauseToken ---
 export { PauseToken } from './pause-token.js';
 export {
   ContentAddressedIndex,
@@ -48,7 +43,6 @@ export {
   type ContentIndexStats,
 } from './content-index.js';
 
-// --- Track 3.3: Auto-Sync Watcher ---
 export {
   CodeGraphWatcher,
   type WatcherOptions,
@@ -56,7 +50,6 @@ export {
   type WatcherEvent,
 } from './watcher.js';
 
-// --- Track 3.4: Repo-Map Ranking & Session Injection ---
 export {
   computePageRank,
   getRepoMap,
@@ -72,7 +65,6 @@ export {
   type RepoMapSessionResult,
 } from './repo-map.js';
 
-// --- Track 3.5: Multi-Server LSP Client & Diagnostics Ledger ---
 export {
   LspDiagnosticSeverity,
   type LspDiagnostic,
@@ -352,59 +344,35 @@ export class CodeKnowledgeGraph {
     return buildRepoMap(this.graph.getAllNodes(), this.graph.getAllEdges(), budgetTokens, options);
   }
 
-  /**
-   * Track 3 (3.1): Get callers of a function/method/symbol.
-   */
   getCallers(symbolIdOrName: string): CodeNode[] {
     return this.graph.getCallers(symbolIdOrName);
   }
 
-  /**
-   * Track 3 (3.1): Get callees of a function/method/symbol.
-   */
   getCallees(symbolIdOrName: string): CodeNode[] {
     return this.graph.getCallees(symbolIdOrName);
   }
 
-  /**
-   * Track 3 (3.1): Calculate blast radius (impact report) when a symbol changes.
-   */
   getImpact(symbolIdOrName: string, maxDepth = 3) {
     return this.graph.getImpact(symbolIdOrName, maxDepth);
   }
 
-  /**
-   * Track 3 (3.1): Explore neighborhood subgraph around a symbol or file.
-   */
   explore(startSymbolOrFile: string, options?: { depth?: number; kinds?: CodeNode['kind'][] }) {
     return this.graph.explore(startSymbolOrFile, options);
   }
 
-  /**
-   * Track 3 (3.2): Access content-addressed indexing service.
-   */
   getContentIndex(): ContentAddressedIndex {
     return this.contentIndex;
   }
 
-  /**
-   * Track 3 (3.3): Create a live auto-sync watcher.
-   */
   createWatcher(options?: WatcherOptions): CodeGraphWatcher {
     return new CodeGraphWatcher(this, options);
   }
 
-  /**
-   * Track 3 (3.4): Build tree-structured repo map.
-   */
   getRepoMapTree(budgetTokens = 2000, options?: PageRankOptions & TreeRepoMapOptions): string {
     const map = this.getRepoMap(budgetTokens, options);
     return renderTreeRepoMap(map, options);
   }
 
-  /**
-   * Track 3 (3.4): Generate session repo map with caching.
-   */
   getSessionRepoMap(
     budgetTokens = 2000,
     options?: PageRankOptions & TreeRepoMapOptions,
@@ -417,9 +385,6 @@ export class CodeKnowledgeGraph {
     );
   }
 
-  /**
-   * Track 3 (3.5): Get or lazily initialize the multi-server LSP manager.
-   */
   getLspManager(): LspManager {
     if (!this.lspManager) {
       this.lspManager = new LspManager();
@@ -427,9 +392,6 @@ export class CodeKnowledgeGraph {
     return this.lspManager;
   }
 
-  /**
-   * Track 3 (3.1): Detailed graph status.
-   */
   statusDetailed() {
     const s = this.graph.status();
     s.storeActive = this.store !== null;

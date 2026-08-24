@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — ScreenPreviewPanel Component
 // Screen preview + cost telemetry display
-// ==============================================================================
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';

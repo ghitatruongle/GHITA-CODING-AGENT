@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Priority & Routing (Phase 35)
-// ==============================================================================
-
 import type { Notification, NotificationPriority, NotificationChannel } from './types.js';
 
 /** Numeric weight for priority comparison */

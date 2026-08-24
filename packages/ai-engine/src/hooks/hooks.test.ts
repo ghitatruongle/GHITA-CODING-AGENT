@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Streaming Hooks Tests (Phase 14 — Update 0.0.3)
-// ==============================================================================
-
 import { describe, it, expect } from 'vitest';
 import { StreamingBuffer } from './buffer.js';
 import { StreamingPipeline, streamWithHooks, type Hook } from './streaming.js';

@@ -1,5 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Audit Fix 2.18 Regression Tests
 //
 // Covers the daemon restart-cycle fix in `GatewayDaemon.restartWorker()`:
 // the previous implementation only mutated the in-memory status object
@@ -16,7 +14,6 @@
 // only public surface for registering workers is `start()` and we need
 // to drive `restartWorker()` with controlled stop/start hooks to assert
 // the cycle is invoked in order.
-// ==============================================================================
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { GatewayDaemon } from '../src/daemon.js';

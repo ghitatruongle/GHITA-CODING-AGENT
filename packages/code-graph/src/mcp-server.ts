@@ -1,10 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - CodeGraph MCP Server (standard @ghita/mcp + official SDK)
-// ==============================================================================
 // Exposes CodeKnowledgeGraph operations as standard MCP tools. Built on
 // @ghita/mcp (official @modelcontextprotocol SDK) — the previous hand-written
-// JSON-RPC protocol was removed (v1.1.0 Track 1 P19/P23).
-// ==============================================================================
 
 import { createMCPServer, type GhitaMCPServer, type ToolDefinition } from '@ghita/mcp';
 import type { CodeKnowledgeGraph } from './index.js';
@@ -16,9 +11,7 @@ export class CodeGraphMCPServer {
   /** The standard tools exposed by CodeGraph MCP server. */
   listTools(): ToolDefinition[] {
     return [
-      // -----------------------------------------------------------------------
-      // Track 3 (3.1): codegraph_callers
-      // -----------------------------------------------------------------------
+      
       {
         name: 'codegraph_callers',
         description:
@@ -76,9 +69,6 @@ export class CodeGraphMCPServer {
         },
       },
 
-      // -----------------------------------------------------------------------
-      // Track 3 (3.1): codegraph_callees
-      // -----------------------------------------------------------------------
       {
         name: 'codegraph_callees',
         description:
@@ -135,9 +125,6 @@ export class CodeGraphMCPServer {
         },
       },
 
-      // -----------------------------------------------------------------------
-      // Track 3 (3.1): codegraph_impact (Blast-Radius Analysis)
-      // -----------------------------------------------------------------------
       {
         name: 'codegraph_impact',
         description:
@@ -202,9 +189,6 @@ export class CodeGraphMCPServer {
         },
       },
 
-      // -----------------------------------------------------------------------
-      // Track 3 (3.1): codegraph_explore
-      // -----------------------------------------------------------------------
       {
         name: 'codegraph_explore',
         description: 'Explore the neighborhood subgraph around a specific symbol or file',
@@ -267,9 +251,6 @@ export class CodeGraphMCPServer {
         },
       },
 
-      // -----------------------------------------------------------------------
-      // Track 3 (3.1): codegraph_status
-      // -----------------------------------------------------------------------
       {
         name: 'codegraph_status',
         description:
@@ -281,9 +262,8 @@ export class CodeGraphMCPServer {
         },
       },
 
-      // -----------------------------------------------------------------------
       // Existing tools (backward compatibility)
-      // -----------------------------------------------------------------------
+      
       {
         name: 'search_code_symbols',
         description: 'Search symbols (functions, classes, variables) in the indexed AST code graph',

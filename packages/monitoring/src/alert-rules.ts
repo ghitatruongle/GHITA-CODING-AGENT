@@ -1,24 +1,12 @@
-// ==============================================================================
-// Phase 32: Alert Rules Engine
-// ==============================================================================
-
 import type { AlertRule, AlertEvent, CapturedError, Severity } from './types.js';
 
 interface RuleState {
-  /** Timestamps các lần trigger trong window hiện tại */
+  
   occurrences: number[];
-  /** Timestamp lần cuối fire alert (để enforce cooldown) */
+  
   lastFiredAt: number;
 }
 
-/**
- * AlertEngine — đánh giá AlertRule dựa trên error events.
- *
- * Mỗi rule có:
- *  - pattern: regex match error message hoặc fingerprint
- *  - threshold: số lần xảy ra trong windowMs
- *  - cooldownMs: thời gian chờ giữa 2 lần fire
- */
 export class AlertEngine {
   private readonly rules = new Map<string, AlertRule>();
   private readonly state = new Map<string, RuleState>();
@@ -33,27 +21,18 @@ export class AlertEngine {
     this.onLog = options.logger;
   }
 
-  /**
-   * Đăng ký alert rule.
-   */
   addRule(rule: AlertRule): void {
     this.rules.set(rule.id, rule);
     this.state.set(rule.id, { occurrences: [], lastFiredAt: 0 });
     this.log('debug', `Alert rule registered: ${rule.id} (${rule.name})`);
   }
 
-  /**
-   * Xóa rule.
-   */
   removeRule(id: string): boolean {
     const ok = this.rules.delete(id);
     this.state.delete(id);
     return ok;
   }
 
-  /**
-   * Bật/tắt rule.
-   */
   setEnabled(id: string, enabled: boolean): boolean {
     const rule = this.rules.get(id);
     if (!rule) return false;
@@ -61,16 +40,10 @@ export class AlertEngine {
     return true;
   }
 
-  /**
-   * Liệt kê tất cả rule.
-   */
   listRules(): AlertRule[] {
     return Array.from(this.rules.values());
   }
 
-  /**
-   * Feed error event vào engine. Trigger alert nếu rule khớp và đạt threshold.
-   */
   async evaluate(event: CapturedError): Promise<AlertEvent[]> {
     const triggered: AlertEvent[] = [];
     const now = event.timestamp;
@@ -83,7 +56,6 @@ export class AlertEngine {
       const state = this.state.get(id);
       if (!state) continue;
 
-      // Prune occurrences ngoài window
       state.occurrences = state.occurrences.filter((t) => now - t < rule.windowMs);
       state.occurrences.push(now);
 
@@ -122,9 +94,6 @@ export class AlertEngine {
     return triggered;
   }
 
-  /**
-   * Lấy stats.
-   */
   stats(): { rulesCount: number; activeRules: number; alertsTriggered: number } {
     return {
       rulesCount: this.rules.size,
@@ -144,19 +113,14 @@ export class AlertEngine {
     }
   }
 
-  /**
-   * Xóa tất cả rule.
-   */
   clear(): void {
     this.rules.clear();
     this.state.clear();
     this.alertsTriggered = 0;
   }
 
-  // ============================================================================
   // Private
-  // ============================================================================
-
+  
   private matchesRule(event: CapturedError, rule: AlertRule): boolean {
     try {
       const re = new RegExp(rule.pattern, 'i');

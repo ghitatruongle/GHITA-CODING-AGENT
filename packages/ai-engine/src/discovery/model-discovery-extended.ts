@@ -1,11 +1,7 @@
-// ==============================================================================
-// GHITA CODING AGENT - Model Discovery Extensions (Phase 10)
 // Built on top of ModelDiscovery (model-discovery.ts):
 //  - discoverAll() with provider presets (OpenAI, Anthropic, Opengateway, Ollama)
 //  - getStats() cho cache metrics
 //  - invalidateAll() bulk clear
-//  - PRESETS catalog với baseUrl + auth style + parser
-// ==============================================================================
 
 import {
   ModelDiscovery,
@@ -15,7 +11,6 @@ import {
 } from './model-discovery.js';
 import type { DiscoveryConfig, DiscoveryResult } from './types.js';
 
-/** Provider preset - shortcuts to construct DiscoveryConfig từ provider name */
 export interface ProviderPreset {
   providerType: string;
   displayName: string;
@@ -344,7 +339,6 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
   },
 ];
 
-/** Build DiscoveryConfig từ preset + optional API key */
 export function buildConfigFromPreset(preset: ProviderPreset, apiKey?: string): DiscoveryConfig {
   return {
     baseUrl: preset.baseUrl,
@@ -372,7 +366,6 @@ export class ModelDiscoveryExtended {
     return this.base;
   }
 
-  /** Discover models for a preset (auto-loads API key từ env) */
   async discoverPreset(preset: ProviderPreset): Promise<DiscoveryResult> {
     let apiKey: string | undefined;
     if (!preset.free && preset.envVars.length > 0) {

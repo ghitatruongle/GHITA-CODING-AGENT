@@ -1,14 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Code-graph index budget (v1.1.0 Track 9 B4)
-// ==============================================================================
-// Byte-budget tracker for the in-memory index: ước lượng bytes theo
-// node/edge counts, cảnh báo tại cap 200MB và gợi ý spill SQLite
-// (SQLiteGraphStore đã có trong code-graph).
-// ==============================================================================
-
 import type { CodeEdge, CodeNode } from './types.js';
 
-/** Ước lượng bytes lưu trữ một node (id + name + qualifiedName + filePath + excerpt). */
 export function estimateNodeBytes(node: CodeNode): number {
   return (
     node.id.length +
@@ -25,7 +16,7 @@ export function estimateEdgeBytes(edge: CodeEdge): number {
 }
 
 export interface IndexBudgetOptions {
-  /** Cap bytes (mặc định 200 MB). */
+  
   maxBytes?: number;
   onExceed?: (state: IndexBudgetState) => void;
 }
@@ -37,7 +28,7 @@ export interface IndexBudgetState {
   maxBytes: number;
   ratio: number;
   over: boolean;
-  /** Gợi ý spill khi vượt cap. */
+  
   spillSuggestion: boolean;
 }
 
@@ -53,7 +44,6 @@ export class IndexBudgetTracker {
     this.onExceed = options.onExceed;
   }
 
-  /** Add a batch of nodes/edges; returns false khi vượt cap (deny-default). */
   addBatch(nodes: readonly CodeNode[], edges: readonly CodeEdge[]): boolean {
     let added = 0;
     for (const n of nodes) added += estimateNodeBytes(n);
@@ -69,7 +59,6 @@ export class IndexBudgetTracker {
     return true;
   }
 
-  /** Evict n nodes (LRU-ish: theo thứ tự thêm) → giảm bytes. */
   evict(
     count: number,
     drop: (nodeIds: string[]) => void,

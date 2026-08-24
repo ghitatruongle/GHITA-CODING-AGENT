@@ -1,11 +1,8 @@
 #!/usr/bin/env node
-// ==============================================================================
-// GHITA CODING AGENT — v1.0.0 `pnpm doctor`
-// ==============================================================================
+
 // Diagnoses the development environment and prints actionable fixes.
 // Usage:  pnpm doctor          (from the repo root)
 // Exit 0 when everything required is present, 1 otherwise.
-// ==============================================================================
 
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, statfsSync } from 'node:fs';

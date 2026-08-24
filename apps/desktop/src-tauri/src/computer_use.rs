@@ -445,12 +445,7 @@ fn find_window_by_title(title_substring: &str) -> Result<isize, String> {
         found: None,
     };
 
-    unsafe {
-        EnumWindows(
-            Some(enum_callback),
-            &mut state as *mut EnumState as isize,
-        )
-    };
+    unsafe { EnumWindows(Some(enum_callback), &mut state as *mut EnumState as isize) };
 
     state.found.ok_or_else(|| {
         format!(
@@ -471,7 +466,9 @@ pub fn computer_window_move(
 ) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
-        use windows_sys::Win32::UI::WindowsAndMessaging::{GetWindowRect, SetWindowPos, SWP_NOACTIVATE, SWP_NOZORDER};
+        use windows_sys::Win32::UI::WindowsAndMessaging::{
+            GetWindowRect, SetWindowPos, SWP_NOACTIVATE, SWP_NOZORDER,
+        };
 
         let hwnd = find_window_by_title(&title)?;
 
@@ -484,7 +481,10 @@ pub fn computer_window_move(
         } else {
             let mut rect = unsafe { std::mem::zeroed() };
             unsafe { GetWindowRect(hwnd as _, &mut rect) };
-            ((rect.right - rect.left) as i32, (rect.bottom - rect.top) as i32)
+            (
+                (rect.right - rect.left) as i32,
+                (rect.bottom - rect.top) as i32,
+            )
         };
 
         let ok = unsafe {
@@ -516,7 +516,9 @@ pub fn computer_window_move(
 pub fn computer_window_focus(title: String) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
-        use windows_sys::Win32::UI::WindowsAndMessaging::{SetForegroundWindow, ShowWindow, SW_RESTORE};
+        use windows_sys::Win32::UI::WindowsAndMessaging::{
+            SetForegroundWindow, ShowWindow, SW_RESTORE,
+        };
 
         let hwnd = find_window_by_title(&title)?;
         unsafe {

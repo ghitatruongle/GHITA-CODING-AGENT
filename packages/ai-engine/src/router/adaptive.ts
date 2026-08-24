@@ -1,15 +1,10 @@
-// ==============================================================================
-// GHITA CODING AGENT - Adaptive Router (Phase 2)
 // Complexity-based model selection for optimal cost/quality tradeoff
-// ==============================================================================
 
 import type { AIProviderType } from '@ghita/shared';
 import type { ChatMessage, ChatOptions } from '../types.js';
 import { getModelPricing, type ModelPricing } from '../cost/tracker.js';
 
-// ---------------------------------------------------------------------------
 // Complexity Analysis
-// ---------------------------------------------------------------------------
 
 /** Complexity tier that maps to a model class */
 export type ComplexityTier = 'trivial' | 'simple' | 'moderate' | 'complex' | 'expert';
@@ -40,9 +35,7 @@ export interface ComplexityFactors {
 /** Model class from cheapest to most capable */
 export type ModelClass = 'fast' | 'standard' | 'capable' | 'premium' | 'frontier';
 
-// ---------------------------------------------------------------------------
 // Configuration
-// ---------------------------------------------------------------------------
 
 export interface AdaptiveRouterConfig {
   /** Override thresholds for tier boundaries (defaults applied if omitted) */
@@ -57,9 +50,7 @@ export interface AdaptiveRouterConfig {
   debug?: boolean;
 }
 
-// ---------------------------------------------------------------------------
 // Default tier thresholds & model mappings
-// ---------------------------------------------------------------------------
 
 const DEFAULT_THRESHOLDS: Record<ComplexityTier, number> = {
   trivial: 0.15,
@@ -85,9 +76,7 @@ const DEFAULT_PROVIDER_MAP: Record<ModelClass, AIProviderType> = {
   frontier: 'openai',
 };
 
-// ---------------------------------------------------------------------------
 // Reasoning / creativity / code keyword sets
-// ---------------------------------------------------------------------------
 
 const REASONING_KEYWORDS = [
   'explain',
@@ -169,9 +158,7 @@ const STRUCTURED_OUTPUT_KEYWORDS = [
   'format as',
 ];
 
-// ---------------------------------------------------------------------------
 // AdaptiveRouter
-// ---------------------------------------------------------------------------
 
 export class AdaptiveRouter {
   private thresholds: Record<ComplexityTier, number>;
@@ -191,10 +178,8 @@ export class AdaptiveRouter {
     this.debug = config.debug ?? false;
   }
 
-  // -----------------------------------------------------------------------
   // Public API
-  // -----------------------------------------------------------------------
-
+  
   /**
    * Analyze the complexity of a conversation and return a full analysis.
    */
@@ -297,10 +282,8 @@ export class AdaptiveRouter {
     Object.assign(this.providerMap, partial);
   }
 
-  // -----------------------------------------------------------------------
   // Private: factor extraction
-  // -----------------------------------------------------------------------
-
+  
   private extractFactors(messages: ChatMessage[]): ComplexityFactors {
     const allText = messages.map((m) => m.content).join('\n');
     const lowerText = allText.toLowerCase();
@@ -338,10 +321,8 @@ export class AdaptiveRouter {
     };
   }
 
-  // -----------------------------------------------------------------------
   // Private: score computation
-  // -----------------------------------------------------------------------
-
+  
   private computeScore(f: ComplexityFactors): number {
     let score = 0;
 
@@ -379,10 +360,8 @@ export class AdaptiveRouter {
     return this.clamp(score, 0, 1);
   }
 
-  // -----------------------------------------------------------------------
   // Private: tier & class mapping
-  // -----------------------------------------------------------------------
-
+  
   private scoreToTier(score: number): ComplexityTier {
     if (score <= this.thresholds.trivial) return 'trivial';
     if (score <= this.thresholds.simple) return 'simple';
@@ -409,10 +388,8 @@ export class AdaptiveRouter {
     }
   }
 
-  // -----------------------------------------------------------------------
   // Helpers
-  // -----------------------------------------------------------------------
-
+  
   private countKeywordHits(text: string, keywords: string[]): number {
     let hits = 0;
     for (const kw of keywords) {

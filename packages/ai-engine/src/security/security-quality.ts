@@ -68,9 +68,7 @@ function jaccardSimilarity(a: string, b: string): number {
   return union.size === 0 ? 0 : intersection.size / union.size;
 }
 
-// ---------------------------------------------------------------------------
 // T5.5: Terminal Command Scorer
-// ---------------------------------------------------------------------------
 
 export type RiskLevel = 'safe' | 'caution' | 'dangerous' | 'blocked';
 
@@ -145,9 +143,7 @@ export function shouldBlockCommand(command: string, threshold = 70): boolean {
   return result.blocked || result.score >= threshold;
 }
 
-// ---------------------------------------------------------------------------
 // T5.6: Canonical Scan Artifacts
-// ---------------------------------------------------------------------------
 
 export interface ScanManifest {
   schema: 'scan-manifest-v1';

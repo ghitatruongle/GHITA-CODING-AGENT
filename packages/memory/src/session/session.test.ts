@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Session Management Tests (Phase 24 — Update 0.0.3)
-// ==============================================================================
-
 import { describe, it, expect } from 'vitest';
 import { SessionManager, InMemorySessionStore, type SessionStore } from './session.js';
 

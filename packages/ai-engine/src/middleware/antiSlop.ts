@@ -1,20 +1,10 @@
-// ==============================================================================
-// GHITA CODING AGENT — Phase 10: Anti-Slop Output Filtration Middleware
-// ==============================================================================
-// Lọc sạch từ ngữ chào hỏi thừa thãi ("Certainly!", "I can help with...")
-// ra khỏi luồng stream kết quả LLM để tiết kiệm token tối đa.
-// Tham chiếu: Continue (anti-slop)
-// ==============================================================================
-
 import type BetterSqlite3 from 'better-sqlite3';
 type BetterSqlite3Database = InstanceType<typeof BetterSqlite3>;
 import type { ChatMiddleware, ChatStreamMiddleware } from '../utils/middleware.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
-// ──────────────────────────────────────────────────────────────────────────────
 // Types
-// ──────────────────────────────────────────────────────────────────────────────
 
 export interface AntiSlopConfig {
   /** Custom slop patterns to filter (regex strings) */
@@ -43,9 +33,7 @@ interface Runnable {
   run(params: Record<string, unknown>): unknown;
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
 // Default Slop Patterns — common LLM filler phrases
-// ──────────────────────────────────────────────────────────────────────────────
 
 const DEFAULT_SLOP_PATTERNS: SlopPattern[] = [
   // Longer / more specific patterns first to avoid partial matches
@@ -95,9 +83,7 @@ const DEFAULT_SLOP_PATTERNS: SlopPattern[] = [
   { regex: /^(?:Sure!?\s*)/i, description: 'Sure!' },
 ];
 
-// ──────────────────────────────────────────────────────────────────────────────
 // Aho-Corasick Implementation — multi-pattern string matching in O(n)
-// ──────────────────────────────────────────────────────────────────────────────
 
 class AhoCorasick {
   private gotoFn: Map<string, number>[] = [];
@@ -207,9 +193,7 @@ class AhoCorasick {
   }
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
 // Markdown Code Block Detection — disable filter inside code blocks
-// ──────────────────────────────────────────────────────────────────────────────
 
 interface CodeBlockState {
   inCodeBlock: boolean;
@@ -255,9 +239,7 @@ function isInsideCodeBlock(state: CodeBlockState, line: string): boolean {
   return state.inCodeBlock;
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
 // Slop YAML Loader (simple key-value parser)
-// ──────────────────────────────────────────────────────────────────────────────
 
 function loadSlopConfig(configPath: string): string[] {
   try {
@@ -288,9 +270,7 @@ function loadSlopConfig(configPath: string): string[] {
   }
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
 // Token Savings Tracker
-// ──────────────────────────────────────────────────────────────────────────────
 
 class TokenSavingsTracker {
   private logs: TokenSavingsLog[] = [];
@@ -400,9 +380,7 @@ class TokenSavingsTracker {
   }
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
 // Core: Anti-Slop Filter
-// ──────────────────────────────────────────────────────────────────────────────
 
 export class AntiSlopFilter {
   private patterns: SlopPattern[];
@@ -557,9 +535,7 @@ export class AntiSlopFilter {
   }
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
 // Factory: Create ChatStreamMiddleware (for wrapping LLM stream output)
-// ──────────────────────────────────────────────────────────────────────────────
 
 export function createAntiSlopStreamMiddleware(config?: AntiSlopConfig): ChatStreamMiddleware {
   const filter = new AntiSlopFilter(config);
@@ -639,9 +615,7 @@ export function createAntiSlopStreamMiddleware(config?: AntiSlopConfig): ChatStr
   };
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
 // Factory: Create ChatMiddleware (for non-streaming responses)
-// ──────────────────────────────────────────────────────────────────────────────
 
 export function createAntiSlopMiddleware(config?: AntiSlopConfig): ChatMiddleware {
   const filter = new AntiSlopFilter(config);
@@ -670,9 +644,7 @@ export function createAntiSlopMiddleware(config?: AntiSlopConfig): ChatMiddlewar
   };
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
 // Standalone: quick clean utility (no middleware needed)
-// ──────────────────────────────────────────────────────────────────────────────
 
 export function cleanSlop(text: string, config?: AntiSlopConfig): string {
   const filter = new AntiSlopFilter(config);

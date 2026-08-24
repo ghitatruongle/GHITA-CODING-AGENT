@@ -1,6 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - v1.1.5-beta1 Track 4.5: Model Middleware Stack
-// ------------------------------------------------------------------------------
 // Composable middleware for model response processing (pattern: vercel-ai
 // extract-reasoning, simulate-streaming, repaired-parse). Each middleware
 // plugs into the existing AgentMiddleware pipeline from @ghita/agents.
@@ -12,15 +9,12 @@
 //                           for uniform downstream handling
 //   - repairedParse       : accept structured output only when unambiguous;
 //                           reject partial/ambiguous repairs
-// ==============================================================================
 
 import type { AgentMiddleware, MiddlewareContext, PostModelResult } from '@ghita/agents';
 import type { BaseMessage } from '@ghita/agents';
 import { AIMessage } from '@ghita/agents';
 
-// ---------------------------------------------------------------------------
 // Extract Reasoning Middleware
-// ---------------------------------------------------------------------------
 
 export interface ExtractReasoningOptions {
   /** Regex patterns to detect reasoning blocks in content. */
@@ -80,9 +74,7 @@ export function createExtractReasoningMiddleware(
   };
 }
 
-// ---------------------------------------------------------------------------
 // Simulate Streaming Middleware
-// ---------------------------------------------------------------------------
 
 export interface SimulateStreamingOptions {
   /** Chunk size in characters (default: 50). */
@@ -125,9 +117,7 @@ export function createSimulateStreamingMiddleware(
   };
 }
 
-// ---------------------------------------------------------------------------
 // Repaired Parse Middleware
-// ---------------------------------------------------------------------------
 
 export interface RepairedParseOptions {
   /** JSON schema validator function. Return true if valid. */

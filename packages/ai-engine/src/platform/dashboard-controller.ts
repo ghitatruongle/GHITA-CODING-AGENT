@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Dashboard Controller
-// ==============================================================================
-
 import * as crypto from 'node:crypto';
 import type { AIGatewayServer } from './gateway.js';
 

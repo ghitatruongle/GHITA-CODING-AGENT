@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Plugin Marketplace Types (Phase 31)
-// ==============================================================================
-
 /** Plugin manifest — the package.json-based descriptor for marketplace plugins */
 export interface PluginManifest {
   /** Unique plugin identifier (npm-style scoped name) */

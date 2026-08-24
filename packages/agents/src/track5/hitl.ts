@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Agents v1.1.0 Track 5 P35: human-in-the-loop requests
-// ==============================================================================
 // First-class HITL: request_human_input with options/urgency/format and
 // webhook resume (12-factor-agents pattern). The loop pauses until a human
 // answers (or the request times out).
-// ==============================================================================
 
 export type Urgency = 'low' | 'normal' | 'high';
 

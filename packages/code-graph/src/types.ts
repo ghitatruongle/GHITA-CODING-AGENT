@@ -1,12 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 13: Code Knowledge Graph — Types
-// ==============================================================================
 // Core type definitions for graph nodes, edges, symbols, and search results.
-// ==============================================================================
 
-// ---------------------------------------------------------------------------
 // Node types — represent code entities extracted from AST
-// ---------------------------------------------------------------------------
 
 export type CodeNodeKind =
   | 'function'
@@ -53,9 +47,7 @@ export interface CodeNode {
   indexedAt: number;
 }
 
-// ---------------------------------------------------------------------------
 // Edge types — represent relationships between nodes
-// ---------------------------------------------------------------------------
 
 export type CodeEdgeKind =
   | 'import'
@@ -79,9 +71,7 @@ export interface CodeEdge {
   line?: number;
 }
 
-// ---------------------------------------------------------------------------
 // Dependency Graph
-// ---------------------------------------------------------------------------
 
 export interface DependencyGraph {
   /** All nodes indexed by id */
@@ -111,9 +101,7 @@ export interface ImportInfo {
   line: number;
 }
 
-// ---------------------------------------------------------------------------
 // Search types
-// ---------------------------------------------------------------------------
 
 export type SearchScope = 'all' | 'function' | 'class' | 'interface' | 'module' | 'type' | 'enum';
 
@@ -140,9 +128,7 @@ export interface SearchResult {
   highlights: Array<[number, number]>;
 }
 
-// ---------------------------------------------------------------------------
 // Store adapter interface
-// ---------------------------------------------------------------------------
 
 export interface GraphStore {
   /** Save or update a batch of nodes */
@@ -169,9 +155,7 @@ export interface GraphStore {
   close(): void;
 }
 
-// ---------------------------------------------------------------------------
 // Parse options
-// ---------------------------------------------------------------------------
 
 export interface ParseOptions {
   /** File extensions to include (default: ['.ts', '.tsx', '.js', '.jsx']) */
@@ -188,10 +172,6 @@ export interface ParseOptions {
    */
   forceJs?: boolean;
 }
-
-// ---------------------------------------------------------------------------
-// Track 3 (v1.1.5-beta1): Code-graph v2 Types
-// ---------------------------------------------------------------------------
 
 /**
  * Impact report (blast-radius analysis) when changing a symbol.

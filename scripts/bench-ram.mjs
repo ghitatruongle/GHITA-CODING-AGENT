@@ -1,14 +1,8 @@
 #!/usr/bin/env node
-// ==============================================================================
-// GHITA CODING AGENT - RAM benchmark suite (v1.1.0 Track 9 B1)
-// ------------------------------------------------------------------------------
-// 4 scenarios đo heap delta + peak RSS:
-//   [A] security scanner trên 5MB code
-//   [B] BM25 index + query trên 10k chunks
+
 //   [C] chat history 200 messages (ChatHistoryBudget)
-//   [D] terminal scrollback 10k dòng (ScrollbackBudget)
+
 // Usage: node scripts/bench-ram.mjs [--json] [--baseline]
-// ==============================================================================
 
 import { performance } from 'node:perf_hooks';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -39,7 +33,6 @@ function scenario(name, work) {
 export function runAll() {
   const results = {};
 
-  // [A] scanner 5MB (streaming-ish: split thì nhớ; dùng fast alternation)
   const code = genCode(5);
   const a = scenario('scanner-5mb', () => {
     const combined = new RegExp('(?:sk-[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}|PRIVATE KEY|password\\s*[:=])', 'gm');

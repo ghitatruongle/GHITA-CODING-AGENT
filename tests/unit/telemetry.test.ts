@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 8 Integration & Telemetry Tests
-// ==============================================================================
-
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import { SemanticCache } from '../../packages/ai-engine/src/utils/cache.js';
 import { CostTracker, BudgetManager } from '../../packages/ai-engine/src/utils/cost.js';

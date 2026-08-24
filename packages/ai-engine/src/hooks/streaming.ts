@@ -1,11 +1,7 @@
-// ==============================================================================
-// GHITA CODING AGENT - Streaming Hooks + Real-time (Phase 14 — Update 0.0.3)
-// ==============================================================================
 // Pre/post generation hooks for LLM streaming pipeline.
 // - HookContext: passed to each hook with metadata
 // - HookPipeline: ordered list of hooks, runs pre and post events
 // - Plugin hook interface: third-party plugins can register via registerHook()
-// ==============================================================================
 
 import { StreamingBuffer } from './buffer.js';
 
@@ -156,15 +152,33 @@ export async function* streamWithHooks(
   baseCtx: Partial<HookContext> = {},
 ): AsyncGenerator<string, void, void> {
   let accumulated = '';
-  for await (const chunk of chunks) {
-    accumulated += chunk;
+  // Coalesce hook invocations into ~40ms batches: per-token middleware
+  // multiplied its overhead across the whole stream. Consumers still receive
+  // every chunk unchanged; hooks just see batched `chunk` payloads.
+  const BATCH_MS = 40;
+  let batchChunk = '';
+  let lastFlush = Date.now();
+  const flush = async (): Promise<boolean> => {
     const continueStream = await pipeline.runPostChunk({
       sessionId,
-      chunk,
+      chunk: batchChunk,
       accumulated,
       metadata: baseCtx.metadata ?? {},
     });
-    if (!continueStream) return;
+    batchChunk = '';
+    lastFlush = Date.now();
+    return continueStream;
+  };
+  for await (const chunk of chunks) {
+    accumulated += chunk;
+    batchChunk += chunk;
+    if (Date.now() - lastFlush >= BATCH_MS) {
+      if (!(await flush())) return;
+    }
     yield chunk;
+  }
+  // Final partial batch — never drop the tail.
+  if (batchChunk) {
+    await flush();
   }
 }

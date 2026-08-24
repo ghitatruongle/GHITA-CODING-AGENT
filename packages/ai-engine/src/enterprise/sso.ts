@@ -1,8 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 3.3: SSO Integration
 // Auth0, Okta, Keycloak, Entra ID (Azure AD), WorkOS
 // Reference: LiteLLM proxy_auth/, CrewAI a2a/auth/
-// ==============================================================================
 
 // --- Types ---
 

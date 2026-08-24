@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Hooks Module Barrel Export (Phase 12)
-// ==============================================================================
-
 export { HookRunner } from './runner.js';
 export { SecurityChecker } from './security-checkers.js';
 

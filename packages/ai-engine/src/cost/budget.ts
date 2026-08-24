@@ -2,9 +2,8 @@ import { AIBudgetExceededError } from '../errors/index.js';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-// ------------------------------------------------------------------------------
 // Budget Manager
-// ------------------------------------------------------------------------------
+
 export interface BudgetOptions {
   limit: number;
   period?: 'daily' | 'weekly' | 'monthly';
@@ -108,10 +107,8 @@ export class BudgetManager {
     this.triggeredThresholds.clear();
   }
 
-  // ---------------------------------------------------------------------------
   // Persistence helpers (audit fix 2.9)
-  // ---------------------------------------------------------------------------
-
+  
   private saveToDisk(): void {
     try {
       if (!this.persistencePath) return;

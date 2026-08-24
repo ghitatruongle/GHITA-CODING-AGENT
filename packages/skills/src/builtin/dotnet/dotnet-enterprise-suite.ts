@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Built-in Skill: Enterprise .NET Suite
-// ==============================================================================
 // Absorbed from Microsoft .NET Skills reference project.
 // Provides diagnostic analysis, NuGet security audit, MSBuild target inspection,
 // and automated .NET version upgrade assistance.
-// ==============================================================================
 
 import type { SkillDefinition } from '../../types.js';
 import { SKILLS_VERSION } from '../../types.js';

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - UnifiedRouter Unit Tests (Phase 15)
-// ==============================================================================
-
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
@@ -199,9 +195,6 @@ providers:
     expect(provDefault.type).toBe('openai');
   });
 
-  // ==========================================
-  // Nâng cấp: chatStream
-  // ==========================================
   it('should stream chunks from provider', async () => {
     const registry = new ProviderRegistry();
     const mockProvider = new TestProvider({ apiKey: 'mock' });
@@ -247,9 +240,6 @@ providers:
     expect(metrics[0]?.success).toBe(true);
   });
 
-  // ==========================================
-  // Nâng cấp: Model-based routing
-  // ==========================================
   describe('Model-based routing', () => {
     let router: UnifiedRouter;
 
@@ -303,9 +293,6 @@ providers:
     });
   });
 
-  // ==========================================
-  // Nâng cấp: Prompt adaptation (DeepSeek <think> tags)
-  // ==========================================
   it('should inject <think> tags for DeepSeek system messages', async () => {
     const registry = new ProviderRegistry();
 
@@ -345,9 +332,6 @@ providers:
     expect(sysMsg.content).toContain('You are helpful.');
   });
 
-  // ==========================================
-  // Nâng cấp: Latency metrics cap at 100
-  // ==========================================
   it('should cap latency history at 100 entries', async () => {
     const registry = new ProviderRegistry();
     registry.register(new TestProvider({ apiKey: 'mock' }));
@@ -367,9 +351,6 @@ providers:
     expect(metrics.length).toBe(100);
   });
 
-  // ==========================================
-  // Nâng cấp: Fallback order
-  // ==========================================
   it('should use fallback order when default provider missing', () => {
     // Clear env vars to prevent loadFromEnv from registering providers
     delete process.env.OPENAI_API_KEY;
@@ -398,9 +379,6 @@ providers:
     expect(prov.type).toBe('google');
   });
 
-  // ==========================================
-  // Nâng cấp: No providers throws
-  // ==========================================
   it('should throw when no providers registered', () => {
     // Write a YAML with a dummy provider to prevent loadFromEnv
     // (loadFromEnv always registers ollama since it needs no apiKey)
@@ -427,9 +405,6 @@ providers:
     expect(() => router.resolveProvider()).toThrow();
   });
 
-  // ==========================================
-  // Nâng cấp: Embed delegation
-  // ==========================================
   it('should delegate embed to resolved provider', async () => {
     const registry = new ProviderRegistry();
     registry.register(new TestProvider({ apiKey: 'mock' }));
@@ -461,9 +436,6 @@ providers:
     expect(result.embeddings.length).toBe(1); // TestProvider returns 1
   });
 
-  // ==========================================
-  // Nâng cấp: Empty YAML file
-  // ==========================================
   it('should fallback to env when YAML file is empty', () => {
     fs.writeFileSync(mockYamlPath, '', 'utf-8');
     process.env.OPENAI_API_KEY = 'test-fallback';
@@ -477,9 +449,6 @@ providers:
     expect(prov).toBeDefined();
   });
 
-  // ==========================================
-  // Nâng cấp: isReady and test delegation
-  // ==========================================
   it('should delegate isReady to primary provider', async () => {
     const registry = new ProviderRegistry();
     registry.register(new TestProvider({ apiKey: 'mock' }));
@@ -510,9 +479,6 @@ providers:
     expect(ok).toBe(true);
   });
 
-  // ==========================================
-  // Nâng cấp: defaultModel and models getters
-  // ==========================================
   it('should expose defaultModel and models from primary provider', () => {
     const registry = new ProviderRegistry();
     registry.register(new TestProvider({ apiKey: 'mock' }));
@@ -529,9 +495,7 @@ providers:
   });
 });
 
-// =============================================================================
 // CryptoHelper — dedicated tests
-// =============================================================================
 
 describe('CryptoHelper', () => {
   const key = 'test-secret-key-32-chars-long-abc';

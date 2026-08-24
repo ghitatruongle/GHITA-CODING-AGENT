@@ -1,8 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 3.11: Alerting System
 // Slack, email (SendGrid/SMTP/Resend), PagerDuty alerts
 // Reference: LiteLLM integrations/SlackAlerting/
-// ==============================================================================
 
 import { createHash, randomBytes } from 'node:crypto';
 

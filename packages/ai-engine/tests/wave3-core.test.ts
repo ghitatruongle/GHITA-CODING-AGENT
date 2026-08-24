@@ -1,6 +1,4 @@
-// ==============================================================================
 // Wave 3 — ai-engine key manager / fallback / cleanSlop
-// ==============================================================================
 
 import { describe, it, expect, vi } from 'vitest';
 import { KeyManager } from '../src/key-manager.js';

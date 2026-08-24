@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — English Translations (Optimized)
-// ==============================================================================
-
 import type { TranslationKeys } from './types';
 
 export const en: TranslationKeys = {
@@ -35,7 +31,7 @@ export const en: TranslationKeys = {
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v1.1.5-beta2',
+    version: 'v1.1.5',
     deviceReconnected: 'Reconnected to device: {{name}}',
     devicePaired: 'Successfully paired device: {{name}}',
     commandReceived: 'Command received from device: {{action}}',
@@ -467,7 +463,7 @@ export const en: TranslationKeys = {
     hide: 'Hide Key',
     show: 'Show Key',
     fetch: 'Fetch',
-    // Phase 1.1: Multi-key
+    
     addKey: 'Add Key',
     removeKey: 'Remove',
     keyStrategy: 'API Key Rotation Strategy',
@@ -532,7 +528,7 @@ export const en: TranslationKeys = {
     noContainersDesc:
       'An isolated Docker container will launch automatically when AI needs to execute tests or unsafe operations.',
   },
-  // Phase 7: Notification System (Q3 2026)
+  
   notification: {
     ariaLabel: 'Notifications',
     title: 'Notifications',
@@ -541,7 +537,7 @@ export const en: TranslationKeys = {
     unreadBadge: '{{count}}',
     dismiss: 'Dismiss notification',
   },
-  // Phase 8: Voice I/O (Q3 2026)
+  
   voice: {
     start: 'Start voice input',
     stop: 'Stop listening',
@@ -549,7 +545,7 @@ export const en: TranslationKeys = {
     unsupported: 'Voice input not supported',
     unsupportedHint: 'Speech recognition is not available in this environment',
   },
-  // Phase 9: Monitoring Dashboard (Q3 2026)
+  
   monitoring: {
     title: 'Monitoring',
     loading: 'Loading monitoring…',
@@ -571,7 +567,7 @@ export const en: TranslationKeys = {
     lastSeen: 'Last seen',
     refresh: 'Refresh',
   },
-  // Phase 10: Quota & Rate Limiting (Q3 2026)
+  
   quota: {
     title: 'Quota & Rate Limiting',
     loading: 'Loading quota…',
@@ -595,7 +591,7 @@ export const en: TranslationKeys = {
     refresh: 'Refresh',
     budgetUsage: 'Budget usage',
   },
-  // Phase 11: Code Knowledge Graph (Q3 2026)
+  
   codeGraph: {
     title: 'Code Knowledge Graph',
     workspacePath: 'Workspace path',

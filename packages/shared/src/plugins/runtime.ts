@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Plugin Runtime
-// ==============================================================================
-
 import * as path from 'node:path';
 import type { GhitaPlugin, PluginManifest, PluginHooks } from './types.js';
 import type { SkillResult } from '../types.js';

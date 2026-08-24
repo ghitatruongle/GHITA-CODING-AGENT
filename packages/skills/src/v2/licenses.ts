@@ -1,8 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Skills v1.1.0 Track 2: license engine (P30)
-// ==============================================================================
 // License classification + THIRD_PARTY_NOTICES generation for imported skills.
-// ==============================================================================
 
 export type LicenseClass = 'permissive' | 'copyleft' | 'proprietary' | 'unknown';
 

@@ -1,8 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Default Skill Catalog
-// Phase 2.3: Bundled fallback catalog with 20+ skills
-// ==============================================================================
-
 import type { SkillManifest } from './types.js';
 
 export function getDefaultCatalog(): SkillManifest[] {

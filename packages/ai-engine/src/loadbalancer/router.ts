@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Routing Strategies (Phase 28)
 // Implements the 5 routing strategies for the load balancer.
-// ==============================================================================
 
 import type {
   HealthSnapshot,
@@ -10,9 +7,7 @@ import type {
   RoutingDecision,
 } from './types.js';
 
-// ---------------------------------------------------------------------------
 // Eligible candidate filter
-// ---------------------------------------------------------------------------
 
 export function filterEligible(
   providers: LoadBalancedProvider[],
@@ -28,9 +23,7 @@ export function filterEligible(
   });
 }
 
-// ---------------------------------------------------------------------------
 // Pick using the active strategy
-// ---------------------------------------------------------------------------
 
 export function pickProvider(
   providers: LoadBalancedProvider[],

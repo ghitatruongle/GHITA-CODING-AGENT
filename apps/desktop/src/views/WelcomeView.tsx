@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — Welcome View (v0.7.0)
 // Shown when no workspace is open; provides Open Folder + recent workspaces
-// ==============================================================================
 
 import { useCallback, useState } from 'react';
 import { motion } from 'framer-motion';

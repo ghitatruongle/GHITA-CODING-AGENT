@@ -1,11 +1,7 @@
-// ==============================================================================
-// GHITA CODING AGENT — Sandbox Process Runner (v1.1.5-beta2 Track 2)
-// ------------------------------------------------------------------------------
 // Multi-platform sandbox executor combining:
 // 1. Pre-execution command policy checking (`checkCommand`)
 // 2. Native OS sandbox enforcement (`ghita-sandbox` addon)
 // 3. Fallback to child_process with timeout and env scrubbing
-// ==============================================================================
 
 import { spawnSync } from 'node:child_process';
 import { loadNative } from '@ghita/native-bridge';

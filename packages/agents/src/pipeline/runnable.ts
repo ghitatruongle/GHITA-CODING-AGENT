@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Runnable Pipeline System
-// ==============================================================================
-
 import type { RunnableConfig, StreamChunk, TransformFn } from './types.js';
 
 function generateId(): string {

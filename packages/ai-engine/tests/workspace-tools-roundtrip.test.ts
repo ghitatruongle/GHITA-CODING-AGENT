@@ -1,11 +1,9 @@
-// ==============================================================================
 // PROOF: AI agentic file editing (Antigravity-style) does real filesystem work
 //
 // Exercises the built-in workspace tools (write_file / read_file /
 // replace_file_content / list_dir / grep_search) that the ReAct agent invokes,
 // against a REAL temp workspace — proving the AI can create and edit existing
 // files on disk, with sandbox containment and an approval gate.
-// ==============================================================================
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, existsSync, readFileSync, writeFileSync } from 'node:fs';

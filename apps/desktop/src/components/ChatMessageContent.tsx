@@ -1,4 +1,4 @@
-import { Children, isValidElement, useRef, useState, type ReactNode } from 'react';
+import { Children, isValidElement, memo, useRef, useState, type ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
@@ -545,109 +545,113 @@ function extractTextContent(node: ReactNode): string {
     .join('');
 }
 
-export function MarkdownMessage({ content }: { content: string }) {
+// Stable across renders — rebuilding this object per render defeats memoization
+// of MarkdownMessage and forces react-markdown to re-bind every element.
+const MARKDOWN_COMPONENTS = {
+  p: ({ children }: { children?: ReactNode }) => <p style={{ margin: '0 0 8px 0' }}>{children}</p>,
+  ul: ({ children }: { children?: ReactNode }) => (
+    <ul style={{ margin: '0 0 8px 0', paddingLeft: '18px' }}>{children}</ul>
+  ),
+  ol: ({ children }: { children?: ReactNode }) => (
+    <ol style={{ margin: '0 0 8px 0', paddingLeft: '18px' }}>{children}</ol>
+  ),
+  li: ({ children }: { children?: ReactNode }) => <li style={{ margin: '2px 0' }}>{children}</li>,
+  blockquote: ({ children }: { children?: ReactNode }) => (
+    <blockquote
+      style={{
+        margin: '0 0 8px 0',
+        padding: '0 0 0 12px',
+        borderLeft: '3px solid rgba(129, 140, 248, 0.5)',
+        color: '#cbd5e1',
+      }}
+    >
+      {children}
+    </blockquote>
+  ),
+  a: ({ href, children }: { href?: string; children?: ReactNode }) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer noopener"
+      style={{ color: '#93c5fd', textDecoration: 'underline' }}
+    >
+      {children}
+    </a>
+  ),
+  table: ({ children }: { children?: ReactNode }) => (
+    <div style={{ overflowX: 'auto', margin: '0 0 8px 0' }}>
+      <table
+        style={{
+          width: '100%',
+          borderCollapse: 'collapse',
+          fontSize: '12px',
+        }}
+      >
+        {children}
+      </table>
+    </div>
+  ),
+  th: ({ children }: { children?: ReactNode }) => (
+    <th
+      style={{
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        padding: '6px 8px',
+        textAlign: 'left',
+        background: 'rgba(255, 255, 255, 0.04)',
+      }}
+    >
+      {children}
+    </th>
+  ),
+  td: ({ children }: { children?: ReactNode }) => (
+    <td
+      style={{
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        padding: '6px 8px',
+      }}
+    >
+      {children}
+    </td>
+  ),
+  code: ({ children }: { children?: ReactNode }) => {
+    const text = extractTextContent(children).replace(/\n$/, '');
+    return (
+      <code
+        style={{
+          background: 'rgba(99,102,241,0.15)',
+          padding: '1px 5px',
+          borderRadius: '3px',
+          fontSize: '12px',
+          color: '#a5b4fc',
+          fontFamily: "'Cascadia Code', 'Fira Code', monospace",
+        }}
+      >
+        {text}
+      </code>
+    );
+  },
+  pre: ({ children }: { children?: ReactNode }) => {
+    const childArray = Children.toArray(children);
+    const firstChild = childArray[0];
+
+    if (isValidElement<{ className?: string; children?: ReactNode }>(firstChild)) {
+      const lang = firstChild.props.className?.match(/language-(\S+)/)?.[1] || '';
+      const text = extractTextContent(firstChild.props.children ?? '').replace(/\n$/, '');
+      return <CodeBlock lang={lang} code={text} />;
+    }
+
+    return <pre>{children}</pre>;
+  },
+} as const;
+
+export const MarkdownMessage = memo(function MarkdownMessage({ content }: { content: string }) {
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       rehypePlugins={[rehypeSanitize]}
-      components={{
-        p: ({ children }) => <p style={{ margin: '0 0 8px 0' }}>{children}</p>,
-        ul: ({ children }) => (
-          <ul style={{ margin: '0 0 8px 0', paddingLeft: '18px' }}>{children}</ul>
-        ),
-        ol: ({ children }) => (
-          <ol style={{ margin: '0 0 8px 0', paddingLeft: '18px' }}>{children}</ol>
-        ),
-        li: ({ children }) => <li style={{ margin: '2px 0' }}>{children}</li>,
-        blockquote: ({ children }) => (
-          <blockquote
-            style={{
-              margin: '0 0 8px 0',
-              padding: '0 0 0 12px',
-              borderLeft: '3px solid rgba(129, 140, 248, 0.5)',
-              color: '#cbd5e1',
-            }}
-          >
-            {children}
-          </blockquote>
-        ),
-        a: ({ href, children }) => (
-          <a
-            href={href}
-            target="_blank"
-            rel="noreferrer noopener"
-            style={{ color: '#93c5fd', textDecoration: 'underline' }}
-          >
-            {children}
-          </a>
-        ),
-        table: ({ children }) => (
-          <div style={{ overflowX: 'auto', margin: '0 0 8px 0' }}>
-            <table
-              style={{
-                width: '100%',
-                borderCollapse: 'collapse',
-                fontSize: '12px',
-              }}
-            >
-              {children}
-            </table>
-          </div>
-        ),
-        th: ({ children }) => (
-          <th
-            style={{
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              padding: '6px 8px',
-              textAlign: 'left',
-              background: 'rgba(255, 255, 255, 0.04)',
-            }}
-          >
-            {children}
-          </th>
-        ),
-        td: ({ children }) => (
-          <td
-            style={{
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              padding: '6px 8px',
-            }}
-          >
-            {children}
-          </td>
-        ),
-        code: ({ children }) => {
-          const text = extractTextContent(children).replace(/\n$/, '');
-          return (
-            <code
-              style={{
-                background: 'rgba(99,102,241,0.15)',
-                padding: '1px 5px',
-                borderRadius: '3px',
-                fontSize: '12px',
-                color: '#a5b4fc',
-                fontFamily: "'Cascadia Code', 'Fira Code', monospace",
-              }}
-            >
-              {text}
-            </code>
-          );
-        },
-        pre: ({ children }) => {
-          const childArray = Children.toArray(children);
-          const firstChild = childArray[0];
-
-          if (isValidElement<{ className?: string; children?: ReactNode }>(firstChild)) {
-            const lang = firstChild.props.className?.match(/language-(\S+)/)?.[1] || '';
-            const text = extractTextContent(firstChild.props.children ?? '').replace(/\n$/, '');
-            return <CodeBlock lang={lang} code={text} />;
-          }
-
-          return <pre>{children}</pre>;
-        },
-      }}
+      components={MARKDOWN_COMPONENTS}
     >
       {content}
     </ReactMarkdown>
   );
-}
+});

@@ -1,6 +1,5 @@
-// =============================================================================
 // Shared Socket — Singleton socket.io connection to sidecar server
-// =============================================================================
+
 // All components (ChatPanel, SkillManager, etc.) should use this shared socket
 // instead of creating their own connections. This eliminates 2-3 duplicate
 // WebSocket connections and their associated overhead.
@@ -16,16 +15,14 @@ let connectionPromise: Promise<Socket | null> | null = null;
 /**
  * Get or create the shared socket connection to the sidecar server.
  * Returns null if the server is not available.
+ *
+ * The socket instance is created ONCE for the app lifetime and relies on
+ * socket.io's built-in reconnection. Destroying and replacing a disconnected
+ * instance would invalidate every consumer's saved ref and silently drop
+ * their registered listeners.
  */
 export async function getSharedSocket(): Promise<Socket | null> {
-  if (socket?.connected) return socket;
-
-  // Disconnect stale socket before creating a new one
-  if (socket && !socket.connected) {
-    socket.removeAllListeners();
-    socket.disconnect();
-    socket = null;
-  }
+  if (socket) return socket;
 
   // Deduplicate concurrent connection attempts
   if (connectionPromise) return connectionPromise;
@@ -43,7 +40,7 @@ export async function getSharedSocket(): Promise<Socket | null> {
       socket = io(`http://127.0.0.1:${port}`, {
         transports: ['websocket'],
         reconnection: true,
-        reconnectionAttempts: 20,
+        reconnectionAttempts: Infinity,
         reconnectionDelay: 1000,
         reconnectionDelayMax: 30000,
         auth: { token: sessionToken },

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Rate Limiter Tests
-// ==============================================================================
-
 import { describe, it, expect, beforeEach } from 'vitest';
 import { RateLimiter } from './rate-limiter.js';
 
@@ -28,10 +24,11 @@ describe('RateLimiter', () => {
     expect(result.remaining).toBe(0);
   });
 
-  it('should allow unlimited requests for unregistered limits', () => {
+  it('should fail CLOSED for unregistered limits (Track 2 security fix)', () => {
     const result = limiter.check('user1', 'unknown');
-    expect(result.allowed).toBe(true);
-    expect(result.limit).toBe(Infinity);
+    expect(result.allowed).toBe(false);
+    expect(result.limit).toBe(0);
+    expect(result.retryAfterMs).toBeGreaterThan(0);
   });
 
   it('should peek at remaining tokens without consuming', () => {
@@ -71,11 +68,11 @@ describe('RateLimiter', () => {
     expect(stats.uniqueUsers).toBe(1);
   });
 
-  it('should unregister a limit', () => {
+  it('should unregister a limit (unregistered ids then fail closed)', () => {
     limiter.registerLimit({ id: 'test', limit: 1, window: 'minute', scope: 'requests' });
     limiter.unregisterLimit('test');
     const result = limiter.check('user1', 'test');
-    expect(result.allowed).toBe(true);
+    expect(result.allowed).toBe(false);
   });
 
   it('should clear all buckets', () => {

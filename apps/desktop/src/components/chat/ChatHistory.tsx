@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — Chat History Component
 // Session list with select, create, and delete functionality.
-// ==============================================================================
 
 import React from 'react';
 import type { ChatSession } from '../../hooks/useChatSessions';

@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Redis Cache with LRUCache Fallback
-// ==============================================================================
 // Redis-backed cache with dynamic import and graceful fallback to LRUCache
 // when Redis is unavailable. Implements BaseCache interface.
-// ==============================================================================
 
 import { LRUCache } from './lru-cache.js';
 import type { BaseCache } from './base-cache.js';

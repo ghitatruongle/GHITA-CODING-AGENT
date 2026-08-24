@@ -1,14 +1,37 @@
-// ==============================================================================
-// GHITA CODING AGENT — Socket.io Client Service
 // Desktop ↔ Mobile real-time communication
-// ==============================================================================
 
 import type { Socket } from 'socket.io-client';
 import { io } from 'socket.io-client';
+import { gcm } from '@noble/ciphers/aes.js';
+import { sha256 } from '@noble/hashes/sha2.js';
 import { SOCKET_EVENTS } from '@ghita/shared';
 import type { ConnectionState, ChatMessage } from '../types';
 import { clearAuthToken, getAuthToken, getDeviceId, saveAuthToken } from './storageService';
 import { assertSafeServerAddress } from './serverAddress';
+
+interface AuthTokenCipher {
+  v: number;
+  salt: string;
+  nonce: string;
+  payload: string;
+}
+
+function bytesFromBase64(value: string): Uint8Array {
+  const binary = global.atob(value);
+  const out = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
+  return out;
+}
+
+/// Decrypt the device auth token sealed by the desktop with AES-256-GCM under
+/// a key derived from the pairing code (the shared pre-shared key).
+function decryptAuthToken(cipher: AuthTokenCipher, pairingCode: string): string {
+  if (cipher.v !== 1) throw new Error(`Unsupported authTokenCipher version: ${cipher.v}`);
+  const key = sha256(new TextEncoder().encode(`${pairingCode}:${cipher.salt}`));
+  const aes = gcm(key, bytesFromBase64(cipher.nonce));
+  const plaintext = aes.decrypt(bytesFromBase64(cipher.payload));
+  return new TextDecoder().decode(plaintext);
+}
 
 // --- Event callback types ---
 export interface SocketCallbacks {
@@ -427,7 +450,7 @@ export class SocketService {
     this.healthCheckInterval = setInterval(async () => {
       if (!this.lastLocalAddress) return;
       try {
-        // deep-review fix (L12): bound the health probe so a hanging server
+        
         // cannot pile up in-flight fetches.
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), 5000);
@@ -511,28 +534,45 @@ export class SocketService {
       this.callbacks.onError?.(
         `Connecting retry attempt ${this.reconnectAttempts}: ${err.message}`,
       );
-
-      // Failover state machine: local -> cloud (tạm vô hiệu hóa — Cloud Relay đã bị xóa)
-      // if (this.connectionType === 'local' && this.reconnectAttempts >= 3) {
-      //   console.log('[SocketService] Local LAN disconnected. Switching to Cloud Relay...');
-      //   this.callbacks.onError?.('Local LAN disconnected. Switching to Cloud Relay...');
-      //   this.connect(this.cloudAddress);
-      //   this.startLocalHealthCheck();
-      // }
     });
 
     // Pairing confirmation
     this.socket.on(
       SOCKET_EVENTS.PAIR_CONFIRM,
-      (data: { deviceName?: string; deviceId?: string; authToken?: string }) => {
+      (
+        data: {
+          deviceName?: string;
+          deviceId?: string;
+          authToken?: string;
+          authTokenCipher?: AuthTokenCipher;
+        },
+      ) => {
         if (data.deviceId) {
           this.deviceId = data.deviceId;
         } else if (this.connectionType === 'cloud') {
           this.deviceId = 'cloud_session';
         }
-        if (data.authToken) {
-          this.authToken = data.authToken;
-          void saveAuthToken(data.authToken);
+        try {
+          let token: string | null = null;
+          if (data.authTokenCipher) {
+            if (!this.lastPairingCode) {
+              throw new Error('Pairing code unavailable — cannot decrypt the device token');
+            }
+            token = decryptAuthToken(data.authTokenCipher, this.lastPairingCode);
+          } else if (data.authToken) {
+            // Legacy desktop build that still sends the raw token.
+            console.warn('[SocketService] Desktop sent a plaintext auth token — update the desktop app.');
+            token = data.authToken;
+          }
+          if (token) {
+            this.authToken = token;
+            void saveAuthToken(token);
+          }
+        } catch (e) {
+          this.callbacks.onError?.(
+            `Failed to decrypt pairing token: ${e instanceof Error ? e.message : String(e)}`,
+          );
+          return;
         }
         if (this.socket) {
           this.socket.auth = {

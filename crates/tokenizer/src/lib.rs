@@ -1,12 +1,9 @@
-// ==============================================================================
-// GHITA CODING AGENT — Exact BPE Token Counter & Cached Estimator (v1.1.5-beta2)
-// ------------------------------------------------------------------------------
-// Wraps tiktoken-rs to provide exact token counts for OpenAI/Claude/GPT models.
-// Features:
-// 1. Exact BPE token counting across o200k, cl100k, r50k encodings.
-// 2. Rolling hash cache for repetitive tokens (System Prompts, Operator Charters).
-// 3. Message structure overhead calculation.
-// ==============================================================================
+//! GHITA CODING AGENT — Exact BPE Token Counter & Cached Estimator
+//! Wraps tiktoken-rs to provide exact token counts for OpenAI/Claude/GPT models.
+//! Features:
+//! 1. Exact BPE token counting across o200k, cl100k, r50k encodings.
+//! 2. Rolling hash cache for repetitive tokens (System Prompts, Operator Charters).
+//! 3. Message structure overhead calculation.
 
 #[cfg(feature = "addon")]
 mod napi;
@@ -88,6 +85,32 @@ pub fn global_token_cache() -> &'static TokenCache {
     CACHE.get_or_init(|| TokenCache::new(4096))
 }
 
+/// Constructing a BPE encoder loads and merges the full vocabulary — an
+/// expensive operation that must happen ONCE per process, not once per cache
+/// miss. Each encoding family gets its own lazily-initialized static.
+#[cfg(feature = "addon")]
+fn bpe_for(family: EncodingFamily) -> Result<&'static tiktoken_rs::CoreBPE, String> {
+    use std::sync::OnceLock;
+    use tiktoken_rs::{cl100k_base, o200k_base, r50k_base};
+
+    static O200K: OnceLock<Option<tiktoken_rs::CoreBPE>> = OnceLock::new();
+    static CL100K: OnceLock<Option<tiktoken_rs::CoreBPE>> = OnceLock::new();
+    static R50K: OnceLock<Option<tiktoken_rs::CoreBPE>> = OnceLock::new();
+
+    let (slot, load): (
+        &OnceLock<Option<tiktoken_rs::CoreBPE>>,
+        fn() -> Result<tiktoken_rs::CoreBPE, String>,
+    ) = match family {
+        EncodingFamily::O200k => (&O200K, || o200k_base().map_err(|e| e.to_string())),
+        EncodingFamily::Cl100k => (&CL100K, || cl100k_base().map_err(|e| e.to_string())),
+        EncodingFamily::R50k => (&R50K, || r50k_base().map_err(|e| e.to_string())),
+    };
+
+    slot.get_or_init(|| load().ok())
+        .as_ref()
+        .ok_or_else(|| format!("failed to initialize {family:?} BPE vocabulary"))
+}
+
 /// Count tokens for a text string using the specified encoding family with caching.
 #[cfg(feature = "addon")]
 pub fn count_tokens(text: &str, family: EncodingFamily) -> Result<usize, String> {
@@ -99,12 +122,7 @@ pub fn count_tokens(text: &str, family: EncodingFamily) -> Result<usize, String>
         return Ok(cached);
     }
 
-    use tiktoken_rs::*;
-    let bpe = match family {
-        EncodingFamily::O200k => o200k_base().map_err(|e| e.to_string())?,
-        EncodingFamily::Cl100k => cl100k_base().map_err(|e| e.to_string())?,
-        EncodingFamily::R50k => r50k_base().map_err(|e| e.to_string())?,
-    };
+    let bpe = bpe_for(family)?;
     let count = bpe.encode_with_special_tokens(text).len();
     cache.insert(family, text, count);
     Ok(count)
@@ -156,12 +174,30 @@ mod tests {
     #[test]
     fn encoding_family_from_model() {
         assert_eq!(EncodingFamily::from_model("gpt-4o"), EncodingFamily::O200k);
-        assert_eq!(EncodingFamily::from_model("gpt-4o-mini"), EncodingFamily::O200k);
-        assert_eq!(EncodingFamily::from_model("o1-preview"), EncodingFamily::O200k);
-        assert_eq!(EncodingFamily::from_model("gpt-4-turbo"), EncodingFamily::Cl100k);
-        assert_eq!(EncodingFamily::from_model("gpt-3.5-turbo"), EncodingFamily::Cl100k);
-        assert_eq!(EncodingFamily::from_model("claude-3-opus"), EncodingFamily::Cl100k);
-        assert_eq!(EncodingFamily::from_model("unknown-model"), EncodingFamily::Cl100k);
+        assert_eq!(
+            EncodingFamily::from_model("gpt-4o-mini"),
+            EncodingFamily::O200k
+        );
+        assert_eq!(
+            EncodingFamily::from_model("o1-preview"),
+            EncodingFamily::O200k
+        );
+        assert_eq!(
+            EncodingFamily::from_model("gpt-4-turbo"),
+            EncodingFamily::Cl100k
+        );
+        assert_eq!(
+            EncodingFamily::from_model("gpt-3.5-turbo"),
+            EncodingFamily::Cl100k
+        );
+        assert_eq!(
+            EncodingFamily::from_model("claude-3-opus"),
+            EncodingFamily::Cl100k
+        );
+        assert_eq!(
+            EncodingFamily::from_model("unknown-model"),
+            EncodingFamily::Cl100k
+        );
     }
 
     #[test]
@@ -181,7 +217,10 @@ mod tests {
     fn exact_count_nonempty() {
         let count = count_tokens("Hello, world!", EncodingFamily::Cl100k).unwrap();
         assert!(count > 0, "non-empty text should have >0 tokens");
-        assert!(count <= 10, "short text should have few tokens, got {count}");
+        assert!(
+            count <= 10,
+            "short text should have few tokens, got {count}"
+        );
     }
 
     #[cfg(feature = "addon")]

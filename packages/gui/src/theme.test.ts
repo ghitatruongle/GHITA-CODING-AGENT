@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Theme Manager Tests
-// ==============================================================================
-
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ThemeManager } from './theme.js';
 

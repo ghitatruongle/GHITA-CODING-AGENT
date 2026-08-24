@@ -1,7 +1,5 @@
 #!/usr/bin/env node
-// ==============================================================================
-// GHITA CODING AGENT - CPU benchmark suite (v1.1.0 Track 8 A1)
-// ------------------------------------------------------------------------------
+
 // Three probes on the identified hot paths:
 //   [A] security line-regex over 5MB generated code
 //   [B] BM25 retrieval over 10k chunks
@@ -10,7 +8,6 @@
 //   node scripts/bench-cpu.mjs              # run, print results
 //   node scripts/bench-cpu.mjs --json       # JSON (for CI/baseline)
 //   node scripts/bench-cpu.mjs --baseline   # compare with docs/perf-baseline.json
-// ==============================================================================
 
 import { performance } from 'node:perf_hooks';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
@@ -185,10 +182,6 @@ export function makeEdges(n) {
   return edges;
 }
 
-// ---------------------------------------------------------------------------
-// [D] AST parse + [E] diff-stat probes (v1.1.1 Track 8)
-// ---------------------------------------------------------------------------
-
 /** Small but realistic TS sample — ~20 symbols per file. */
 export function genTsSample() {
   return [
@@ -338,7 +331,7 @@ export function checkBaseline(results) {
     if (results[key] === undefined) continue;
     // scanner.naive.ms is the "before" reference — not a regression target.
     if (key.endsWith('.naive.ms')) continue;
-    // Absolute floor: bỏ qua nhiễu dưới 0.5 ms (phép đo ~0.1-3 ms).
+    
     const absolute = results[key] - value;
     if (results[key] > value * (1 + REGRESSION_THRESHOLD) && absolute > 0.5) {
       failures.push(`${key}: ${results[key].toFixed(1)} > baseline ${value.toFixed(1)} (+${((results[key] / value - 1) * 100).toFixed(0)}%)`);

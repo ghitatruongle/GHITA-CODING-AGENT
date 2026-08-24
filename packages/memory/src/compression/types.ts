@@ -1,12 +1,7 @@
-// ==============================================================================
-// GHITA CODING AGENT - Memory Compression Types (Phase 30)
 // Summarize old memories, embedding-based dedup, hot/warm/cold tier migration,
 // and background compaction jobs.
-// ==============================================================================
 
-// ---------------------------------------------------------------------------
 // Memory Tiers
-// ---------------------------------------------------------------------------
 
 /**
  * - 'hot':   in-process, immediate access, no summarization
@@ -15,9 +10,7 @@
  */
 export type MemoryTier = 'hot' | 'warm' | 'cold';
 
-// ---------------------------------------------------------------------------
 // Compressable entry (subset of MemoryEntry, with extra compression metadata)
-// ---------------------------------------------------------------------------
 
 export interface CompressableMemoryEntry {
   id: string;
@@ -45,9 +38,7 @@ export interface CompressableMemoryEntry {
   summarizedFrom?: string[];
 }
 
-// ---------------------------------------------------------------------------
 // Summarization
-// ---------------------------------------------------------------------------
 
 export interface SummarizerConfig {
   /** Target max length of a summary (chars, default: 300) */
@@ -95,9 +86,7 @@ export interface SummarizationResult {
   summaries: CompressableMemoryEntry[];
 }
 
-// ---------------------------------------------------------------------------
 // Embedding-based Dedup
-// ---------------------------------------------------------------------------
 
 export interface EmbeddingDedupConfig {
   /** Cosine similarity threshold (0-1) for dedup (default: 0.92) */
@@ -121,9 +110,7 @@ export interface DedupResult {
   charsSaved: number;
 }
 
-// ---------------------------------------------------------------------------
 // Tier migration
-// ---------------------------------------------------------------------------
 
 export interface TierMigrationConfig {
   /** Hot tier max size (entries) before demoting to warm (default: 1000) */
@@ -149,9 +136,7 @@ export interface TierMigrationResult {
   counts: { hot: number; warm: number; cold: number };
 }
 
-// ---------------------------------------------------------------------------
 // Background Job
-// ---------------------------------------------------------------------------
 
 export interface CompressionJobConfig {
   /** Whether to enable the background job (default: true) */
@@ -183,9 +168,7 @@ export interface CompressionJobRun {
   errors: string[];
 }
 
-// ---------------------------------------------------------------------------
 // Combined Compression Config
-// ---------------------------------------------------------------------------
 
 export interface CompressionConfig {
   summarizer?: Partial<SummarizerConfig>;
@@ -224,9 +207,7 @@ export const DEFAULT_COMPRESSION_CONFIG: Required<CompressionConfig> = {
   },
 };
 
-// ---------------------------------------------------------------------------
 // Embedding provider interface
-// ---------------------------------------------------------------------------
 
 export interface EmbeddingProvider {
   embed(text: string): Promise<number[]>;
@@ -234,9 +215,7 @@ export interface EmbeddingProvider {
   embedBatch?(texts: string[]): Promise<number[][]>;
 }
 
-// ---------------------------------------------------------------------------
 // Storage adapter (read/write the memory store)
-// ---------------------------------------------------------------------------
 
 export interface MemoryStorageAdapter {
   /** List all entries (optionally filtered by tier) */
@@ -255,9 +234,7 @@ export interface MemoryStorageAdapter {
   countByTier(): Promise<{ hot: number; warm: number; cold: number }>;
 }
 
-// ---------------------------------------------------------------------------
 // Events
-// ---------------------------------------------------------------------------
 
 export type CompressionEvent =
   | { type: 'dedup-completed'; result: DedupResult }
@@ -269,9 +246,7 @@ export type CompressionEvent =
 
 export type CompressionEventListener = (event: CompressionEvent) => void;
 
-// ---------------------------------------------------------------------------
 // Aggregated stats
-// ---------------------------------------------------------------------------
 
 export interface CompressionStats {
   totalRuns: number;

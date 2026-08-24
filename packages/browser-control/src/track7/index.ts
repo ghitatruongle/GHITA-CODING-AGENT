@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Browser v1.1.0 Track 7: public entry
-// ==============================================================================
-
 export { ActionRegistry, BUILTIN_ACTIONS } from './action-registry.js';
 export type { ActionDefinition, ActionRegistryOptions } from './action-registry.js';
 

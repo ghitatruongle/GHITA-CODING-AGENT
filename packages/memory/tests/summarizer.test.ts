@@ -1,8 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - MemorySummarizer Unit Tests
 // 25 test cases covering topic extraction, grouping, summary building,
 // session summarization, and edge cases.
-// ==============================================================================
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { MemorySummarizer } from '../src/compression/summarizer.js';

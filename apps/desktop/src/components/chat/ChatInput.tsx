@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — Chat Input Component
 // Text input, slash command autocomplete, image attachment, and send button.
-// ==============================================================================
 
 import React, { useRef } from 'react';
 import { VoiceInputButton } from '../VoiceInputButton';

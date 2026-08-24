@@ -1,8 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - AI-Driven Browser Actions
-// Phase 3 (Update 0.0.3 beta2): LLM-guided selector resolution
-// ==============================================================================
-
 import type { BrowserController } from './index.js';
 
 export interface AIBrowserContext {

@@ -1,10 +1,8 @@
-// ==============================================================================
 // v0.4.9 A7: GUI-Agent Grounding & Retry
 //
 // Two-step grounding for GUI actions: LOCATE (derive a target point) then
 // VERIFY (bounds/sanity check before we actually click). Plus a small retry
 // policy and step-annotation helper for the ReAct history.
-// ==============================================================================
 
 import type { ScreenSize } from '../index.js';
 

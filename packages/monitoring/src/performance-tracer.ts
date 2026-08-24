@@ -1,21 +1,17 @@
-// ==============================================================================
-// Phase 32: Performance Tracer — span/transaction helper
-// ==============================================================================
-
 import type { PerformanceTransaction, PerformanceSpan } from './types.js';
 import type { SentryClient } from './sentry-client.js';
 
 export interface TracerOptions {
   /** Sample rate (0-1) cho transaction */
   sampleRate?: number;
-  /** SentryClient để forward span */
+  
   sentryClient?: SentryClient;
 }
 
 /**
- * Tracer — high-level wrapper để đo performance cho async operation.
+
  *
- * Sử dụng:
+
  *   await tracer.withSpan('ai.chat', { model: 'gpt-4o' }, async (span) => {
  *     const response = await provider.chat(messages);
  *     span.setTag('tokens', String(response.usage.totalTokens));
@@ -34,16 +30,10 @@ export class Tracer {
     this.sentryClient = options.sentryClient;
   }
 
-  /**
-   * Quyết định có sample transaction này không.
-   */
   shouldSample(): boolean {
     return Math.random() < this.sampleRate;
   }
 
-  /**
-   * Bắt đầu transaction mới.
-   */
   start(
     name: string,
     op = 'custom',
@@ -68,9 +58,6 @@ export class Tracer {
     return tx;
   }
 
-  /**
-   * Tạo child span từ transaction.
-   */
   startSpan(tx: PerformanceTransaction, op: string, description?: string): PerformanceSpan {
     this.totalSpans++;
     if (this.sentryClient) {
@@ -100,18 +87,12 @@ export class Tracer {
     return span;
   }
 
-  /**
-   * Kết thúc span.
-   */
   finishSpan(span: PerformanceSpan, status: 'ok' | 'internal_error' = 'ok'): void {
     span.endTimestamp = Date.now();
     span.status = status;
     if (this.sentryClient) this.sentryClient.finishSpan(span, status);
   }
 
-  /**
-   * Kết thúc transaction.
-   */
   async finish(tx: PerformanceTransaction, status: 'ok' | 'internal_error' = 'ok'): Promise<void> {
     tx.endTimestamp = Date.now();
     tx.finished = true;
@@ -120,9 +101,6 @@ export class Tracer {
     if (this.sentryClient) await this.sentryClient.finishTransaction(tx.traceId, status);
   }
 
-  /**
-   * Helper: chạy 1 async operation trong 1 span tự đóng.
-   */
   async withSpan<T>(
     op: string,
     tags: Record<string, string> | undefined,
@@ -152,9 +130,6 @@ export class Tracer {
     }
   }
 
-  /**
-   * Lấy stats.
-   */
   stats(): {
     totalTransactions: number;
     totalSpans: number;

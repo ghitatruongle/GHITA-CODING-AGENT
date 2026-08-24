@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT — Multi-Engine AI Pipeline (v1.1.5-beta2 Track 4)
-// ==============================================================================
 // Orchestrates multi-tier model selection, dynamic failover fallback chains,
 // Thompson-sampling online bandit learning, and adaptive reasoning budget.
-// ==============================================================================
 
 import { sleep } from '@ghita/shared';
 import { ModelCatalog, type ModelEntry } from './model-catalog.js';

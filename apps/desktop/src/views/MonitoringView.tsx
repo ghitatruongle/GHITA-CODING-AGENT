@@ -1,7 +1,5 @@
-// ==============================================================================
 // Monitoring Dashboard — uses browser-safe monitoring primitives only
 // (ErrorMonitor is a Tauri-Rust concern; we use UsageTelemetry + AlertEngine here.)
-// ==============================================================================
 
 import { useState, useCallback } from 'react';
 import { UsageTelemetry, AlertEngine } from '../../../../packages/monitoring/src/index.js';

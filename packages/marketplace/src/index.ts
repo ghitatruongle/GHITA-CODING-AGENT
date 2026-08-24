@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Marketplace Package Barrel Export (Phase 31, 32, 36-40)
-// ==============================================================================
-
 // --- Types ---
 export type {
   PluginManifest,
@@ -49,7 +45,6 @@ export { MarketplaceRegistry } from './registry.js';
 // --- CLI ---
 export { PluginCLI } from './cli.js';
 
-// --- Phase 36: Agent Template Gallery ---
 export {
   TemplateGallery,
   TemplateCustomizer,
@@ -74,7 +69,6 @@ export type {
   CustomizationResult,
 } from './templates/index.js';
 
-// --- Phase 32: Auto-updater for Plugins ---
 export { PluginUpdater, PluginDiffer, RollbackManager } from './updater/index.js';
 export type {
   UpdateCheckResult,
@@ -89,7 +83,6 @@ export type {
   UpdateListener,
 } from './updater/index.js';
 
-// --- Phase 37: Skill Publishing Pipeline ---
 export { SkillToNpmConverter, ReadmeGenerator, Semver, CicdGenerator } from './pipeline/index.js';
 export type {
   SemverVersion,
@@ -107,7 +100,6 @@ export type {
   CicdResult,
 } from './pipeline/index.js';
 
-// --- Phase 38: Revenue Sharing ---
 export { PaymentGateway, RevenueSplitter, PayoutScheduler, TaxReporter } from './revenue/index.js';
 export type {
   PaymentProvider,
@@ -121,7 +113,6 @@ export type {
   TaxReport,
 } from './revenue/index.js';
 
-// --- Phase 39: Analytics Dashboard ---
 export {
   DownloadTracker,
   EngagementTracker,
@@ -137,7 +128,6 @@ export type {
   TrendingScore,
 } from './analytics/index.js';
 
-// --- Phase 40: Community Features ---
 export { ForumManager, BugReportTracker, FeatureVoting, Leaderboard } from './community/index.js';
 export type {
   ForumThread,
@@ -147,5 +137,4 @@ export type {
   Contributor,
 } from './community/index.js';
 
-// ── v1.1.0 Track 3: Claude plugin import, installer, tiers, scan, trust ──
 export * from './plugins/index.js';

@@ -146,17 +146,26 @@ mod tests {
         let mut a = String::new();
         let mut b = String::new();
         for i in 0..5000 {
-            a.push_str(&format!("line {i} = value {i}; const x = compute(values, index, config);\n"));
+            a.push_str(&format!(
+                "line {i} = value {i}; const x = compute(values, index, config);\n"
+            ));
             if i != 2500 {
-                b.push_str(&format!("line {i} = value {i}; const x = compute(values, index, config);\n"));
+                b.push_str(&format!(
+                    "line {i} = value {i}; const x = compute(values, index, config);\n"
+                ));
             } else {
-                b.push_str(&format!("line {i} = value {i}; const x = compute(values, index, EDITED);\n"));
+                b.push_str(&format!(
+                    "line {i} = value {i}; const x = compute(values, index, EDITED);\n"
+                ));
             }
         }
         let t0 = std::time::Instant::now();
         let stat = line_diff_stat(&a, &b);
         let ms = t0.elapsed().as_secs_f64() * 1000.0;
-        println!("[diff native] 5k lines: {ms:.1} ms (added {}, removed {})", stat.added, stat.removed);
+        println!(
+            "[diff native] 5k lines: {ms:.1} ms (added {}, removed {})",
+            stat.added, stat.removed
+        );
         assert_eq!(stat.added, 1);
         assert_eq!(stat.removed, 1);
     }

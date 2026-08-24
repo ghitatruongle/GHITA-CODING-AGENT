@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Shared Utilities
-// ==============================================================================
-
 import type { Platform } from './types.js';
 
 // --- Platform Detection ---
@@ -223,7 +219,19 @@ export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function retry<T>(fn: () => Promise<T>, maxAttempts = 3, delayMs = 1000): Promise<T> {
+/** Errors that no number of retries can fix — retrying only burns resources. */
+const NON_RETRYABLE_ERROR = /unauthorized|forbidden|invalid[ _-]?api[ _-]?key|authentication|\b(400|401|403|404|422)\b/i;
+
+export async function retry<T>(
+  fn: (attempt: number) => Promise<T>,
+  maxAttempts = 3,
+  delayMs = 1000,
+  options?: {
+    signal?: AbortSignal;
+    /** Override the default non-retryable classification. */
+    isRetryable?: (error: Error) => boolean;
+  },
+): Promise<T> {
   if (maxAttempts < 1) {
     throw new Error('maxAttempts must be at least 1');
   }
@@ -233,12 +241,17 @@ export async function retry<T>(fn: () => Promise<T>, maxAttempts = 3, delayMs = 
   let lastError: Error | undefined;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      return await fn();
+      return await fn(attempt);
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
-      if (attempt < maxAttempts) {
-        await sleep(delayMs * attempt); // exponential backoff
+      const retryable = options?.isRetryable
+        ? options.isRetryable(lastError)
+        : !NON_RETRYABLE_ERROR.test(lastError.message);
+      if (!retryable || options?.signal?.aborted || attempt >= maxAttempts) {
+        throw lastError;
       }
+      // Exponential backoff with jitter.
+      await sleep(delayMs * 2 ** (attempt - 1) + Math.floor(Math.random() * Math.min(250, delayMs)));
     }
   }
   throw lastError;

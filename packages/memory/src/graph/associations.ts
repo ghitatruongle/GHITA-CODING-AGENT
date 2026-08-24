@@ -1,5 +1,5 @@
 /**
- * Phase 23 — Entity Associations
+
  *
  * Defines the association primitives used by the connection-path and
  * community-detection modules. An Association is a typed, weighted

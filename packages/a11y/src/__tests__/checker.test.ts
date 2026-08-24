@@ -1,6 +1,4 @@
-// ==============================================================================
 // @ghita/a11y -- Comprehensive Tests
-// ==============================================================================
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { AccessibilityChecker } from '../checker.js';
@@ -9,9 +7,7 @@ import { ColorContrastAnalyzer } from '../color-contrast.js';
 import { AriaValidator } from '../aria-validator.js';
 import { ScreenReaderHelper } from '../screen-reader.js';
 
-// ============================================================
 // AccessibilityChecker
-// ============================================================
 
 describe('AccessibilityChecker', () => {
   let checker: AccessibilityChecker;
@@ -141,9 +137,7 @@ describe('AccessibilityChecker', () => {
   });
 });
 
-// ============================================================
 // ColorContrastAnalyzer
-// ============================================================
 
 describe('ColorContrastAnalyzer', () => {
   let analyzer: ColorContrastAnalyzer;
@@ -200,9 +194,7 @@ describe('ColorContrastAnalyzer', () => {
   });
 });
 
-// ============================================================
 // AriaValidator
-// ============================================================
 
 describe('AriaValidator', () => {
   let validator: AriaValidator;
@@ -251,9 +243,7 @@ describe('AriaValidator', () => {
   });
 });
 
-// ============================================================
 // ScreenReaderHelper
-// ============================================================
 
 describe('ScreenReaderHelper', () => {
   let helper: ScreenReaderHelper;

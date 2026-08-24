@@ -1,8 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Guardrails Middleware
-// Phase 3.3: Content filter, PII detector, secret detector, rate limiter, audit logger
-// ==============================================================================
-
+import { loadNative } from '@ghita/native-bridge';
 import type { AIProviderType, AIStreamChunk } from '@ghita/shared';
 import type { ChatMiddleware, ChatStreamMiddleware } from '../utils/middleware.js';
 import type { ChatMessage } from '../types.js';
@@ -95,7 +91,7 @@ const PII_PATTERNS: Array<{
 // --- Secret Patterns ---
 
 const SECRET_PATTERNS: Array<{ name: string; regex: RegExp }> = [
-  { name: 'openai_key', regex: /sk-[a-zA-Z0-9]{20,}/g },
+  { name: 'openai_key', regex: /\bsk-(?:proj-|org-|ant-)?[A-Za-z0-9_-]{20,}\b/g },
   { name: 'github_token', regex: /ghp_[a-zA-Z0-9]{36}/g },
   { name: 'aws_key', regex: /AKIA[0-9A-Z]{16}/g },
   { name: 'google_api_key', regex: /AIzaSy[a-zA-Z0-9_-]{33}/g },
@@ -103,6 +99,43 @@ const SECRET_PATTERNS: Array<{ name: string; regex: RegExp }> = [
   { name: 'private_key', regex: /-----BEGIN (?:RSA |EC )?PRIVATE KEY-----/g },
   { name: 'jwt_token', regex: /eyJ[a-zA-Z0-9_-]*\.eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*/g },
 ];
+
+// Exported for parity testing (tests/secret-parity.test.ts mirrors these
+// categories against the shared secret fixture corpus).
+export const SECRET_PATTERN_CATALOG = SECRET_PATTERNS;
+
+// --- Native fast path (secscan addon) ---
+
+type SecscanNativeLike = {
+  scanFast?: (
+    content: string,
+    rules: Array<{ id: string; pattern: string; negative?: string | null }>,
+  ) => { lines?: Uint32Array } | undefined;
+};
+
+let secscanNative: SecscanNativeLike | null | undefined;
+
+function getSecscanNative(): SecscanNativeLike | null {
+  if (secscanNative !== undefined) return secscanNative;
+  try {
+    const bridge = loadNative<SecscanNativeLike>(
+      'secscan',
+      undefined as unknown as SecscanNativeLike,
+    );
+    secscanNative =
+      bridge?.native && typeof bridge.impl?.scanFast === 'function' ? bridge.impl : null;
+  } catch {
+    secscanNative = null;
+  }
+  return secscanNative ?? null;
+}
+
+// All guardrails patterns are look-around-free, so the full set runs in the
+// native one-pass pre-filter.
+const GUARDRAILS_NATIVE_RULES = SECRET_PATTERNS.map((p, i) => ({
+  id: String(i),
+  pattern: p.regex.source,
+}));
 
 // --- Content Filter Patterns ---
 
@@ -149,6 +182,18 @@ function detectSecrets(
   config: SecretDetectorConfig,
 ): { detected: boolean; names: string[] } {
   if (!config.enabled) return { detected: false, names: [] };
+  // Native fast path: one combined-regex pass decides whether any known
+  // secret shape exists before paying for the per-pattern JS loop. The JS
+  // loop below stays the source of truth for which category matched.
+  const secscan = getSecscanNative();
+  if (secscan?.scanFast) {
+    try {
+      const pre = secscan.scanFast(text, GUARDRAILS_NATIVE_RULES);
+      if ((pre?.lines?.length ?? 0) === 0) return { detected: false, names: [] };
+    } catch {
+      // native unavailable or a pattern rejected by the regex crate — run JS
+    }
+  }
   const names: string[] = [];
   for (const pattern of SECRET_PATTERNS) {
     pattern.regex.lastIndex = 0;

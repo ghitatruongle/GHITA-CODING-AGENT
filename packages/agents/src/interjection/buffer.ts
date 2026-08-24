@@ -1,13 +1,9 @@
-// ==============================================================================
-// GHITA CODING AGENT - v1.1.5-beta1 Track 2.4: Interjection Buffer
-// ------------------------------------------------------------------------------
 // Thread-safe buffer for injecting user commands into a running agent at safe
 // points between turns (pattern: grok-build xai-interjection-core). The buffer
 // accumulates messages while the agent is mid-turn and drains them at the next
 // safe injection point (after all pending tool actions complete, before the
 // next LLM call). This prevents race conditions where user input arrives
 // during tool execution or model streaming.
-// ==============================================================================
 
 /** A single interjection message queued by the user. */
 export interface InterjectionMessage {

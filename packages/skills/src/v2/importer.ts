@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Skills v1.1.0 Track 2: v2 universal importer (P26)
-// ==============================================================================
 // Imports SKILL.md v2 documents: parses frontmatter (dedicated v2 YAML-subset
 // parser with nested `metadata:` and `sources:` blocks), validates the v2
 // contract, maps fields onto a SkillDefinition and reports per-skill skips.
-// ==============================================================================
 
 import type { SkillResult } from '@ghita/shared';
 import type { SkillDefinition, SkillInvocation, SkillExecutionContext } from '../types.js';

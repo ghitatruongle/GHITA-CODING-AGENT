@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Agent Groups
-// ==============================================================================
-
 import { useState } from 'react';
 import {
   createDefaultAgentGroupManager,
@@ -195,7 +191,7 @@ export function AgentGroups() {
 
   const runGroup = async (group: AgentGroup) => {
     setRunningGroupId(group.id);
-    // deep-review fix (M5): a rejected runGroup previously left the button
+    
     // disabled forever and produced an unhandled rejection. Always clear the
     // running state, and surface the failure as a task entry.
     try {

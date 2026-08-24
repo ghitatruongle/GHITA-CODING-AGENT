@@ -1,6 +1,4 @@
-// ==============================================================================
 // Wave 2 — agents storage / runnable / flow / messages coverage
-// ==============================================================================
 
 import { describe, it, expect, vi } from 'vitest';
 import { InMemoryStorage } from '../src/storage/memory.js';

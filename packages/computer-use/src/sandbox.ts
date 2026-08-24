@@ -1,8 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Sandbox Execution
-// Chạy code AI trong child process cách ly với resource limits
-// ==============================================================================
-
 import { spawn, type ChildProcess } from 'node:child_process';
 import { writeFile, unlink, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -10,17 +5,17 @@ import { tmpdir } from 'node:os';
 import { randomBytes } from 'node:crypto';
 
 export interface SandboxConfig {
-  /** Thời gian tối đa chạy (ms), mặc định 30s */
+  
   timeoutMs?: number;
-  /** Bộ nhớ tối đa (MB), mặc định 256MB */
+  
   memoryLimitMb?: number;
-  /** Cho phép truy cập network, mặc định false */
+  
   allowNetwork?: boolean;
   /** Working directory cho sandbox */
   cwd?: string;
   /** Environment variables */
   env?: Record<string, string>;
-  /** Ngôn ngữ: 'javascript' | 'typescript' | 'python' | 'shell' */
+  
   language?: SandboxLanguage;
 }
 
@@ -473,7 +468,6 @@ export async function runInSandbox(
   return localResult;
 }
 
-/** Tạo sandbox skill cho SkillRegistry */
 export function createSandboxSkill() {
   return {
     id: 'sandbox.run',

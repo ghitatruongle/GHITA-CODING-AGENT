@@ -1,10 +1,7 @@
-// ==============================================================================
-// ghita-retrieval — Text splitters for chunking (Track 8.3)
-// ==============================================================================
-// Replaces ingest/src/splitters.ts with native Rust implementations.
-// Provides markdown-aware, code-aware, and fixed-size splitting strategies.
-// Std-only core; the addon exposes napi bindings.
-// ==============================================================================
+//! ghita-retrieval — Text splitters for chunking
+//! Replaces ingest/src/splitters.ts with native Rust implementations.
+//! Provides markdown-aware, code-aware, and fixed-size splitting strategies.
+//! Std-only core; the addon exposes napi bindings.
 
 /// A chunk of text with metadata about its position in the source.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -174,9 +171,15 @@ pub fn split_fixed(text: &str, chunk_size: usize, overlap: usize) -> Vec<Chunk> 
             end_offset: end,
         });
         id += 1;
-        let step = if chunk_size > overlap { chunk_size - overlap } else { 1 };
+        let step = if chunk_size > overlap {
+            chunk_size - overlap
+        } else {
+            1
+        };
         start += step;
-        if start >= text.len() { break; }
+        if start >= text.len() {
+            break;
+        }
     }
 
     chunks

@@ -1,15 +1,10 @@
-// ==============================================================================
-// GHITA CODING AGENT - Load Balancer Types (Phase 28)
 // Round-robin + weighted routing with health checks, rate limiting, and
 // automatic failover across LLM providers.
-// ==============================================================================
 
 import type { AIProviderType, AIStreamChunk } from '@ghita/shared';
 import type { ChatMessage, ChatOptions, ChatResponse } from '../types.js';
 
-// ---------------------------------------------------------------------------
 // Routing strategy
-// ---------------------------------------------------------------------------
 
 /**
  * - 'round-robin': cycle through healthy providers
@@ -25,9 +20,7 @@ export type LoadBalancingStrategy =
   | 'fastest'
   | 'priority';
 
-// ---------------------------------------------------------------------------
 // Provider endpoint / pool entry
-// ---------------------------------------------------------------------------
 
 /** A single provider endpoint in the load-balanced pool. */
 export interface LoadBalancedProvider {
@@ -55,9 +48,7 @@ export interface LoadBalancedProvider {
   costPer1k?: number;
 }
 
-// ---------------------------------------------------------------------------
 // Health check
-// ---------------------------------------------------------------------------
 
 export type HealthState = 'healthy' | 'degraded' | 'unhealthy' | 'unknown';
 
@@ -106,9 +97,7 @@ export interface HealthSnapshot {
   averageLatencyMs: number;
 }
 
-// ---------------------------------------------------------------------------
 // Rate limiter
-// ---------------------------------------------------------------------------
 
 export interface RateLimiterConfig {
   /** Window size in ms (default 60_000 = 1 minute) */
@@ -134,9 +123,7 @@ export interface RateLimitState {
   nextRefillAt: number;
 }
 
-// ---------------------------------------------------------------------------
 // Load Balancer Configuration
-// ---------------------------------------------------------------------------
 
 export interface LoadBalancerConfig {
   /** Routing strategy (default: 'weighted') */
@@ -166,9 +153,7 @@ export const DEFAULT_LOAD_BALANCER_CONFIG: Omit<LoadBalancerConfig, 'providers'>
   autoRecover: true,
 };
 
-// ---------------------------------------------------------------------------
 // Failover
-// ---------------------------------------------------------------------------
 
 export type FailoverMode = 'queue' | 'reject' | 'next-best' | 'circuit-break';
 
@@ -183,9 +168,7 @@ export interface FailoverPolicy {
   retryDelayMs: number;
 }
 
-// ---------------------------------------------------------------------------
 // Routing decision
-// ---------------------------------------------------------------------------
 
 export interface RoutingDecision {
   /** Chosen provider endpoint */
@@ -207,9 +190,7 @@ export interface RoutingDecision {
   poolSnapshot: string[];
 }
 
-// ---------------------------------------------------------------------------
 // Request & Result types
-// ---------------------------------------------------------------------------
 
 export interface LoadBalancedRequest {
   id: string;
@@ -249,9 +230,7 @@ export interface LoadBalancedAttempt {
   skipped?: 'rate-limit' | 'unhealthy' | 'disabled' | 'tag-mismatch';
 }
 
-// ---------------------------------------------------------------------------
 // Provider adapter for the load balancer
-// ---------------------------------------------------------------------------
 
 /**
  * Mirrors the part of AIProvider used by the load balancer. Allows the
@@ -268,9 +247,7 @@ export interface LoadBalancedAdapter {
   healthCheck?(timeoutMs: number): Promise<void>;
 }
 
-// ---------------------------------------------------------------------------
 // Events
-// ---------------------------------------------------------------------------
 
 export type LoadBalancerEvent =
   | { type: 'health-changed'; providerId: string; state: HealthState; previous: HealthState }
@@ -283,9 +260,7 @@ export type LoadBalancerEvent =
 
 export type LoadBalancerEventListener = (event: LoadBalancerEvent) => void;
 
-// ---------------------------------------------------------------------------
 // Load Balancer Stats
-// ---------------------------------------------------------------------------
 
 export interface LoadBalancerStats {
   totalRequests: number;

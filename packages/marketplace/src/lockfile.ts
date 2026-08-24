@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Plugin Lockfile (Phase 31)
 // Version pinning + lockfile for reproducible installs
-// ==============================================================================
 
 import { readFile, writeFile } from 'node:fs/promises';
 import * as crypto from 'node:crypto';

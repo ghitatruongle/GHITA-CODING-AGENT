@@ -1,6 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - ReAct Loop (Phase 18: Screenshot Pipeline)
-// ==============================================================================
 //
 // The ReAct loop is the orchestration layer that ties the Operator, the
 // multimodal LLM, and the ActionParser together. On every iteration it:
@@ -22,7 +19,6 @@
 // dependency on a particular LLM SDK — this matches the rest of the
 // codebase (skills, computer-use, vision) which all use small typed
 // contracts instead of pulling in framework globals.
-// ==============================================================================
 
 import type {
   Operator,

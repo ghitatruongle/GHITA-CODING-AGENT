@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Shared Button Primitive
-// ==============================================================================
-
 import { type ButtonHTMLAttributes, type ReactNode } from 'react';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

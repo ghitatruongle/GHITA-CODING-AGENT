@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Communication Server
 // Socket.io server for Desktop ↔ Mobile real-time communication
-// ==============================================================================
 
 import { createServer, type Server as HttpServer } from 'node:http';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
@@ -16,7 +13,6 @@ import { ScreenCapture } from './screen-capture.js';
 import type { ServerConfig, ServerEvents, PairedDevice, CommandPayload } from './types.js';
 import { ChannelPluginRegistry } from './channel-plugin-contract.js';
 
-// deep-review fix (L10): constant-time string comparison for device tokens.
 function secureStringEqual(left: string, right: string): boolean {
   const a = Buffer.from(left);
   const b = Buffer.from(right);
@@ -124,7 +120,7 @@ export class CommunicationServer {
   private savePairedDevices(): void {
     try {
       const list = Array.from(this.connectedDevices.values())
-        .filter((d) => d.id && d.id !== 'cloud_session') // Chỉ lưu thiết bị LAN thực tế, bỏ cloud
+        .filter((d) => d.id && d.id !== 'cloud_session') 
         .map((d) => ({
           id: d.id,
           name: d.name,
@@ -154,10 +150,8 @@ export class CommunicationServer {
     this.screenCapture = new ScreenCapture();
   }
 
-  // ===========================================================================
   // Lifecycle
-  // ===========================================================================
-
+  
   /**
    * Start the Socket.io server
    */
@@ -500,10 +494,8 @@ export class CommunicationServer {
     this.pendingApprovals.clear();
   }
 
-  // ===========================================================================
   // Public API
-  // ===========================================================================
-
+  
   /**
    * Register event callbacks
    */
@@ -612,10 +604,8 @@ export class CommunicationServer {
     this.io.to('paired-devices').emit(SOCKET_EVENTS.REQUIRE_APPROVAL, data);
   }
 
-  // ===========================================================================
   // Socket Event Handlers
-  // ===========================================================================
-
+  
   private registerSocketHandlers(): void {
     if (!this.io) return;
 
@@ -629,7 +619,7 @@ export class CommunicationServer {
         if (existingDevice) {
           existingDevice.socketId = socket.id;
           existingDevice.lastSeen = Date.now();
-          // deep-review fix (M12): join the paired-devices room so the
+          
           // reconnecting device actually receives broadcasts (chat, status,
           // screenshot, approvals). Previously the socketId was updated but
           // the room membership was never granted, leaving the device
@@ -719,7 +709,6 @@ export class CommunicationServer {
         }
       });
 
-      // --- Phase 5A: MCP Tool Call ---
       socket.on(
         'mcp_tool_call',
         (data: { serverName: string; toolName: string; args: Record<string, unknown> }) => {
@@ -735,7 +724,6 @@ export class CommunicationServer {
         },
       );
 
-      // --- Phase 5C: Web Search ---
       socket.on('web_search', (data: { query: string; maxResults?: number }) => {
         const device = this.findDeviceBySocket(socket.id);
         if (!device) {
@@ -747,7 +735,6 @@ export class CommunicationServer {
         this.events.onChat?.(device.id, JSON.stringify({ type: 'web_search', ...data }));
       });
 
-      // --- Phase 6C: Image Input ---
       socket.on('image_input', (data: { image: string; prompt?: string }) => {
         const device = this.findDeviceBySocket(socket.id);
         if (!device) {
@@ -765,7 +752,6 @@ export class CommunicationServer {
         socket.broadcast.emit(SOCKET_EVENTS.SYNC_LANGUAGE, data);
       });
 
-      // --- Phase 2: Set Workspace ---
       socket.on('set_workspace', (data: { workspacePath: string }) => {
         const device = this.findDeviceBySocket(socket.id);
         if (!device) {
@@ -781,7 +767,6 @@ export class CommunicationServer {
         }
       });
 
-      // --- Phase 2: Set Skill Enabled ---
       socket.on('set_skill_enabled', (data: { skillId: string; enabled: boolean }) => {
         const device = this.findDeviceBySocket(socket.id);
         if (!device) {
@@ -801,7 +786,6 @@ export class CommunicationServer {
         }
       });
 
-      // --- Phase 2: Run Skill ---
       socket.on('run_skill', (data: { skillId: string; params?: Record<string, unknown> }) => {
         const device = this.findDeviceBySocket(socket.id);
         if (!device) {
@@ -819,7 +803,6 @@ export class CommunicationServer {
         }
       });
 
-      // --- Phase 2: List Skills ---
       socket.on('list_skills', () => {
         const device = this.findDeviceBySocket(socket.id);
         if (!device) {
@@ -885,7 +868,7 @@ export class CommunicationServer {
     } else if (deviceId) {
       // Session Resumption / Reconnection
       device = this.connectedDevices.get(deviceId);
-      // deep-review fix (L10): compare the device secret with a constant-time
+      
       // comparison — the previous `authToken === device.secret` leaked timing
       // information that could help brute-force a session token.
       if (device && device.secret && authToken && secureStringEqual(authToken, device.secret)) {

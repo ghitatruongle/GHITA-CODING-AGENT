@@ -1,13 +1,8 @@
-// ==============================================================================
-// GHITA CODING AGENT - Desktop E2E smoke (v1.1.0 Track 12 G3)
-// ------------------------------------------------------------------------------
 // Smoke headless desktop-critical paths (Windows dev / Windows CI):
 //   [D1] Startup modules sidecar < 2000ms (ai-engine/skills/agents/memory/security)
 //   [D2] Chat stream parts (consumeChatStream: text/tool-call/file/source)
 //   [D3] Edit review gate (zustand editProposalStore: proposeRemote→getForPath→remove)
 //   [D4] Terminal session (serialize/restore + FlowControl)
-// Chạy: node --import tsx scripts/desktop-smoke.mjs
-// ==============================================================================
 
 import { performance } from 'node:perf_hooks';
 
@@ -16,7 +11,7 @@ const results = [];
 const failures = [];
 
 async function main() {
-  // [D1] Startup: nạp các module nặng mà sidecar lazy-load — đo load time.
+  
   const t0 = performance.now();
   await Promise.all([
     import('../packages/ai-engine/dist/index.js'),

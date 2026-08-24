@@ -1,15 +1,5 @@
-// ==============================================================================
-// Phase 34: Security Audit — Type Definitions
-// ==============================================================================
-
-/**
- * Mức độ nghiêm trọng của security issue.
- */
 export type SecuritySeverity = 'info' | 'low' | 'medium' | 'high' | 'critical';
 
-/**
- * Category phân loại issue.
- */
 export type SecurityCategory =
   | 'xss'
   | 'sql-injection'
@@ -24,9 +14,6 @@ export type SecurityCategory =
   | 'secrets'
   | 'input-validation';
 
-/**
- * Security issue phát hiện được.
- */
 export interface SecurityIssue {
   /** Issue ID (vd: 'SEC-XSS-001') */
   id: string;
@@ -34,45 +21,39 @@ export interface SecurityIssue {
   category: SecurityCategory;
   /** Severity */
   severity: SecuritySeverity;
-  /** Mô tả ngắn */
+  
   title: string;
-  /** Mô tả chi tiết */
+  
   description: string;
-  /** Vị trí phát hiện (file path, URL, config key) */
+  
   location: string;
   /** Code snippet / evidence */
   evidence?: string;
-  /** Gợi ý fix */
+  
   remediation: string;
   /** CWE reference (vd: 'CWE-79') */
   cwe?: string;
-  /** Timestamp phát hiện */
+  
   detectedAt: number;
 }
 
-/**
- * Audit report tổng hợp.
- */
 export interface AuditReport {
   /** Report ID */
   id: string;
-  /** Thời điểm chạy audit */
+  
   runAt: number;
-  /** Danh sách issue */
+  
   issues: SecurityIssue[];
-  /** Tổng số issue theo severity */
+  
   counts: Record<SecuritySeverity, number>;
-  /** Điểm tổng (0-100, 100 = không có issue) */
+  
   score: number;
-  /** Có pass ngưỡng không */
+  
   passed: boolean;
-  /** Ngưỡng pass (score tối thiểu) */
+  
   threshold: number;
 }
 
-/**
- * CORS config cần audit.
- */
 export interface CorsConfig {
   /** Allowed origins */
   origins: string[];
@@ -94,15 +75,15 @@ export interface CorsConfig {
 export interface SanitizationRule {
   /** Rule ID */
   id: string;
-  /** Tên */
+  
   name: string;
-  /** Pattern để detect (regex) */
+  
   pattern: RegExp;
   /** Severity khi match */
   severity: SecuritySeverity;
   /** Category */
   category: SecurityCategory;
-  /** Hàm fix (optional) */
+  
   fix?: (input: string) => string;
 }
 
@@ -114,7 +95,7 @@ export interface ApiKeyInfo {
   id: string;
   /** Provider (vd: 'openai', 'anthropic') */
   provider: string;
-  /** Masked key (chỉ hiện prefix + suffix) */
+  
   maskedKey: string;
   /** Created timestamp */
   createdAt: number;
@@ -140,7 +121,7 @@ export interface RotationEvent {
   action: 'rotated' | 'revoked' | 'expired';
   /** Timestamp */
   timestamp: number;
-  /** Lý do */
+  
   reason?: string;
   /** Callback */
   onComplete?: (event: RotationEvent) => void | Promise<void>;

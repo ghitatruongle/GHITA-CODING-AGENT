@@ -1,11 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Phase 5: Socratic Docs-Aware /grill-me (DocsGriller)
-// ==============================================================================
-// Nâng cấp lệnh /grill-me: quét docs/, đối chiếu cosine similarity,
-// phát hiện mâu thuẫn kiến trúc, lưu lịch sử vào .ghita/grill-history.json
-// Tham chiếu: Matt's Skills (grill-with-docs)
-// ==============================================================================
-
 import * as fs from 'fs';
 import * as path from 'path';
 import { execFileSync } from 'child_process';
@@ -40,13 +32,10 @@ import type {
 import { GRILL_MODE_LIMITS } from './types.js';
 import { tokenize, buildVector, cosineSimilarity, extractExcerpt } from './utils.js';
 
-// deep-review fix (L9): cap individual doc/source reads to avoid OOM on huge
 // files (mirrors the Rust run_grill_session cap of 256 KiB per file).
 const DOCS_GRILL_MAX_FILE_BYTES = 256 * 1024;
 
-// ──────────────────────────────────────────────────────────────────────────────
 // Markdown Structure Parser
-// ──────────────────────────────────────────────────────────────────────────────
 
 /** Parse markdown content into structured sections */
 function parseMarkdownStructure(content: string): DocSection[] {
@@ -162,9 +151,7 @@ function parseMarkdownStructure(content: string): DocSection[] {
   return sections;
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
 // Source Code Scanner for Cross-Referencing
-// ──────────────────────────────────────────────────────────────────────────────
 
 /** Extract exported symbols from a TypeScript/JavaScript source file */
 function extractSourceSymbols(content: string, filePath: string): SourceCodeRef {
@@ -217,9 +204,7 @@ function extractSourceSymbols(content: string, filePath: string): SourceCodeRef 
   };
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
 // Core: DocsGriller Engine
-// ──────────────────────────────────────────────────────────────────────────────
 
 export class DocsGriller {
   private config: Required<DocsGrillerConfig>;
@@ -260,7 +245,7 @@ export class DocsGriller {
       if (!this.config.extensions.includes(ext)) continue;
 
       try {
-        // deep-review fix (L9): cap per-file reads (256 KiB) so an oversized
+        
         // doc cannot OOM the process — mirrors the Rust run_grill_session cap.
         const stat = fs.statSync(filePath);
         if (stat.size > DOCS_GRILL_MAX_FILE_BYTES) {
@@ -320,7 +305,7 @@ export class DocsGriller {
       }
 
       try {
-        // deep-review fix (L9): cap source file reads too.
+        
         const stat = fs.statSync(filePath);
         if (stat.size > DOCS_GRILL_MAX_FILE_BYTES) continue;
         const content = fs.readFileSync(filePath, 'utf-8');
@@ -909,9 +894,7 @@ export class DocsGriller {
   }
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
 // Factory: create /grill-me slash command
-// ──────────────────────────────────────────────────────────────────────────────
 
 export function createGrillMeCommand(griller?: DocsGriller): {
   name: string;

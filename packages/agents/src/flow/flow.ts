@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Flow Orchestration Engine
-// ==============================================================================
-
 import type { FlowStep, FlowStepResult, FlowContext, FlowConfig, FlowRunResult } from './types.js';
 
 function generateId(): string {

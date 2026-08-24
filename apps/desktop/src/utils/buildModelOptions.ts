@@ -1,8 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT — Model options builder
 // Shared helper that flattens persisted API config into a flat dropdown list.
 // Extracted from ChatPanel.tsx to allow reuse and unit testing.
-// ==============================================================================
 
 import { loadApiConfig, normalizeApiKeys } from './apiConfig';
 import { formatModelLabel } from './modelLabel';

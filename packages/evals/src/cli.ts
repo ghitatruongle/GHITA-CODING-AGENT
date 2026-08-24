@@ -1,7 +1,4 @@
 #!/usr/bin/env node
-// ==============================================================================
-// GHITA CODING AGENT - Evals: CLI (`pnpm evals run|compare|replay`)
-// ==============================================================================
 
 import { parseArgs } from 'node:util';
 import { readFileSync, mkdirSync, writeFileSync, existsSync } from 'node:fs';

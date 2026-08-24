@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — File Explorer Toolbar (header bar)
-// ==============================================================================
-
 interface FileExplorerToolbarProps {
   folderName: string;
   onOpenFolder: () => void;

@@ -1,8 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Marketplace Types
-// Phase 2.3
-// ==============================================================================
-
 import type { SkillCategory } from '@ghita/shared';
 
 export interface SkillManifest {

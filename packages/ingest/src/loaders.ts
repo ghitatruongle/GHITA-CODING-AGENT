@@ -1,14 +1,16 @@
-// ==============================================================================
-// GHITA CODING AGENT - @ghita/ingest loaders (P65)
-// ==============================================================================
-// Text loaders for md/json/csv/txt + best-effort docx (w:t extraction from
-// raw zip bytes, no native dependency) + optional pdf via injectable reader.
-// ==============================================================================
+// Text loaders for md/json/csv/txt + docx (native Rust unzip+parse via the
+// docloader addon when built, JS latin1/regex fallback otherwise) + optional
+// pdf via injectable reader.
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { extname, join, relative } from 'node:path';
 import { createHash } from 'node:crypto';
+import { loadNative } from '@ghita/native-bridge';
 import type { IngestDocument, LoadResult, SourceType } from './types.js';
+
+// Probe once at module load; `extractDocxJs` exists only in addon builds
+// built with the `docx` feature.
+const docloaderAddon = loadNative<{ extractDocxJs?: (data: Buffer) => string; extractPdfJs?: (data: Buffer) => string }>('docloader', {});
 
 export function contentHash(content: string): string {
   return createHash('sha256').update(content).digest('hex').slice(0, 32);
@@ -85,11 +87,20 @@ export async function loadDocument(
   let content: string | undefined;
   switch (source) {
     case 'docx':
-      content = extractDocxText(buffer);
+      // Native path handles DEFLATE-compressed documents (the common case);
+      // the JS fallback only understands stored (uncompressed) entries.
+      content = docloaderAddon.native && docloaderAddon.impl.extractDocxJs
+        ? docloaderAddon.impl.extractDocxJs(buffer)
+        : extractDocxText(buffer);
       break;
     case 'pdf':
       if (options.readPdf) {
+        // Explicit injected reader keeps the highest priority (API compat).
         content = await options.readPdf(buffer, path);
+      } else if (docloaderAddon.native && docloaderAddon.impl.extractPdfJs) {
+        // Native Rust extraction (pdf-extract) — previously PDFs were skipped
+        // entirely when no reader was injected.
+        content = docloaderAddon.impl.extractPdfJs(buffer);
       } else {
         return { skipped: `pdf reader not configured: ${path}` };
       }

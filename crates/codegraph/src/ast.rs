@@ -1,16 +1,15 @@
-// ==============================================================================
-// ghita-codegraph — tree-sitter AST extraction (v1.1.1 Track 8 A10)
-// ==============================================================================
-// Native replacement for the JS hot path `packages/code-graph/src/ast-parser.ts`
-// (TypeScript Compiler API walk). Same output contract:
-//   - symbols: function/class/method/interface/type/enum/variable/property
-//   - imports: moduleSpecifier + named/default/namespace + line
-//   - edges: contains / exports / extends / implements
-// The TS wrapper still computes node ids, tags, module nodes and `indexedAt`
-// (cheap string work) so graphs are byte-compatible with the JS fallback.
-// tree-sitter is error-tolerant: syntax errors yield partial results, never a
-// throw (mirrors "fail soft" behavior of the JS walker).
-// ==============================================================================
+//! ghita-codegraph — tree-sitter AST extraction
+//! Native replacement for the JS hot path `packages/code-graph/src/ast-parser.ts`
+//! (TypeScript Compiler API walk). Same output contract:
+//!
+//! - symbols: function/class/method/interface/type/enum/variable/property
+//! - imports: moduleSpecifier + named/default/namespace + line
+//! - edges: contains / exports / extends / implements
+//!
+//! The TS wrapper still computes node ids, tags, module nodes and `indexedAt`
+//! (cheap string work) so graphs are byte-compatible with the JS fallback.
+//! tree-sitter is error-tolerant: syntax errors yield partial results, never a
+//! throw (mirrors "fail soft" behavior of the JS walker).
 
 use std::path::Path;
 
@@ -210,10 +209,7 @@ fn named_children(node: Node) -> Vec<Node> {
 fn excerpt(node: Node, content: &str) -> String {
     let text = node_text(node, content);
     let first: String = text.chars().take(200).collect();
-    first
-        .split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" ")
+    first.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 fn field_name(node: Node, name: &str, content: &str) -> Option<String> {
@@ -227,7 +223,8 @@ fn field_name(node: Node, name: &str, content: &str) -> Option<String> {
 fn return_type_text(node: Node, content: &str) -> Option<String> {
     node.child_by_field_name("return_type").and_then(|n| {
         let text = if n.kind() == "type_annotation" {
-            n.named_children(&mut n.walk()).next()
+            n.named_children(&mut n.walk())
+                .next()
                 .map(|t| node_text(t, content).trim().to_string())
                 .unwrap_or_default()
         } else {
@@ -251,13 +248,11 @@ fn parameter_names(params: Node, content: &str) -> Vec<String> {
             "default_parameter" | "typed_parameter" | "typed_default_parameter" => {
                 // python: typed_parameter has no `name` field — first identifier
                 // child IS the name (grammar: (typed_parameter (identifier) type: ...)).
-                let name = n
-                    .child_by_field_name("name")
-                    .or_else(|| {
-                        n.named_children(&mut n.walk())
-                            .into_iter()
-                            .find(|c| c.kind() == "identifier")
-                    });
+                let name = n.child_by_field_name("name").or_else(|| {
+                    n.named_children(&mut n.walk())
+                        .into_iter()
+                        .find(|c| c.kind() == "identifier")
+                });
                 if let Some(name) = name {
                     out.push(node_text(name, content).trim().to_string());
                 }
@@ -308,7 +303,14 @@ fn push_symbol(
     });
 }
 
-fn push_edge(out: &mut FileParse, from: String, to: String, kind: EdgeKind, weight: f64, line: u32) {
+fn push_edge(
+    out: &mut FileParse,
+    from: String,
+    to: String,
+    kind: EdgeKind,
+    weight: f64,
+    line: u32,
+) {
     out.edges.push(EdgeSpec {
         from,
         to,
@@ -331,7 +333,17 @@ fn is_exported(node: Node, content: &str) -> bool {
                 let text = node_text(p, content).trim_start();
                 return text.starts_with("export")
                     && (p.child_by_field_name("declaration").is_some()
-                        || named_children(p).iter().any(|c| matches!(c.kind(), "function_declaration" | "class_declaration" | "lexical_declaration" | "interface_declaration" | "type_alias_declaration" | "enum_declaration")));
+                        || named_children(p).iter().any(|c| {
+                            matches!(
+                                c.kind(),
+                                "function_declaration"
+                                    | "class_declaration"
+                                    | "lexical_declaration"
+                                    | "interface_declaration"
+                                    | "type_alias_declaration"
+                                    | "enum_declaration"
+                            )
+                        }));
             }
             "export" => return true,
             _ => parent = p.parent(),
@@ -388,7 +400,14 @@ fn walk_tsjs(
                 None,
             );
             if exported {
-                push_edge(out, String::new(), qname, EdgeKind::Exports, 1.0, line_of(node));
+                push_edge(
+                    out,
+                    String::new(),
+                    qname,
+                    EdgeKind::Exports,
+                    1.0,
+                    line_of(node),
+                );
             }
             // JS walker recurses into function bodies too (nested defs with
             // no parent) — replicate.
@@ -440,7 +459,14 @@ fn walk_tsjs(
                 None,
             );
             if force_exported || is_exported(node, content) {
-                push_edge(out, String::new(), qname.clone(), EdgeKind::Exports, 1.0, line_of(node));
+                push_edge(
+                    out,
+                    String::new(),
+                    qname.clone(),
+                    EdgeKind::Exports,
+                    1.0,
+                    line_of(node),
+                );
             }
             extract_ts_heritage(node, content, &qname, out);
             for member in node
@@ -490,7 +516,14 @@ fn walk_tsjs(
                 parent.clone(),
             );
             if let Some(p) = &parent {
-                push_edge(out, p.clone(), qname, EdgeKind::Contains, 1.0, line_of(node));
+                push_edge(
+                    out,
+                    p.clone(),
+                    qname,
+                    EdgeKind::Contains,
+                    1.0,
+                    line_of(node),
+                );
             }
         }
         "public_field_definition" | "property_signature" => {
@@ -511,7 +544,14 @@ fn walk_tsjs(
                         parent.clone(),
                     );
                     if let Some(p) = &parent {
-                        push_edge(out, p.clone(), qname, EdgeKind::Contains, 0.8, line_of(node));
+                        push_edge(
+                            out,
+                            p.clone(),
+                            qname,
+                            EdgeKind::Contains,
+                            0.8,
+                            line_of(node),
+                        );
                     }
                 }
             }
@@ -532,7 +572,14 @@ fn walk_tsjs(
                     None,
                 );
                 if force_exported || is_exported(node, content) {
-                    push_edge(out, String::new(), qname, EdgeKind::Exports, 1.0, line_of(node));
+                    push_edge(
+                        out,
+                        String::new(),
+                        qname,
+                        EdgeKind::Exports,
+                        1.0,
+                        line_of(node),
+                    );
                 }
                 // interface members are method/property *signatures* — the JS
                 // walker does not emit child nodes for them.
@@ -554,7 +601,14 @@ fn walk_tsjs(
                     None,
                 );
                 if force_exported || is_exported(node, content) {
-                    push_edge(out, String::new(), qname, EdgeKind::Exports, 1.0, line_of(node));
+                    push_edge(
+                        out,
+                        String::new(),
+                        qname,
+                        EdgeKind::Exports,
+                        1.0,
+                        line_of(node),
+                    );
                 }
             }
         }
@@ -574,7 +628,14 @@ fn walk_tsjs(
                     None,
                 );
                 if force_exported || is_exported(node, content) {
-                    push_edge(out, String::new(), qname, EdgeKind::Exports, 1.0, line_of(node));
+                    push_edge(
+                        out,
+                        String::new(),
+                        qname,
+                        EdgeKind::Exports,
+                        1.0,
+                        line_of(node),
+                    );
                 }
             }
         }
@@ -586,20 +647,18 @@ fn walk_tsjs(
                 .child_by_field_name("declaration")
                 .or_else(|| node.child_by_field_name("value"))
                 .or_else(|| {
-                    named_children(node)
-                        .into_iter()
-                        .find(|c| {
-                            matches!(
-                                c.kind(),
-                                "function_declaration"
-                                    | "class_declaration"
-                                    | "lexical_declaration"
-                                    | "interface_declaration"
-                                    | "type_alias_declaration"
-                                    | "enum_declaration"
-                                    | "internal_module"
-                            )
-                        })
+                    named_children(node).into_iter().find(|c| {
+                        matches!(
+                            c.kind(),
+                            "function_declaration"
+                                | "class_declaration"
+                                | "lexical_declaration"
+                                | "interface_declaration"
+                                | "type_alias_declaration"
+                                | "enum_declaration"
+                                | "internal_module"
+                        )
+                    })
                 });
             if let Some(d) = decl {
                 walk_tsjs(_tree, d, content, parent.clone(), true, out);
@@ -688,7 +747,14 @@ fn emit_variable_declarations(
                 None,
             );
             if exported {
-                push_edge(out, String::new(), qname, EdgeKind::Exports, 1.0, line_of(node));
+                push_edge(
+                    out,
+                    String::new(),
+                    qname,
+                    EdgeKind::Exports,
+                    1.0,
+                    line_of(node),
+                );
             }
         } else {
             push_symbol(
@@ -705,12 +771,18 @@ fn emit_variable_declarations(
             );
             if exported {
                 // JS weight for variable exports is 0.8
-                push_edge(out, String::new(), qname, EdgeKind::Exports, 0.8, line_of(node));
+                push_edge(
+                    out,
+                    String::new(),
+                    qname,
+                    EdgeKind::Exports,
+                    0.8,
+                    line_of(node),
+                );
             }
         }
     }
 }
-
 
 fn extract_ts_import(node: Node, content: &str, out: &mut FileParse) {
     let source = node
@@ -801,7 +873,14 @@ fn extract_ts_heritage(node: Node, content: &str, class_qname: &str, out: &mut F
                 if let Some(target) = clause.child_by_field_name("value") {
                     let t = node_text(target, content).trim().to_string();
                     if !t.is_empty() {
-                        push_edge(out, class_qname.to_string(), t, EdgeKind::Extends, 1.0, line);
+                        push_edge(
+                            out,
+                            class_qname.to_string(),
+                            t,
+                            EdgeKind::Extends,
+                            1.0,
+                            line,
+                        );
                     }
                 }
             }
@@ -809,7 +888,14 @@ fn extract_ts_heritage(node: Node, content: &str, class_qname: &str, out: &mut F
                 for expr in named_children(clause) {
                     let target = node_text(expr, content).trim().to_string();
                     if !target.is_empty() {
-                        push_edge(out, class_qname.to_string(), target, EdgeKind::Implements, 1.0, line);
+                        push_edge(
+                            out,
+                            class_qname.to_string(),
+                            target,
+                            EdgeKind::Implements,
+                            1.0,
+                            line,
+                        );
                     }
                 }
             }
@@ -866,9 +952,20 @@ fn walk_py(
                     parent.clone(),
                 );
                 if let Some(p) = &parent {
-                    push_edge(out, p.clone(), qname, EdgeKind::Contains, 1.0, line_of(node));
+                    push_edge(
+                        out,
+                        p.clone(),
+                        qname,
+                        EdgeKind::Contains,
+                        1.0,
+                        line_of(node),
+                    );
                 }
-                for child in node.child_by_field_name("body").map(named_children).unwrap_or_default() {
+                for child in node
+                    .child_by_field_name("body")
+                    .map(named_children)
+                    .unwrap_or_default()
+                {
                     walk_py(_tree, child, content, None, false, out);
                 }
             }
@@ -897,7 +994,11 @@ fn walk_py(
                         }
                     }
                 }
-                for child in node.child_by_field_name("body").map(named_children).unwrap_or_default() {
+                for child in node
+                    .child_by_field_name("body")
+                    .map(named_children)
+                    .unwrap_or_default()
+                {
                     walk_py(_tree, child, content, Some(qname.clone()), false, out);
                 }
             }
@@ -1039,7 +1140,11 @@ export const legacy = () => 1;
         // contains: class → property (0.8) first, class → method (1.0) second
         // (declaration order); `to` is the qualified name the JS wrapper maps
         // to a node id.
-        let contains: Vec<&EdgeSpec> = out.edges.iter().filter(|e| e.kind == EdgeKind::Contains).collect();
+        let contains: Vec<&EdgeSpec> = out
+            .edges
+            .iter()
+            .filter(|e| e.kind == EdgeKind::Contains)
+            .collect();
         assert_eq!(contains.len(), 2);
         assert_eq!(contains[0].from, "Greeter");
         assert_eq!(contains[0].to, "Greeter.greeting");
@@ -1081,11 +1186,19 @@ class Dog extends Base implements Animal, Runnable {
 }
 "#;
         let out = parse(src, "/abs/path/dog.ts");
-        let extends: Vec<&EdgeSpec> = out.edges.iter().filter(|e| e.kind == EdgeKind::Extends).collect();
+        let extends: Vec<&EdgeSpec> = out
+            .edges
+            .iter()
+            .filter(|e| e.kind == EdgeKind::Extends)
+            .collect();
         assert_eq!(extends.len(), 1);
         assert_eq!(extends[0].from, "Dog");
         assert_eq!(extends[0].to, "Base");
-        let impls: Vec<&EdgeSpec> = out.edges.iter().filter(|e| e.kind == EdgeKind::Implements).collect();
+        let impls: Vec<&EdgeSpec> = out
+            .edges
+            .iter()
+            .filter(|e| e.kind == EdgeKind::Implements)
+            .collect();
         assert_eq!(impls.len(), 2);
         assert_eq!(impls[0].from, "Dog");
     }
@@ -1177,31 +1290,43 @@ class A {
         // variable node has no parentId, but qualifiedName carries the prefix)
         for (name, qname) in [("c", "A.c"), ("g", "A.g"), ("s", "A.s")] {
             assert!(
-                out.symbols.iter().any(|s| s.name == name && s.qualified_name == qname),
+                out.symbols
+                    .iter()
+                    .any(|s| s.name == name && s.qualified_name == qname),
                 "missing nested {name}"
             );
         }
         // A real method emits a method symbol but its body is NOT walked.
         let normal = out.symbols.iter().find(|s| s.name == "normal").unwrap();
         assert_eq!(normal.kind, SymbolKind::Method);
-        assert!(!out.symbols.iter().any(|s| s.name == "n"), "method body must not be walked");
+        assert!(
+            !out.symbols.iter().any(|s| s.name == "n"),
+            "method body must not be walked"
+        );
         // no constructor/getter/setter symbols
         assert!(!out.symbols.iter().any(|s| s.name == "constructor"));
-        assert!(!out.symbols.iter().any(|s| s.name == "val" || s.name == "val2"));
+        assert!(!out
+            .symbols
+            .iter()
+            .any(|s| s.name == "val" || s.name == "val2"));
     }
 
     #[test]
     fn anonymous_default_export_walks_body() {
         // `export default function () { const inner = 1 }` — no symbol for the
         // anonymous function, but the body is still walked.
-        let out = parse("export default function() { const inner = 1; }", "/abs/path/x.ts");
-        let inner = out.symbols.iter().find(|s| s.name == "inner").expect("inner");
+        let out = parse(
+            "export default function() { const inner = 1; }",
+            "/abs/path/x.ts",
+        );
+        let inner = out
+            .symbols
+            .iter()
+            .find(|s| s.name == "inner")
+            .expect("inner");
         assert_eq!(inner.kind, SymbolKind::Variable);
         // named default export class still lands as an exported class
-        let out2 = parse(
-            "export default class Foo { bar() {} }",
-            "/abs/path/y.ts",
-        );
+        let out2 = parse("export default class Foo { bar() {} }", "/abs/path/y.ts");
         let foo = out2.symbols.iter().find(|s| s.name == "Foo").unwrap();
         assert_eq!(foo.kind, SymbolKind::Class);
         assert!(foo.exported);

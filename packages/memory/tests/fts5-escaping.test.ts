@@ -1,13 +1,9 @@
-// ==============================================================================
-// GHITA CODING AGENT — FTS5 Query Escaping Security Tests
-// ==============================================================================
 // Tests for RustMemoryAddon.searchFTS5() query sanitization:
 //   - FTS5 special characters are neutralized (no syntax errors)
 //   - Double-quote injection cannot break out of MATCH wrapper
 //   - LIKE fallback properly escapes wildcards (%, _, \)
 //   - Empty / whitespace-only queries return empty results
 //   - Normal keyword searches still work correctly
-// ==============================================================================
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { RustMemoryAddon, type ChatLogEntry } from '../src/semantic/rustAddon.js';
@@ -63,9 +59,8 @@ describe('RustMemoryAddon — FTS5 Query Escaping Security', () => {
     addon.close();
   });
 
-  // ---------------------------------------------------------------------------
   // 1. FTS5 Special Characters — must not crash or produce errors
-  // ---------------------------------------------------------------------------
+  
   describe('FTS5 special character neutralization', () => {
     it('should handle asterisk (*) without crashing', async () => {
       // In raw FTS5, * is a prefix wildcard; if unescaped it changes query semantics
@@ -149,9 +144,8 @@ describe('RustMemoryAddon — FTS5 Query Escaping Security', () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
   // 2. Normal Searches Still Work Correctly
-  // ---------------------------------------------------------------------------
+  
   describe('Normal keyword searches remain functional', () => {
     it('should find entries matching a single keyword', async () => {
       const results = await addon.searchFTS5('Tauri');
@@ -172,9 +166,8 @@ describe('RustMemoryAddon — FTS5 Query Escaping Security', () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
   // 3. Empty / Whitespace Queries
-  // ---------------------------------------------------------------------------
+  
   describe('Empty and whitespace queries', () => {
     it('should return empty results for empty string', async () => {
       const results = await addon.searchFTS5('');
@@ -192,9 +185,8 @@ describe('RustMemoryAddon — FTS5 Query Escaping Security', () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
   // 4. LIKE Fallback Wildcard Escaping
-  // ---------------------------------------------------------------------------
+  
   describe('LIKE fallback wildcard escaping', () => {
     // These tests verify the ESCAPE clause logic in the LIKE fallback.
     // The fallback triggers when FTS5 MATCH throws (e.g. on certain queries).
@@ -220,9 +212,8 @@ describe('RustMemoryAddon — FTS5 Query Escaping Security', () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
   // 5. Fallback Token Matching (mock DB path)
-  // ---------------------------------------------------------------------------
+  
   describe('Fallback token matching (no SQLite path)', () => {
     it('should correctly tokenize and match in fallback mode', async () => {
       // Create an addon that will use the mock fallback (simulate no better-sqlite3)
@@ -268,9 +259,8 @@ describe('RustMemoryAddon — FTS5 Query Escaping Security', () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
   // 6. Limit Parameter
-  // ---------------------------------------------------------------------------
+  
   describe('Result limit enforcement', () => {
     it('should respect the limit parameter', async () => {
       // Search for a common word that matches many entries

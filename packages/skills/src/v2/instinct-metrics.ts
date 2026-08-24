@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Skills v1.1.0 Track 2: instinct trigger metrics (P34)
-// ==============================================================================
 // Tracks instinct/skill trigger hits & misses to measure trigger accuracy and
 // tune thresholds (precision over time).
-// ==============================================================================
 
 export interface TriggerEvent {
   skillId: string;

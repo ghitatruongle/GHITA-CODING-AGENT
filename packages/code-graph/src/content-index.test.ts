@@ -1,7 +1,3 @@
-// ==============================================================================
-// Content-Addressed Index & PauseToken Unit Tests (Track 3.2)
-// ==============================================================================
-
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';

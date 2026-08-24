@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - @ghita/ingest public entry
-// ==============================================================================
-
 export { INGEST_VERSION } from './types.js';
 export type {
   SourceType,

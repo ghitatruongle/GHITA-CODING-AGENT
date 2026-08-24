@@ -1,8 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 3.2: Rate Limiting
 // Per-user, per-key, per-model rate limiting with cooldown management
 // Reference: LiteLLM router.py
-// ==============================================================================
 
 // --- Types ---
 

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Response Caching Layer Types (Phase 26)
-// ==============================================================================
-
 /** Cache entry metadata stored alongside the value */
 export interface CacheEntry<T = unknown> {
   key: string;

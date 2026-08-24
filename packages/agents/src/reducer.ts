@@ -1,12 +1,8 @@
-// ==============================================================================
-// GHITA CODING AGENT - v1.1.5-beta1 Track 2.7: Stateless Reducer
-// ------------------------------------------------------------------------------
 // Pure function (state, event) -> state for agent run reconstruction (pattern:
 // 12-factor-agents Factor 12). Given an initial state and an ordered event log,
 // the reducer replays every event deterministically to reconstruct the final
 // state. This enables crash recovery, eval replay, and fanout swarm
 // reproducibility without storing full snapshots at every step.
-// ==============================================================================
 
 /** Events that mutate agent run state. */
 export type AgentRunEvent =

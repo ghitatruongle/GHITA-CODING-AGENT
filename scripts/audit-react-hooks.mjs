@@ -1,15 +1,6 @@
 #!/usr/bin/env node
-// ==============================================================================
-// GHITA CODING AGENT - React hooks audit (v1.1.0 Track 10 R2)
-// ------------------------------------------------------------------------------
-// Quét apps/desktop/src cho:
-//   [H1] useEffect không có deps array (chạy mỗi render)
-//   [H2] useEffect có deps nhưng không cleanup function (return) — tiềm ẩn leak
-//   [H3] addEventListener/.on(/subscribe( — có return cleanup ngay trong effect?
-//   [H4] setInterval/setTimeout trong useEffect không clear trong cleanup
-// Báo cáo: số lượng theo rule + danh sách file nghi vấn (mẫu).
+
 // Usage: node scripts/audit-react-hooks.mjs
-// ==============================================================================
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';

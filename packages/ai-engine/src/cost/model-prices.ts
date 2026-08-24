@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - AI Engine v1.1.0 Track 4 P52: model pricing database
-// ==============================================================================
 // Syncable model price metadata (cost per 1k tokens, context window). A small
 // built-in table ships by default; `sync()` replaces it with upstream data.
-// ==============================================================================
 
 export interface ModelPrice {
   /** "provider:model" id. */

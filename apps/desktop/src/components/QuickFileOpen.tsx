@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT — v1.0.0 Quick File Open (Ctrl+Shift+P / Ctrl+Shift+O)
-// ==============================================================================
 // VS Code-inspired fuzzy file picker over open tabs + recently opened files.
 // Opens the selected file in the Code tab and rehydrates its content from disk
 // if its buffer was evicted by the LRU cache.
-// ==============================================================================
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -98,7 +94,6 @@ export function QuickFileOpen({ open, onClose }: QuickFileOpenProps) {
     }
   }, [open]);
 
-  // NOTE (deep-review fix BUG-1): this component deliberately registers NO
   // global Ctrl+Shift+P/O listener. App.tsx owns the shortcut and toggles
   // `open`; a second capture-phase listener here fired before the parent's
   // toggle and re-closed the modal the instant it opened, making it

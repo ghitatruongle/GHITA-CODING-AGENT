@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Marketplace v1.1.0 Track 3 P41: marketplace view rows
-// ==============================================================================
 // View-model for the Marketplace UI: version picker, license badge, tier,
 // trust badge, quarantine status — data layer for the desktop view.
-// ==============================================================================
 
 import type { PluginManifest } from '../types.js';
 import type { CatalogEntry } from './catalog-tiers.js';

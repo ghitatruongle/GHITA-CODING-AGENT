@@ -1,8 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Stealth Browser Module
-// Phase 3 (Update 0.0.3 beta2): CloakBrowser-style anti-fingerprinting
-// ==============================================================================
-
 import type { BrowserControlAdapter } from './index.js';
 
 export interface StealthOptions {

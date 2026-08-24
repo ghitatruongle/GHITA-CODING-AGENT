@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Forum (Phase 40)
-// ==============================================================================
-
 import { randomUUID } from 'node:crypto';
 import type { ForumReply, ForumThread } from './types.js';
 

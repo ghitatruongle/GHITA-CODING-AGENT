@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Browser v1.1.0 Track 7 P80: network interception + HAR
-// ==============================================================================
 // Request logging, abort allowlist (block domains), and HAR export
 // (Playwright route pattern).
-// ==============================================================================
 
 export type RequestMethod =
   | 'GET'

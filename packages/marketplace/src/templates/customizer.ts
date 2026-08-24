@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Template Customization Wizard (Phase 36)
-// ==============================================================================
-
 import type {
   AgentTemplate,
   AgentConfig,

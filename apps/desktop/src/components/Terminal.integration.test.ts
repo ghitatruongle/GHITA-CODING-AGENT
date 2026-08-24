@@ -1,10 +1,8 @@
 // @vitest-environment node
-// ==============================================================================
-// GHITA CODING AGENT — PTY Terminal Integration Test
+
 // Spawns real PTY sessions via node-pty and verifies end-to-end I/O.
 // Overrides the default happy-dom environment because node-pty is a native
 // Node.js addon that requires a real process environment.
-// ==============================================================================
 
 import { describe, it, expect, afterAll, beforeEach, afterEach } from 'vitest';
 import { createRequire } from 'node:module';
@@ -12,7 +10,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 
 // node-pty is a native addon — loaded lazily so vitest can resolve the module
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- type-only import kept out of runtime to avoid loading xterm in unit context
 const pty: typeof import('node-pty') = require('node-pty');
 
 // ── Constants mirroring the server's PTY logic ────────────────────────────
@@ -24,7 +22,7 @@ const PTY_SESSION_MAX_IDLE_MS = 900_000;
 const FOCUS_EVENT_SEQUENCES = new Set(['\x1b[I', '\x1b[O']);
 
 interface PtySession {
-  // eslint-disable-next-line @typescript-eslint/consistent-type-imports
+  // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- type-only import kept out of runtime to avoid loading xterm in unit context
   ptyProcess: import('node-pty').IPty;
   socketId: string;
   lastActivity: number;
@@ -178,9 +176,8 @@ describe('PTY Terminal Integration (real node-pty)', () => {
     sessions.clear();
   });
 
-  // ─────────────────────────────────────────────────────────────────────────
   // Test 1: Create a real PTY session, execute a command, read output
-  // ─────────────────────────────────────────────────────────────────────────
+  
   it('should spawn a real shell, execute a command, and return output', async () => {
     const id = 'integration_test_1';
     const session = createSession(id, TEST_SOCKET_ID);
@@ -195,9 +192,8 @@ describe('PTY Terminal Integration (real node-pty)', () => {
     }
   }, 20_000);
 
-  // ─────────────────────────────────────────────────────────────────────────
   // Test 2: Multiple commands in the same session (session reuse)
-  // ─────────────────────────────────────────────────────────────────────────
+  
   it('should handle multiple consecutive commands in the same session', async () => {
     const id = 'integration_test_2';
     const session = createSession(id, TEST_SOCKET_ID);
@@ -218,9 +214,8 @@ describe('PTY Terminal Integration (real node-pty)', () => {
     }
   }, 30_000);
 
-  // ─────────────────────────────────────────────────────────────────────────
   // Test 3: Session replacement (same ID → kill old, create new)
-  // ─────────────────────────────────────────────────────────────────────────
+  
   it('should replace an existing session with the same ID (kill old, create new)', async () => {
     const sharedId = 'integration_test_3';
 
@@ -255,9 +250,8 @@ describe('PTY Terminal Integration (real node-pty)', () => {
     }
   }, 20_000);
 
-  // ─────────────────────────────────────────────────────────────────────────
   // Test 4: Empty string input filtering (server-side filter #6)
-  // ─────────────────────────────────────────────────────────────────────────
+  
   it('should filter empty string input at the server level (do not forward to PTY)', async () => {
     const id = 'integration_test_4';
     const session = createSession(id, TEST_SOCKET_ID);
@@ -289,9 +283,8 @@ describe('PTY Terminal Integration (real node-pty)', () => {
     }
   }, 15_000);
 
-  // ─────────────────────────────────────────────────────────────────────────
   // Test 5: Focus event sequence detection (server-side filter #2/#5)
-  // ─────────────────────────────────────────────────────────────────────────
+  
   it('should detect and filter focus-reporting sequences', () => {
     // These sequences are filtered on the client side in Terminal.tsx,
     // but the server also validates input.  Verify the detection logic.
@@ -306,9 +299,8 @@ describe('PTY Terminal Integration (real node-pty)', () => {
     expect(FOCUS_EVENT_SEQUENCES.has('cd /d "C:\\Users"')).toBe(false);
   });
 
-  // ─────────────────────────────────────────────────────────────────────────
   // Test 6: Idle timeout kills zombie sessions (server cleanup interval)
-  // ─────────────────────────────────────────────────────────────────────────
+  
   it('should kill idle PTY sessions that exceed the max idle time', async () => {
     const id = 'integration_test_6';
     const session = createSession(id, TEST_SOCKET_ID);
@@ -329,9 +321,8 @@ describe('PTY Terminal Integration (real node-pty)', () => {
     expect(() => session.ptyProcess.kill()).not.toThrow();
   }, 10_000);
 
-  // ─────────────────────────────────────────────────────────────────────────
   // Test 7: Cleanup all sessions on disconnect (server socket disconnect)
-  // ─────────────────────────────────────────────────────────────────────────
+  
   it('should kill all sessions belonging to a disconnected socket', () => {
     const socketId = 'socket_to_disconnect';
     const session1 = createSession('disc_1', socketId);
@@ -364,9 +355,8 @@ describe('PTY Terminal Integration (real node-pty)', () => {
     sessions.delete('disc_3');
   });
 
-  // ─────────────────────────────────────────────────────────────────────────
   // Test 8: Verify the server's startPtyCleanupInterval logic
-  // ─────────────────────────────────────────────────────────────────────────
+  
   it('should periodically sweep idle sessions (simulating server cleanup interval)', async () => {
     const id = 'integration_test_8';
     const session = createSession(id, TEST_SOCKET_ID);
@@ -409,9 +399,8 @@ describe('PTY Terminal Integration (real node-pty)', () => {
     expect(sessions.has(id)).toBe(false);
   });
 
-  // ─────────────────────────────────────────────────────────────────────────
   // Test 9: Shell switching (cmd ↔ powershell) creates correct process
-  // ─────────────────────────────────────────────────────────────────────────
+  
   it('should spawn the correct shell type based on configuration', () => {
     const shellForPlatform = (shellType?: string) => {
       if (process.platform === 'win32') {
@@ -427,9 +416,8 @@ describe('PTY Terminal Integration (real node-pty)', () => {
     expect(shellForPlatform()).toBe(process.platform === 'win32' ? 'cmd.exe' : 'bash');
   });
 
-  // ─────────────────────────────────────────────────────────────────────────
   // Test 10: PTY resize does not throw
-  // ─────────────────────────────────────────────────────────────────────────
+  
   it('should resize a PTY session without throwing', async () => {
     const id = 'integration_test_10';
     const session = createSession(id, TEST_SOCKET_ID);
@@ -450,9 +438,8 @@ describe('PTY Terminal Integration (real node-pty)', () => {
     }
   });
 
-  // ─────────────────────────────────────────────────────────────────────────
   // Test 11: Concurrent sessions are independent
-  // ─────────────────────────────────────────────────────────────────────────
+  
   it('should maintain independent state for concurrent sessions', async () => {
     const id1 = 'concurrent_1';
     const id2 = 'concurrent_2';
@@ -478,9 +465,8 @@ describe('PTY Terminal Integration (real node-pty)', () => {
     }
   }, 30_000);
 
-  // ─────────────────────────────────────────────────────────────────────────
   // Test 12: Session cleanup on unexpected exit (process.on('exit'))
-  // ─────────────────────────────────────────────────────────────────────────
+  
   it('should kill remaining PTY sessions on unexpected exit (best-effort)', async () => {
     const id = 'integration_test_12';
     const session = createSession(id, TEST_SOCKET_ID);
@@ -507,3 +493,5 @@ describe('PTY Terminal Integration (real node-pty)', () => {
     expect(cleanupOnExit).not.toThrow();
   });
 });
+
+

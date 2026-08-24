@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Chinese dictionary for Mobile App (Optimized)
-// ==============================================================================
-
 import type { TranslationKeys } from './types';
 
 export const zh: TranslationKeys = {
@@ -67,7 +63,7 @@ export const zh: TranslationKeys = {
     pairErrBtFindFail: '未通过蓝牙找到电脑。',
     pairErrApiKeyMissing: '未配置 Cloud Discovery API Key。请使用手动 IP 地址进行连接。',
     pairErrCloudDisabled:
-      'Cloud Discovery 已临时禁用。请在 Wi-Fi 选项卡中手动输入 IP 地址，或通过蓝牙直接连接计算机。',
+      'Cloud Discovery 已临时禁用。请在 Wi-Fi 选项卡中手动输入计算机的 IP 地址。',
     noCodeFromServer: '无法从服务器获取配对码。',
   },
   remote: {

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Contributor Leaderboard (Phase 40)
-// ==============================================================================
-
 import type { Contributor, ForumReply, ForumThread, BugReport, FeatureRequest } from './types.js';
 
 /** Weights per activity */

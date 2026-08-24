@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - @ghita/mcp public entry
-// ==============================================================================
-
 export { MCPClient, createMCPClient } from './client.js';
 export type { RemoteTool, CallToolResponse } from './client.js';
 export { GhitaMCPServer, createMCPServer } from './server.js';

@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT — DocsGriller Types
-// ==============================================================================
 // Type definitions for the Socratic docs-aware /grill-me system.
 // Extracted from docsGriller.ts for modularity.
-// ==============================================================================
 
 /** Markdown structural element extracted from a doc file */
 export interface DocSection {

@@ -1,14 +1,10 @@
-// ==============================================================================
-// GHITA CODING AGENT - Skills Types
-// ==============================================================================
 // Shared type definitions for the skills package.
 // Extracted from index.ts to avoid circular dependencies.
-// ==============================================================================
 
 import type { Skill, SkillCategory, SkillResult } from '@ghita/shared';
 
 /** Version constant for the skills package assets. */
-export const SKILLS_VERSION = '1.1.5-beta2';
+export const SKILLS_VERSION = '1.1.5';
 
 /** Ready, disabled, or missing status states for loaded skills. */
 export type SkillStatus = 'ready' | 'disabled' | 'missing-adapter' | 'error';
@@ -49,7 +45,7 @@ export interface SkillDefinition extends Skill {
   dangerous?: boolean;
   /** Main executor executing the skill's business logic. */
   run: (invocation: SkillInvocation, context: SkillExecutionContext) => Promise<SkillResult>;
-  // ── v1.1.0 Track 2 (Skill schema v2) ─────────────────────────────────────
+  
   /** Tool allowlist: adapter keys permitted at execution boundary (deny others). */
   allowedTools?: string[];
   /** Sandbox permission level requested by the skill. */

@@ -1,8 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - TrajectoryCompressor Unit Tests
 // 30 test cases covering analysis, compression, async compression,
 // config management, edge cases, and Vietnamese content.
-// ==============================================================================
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { TrajectoryCompressor } from '../src/context/compressor.js';

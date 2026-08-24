@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — API Manager Sub-Module Barrel Export
-// ==============================================================================
-
 export { ProviderCard } from './ProviderCard';
 export { ApiKeyInput } from './ApiKeyInput';
 export { ModelSelector } from './ModelSelector';

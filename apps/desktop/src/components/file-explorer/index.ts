@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — File Explorer Sub-Module Barrel Export
-// ==============================================================================
-
 export { FileTree } from './FileTree';
 export { FileTreeNode } from './FileTreeNode';
 export { FileExplorerToolbar } from './FileExplorerToolbar';

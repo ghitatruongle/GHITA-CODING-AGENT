@@ -1,6 +1,4 @@
-// ==============================================================================
 // v0.4.9: ObservabilityManager time-range metric filtering tests
-// ==============================================================================
 
 import { describe, it, expect } from 'vitest';
 import { ObservabilityManager } from '../src/enterprise/observability.js';

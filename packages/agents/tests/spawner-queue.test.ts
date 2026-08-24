@@ -1,5 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Subagent Spawner regression tests
 //
 // Covers the audit-driven concurrency fix: instead of rejecting spawn
 // requests immediately when `maxConcurrency` is reached, the spawner
@@ -10,7 +8,6 @@
 //
 // We mock `AgentManager` with a minimal in-memory stub so the test
 // runs in <100ms without spinning real agents.
-// ==============================================================================
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SubagentSpawner } from '../src/subagent/spawner.js';

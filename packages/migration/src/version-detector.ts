@@ -1,6 +1,4 @@
-// ==============================================================================
 // @ghita/migration -- Version Utilities
-// ==============================================================================
 
 export function compareVersions(a: string, b: string): number {
   const pa = a.split('.').map(Number);

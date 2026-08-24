@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - AI Engine v1.1.0 Track 4 P51: model roles routing
-// ==============================================================================
 // Maps semantic roles (smol/fast/plan/vision/advisor/orchestrator/critic/
 // editor/browser/creative) to provider-model priority chains with fallback.
-// ==============================================================================
 
 export const MODEL_ROLES = [
   'smol',

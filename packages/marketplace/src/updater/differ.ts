@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Plugin Diff Calculator (Phase 32)
-// ==============================================================================
-
 import type { PluginDiff, PluginDiffEntry } from './types.js';
 
 /**

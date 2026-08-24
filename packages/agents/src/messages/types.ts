@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Message System Types
-// ==============================================================================
-
 export type MessageRole = 'user' | 'assistant' | 'system' | 'tool' | 'function';
 
 export type ContentType = 'text' | 'image' | 'audio' | 'tool_call' | 'tool_result';

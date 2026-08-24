@@ -1,6 +1,4 @@
-// ==============================================================================
 // Fuzz Tests -- Property-based testing for security-critical code
-// ==============================================================================
 
 import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';

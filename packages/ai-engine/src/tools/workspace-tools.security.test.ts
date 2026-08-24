@@ -4,10 +4,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ensureInSandbox } from './workspace-tools.js';
 
-// ==============================================================================
-// v1.1.0 Track 11 F1/F2 — regression tests for CR-002 (workspace-tools sandbox)
-// ==============================================================================
-
 let root: string;
 let outside: string;
 

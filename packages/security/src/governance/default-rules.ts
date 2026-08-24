@@ -1,18 +1,11 @@
-// ==============================================================================
 // v0.4.9 A2: Agent Governance — Default Policy Rules
 //
 // Baseline deny-default rule set for the GHITA agent runtime. These pair with
 // the terminal blacklist in .ghita/security-blacklist.yaml to block the most
 // destructive tool-calls before they reach an adapter.
-// ==============================================================================
 
 import type { PolicyRule } from './types.js';
 
-/**
- * Bộ rule mặc định. PolicyEngine chạy deny-default nên mọi thứ không được
- * allow tường minh sẽ bị chặn; các rule deny dưới đây là "chốt chặn cứng"
- * có priority cao để không allow rule nào ghi đè được.
- */
 export const DEFAULT_POLICY_RULES: PolicyRule[] = [
   {
     id: 'deny-destructive-run-command',

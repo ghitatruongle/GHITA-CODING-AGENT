@@ -1,8 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT — Chat Agent Controls Component
 // Live agent events timeline, advanced mode toggles, Ralph progress, and
 // connection status bar.
-// ==============================================================================
 
 import type { ChatAgentControlsProps } from './chatAgentControlsTypes';
 import { AgentActivityTimeline } from './AgentActivityTimeline';

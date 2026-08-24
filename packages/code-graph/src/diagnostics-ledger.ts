@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Track 3 (v1.1.5-beta1): Diagnostics Ledger & Deferred Feedback
-// ==============================================================================
 // Collects language server diagnostics, tracks turn-to-turn diffs (new/resolved),
 // and formats non-blocking deferred feedback for the next agent observation.
-// ==============================================================================
 
 import path from 'node:path';
 import { type LspDiagnostic, LspDiagnosticSeverity, type DiagnosticsDiff } from './lsp-types.js';

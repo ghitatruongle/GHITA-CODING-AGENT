@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Prompt Input & Output Validators
-// ==============================================================================
-
 import type { PromptInputSpec, PromptValidator, ValidationResult } from './types.js';
 
 export class PromptValidationError extends Error {

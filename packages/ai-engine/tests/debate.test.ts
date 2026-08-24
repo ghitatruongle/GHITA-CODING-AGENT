@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - DebateEngine Unit Tests (Phase 6)
-// ==============================================================================
-
 import { describe, it, expect, beforeEach } from 'vitest';
 import { DebateEngine, AIMessage } from '@ghita/agents';
 
@@ -119,9 +115,6 @@ describe('Debate-Driven Architectural Alignment (DDAA)', () => {
     expect(result.spec).toBe('Rejected spec draft.');
   });
 
-  // ==========================================
-  // Nâng cấp: Auto-approve khi không có callback
-  // ==========================================
   it('should auto-approve when no approval callback provided', async () => {
     const mockLlmCall = async (messages: any[]) => {
       const sysText = messages[0].getText();
@@ -142,9 +135,6 @@ describe('Debate-Driven Architectural Alignment (DDAA)', () => {
     expect(result.consensusScore).toBe(8);
   });
 
-  // ==========================================
-  // Nâng cấp: EIC trả về invalid JSON
-  // ==========================================
   it('should handle EIC returning invalid JSON gracefully', async () => {
     const mockLlmCall = async (messages: any[]) => {
       const sysText = messages[0].getText();
@@ -160,9 +150,6 @@ describe('Debate-Driven Architectural Alignment (DDAA)', () => {
     expect(result.spec).toBe('This is not valid JSON at all, just plain text spec.');
   });
 
-  // ==========================================
-  // Nâng cấp: EIC trả về partial JSON
-  // ==========================================
   it('should handle EIC returning partial JSON (missing spec)', async () => {
     const mockLlmCall = async (messages: any[]) => {
       const sysText = messages[0].getText();
@@ -179,9 +166,6 @@ describe('Debate-Driven Architectural Alignment (DDAA)', () => {
     expect(result.spec).toBeDefined();
   });
 
-  // ==========================================
-  // Nâng cấp: All 6 debate entries in log
-  // ==========================================
   it('should include all 6 debate entries in log', async () => {
     const mockLlmCall = async (messages: any[]) => {
       const sysText = messages[0].getText();
@@ -202,9 +186,6 @@ describe('Debate-Driven Architectural Alignment (DDAA)', () => {
     expect(result.debateLog).toContain('[Lượt 3 - DevilAdvocate]');
   });
 
-  // ==========================================
-  // Nâng cấp: Model option forwarding
-  // ==========================================
   it('should forward model option to llmCall', async () => {
     const receivedOptions: any[] = [];
     const mockLlmCall = async (messages: any[], options?: any) => {
@@ -225,9 +206,6 @@ describe('Debate-Driven Architectural Alignment (DDAA)', () => {
     }
   });
 
-  // ==========================================
-  // Nâng cấp: Empty topic and docs
-  // ==========================================
   it('should handle empty topic and docs without crashing', async () => {
     const mockLlmCall = async (messages: any[]) => {
       const sysText = messages[0].getText();
@@ -243,9 +221,6 @@ describe('Debate-Driven Architectural Alignment (DDAA)', () => {
     expect(typeof result.consensusScore).toBe('number');
   });
 
-  // ==========================================
-  // Nâng cấp: Callback ordering
-  // ==========================================
   it('should call callbacks in correct order', async () => {
     const callOrder: string[] = [];
     const mockLlmCall = async (messages: any[]) => {

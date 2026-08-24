@@ -1,4 +1,3 @@
-/** Badge trạng thái container */
 export function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, { bg: string; text: string }> = {
     running: { bg: 'rgba(34,197,94,0.15)', text: '#22c55e' },

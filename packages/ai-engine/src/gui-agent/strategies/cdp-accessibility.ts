@@ -1,5 +1,5 @@
 /**
- * Phase 20 — CDP Accessibility helpers.
+
  *
  * Thin wrapper that implements the CdpAccessibilityClient interface over
  * a generic CDP transport (WebSocket / IPC). Used by the browser-use-only
@@ -94,9 +94,7 @@ export class CdpAccessibilityAdapter implements CdpAccessibilityClient {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Raw CDP shape → AxTreeNode conversion
-// ---------------------------------------------------------------------------
 
 interface RawAxNode {
   nodeId: string;
@@ -135,9 +133,7 @@ function toAxTree(nodes: RawAxNode[]): AxTreeNode {
   return root ?? { nodeId: 'root', role: 'RootWebArea', name: '', children: [] };
 }
 
-// ---------------------------------------------------------------------------
 // Selenium WebDriver fallback — implements getFullAXTree via W3C WebDriver
-// ---------------------------------------------------------------------------
 
 export interface WebDriverSession {
   sessionId: string;

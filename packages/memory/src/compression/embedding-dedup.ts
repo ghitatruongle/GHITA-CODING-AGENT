@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Embedding-Based Dedup (Phase 30)
 // Cosine-similarity based deduplication of memory entries.
-// ==============================================================================
 
 import type {
   CompressableMemoryEntry,
@@ -11,9 +8,7 @@ import type {
 } from './types.js';
 import { cosineSimilarityJS } from '../semantic/rustAddon.js';
 
-// ---------------------------------------------------------------------------
 // Embedding Dedup Engine
-// ---------------------------------------------------------------------------
 
 export class EmbeddingDedup {
   private config: Required<EmbeddingDedupConfig>;

@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Universal Skill Importer
-// ==============================================================================
 // Converts external skill definitions (Anthropic SKILL.md, OpenClaw, Superpowers,
 // Cursor Plugins, Composio tools) into native GHITA SkillDefinitions.
-// ==============================================================================
 
 import type { SkillCategory, SkillResult } from '@ghita/shared';
 import type {

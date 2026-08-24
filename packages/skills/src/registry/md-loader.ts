@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - SKILL.md Manifest Loader & Hot-Reload Watcher
-// ==============================================================================
-
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { SkillDefinition, SkillScope, SkillInvocation } from '../index.js';

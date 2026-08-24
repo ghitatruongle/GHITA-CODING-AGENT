@@ -1,6 +1,4 @@
-// ==============================================================================
 // v0.2.5 AI Engine Modules Unit Tests
-// ==============================================================================
 
 import { describe, it, expect } from 'vitest';
 import { QueryEngine } from '../src/compact/query-engine.js';

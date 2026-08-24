@@ -1,6 +1,4 @@
-// ==============================================================================
 // Code Knowledge Graph View
-// ==============================================================================
 
 import { useState, useCallback, useMemo } from 'react';
 import type { CodeNode, CodeKnowledgeGraph } from '../../../../packages/code-graph/src/index.js';

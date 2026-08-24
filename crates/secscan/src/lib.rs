@@ -1,12 +1,9 @@
-// ==============================================================================
-// ghita-secscan — streaming security scanner core (v1.1.0 Track 8 A6/A7)
-// ==============================================================================
-// Multi-pattern line scanner: scans content in blocks without materializing
-// the whole line array (the JS hot-path problem: `split('\n')` on 100MB repos
-// costs hundreds of MB). Std-only core so `cargo test` runs offline; the
-// production addon (feature "addon") swaps the naive byte-search for
-// memchr + regex + rayon and exposes napi bindings.
-// ==============================================================================
+//! ghita-secscan — streaming security scanner core
+//! Multi-pattern line scanner: scans content in blocks without materializing
+//! the whole line array (the JS hot-path problem: `split('\n')` on 100MB repos
+//! costs hundreds of MB). Std-only core so `cargo test` runs offline; the
+//! production addon (feature "addon") swaps the naive byte-search for
+//! memchr + regex + rayon and exposes napi bindings.
 
 #[cfg(feature = "addon")]
 mod napi;
@@ -35,12 +32,36 @@ pub struct Finding {
 }
 
 pub const DEFAULT_RULES: &[Rule] = &[
-    Rule { id: "sk-key", pattern: "sk-", negative: None },
-    Rule { id: "aws-key", pattern: "AKIA", negative: None },
-    Rule { id: "ghp-token", pattern: "ghp_", negative: None },
-    Rule { id: "private-key", pattern: "PRIVATE KEY", negative: None },
-    Rule { id: "bearer", pattern: "Bearer ", negative: None },
-    Rule { id: "env-file", pattern: ".env", negative: Some("node_modules") },
+    Rule {
+        id: "sk-key",
+        pattern: "sk-",
+        negative: None,
+    },
+    Rule {
+        id: "aws-key",
+        pattern: "AKIA",
+        negative: None,
+    },
+    Rule {
+        id: "ghp-token",
+        pattern: "ghp_",
+        negative: None,
+    },
+    Rule {
+        id: "private-key",
+        pattern: "PRIVATE KEY",
+        negative: None,
+    },
+    Rule {
+        id: "bearer",
+        pattern: "Bearer ",
+        negative: None,
+    },
+    Rule {
+        id: "env-file",
+        pattern: ".env",
+        negative: Some("node_modules"),
+    },
 ];
 
 /// Scan a full buffer streaming-wise: iterate lines lazily (no Vec<String>),
@@ -86,7 +107,10 @@ pub fn scan_lines(content: &str, rules: &[Rule]) -> Vec<Finding> {
 
 /// memchr-style newline search (std-only; swap for `memchr` crate in addon).
 fn memchr_newline(bytes: &[u8], from: usize) -> Option<usize> {
-    bytes[from..].iter().position(|&b| b == b'\n').map(|i| from + i)
+    bytes[from..]
+        .iter()
+        .position(|&b| b == b'\n')
+        .map(|i| from + i)
 }
 
 /// Byte-wise literal search (std-only; swap for memchr in addon).
@@ -117,15 +141,22 @@ mod tests {
     fn detects_known_patterns_with_line_numbers() {
         let content = "const key = 'sk-proj-abc';\npassword = 'x';\nBEGIN PRIVATE KEY\n";
         let findings = scan_lines(content, DEFAULT_RULES);
-        assert!(findings.iter().any(|f| f.rule_id == "sk-key" && f.line == 1));
-        assert!(findings.iter().any(|f| f.rule_id == "private-key" && f.line == 3));
+        assert!(findings
+            .iter()
+            .any(|f| f.rule_id == "sk-key" && f.line == 1));
+        assert!(findings
+            .iter()
+            .any(|f| f.rule_id == "private-key" && f.line == 3));
     }
 
     #[test]
     fn negative_pattern_suppresses() {
         let content = "const a = '.env.example';\n// node_modules/.env\n";
         let findings = scan_lines(content, DEFAULT_RULES);
-        let env_hits: Vec<_> = findings.iter().filter(|f| f.rule_id == "env-file").collect();
+        let env_hits: Vec<_> = findings
+            .iter()
+            .filter(|f| f.rule_id == "env-file")
+            .collect();
         assert_eq!(env_hits.len(), 1); // second line suppressed by "node_modules"
         assert_eq!(env_hits[0].line, 1);
     }
@@ -135,7 +166,9 @@ mod tests {
         let long = "x".repeat(5000);
         let content = format!("{long}\nsk-abcdef\n");
         let findings = scan_lines(&content, DEFAULT_RULES);
-        assert!(findings.iter().any(|f| f.rule_id == "sk-key" && f.line == 2));
+        assert!(findings
+            .iter()
+            .any(|f| f.rule_id == "sk-key" && f.line == 2));
     }
 
     #[test]

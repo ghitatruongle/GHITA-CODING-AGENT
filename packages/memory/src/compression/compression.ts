@@ -1,9 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Memory Compression Orchestrator (Phase 30)
 // High-level facade combining summarizer + dedup + tier manager.
 // Exposed as `MemoryCompression` for simple use; the background job is the
 // recommended way to run it in production.
-// ==============================================================================
 
 import type {
   CompressionConfig,
@@ -21,9 +18,7 @@ import { EmbeddingDedup } from './embedding-dedup.js';
 import { TierManager } from './tier-manager.js';
 import { BackgroundCompressionJob } from './background-job.js';
 
-// ---------------------------------------------------------------------------
 // MemoryCompression (facade)
-// ---------------------------------------------------------------------------
 
 export class MemoryCompression {
   private storage: MemoryStorageAdapter;

@@ -1,20 +1,15 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
-// ==============================================================================
-// GHITA CODING AGENT - Phase 14: Memory Compaction & Indexing
-// ==============================================================================
+/* eslint-disable @typescript-eslint/no-non-null-assertion -- non-null invariants are guaranteed by construction before access */
+
 // Provides intelligent memory management through:
 // - Importance scoring (frequency + recency + explicit relevance)
 // - Content deduplication via similarity detection
 // - Session summarization for long conversations
 // - Memory compaction: merge related entries into concise summaries
 // - Compaction scheduling for periodic maintenance
-// ==============================================================================
 
 import type { SessionMessage } from '../search.js';
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 export interface CompactableEntry {
   id: string;
@@ -92,9 +87,7 @@ export interface CompactSchedule {
   enabled?: boolean;
 }
 
-// ---------------------------------------------------------------------------
 // Memory Compaction Engine
-// ---------------------------------------------------------------------------
 
 const TOKEN_PATTERN = /[\p{L}\p{N}_-]+/gu;
 
@@ -120,10 +113,8 @@ export class MemoryCompactor {
     };
   }
 
-  // -----------------------------------------------------------------------
   // Importance Scoring
-  // -----------------------------------------------------------------------
-
+  
   /** Compute importance score for a single entry */
   scoreImportance(
     entry: CompactableEntry,
@@ -161,15 +152,43 @@ export class MemoryCompactor {
     return { entryId: entry.id, recency, frequency, relevance, composite };
   }
 
-  /** Score all entries at once */
+  /** Score all entries at once. Pre-tokenizes each entry exactly once —
+   * the naive per-pair tokenize loop was O(n²) on up to maxEntries items. */
   scoreAll(entries: CompactableEntry[], now?: number): ImportanceScore[] {
-    return entries.map((e) => this.scoreImportance(e, entries, now));
+    const currentTime = now ?? Date.now();
+    const tokenSets = new Map<string, Set<string>>();
+    for (const e of entries) {
+      tokenSets.set(e.id, this.tokenize(e.content));
+    }
+
+    return entries.map((entry) => {
+      const ageMs = Math.max(0, currentTime - entry.timestamp);
+      const ageDays = ageMs / 86_400_000;
+      const recency = Math.pow(0.5, ageDays / this.config.decayHalfLifeDays);
+
+      const entryTokens = tokenSets.get(entry.id)!;
+      let sharedCount = 0;
+      for (const other of entries) {
+        if (other.id === entry.id) continue;
+        const otherTokens = tokenSets.get(other.id)!;
+        let shared = 0;
+        for (const t of entryTokens) if (otherTokens.has(t)) shared++;
+        if (entryTokens.size > 0 && shared / entryTokens.size > 0.3) sharedCount++;
+      }
+      const frequency = Math.min(1, sharedCount / Math.max(entries.length * 0.1, 1));
+      const relevance = entry.relevance ?? 0;
+
+      const composite =
+        this.config.recencyWeight * recency +
+        this.config.frequencyWeight * frequency +
+        this.config.relevanceWeight * relevance;
+
+      return { entryId: entry.id, recency, frequency, relevance, composite };
+    });
   }
 
-  // -----------------------------------------------------------------------
   // Deduplication
-  // -----------------------------------------------------------------------
-
+  
   /** Detect and remove near-duplicate entries */
   deduplicate(entries: CompactableEntry[]): { kept: CompactableEntry[]; removed: string[] } {
     const threshold = this.config.dedupThreshold;
@@ -206,10 +225,8 @@ export class MemoryCompactor {
     return { kept, removed };
   }
 
-  // -----------------------------------------------------------------------
   // Session Summarization
-  // -----------------------------------------------------------------------
-
+  
   /** Create a textual summary from a conversation session */
   summarizeSession(
     messages: SessionMessage[],
@@ -339,10 +356,8 @@ export class MemoryCompactor {
     return { sessionId, summary, messageCount: messages.length, startTime, endTime, keyTopics };
   }
 
-  // -----------------------------------------------------------------------
   // Memory Compaction (full pipeline)
-  // -----------------------------------------------------------------------
-
+  
   /**
    * Run the full compaction pipeline:
    * 1. Score importance
@@ -433,10 +448,8 @@ export class MemoryCompactor {
     };
   }
 
-  // -----------------------------------------------------------------------
   // Compaction Scheduling
-  // -----------------------------------------------------------------------
-
+  
   /** Start automatic periodic compaction */
   startSchedule(
     schedule: CompactSchedule,
@@ -471,10 +484,8 @@ export class MemoryCompactor {
     return this.compactionCount;
   }
 
-  // -----------------------------------------------------------------------
   // Private Helpers
-  // -----------------------------------------------------------------------
-
+  
   /** Group entries by content similarity */
   private groupSimilar(entries: CompactableEntry[]): CompactableEntry[][] {
     const threshold = this.config.mergeThreshold;

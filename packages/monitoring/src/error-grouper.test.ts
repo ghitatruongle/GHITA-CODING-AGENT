@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Error Grouper Tests
-// ==============================================================================
-
 import { describe, it, expect, beforeEach } from 'vitest';
 import { ErrorGrouper } from './error-grouper.js';
 import type { CapturedError } from './types.js';

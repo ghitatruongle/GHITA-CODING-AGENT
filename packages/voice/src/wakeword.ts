@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Wake-Word Detection (Phase 34)
-// ==============================================================================
-
 import type { AudioChunk, WakeWordConfig, WakeWordEvent, WakeWordListener } from './types.js';
 
 /**

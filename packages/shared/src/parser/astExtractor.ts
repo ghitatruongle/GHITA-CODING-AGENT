@@ -1,10 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - AST Multi-Language Extractor (Phase 2)
-// ==============================================================================
-// Trích xuất cây AST phân cấp cho Kotlin, Scala, Pascal
-// Tích hợp Tolerant Parser để bỏ qua khối mã lỗi cú pháp
-// ==============================================================================
-
 import fs from 'fs';
 import path from 'path';
 import * as url from 'url';
@@ -21,7 +14,6 @@ try {
   // ignore
 }
 
-// Ngôn ngữ được hỗ trợ bởi ASTExtractor (Phase 2)
 export type SupportedASTLanguage = 'kotlin' | 'scala' | 'pascal';
 
 export interface ASTNode {
@@ -33,9 +25,9 @@ export interface ASTNode {
   startCol: number; // 0-indexed
   endCol: number; // 0-indexed
   children: ASTNode[];
-  parentName?: string; // Tên class/method cha (phân cấp)
-  scope: string; // Định danh phân cấp: "ClassName.methodName"
-  isBroken?: boolean; // Đánh dấu node bị lỗi cú pháp
+  parentName?: string; 
+  scope: string; 
+  isBroken?: boolean; 
 }
 
 export interface ProjectConfig {
@@ -45,14 +37,8 @@ export interface ProjectConfig {
   sourceRoot?: string;
 }
 
-// ==============================================================================
-// Project Config Sniffer — Nhận diện compiler/framework (Tác vụ 2)
-// ==============================================================================
-
 export class ProjectConfigSniffer {
-  /**
-   * Tự động nhận diện ngôn ngữ và framework từ cấu trúc thư mục dự án
-   */
+  
   static detect(projectRoot: string): ProjectConfig {
     const files = fs.readdirSync(projectRoot);
 
@@ -103,9 +89,6 @@ export class ProjectConfigSniffer {
     throw new Error(`Cannot detect project language in: ${projectRoot}`);
   }
 
-  /**
-   * Lấy danh sách file cần parse theo ngôn ngữ
-   */
   static getSourceFiles(projectRoot: string, lang: SupportedASTLanguage): string[] {
     const extensions: Record<SupportedASTLanguage, string[]> = {
       kotlin: ['.kt', '.kts'],
@@ -125,7 +108,7 @@ export class ProjectConfigSniffer {
       for (const entry of entries) {
         const fullPath = path.join(dir, entry.name);
         if (entry.isDirectory()) {
-          // Bỏ qua node_modules, .git, build output
+          
           if (
             !['node_modules', '.git', 'build', 'dist', 'target', '__pycache__'].includes(entry.name)
           ) {
@@ -141,10 +124,6 @@ export class ProjectConfigSniffer {
     return results;
   }
 }
-
-// ==============================================================================
-// Tolerant Parser — Bỏ qua khối mã lỗi (Tác vụ 4)
-// ==============================================================================
 
 export class TolerantParser {
   private downloader: WasmParserDownloader;
@@ -162,10 +141,6 @@ export class TolerantParser {
     this.isInitialized = true;
   }
 
-  /**
-   * Parse mã nguồn với Tolerant Mode: trả về tree ngay cả khi có lỗi cú pháp
-   * Các node lỗi sẽ được đánh dấu isError = true
-   */
   async parseTolerant(code: string, lang: SupportedASTLanguage): Promise<Parser.Tree> {
     await this.ensureInitialized();
 
@@ -183,16 +158,10 @@ export class TolerantParser {
     return parser.parse(code);
   }
 
-  /**
-   * Kiểm tra node có phải là lỗi cú pháp không
-   */
   isErrorNode(node: Parser.SyntaxNode): boolean {
     return node.type === 'ERROR' || node.isMissing;
   }
 
-  /**
-   * Lấy language instance cho external query
-   */
   async getLanguage(lang: SupportedASTLanguage): Promise<Parser.Language> {
     await this.ensureInitialized();
     const cached = this.parserCache.get(lang);
@@ -207,10 +176,6 @@ export class TolerantParser {
   }
 }
 
-// ==============================================================================
-// ASTExtractor — Bóc tách cây symbol phân cấp (Tác vụ 3, 5)
-// ==============================================================================
-
 export class ASTExtractor {
   private tolerantParser: TolerantParser;
   private tagsDir: string;
@@ -220,10 +185,6 @@ export class ASTExtractor {
     this.tagsDir = path.resolve(__dirname, '../../resources/tags');
   }
 
-  /**
-   * Bóc tách cây AST phân cấp từ mã nguồn
-   * Trả về cây ASTNode với scope phân cấp (Class.method)
-   */
   async extractAST(code: string, lang: SupportedASTLanguage): Promise<ASTNode[]> {
     let tree: Parser.Tree;
     let language: Parser.Language;
@@ -237,7 +198,6 @@ export class ASTExtractor {
       throw err;
     }
 
-    // Đọc query .scm tương ứng
     const queryPath = path.join(this.tagsDir, `${lang}-tags.scm`);
     if (!fs.existsSync(queryPath)) {
       console.warn(`SCM query not found for ${lang}, returning empty AST`);
@@ -304,28 +264,21 @@ export class ASTExtractor {
       }
     }
 
-    // Xây dựng quan hệ phân cấp parent-child (scope indexing)
     this.buildHierarchy(nodes);
 
-    // Trả về cả nodes hợp lệ và nodes lỗi (đánh dấu isBroken)
     return [...nodes, ...errorNodes];
   }
 
-  /**
-   * Xây dựng quan hệ phân cấp parent-child dựa trên phạm vi dòng
-   * Gán scope = "ParentName.ChildName" cho mỗi node
-   */
   private buildHierarchy(nodes: ASTNode[]): void {
-    // Sắp xếp theo kích thước phạm vi (node lớn nhất trước)
+    
     const definitions = nodes
       .filter((n) => n.kind === 'definition')
       .sort((a, b) => {
         const sizeA = a.endLine - a.startLine;
         const sizeB = b.endLine - b.startLine;
-        return sizeB - sizeA; // Lớn nhất trước
+        return sizeB - sizeA; 
       });
 
-    // Gán mỗi child cho immediate parent (parent nhỏ nhất chứa child)
     for (let j = 0; j < definitions.length; j++) {
       const child = definitions[j];
       if (!child) continue;
@@ -351,7 +304,6 @@ export class ASTExtractor {
       }
     }
 
-    // Xác định root definitions (không phải con của definition nào khác)
     const childSet = new Set<ASTNode>();
     for (const def of definitions) {
       for (const ch of def.children) {
@@ -360,12 +312,10 @@ export class ASTExtractor {
     }
     const rootDefinitions = definitions.filter((d) => !childSet.has(d));
 
-    // Gán scope phân cấp chỉ từ root nodes
     for (const node of rootDefinitions) {
       this.assignScope(node, '');
     }
 
-    // Gán scope cho reference nodes — tìm immediate parent (nhỏ nhất chứa node)
     for (const node of nodes) {
       if (node.kind === 'reference' && !node.scope) {
         let bestParent: ASTNode | null = null;
@@ -382,9 +332,6 @@ export class ASTExtractor {
     }
   }
 
-  /**
-   * Gán scope phân cấp đệ quy: "Parent.Child.GrandChild"
-   */
   private assignScope(node: ASTNode, parentScope: string): void {
     node.scope = parentScope ? `${parentScope}.${node.name}` : node.name;
     for (const child of node.children) {
@@ -428,13 +375,10 @@ export class ASTExtractor {
     return nodes;
   }
 
-  /**
-   * Trích xuất SymbolTag[] tương thích với PolyglotTagParser (cho tích hợp repomap)
-   */
   async extractSymbolTags(code: string, lang: SupportedASTLanguage): Promise<SymbolTag[]> {
     const astNodes = await this.extractAST(code, lang);
     return astNodes
-      .filter((n) => !n.isBroken) // Loại bỏ node lỗi khỏi repomap
+      .filter((n) => !n.isBroken) 
       .map((n) => ({
         name: n.name,
         kind: n.kind,

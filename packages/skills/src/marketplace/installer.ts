@@ -1,8 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Skill Installer
-// Phase 2.3: Install, uninstall, update skills from marketplace
-// ==============================================================================
-
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { mkdir, readFile, writeFile, readdir, rm } from 'node:fs/promises';

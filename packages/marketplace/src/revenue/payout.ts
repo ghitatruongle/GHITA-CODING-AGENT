@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Payout Scheduler (Phase 38)
-// ==============================================================================
-
 import { randomUUID } from 'node:crypto';
 import type { Payout, PayoutSchedule } from './types.js';
 

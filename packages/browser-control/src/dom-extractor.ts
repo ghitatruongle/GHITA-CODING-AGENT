@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - DOM Accessibility Tree Extractor
-// ==============================================================================
-
 export interface InteractiveElement {
   id: string;
   tagName: string;

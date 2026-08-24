@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — useRemoteControl Hook
 // Socket callbacks, state management, and handlers for RemoteControlScreen
-// ==============================================================================
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Alert, AppState, Vibration, Platform, BackHandler } from 'react-native';
@@ -86,6 +83,8 @@ export function useRemoteControl(
   const [skillsLoading, setSkillsLoading] = useState(false);
   const [skillRunning, setSkillRunning] = useState<string | null>(null);
   const mountedRef = useRef(true);
+  // Suppresses the reconnect-retry alert storm during an outage (one per 30s).
+  const retryAlertShownRef = useRef(false);
 
   const isConnected = connectionState === 'connected';
 
@@ -203,6 +202,16 @@ export function useRemoteControl(
       onError: (error) => {
         clearScreenshotTimeout();
         setScreenshotLoading(false);
+        // Reconnect retries fire this callback repeatedly during an outage —
+        // show at most one alert per outage instead of stacking modals.
+        const isRetryNoise = error.startsWith('Connecting retry attempt');
+        if (isRetryNoise) {
+          if (retryAlertShownRef.current) return;
+          retryAlertShownRef.current = true;
+          setTimeout(() => {
+            retryAlertShownRef.current = false;
+          }, 30000);
+        }
         Alert.alert(t('common.error'), error, [
           {
             text: t('common.ok'),
@@ -214,6 +223,8 @@ export function useRemoteControl(
               ) {
                 socketService.disconnect();
                 navigation.replace('Pairing');
+              } else if (isRetryNoise) {
+                retryAlertShownRef.current = false;
               }
             },
           },

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Notification Channel Routing (Phase 35)
-// ==============================================================================
-
 import { randomUUID } from 'node:crypto';
 import type {
   ChannelDelivery,
@@ -120,9 +116,7 @@ export class ChannelRouter {
   }
 }
 
-// ============================================================================
 // Tauri Desktop Toast Sink
-// ============================================================================
 
 /**
  * Notification sink that delivers desktop toast notifications via the Tauri

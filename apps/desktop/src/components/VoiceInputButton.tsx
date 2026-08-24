@@ -1,6 +1,4 @@
-// ==============================================================================
 // Voice Input Button — mic toggle with live transcript
-// ==============================================================================
 
 import { useEffect } from 'react';
 import { Mic, MicOff, AlertCircle } from 'lucide-react';

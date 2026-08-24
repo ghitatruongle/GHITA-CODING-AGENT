@@ -1,5 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Audit Fix 2.7 Regression Tests
 //
 // Covers the PII-stream-buffer fix in `createPIIDetectorStreamMiddleware`:
 // the old implementation only retained a 50-char `TAIL_DELAY` and would
@@ -11,7 +9,6 @@
 //
 // These tests intentionally feed PII-bearing text across multiple chunks
 // to prove the buffer catches matches that span boundaries.
-// ==============================================================================
 
 import { describe, it, expect } from 'vitest';
 import { createPIIDetectorStreamMiddleware } from '../src/middleware/guardrails.js';

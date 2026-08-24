@@ -1,13 +1,10 @@
 #!/usr/bin/env node
-// ==============================================================================
-// GHITA CODING AGENT - Native addon build script (v1.1.1 Track 8 A2)
-// ------------------------------------------------------------------------------
+
 // Builds all napi-rs addons for the current platform:
 //   crates/secscan · crates/retrieval · crates/codegraph · packages/memory/rust-napi
 // Outputs land next to each crate dir (*.node) where @ghita/native-bridge and
 // the memory loader probe for them.
 // Usage: node scripts/build-native.mjs [--skip-tests]
-// ==============================================================================
 
 import { execSync } from 'node:child_process';
 import { resolve, dirname, join } from 'node:path';

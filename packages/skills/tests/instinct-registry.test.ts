@@ -1,6 +1,4 @@
-// ==============================================================================
 // v0.4.9 A4: InstinctRegistry Unit Tests
-// ==============================================================================
 
 import { describe, it, expect } from 'vitest';
 import { InstinctRegistry, BUILTIN_INSTINCTS } from '../src/instincts/index.js';

@@ -1,12 +1,8 @@
-// ==============================================================================
-// GHITA CODING AGENT - v1.1.5-beta1 Track 5.3: Fix→Re-scan Verification Loop
-// ------------------------------------------------------------------------------
 // After a finding is fixed, re-scan the scoped region to prove the finding
 // is closed. Verification order: buildability → security closure →
 // change-aware bypass review → behavior preserved.
 //
 // Pattern: codex-security fix-finding + strix --scope-mode diff.
-// ==============================================================================
 
 import type { ValidationReceipt } from './validation-ladder.js';
 

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Provider Card (expandable card for a single provider)
-// ==============================================================================
-
 import { type ProviderConfig } from '../api/providersConfig';
 import { type ApiKeyEntry, type KeyRotationStrategy, type ProviderId, maskKey } from './api-manager-utils';
 import { ApiKeyInput } from './ApiKeyInput';

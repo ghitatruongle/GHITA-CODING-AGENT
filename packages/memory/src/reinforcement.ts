@@ -1,4 +1,3 @@
-// ==============================================================================
 // v0.4.9 A9: Memory Decay & Reinforcement
 //
 // Models a "memory strength" that grows each time a memory is accessed
@@ -8,7 +7,6 @@
 // Strength is stored in a memory entry's metadata under `_strength` and the
 // last reinforcement time under `_lastReinforced`. These are additive to the
 // existing `_accessCount` / `_lastAccessed` / `_importance` signals.
-// ==============================================================================
 
 /** Default reinforcement/decay parameters. */
 export const DEFAULT_HALF_LIFE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days

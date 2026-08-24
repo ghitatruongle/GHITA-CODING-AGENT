@@ -1,12 +1,8 @@
-// ==============================================================================
-// GHITA CODING AGENT — Adaptive Reasoning Budget Controller (v1.1.5-beta2 Track 4)
-// ==============================================================================
 // Dynamically computes thinking/reasoning token budget based on:
 // 1. Prompt complexity tier (simple/moderate/complex)
 // 2. Code AST structure (node count & tree depth)
 // 3. Blast radius / dependency impact count
 // 4. TokenCounter context headroom constraint
-// ==============================================================================
 
 import { estimateTokens } from '../utils/token-counter.js';
 import { classifyTier, type TurnTier } from '../routing/router-v2.js';

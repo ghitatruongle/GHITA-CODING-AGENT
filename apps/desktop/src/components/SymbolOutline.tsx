@@ -1,9 +1,8 @@
-// ==============================================================================
-// GHITA CODING AGENT — Track 3 (v1.1.5-beta2): AST Symbol Outline Component
-// ==============================================================================
-
 import { memo, useEffect, useState, useMemo } from 'react';
-import { parseSource, type CodeNode } from '@ghita/code-graph';
+// Deep imports: the code-graph barrel pulls better-sqlite3 + MCP server into
+// the renderer bundle; the AST parser alone is all this component needs.
+import { parseSource } from '@ghita/code-graph/ast-parser';
+import type { CodeNode } from '@ghita/code-graph/types';
 
 export interface SymbolOutlineProps {
   filePath?: string;

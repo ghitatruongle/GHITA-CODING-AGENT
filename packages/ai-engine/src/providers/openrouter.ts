@@ -1,7 +1,5 @@
-// ==============================================================================
 // v0.4.9 A5: OpenRouter Provider — OpenAI-compatible via defineVendor
 // Aggregator routing to 100+ upstream models (refer_project/ai-framework/litellm).
-// ==============================================================================
 
 import { defineVendor } from './base-extended.js';
 import { BaseProvider } from './base.js';

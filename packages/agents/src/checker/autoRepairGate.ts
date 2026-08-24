@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Self-Correction & Auto-Repair Gate
-// ==============================================================================
 // Runs build / test checks after agent code modifications, extracts crash logs,
 // analyzes root cause, and automatically executes repair iterations until 100% pass.
-// ==============================================================================
 
 export interface TestRunResult {
   passed: boolean;

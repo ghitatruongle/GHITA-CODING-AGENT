@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Streaming Buffer (Phase 14 — Update 0.0.3)
-// ==============================================================================
 // Buffer management: accumulates partial streaming chunks into complete
 // messages / tool calls. Handles delta-based and token-based protocols.
-// ==============================================================================
 
 export interface BufferConfig {
   /** Max buffer size in bytes before forcing flush */

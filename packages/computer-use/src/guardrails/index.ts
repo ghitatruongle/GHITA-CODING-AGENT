@@ -1,7 +1,4 @@
-// =============================================================================
-// GHITA CODING AGENT - Phase 13: Guardrails Module Index
 // Export all security guardrail components
-// =============================================================================
 
 export { SandboxSecurityFilter, createSecurityFilter } from './sandboxFilter.js';
 export { SecurityLogger, createSecurityLogger } from './securityLogger.js';

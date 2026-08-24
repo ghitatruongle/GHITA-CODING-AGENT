@@ -212,6 +212,7 @@ turbo-*.log
 
 # .ghita test runs and evals outputs
 .ghita/evals/runs/
+.ghita/audits/
 .ghita/evals/report.md
 .ghita/evals/*.db*
 .ghita/e2e-smoke/

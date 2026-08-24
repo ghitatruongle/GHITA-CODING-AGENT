@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Provider List (grouped provider list)
-// ==============================================================================
-
 import { type ProviderConfig, type ProviderId } from '../api/providersConfig';
 import { type ApiKeyEntry, type KeyRotationStrategy } from './api-manager-utils';
 import { ProviderCard } from './ProviderCard';

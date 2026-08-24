@@ -1,7 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT — Security Audit Fix Regression Tests
 //
-// Covers the audit-driven security hardening landed during Phase 11:
+
 //   • KeychainStore refuses to silently fall back to a hard-coded
 //     master password (issue 2.13).
 //   • KeychainStore preserves the on-disk file when decrypt fails —
@@ -14,7 +12,6 @@
 //     (link-local fe80::/10, unique-local fc00::/7) — issue 2.14.
 //   • InputSanitizer.resolveAndValidate() returns a pin suitable for
 //     defeating DNS rebinding (issue 2.14).
-// ==============================================================================
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync, existsSync } from 'node:fs';

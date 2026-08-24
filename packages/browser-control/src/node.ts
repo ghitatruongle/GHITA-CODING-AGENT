@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Playwright Adapter
-// ==============================================================================
-
 import type { BrowserControlAdapter } from './index.js';
 
 export { HybridBrowserController } from './hybrid.js';
@@ -18,7 +14,6 @@ export async function createPlaywrightAdapter(
   let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
   let page: Awaited<ReturnType<Awaited<ReturnType<typeof chromium.launch>>['newPage']>> | undefined;
 
-  // deep-review fix (L8): only http(s) navigation is allowed. Anything else
   // (file://, javascript:, data:, ...) is rejected up front so a
   // prompt-injected URL cannot turn the browser into a local file reader.
   function assertSafeUrl(url: string): string {

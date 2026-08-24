@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Performance Benchmarks (Phase 39)
-// ==============================================================================
-
 import type { BenchmarkResult, TrendingScore } from './types.js';
 import type { DownloadTracker } from './downloads.js';
 import type { EngagementTracker } from './engagement.js';

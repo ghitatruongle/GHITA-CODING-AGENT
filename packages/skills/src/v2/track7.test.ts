@@ -27,9 +27,7 @@ import {
   runCapabilityDoctor,
 } from './capability-doctor.js';
 
-// ===========================================================================
 // T7.1: Engineering + superpowers skill pack
-// ===========================================================================
 
 describe('T7.1: Engineering skill pack', () => {
   it('has all required phases in order', () => {
@@ -69,9 +67,7 @@ describe('T7.1: Engineering skill pack', () => {
   });
 });
 
-// ===========================================================================
 // T7.2: Skill self-improvement
-// ===========================================================================
 
 describe('T7.2: Skill self-improvement', () => {
   let tracker: SkillUsageTracker;
@@ -128,9 +124,7 @@ describe('T7.2: Skill self-improvement', () => {
   });
 });
 
-// ===========================================================================
 // T7.3: Description optimizer + benchmark
-// ===========================================================================
 
 describe('T7.3: Description optimizer', () => {
   it('scores a vague description low', () => {
@@ -159,9 +153,7 @@ describe('T7.3: Description optimizer', () => {
   });
 });
 
-// ===========================================================================
 // T7.4: Skills use + tree-SHA lock
-// ===========================================================================
 
 describe('T7.4: Skills use + tree-SHA', () => {
   it('renders skill prompt with context substitution', () => {
@@ -194,9 +186,7 @@ describe('T7.4: Skills use + tree-SHA', () => {
   });
 });
 
-// ===========================================================================
 // T7.5: Plugin manifest normalization
-// ===========================================================================
 
 describe('T7.5: Plugin manifest normalization', () => {
   it('normalizes a raw plugin.json', () => {
@@ -236,9 +226,7 @@ describe('T7.5: Plugin manifest normalization', () => {
   });
 });
 
-// ===========================================================================
 // T7.6: Marketplace CI lint + cache
-// ===========================================================================
 
 describe('T7.6: Marketplace CI lint + cache', () => {
   it('passes lint for well-formed submission', () => {
@@ -288,9 +276,7 @@ describe('T7.6: Marketplace CI lint + cache', () => {
   });
 });
 
-// ===========================================================================
 // T7.7: Capability doctor
-// ===========================================================================
 
 describe('T7.7: Capability doctor', () => {
   it('runs capability checks with ordered backend fallback', async () => {

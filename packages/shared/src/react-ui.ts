@@ -1,12 +1,8 @@
-// ==============================================================================
-// GHITA CODING AGENT - React UI Integration Hooks & Components (v1.1.0 Track 4)
-// ==============================================================================
 // Real implementations (previously stubs):
 //  - useAIChat: streaming chat hook with rich parts (text / tool-call / file /
 //    source), reconnect-tolerant, abortable.
 //  - WorkflowVisualizer: real DAG renderer from flow events.
 // The stream parsing + layout logic is framework-agnostic and unit tested.
-// ==============================================================================
 
 import { createElement, useCallback, useEffect, useRef, useState } from 'react';
 

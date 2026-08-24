@@ -1,20 +1,16 @@
-// ==============================================================================
-// Phase 34: Audit Runner — orchestrator
-// ==============================================================================
-
 import { InputSanitizer } from './input-sanitizer.js';
 import { CorsAuditor } from './cors-auditor.js';
 import { SecretRotator } from './secret-rotator.js';
 import type { SecurityIssue, AuditReport, CorsConfig, SecuritySeverity } from './types.js';
 
 export interface AuditRunOptions {
-  /** Ngưỡng score tối thiểu để pass (0-100) */
+  
   threshold?: number;
-  /** Có auto-revoke key expired không */
+  
   rotateKeys?: boolean;
-  /** Inputs cần quét */
+  
   inputsToScan?: Array<{ value: string; location: string }>;
-  /** CORS configs cần audit */
+  
   corsConfigs?: Array<{ config: CorsConfig; location: string }>;
   /** Logger */
   logger?: (message: string, level: 'debug' | 'info' | 'warn' | 'error') => void;
@@ -29,9 +25,9 @@ const SEVERITY_WEIGHT: Record<SecuritySeverity, number> = {
 };
 
 /**
- * AuditRunner — chạy toàn bộ security audit & sinh report.
+
  *
- * Sử dụng:
+
  *   const runner = new AuditRunner();
  *   const report = await runner.run({
  *     threshold: 80,
@@ -71,9 +67,6 @@ export class AuditRunner {
     return this.rotator;
   }
 
-  /**
-   * Chạy audit tổng hợp.
-   */
   async run(options: AuditRunOptions = {}): Promise<AuditReport> {
     const threshold = options.threshold ?? 80;
     const issues: SecurityIssue[] = [];
@@ -93,7 +86,6 @@ export class AuditRunner {
       issues.push(...this.corsAuditor.auditMany(options.corsConfigs));
     }
 
-    // 3. Rotate keys (nếu bật)
     if (options.rotateKeys) {
       try {
         await this.rotator.tick();
@@ -135,7 +127,6 @@ export class AuditRunner {
       });
     }
 
-    // 5. Tính score
     const counts: Record<SecuritySeverity, number> = {
       info: 0,
       low: 0,

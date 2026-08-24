@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Alert Engine Tests
-// ==============================================================================
-
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { AlertEngine } from './alert-rules.js';
 import type { CapturedError } from './types.js';

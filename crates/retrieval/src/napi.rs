@@ -1,18 +1,12 @@
-// ==============================================================================
-// ghita-retrieval — napi bindings (v1.1.5-beta2)
-// ==============================================================================
-// Exposes inverted-index BM25, RRF fusion, vector search, and splitters to JS.
-// ==============================================================================
+//! ghita-retrieval — napi bindings
+//! Exposes inverted-index BM25, RRF fusion, vector search, and splitters to JS.
 
+use crate::{
+    rrf_fuse as core_rrf_fuse, splitters as core_splitters, vector_search as core_vector_search,
+    BM25Index as CoreBM25Index, Chunk as CoreChunk,
+};
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
-use crate::{
-    BM25Index as CoreBM25Index,
-    Chunk as CoreChunk,
-    rrf_fuse as core_rrf_fuse,
-    vector_search as core_vector_search,
-    splitters as core_splitters,
-};
 
 #[napi(object)]
 pub struct ChunkSpec {
@@ -48,7 +42,10 @@ impl Bm25Index {
     pub fn new(chunks: Vec<ChunkSpec>, k1: Option<f64>, b: Option<f64>) -> Self {
         let core_chunks: Vec<CoreChunk> = chunks
             .into_iter()
-            .map(|c| CoreChunk { id: c.id, text: c.text })
+            .map(|c| CoreChunk {
+                id: c.id,
+                text: c.text,
+            })
             .collect();
         Bm25Index {
             inner: CoreBM25Index::build(&core_chunks, k1.unwrap_or(1.5), b.unwrap_or(0.75)),
@@ -171,14 +168,22 @@ pub fn split_code_native(text: String, max_chunk_size: Option<u32>) -> Vec<Split
 
 /// Split fixed-size windows with overlap native.
 #[napi]
-pub fn split_fixed_native(text: String, chunk_size: Option<u32>, overlap: Option<u32>) -> Vec<SplitChunkResult> {
-    core_splitters::split_fixed(&text, chunk_size.unwrap_or(1200) as usize, overlap.unwrap_or(100) as usize)
-        .into_iter()
-        .map(|c| SplitChunkResult {
-            id: c.id,
-            text: c.text,
-            start_offset: c.start_offset as u32,
-            end_offset: c.end_offset as u32,
-        })
-        .collect()
+pub fn split_fixed_native(
+    text: String,
+    chunk_size: Option<u32>,
+    overlap: Option<u32>,
+) -> Vec<SplitChunkResult> {
+    core_splitters::split_fixed(
+        &text,
+        chunk_size.unwrap_or(1200) as usize,
+        overlap.unwrap_or(100) as usize,
+    )
+    .into_iter()
+    .map(|c| SplitChunkResult {
+        id: c.id,
+        text: c.text,
+        start_offset: c.start_offset as u32,
+        end_offset: c.end_offset as u32,
+    })
+    .collect()
 }

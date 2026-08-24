@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Tool Registry (Composio Pattern)
-// ==============================================================================
 // In-memory registry ho tro 200+ tool slots, dung cho AI function calling.
 // Moi tool co metadata (name, description, parameters) + handler function.
 // Pattern lay cam hung tu Composio: dynamic registration + capability tags.
-// ==============================================================================
 
 import { createBuiltInTools } from './index.js';
 import type {
@@ -19,9 +15,7 @@ import type {
 export * from './registry-types.js';
 export { TOOL_CATALOG, loadComposioCatalog } from './registry-catalog.js';
 
-// ----------------------------------------------------------------------------
 // ToolRegistry Class
-// ----------------------------------------------------------------------------
 
 export class ToolRegistry {
   private tools = new Map<string, ToolDefinition>();
@@ -227,9 +221,7 @@ export class ToolRegistry {
   }
 }
 
-// ----------------------------------------------------------------------------
 // Built-in tools loader
-// ----------------------------------------------------------------------------
 
 /** Register san 7 built-in tools (web_search, web_fetch, list_dir, read_file, write_file, replace_file_content, grep_search, run_command) */
 export function loadBuiltInTools(registry: ToolRegistry): number {
@@ -244,9 +236,7 @@ export function loadBuiltInTools(registry: ToolRegistry): number {
   return defs.length;
 }
 
-// ----------------------------------------------------------------------------
 // Singleton accessor
-// ----------------------------------------------------------------------------
 
 let _defaultRegistry: ToolRegistry | null = null;
 

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Task Delegation Pipeline
-// ==============================================================================
-
 import type { ReActAgent } from '../react/agent.js';
 import { Flow } from '../flow/flow.js';
 import type { FlowContext } from '../flow/types.js';

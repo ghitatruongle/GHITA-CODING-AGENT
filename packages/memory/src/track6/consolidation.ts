@@ -61,9 +61,7 @@ export function calculateEbbinghausRetention(
   return Math.exp(-elapsedDays / stability);
 }
 
-// ---------------------------------------------------------------------------
 // DreamLock: prevents concurrent consolidation runs
-// ---------------------------------------------------------------------------
 
 export class DreamLock {
   private locked = false;
@@ -114,9 +112,7 @@ export class DreamLock {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Consolidation Engine
-// ---------------------------------------------------------------------------
 
 export interface ConsolidationResult {
   episodicCreated: number;

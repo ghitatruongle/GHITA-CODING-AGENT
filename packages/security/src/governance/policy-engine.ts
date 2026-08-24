@@ -1,28 +1,23 @@
-// ==============================================================================
 // v0.4.9 A2: Agent Governance — Policy Engine
 //
 // Deny-default allow/deny policy evaluation for agent tool-calls, following
 // zero-trust principles (nothing runs unless explicitly permitted).
-// ==============================================================================
 
 import type { PolicyDecision, PolicyRequest, PolicyResult, PolicyRule } from './types.js';
 
 export interface PolicyEngineOptions {
-  /** Quyết định khi không rule nào khớp. Mặc định 'deny' (zero-trust). */
+  
   defaultDecision?: PolicyDecision;
-  /** Rule khởi tạo. */
+  
   rules?: PolicyRule[];
 }
 
 /**
- * PolicyEngine — đánh giá quyền cho từng tool-call theo mô hình deny-default.
+
  *
- * Quy tắc quyết định:
- *   1. Lọc các rule khớp request.
- *   2. Chọn rule có priority cao nhất; khi bằng priority, `deny` thắng `allow`.
- *   3. Không rule nào khớp → dùng `defaultDecision`.
+
  *
- * Sử dụng:
+
  *   const engine = new PolicyEngine({ rules: DEFAULT_POLICY_RULES });
  *   const result = engine.evaluate({ tool: 'terminal.exec', action: 'execute', resource: 'rm -rf /' });
  *   if (result.decision === 'deny') throw new Error(result.reason);
@@ -38,12 +33,10 @@ export class PolicyEngine {
     }
   }
 
-  /** Thêm một rule (giữ ổn định thứ tự chèn cho các rule cùng priority). */
   addRule(rule: PolicyRule): void {
     this.rules.push(rule);
   }
 
-  /** Xóa rule theo id. Trả về true nếu có xóa. */
   removeRule(id: string): boolean {
     const idx = this.rules.findIndex((r) => r.id === id);
     if (idx === -1) return false;
@@ -51,14 +44,10 @@ export class PolicyEngine {
     return true;
   }
 
-  /** Danh sách rule hiện tại (bản sao). */
   listRules(): PolicyRule[] {
     return [...this.rules];
   }
 
-  /**
-   * Đánh giá một request.
-   */
   evaluate(request: PolicyRequest): PolicyResult {
     const matches = this.rules.filter((rule) => this.matches(rule, request));
     if (matches.length === 0) {
@@ -73,7 +62,6 @@ export class PolicyEngine {
       };
     }
 
-    // priority cao nhất thắng; hòa priority thì deny thắng allow.
     let winner = matches[0];
     if (!winner) {
       // Unreachable (matches is non-empty here) — satisfies the type checker.
@@ -102,7 +90,6 @@ export class PolicyEngine {
     };
   }
 
-  /** Tiện ích: ném lỗi nếu bị từ chối. */
   enforce(request: PolicyRequest): void {
     const result = this.evaluate(request);
     if (result.decision === 'deny') {
@@ -123,7 +110,6 @@ export class PolicyEngine {
   }
 }
 
-/** Lỗi ném khi `enforce()` gặp quyết định deny. */
 export class PolicyViolationError extends Error {
   public readonly result: PolicyResult;
   constructor(result: PolicyResult) {
@@ -133,7 +119,6 @@ export class PolicyViolationError extends Error {
   }
 }
 
-/** Khớp glob đơn giản: hỗ trợ hậu tố '*' (vd 'fs.*'). */
 function globMatch(pattern: string, value: string): boolean {
   if (pattern === '*') return true;
   if (pattern.endsWith('*')) {

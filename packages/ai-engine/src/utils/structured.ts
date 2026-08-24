@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Structured Output Support
-// ==============================================================================
-
 import { z } from 'zod';
 import { AIValidationError } from '../errors/index.js';
 import type { ChatMessage, ChatOptions } from '../types.js';

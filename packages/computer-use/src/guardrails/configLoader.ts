@@ -1,8 +1,3 @@
-// =============================================================================
-// GHITA CODING AGENT - Phase 13: Security Blacklist YAML Config Loader
-// Đọc cấu hình blacklist tùy chỉnh từ .ghita/security-blacklist.yaml
-// =============================================================================
-
 import { readFile, access } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
@@ -10,8 +5,7 @@ import type { SecurityBlacklistConfig, CustomPatternEntry } from './types.js';
 import { DEFAULT_SECURITY_CONFIG } from './types.js';
 
 /**
- * Tìm file .ghita/security-blacklist.yaml
- * Thứ tự ưu tiên:
+
  *   1. cwd/.ghita/security-blacklist.yaml (project-level)
  *   2. ~/.ghita/security-blacklist.yaml (user-level)
  */
@@ -33,8 +27,7 @@ export async function findConfigFile(cwd?: string): Promise<string | null> {
 }
 
 /**
- * Parse YAML-like config đơn giản
- * Hỗ trợ format:
+
  *   detectBase64: true
  *   detectBinaryExecution: true
  *   requireApprovalForHigh: true
@@ -101,9 +94,6 @@ export function parseSecurityYaml(content: string): Partial<SecurityBlacklistCon
   return config;
 }
 
-/**
- * Load security config từ file YAML
- */
 export async function loadSecurityConfig(cwd?: string): Promise<SecurityBlacklistConfig> {
   const filePath = await findConfigFile(cwd);
   if (!filePath) return DEFAULT_SECURITY_CONFIG;
@@ -117,9 +107,6 @@ export async function loadSecurityConfig(cwd?: string): Promise<SecurityBlacklis
   }
 }
 
-/**
- * Tạo file .ghita/security-blacklist.yaml mẫu
- */
 export function generateSampleConfig(): string {
   return `# =============================================================================
 # GHITA CODING AGENT - Security Blacklist Configuration

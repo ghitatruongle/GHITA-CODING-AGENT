@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Plugin Auto-updater Types (Phase 32)
-// ==============================================================================
-
 /** Update check result */
 export interface UpdateCheckResult {
   /** Plugin ID */

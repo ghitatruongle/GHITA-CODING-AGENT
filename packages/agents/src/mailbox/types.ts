@@ -1,11 +1,7 @@
-// ==============================================================================
-// GHITA CODING AGENT - v1.1.5-beta1 Track 2.1: Mailbox Orchestration Types
-// ------------------------------------------------------------------------------
 // Persistent mailbox system for durable multi-agent coordination (pattern:
 // orca mailbox with ack/replay + worker_done + decision gates). Messages
 // survive process restarts via SQLite; each agent has a private inbox that
 // supports at-least-once delivery with explicit acknowledgment.
-// ==============================================================================
 
 /** A message in the mailbox system. */
 export interface MailboxMessage {
@@ -25,8 +21,10 @@ export interface MailboxMessage {
   seq: number;
 }
 
-/** Delivery status of a message in a recipient's inbox. */
-export type DeliveryStatus = 'pending' | 'delivered' | 'acked';
+/** Delivery status of a message in a recipient's inbox. `in_flight` means
+ * handed to a consumer but not yet acked; it is redelivered after the
+ * visibility timeout so a crash cannot silently drop the message. */
+export type DeliveryStatus = 'pending' | 'in_flight' | 'delivered' | 'acked';
 
 /** A delivery record tracking message consumption. */
 export interface DeliveryRecord {

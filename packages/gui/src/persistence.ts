@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Window State Persistence (Phase 33)
-// ==============================================================================
-
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import type { PersistedWindow } from './types.js';

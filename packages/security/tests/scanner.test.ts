@@ -1,4 +1,3 @@
-// ==============================================================================
 // v0.4.9 A1: SecurityScanner Unit Tests
 //
 // Covers the local rule-based scanner:
@@ -7,7 +6,6 @@
 //   • filesystem scan with exclusion of artifact dirs and path targets
 //   • deterministic fingerprints, severity counts, and score computation
 //   • target normalization + path-traversal rejection
-// ==============================================================================
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -168,7 +166,7 @@ describe('SecurityScanner.scanContentFast (v1.1.0 Track 8 A3)', () => {
   let scanner: SecurityScanner;
 
   beforeEach(() => {
-    SecurityScanner.forceJsScanFast = true; // parity vs lazy-line: ép JS fast path
+    SecurityScanner.forceJsScanFast = true; 
     scanner = new SecurityScanner();
   });
 
@@ -209,7 +207,7 @@ describe('SecurityScanner.scanContentFast — native addon path (v1.1.0 Track 8 
   });
 
   afterEach(() => {
-    unregisterNative('secscan'); // isolation: các test khác tiếp tục dùng JS path
+    unregisterNative('secscan'); 
   });
 
   it('uses the native scan_fast when the addon is registered', () => {

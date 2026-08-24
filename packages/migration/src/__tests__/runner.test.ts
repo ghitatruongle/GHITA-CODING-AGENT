@@ -1,6 +1,4 @@
-// ==============================================================================
 // @ghita/migration -- Comprehensive Tests
-// ==============================================================================
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { MigrationRunner } from '../runner.js';
@@ -17,9 +15,7 @@ function createMockMigration(name: string, version: string): Migration {
   };
 }
 
-// ============================================================
 // MigrationRunner
-// ============================================================
 
 describe('MigrationRunner', () => {
   it('runs migrations in version order', async () => {
@@ -102,9 +98,7 @@ describe('MigrationRunner', () => {
   });
 });
 
-// ============================================================
 // MigrationRegistry
-// ============================================================
 
 describe('MigrationRegistry', () => {
   let registry: MigrationRegistry;
@@ -144,9 +138,7 @@ describe('MigrationRegistry', () => {
   });
 });
 
-// ============================================================
 // Version utilities
-// ============================================================
 
 describe('compareVersions', () => {
   it('returns 0 for equal versions', () => {

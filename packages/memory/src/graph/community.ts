@@ -1,5 +1,5 @@
 /**
- * Phase 23 — Community Detection (Label Propagation)
+
  *
  * Each node starts as its own community. At every iteration, each
  * node adopts the most-frequent label among its neighbors, breaking

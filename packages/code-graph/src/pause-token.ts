@@ -1,8 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Track 3 (v1.1.5-beta1): PauseToken
-// ==============================================================================
 // Cooperative pause/resume/cancel token for long-running indexing operations.
-// ==============================================================================
 
 export class PauseToken {
   private _isPaused = false;

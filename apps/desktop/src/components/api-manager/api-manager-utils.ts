@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — API Manager Types & Utilities
-// ==============================================================================
-
 import { normalizeApiKeys } from '../../utils/apiConfig';
 import { type ProviderId, type ProviderConfig, PROVIDERS } from '../api/providersConfig';
 

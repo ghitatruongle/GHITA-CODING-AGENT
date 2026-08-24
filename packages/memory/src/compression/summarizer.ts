@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Memory Summarizer (Phase 30)
 // Groups similar low-importance entries and produces compact summaries.
-// ==============================================================================
 
 import type {
   CompressableMemoryEntry,
@@ -11,9 +8,7 @@ import type {
   SummaryGroup,
 } from './types.js';
 
-// ---------------------------------------------------------------------------
 // Internal: topic extraction
-// ---------------------------------------------------------------------------
 
 const STOP_WORDS = new Set([
   'the',
@@ -123,9 +118,7 @@ function extractKeyTopics(text: string, max = 5): string[] {
     .map(([t]) => t);
 }
 
-// ---------------------------------------------------------------------------
 // Grouping: cluster entries that are temporally close and topically similar
-// ---------------------------------------------------------------------------
 
 function groupByProximity(
   entries: CompressableMemoryEntry[],
@@ -160,9 +153,7 @@ function groupByProximity(
   return groups;
 }
 
-// ---------------------------------------------------------------------------
 // Build a summary from a group of entries
-// ---------------------------------------------------------------------------
 
 function buildSummary(group: CompressableMemoryEntry[], maxLength: number): SummaryGroup {
   const firstItem = group[0];
@@ -221,9 +212,7 @@ function truncate(text: string, maxLen: number): string {
   return `${text.slice(0, maxLen - 3)  }...`;
 }
 
-// ---------------------------------------------------------------------------
 // Summarizer
-// ---------------------------------------------------------------------------
 
 export class MemorySummarizer {
   private config: Required<SummarizerConfig>;

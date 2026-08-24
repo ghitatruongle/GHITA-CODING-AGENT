@@ -1,6 +1,4 @@
-// ==============================================================================
 // Notification hook — bridges NotificationHistory with React UI
-// ==============================================================================
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import {

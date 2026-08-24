@@ -1,13 +1,7 @@
-// ==============================================================================
-// GHITA CODING AGENT — VS Code Sidecar: pure sync helpers
-// ==============================================================================
 // Pure functions extracted from extension.ts so they can be unit-tested
 // without booting the VS Code runtime.
-// ==============================================================================
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 export interface SyncConfig {
   corePort: number;
@@ -74,9 +68,7 @@ export interface SyncStats {
   totalBytesSent: number;
 }
 
-// ---------------------------------------------------------------------------
 // ID generation
-// ---------------------------------------------------------------------------
 
 /**
  * Generates a short, time-sortable ID for sync events.
@@ -86,9 +78,7 @@ export function generateSyncId(now: number = Date.now(), rand: number = Math.ran
   return `${now.toString(36)}_${rand.toString(36).substring(2).padEnd(8, '0').slice(0, 8)}`;
 }
 
-// ---------------------------------------------------------------------------
 // Config
-// ---------------------------------------------------------------------------
 
 /**
  * Merges user-provided settings with defaults. Unknown keys are dropped,
@@ -106,9 +96,7 @@ export function mergeConfig(input: Partial<SyncConfig> | undefined | null): Sync
   return base;
 }
 
-// ---------------------------------------------------------------------------
 // Payload builders
-// ---------------------------------------------------------------------------
 
 export function buildFileChangePayload(
   filePath: string,
@@ -157,9 +145,7 @@ export function buildWorkspaceInventory(
   };
 }
 
-// ---------------------------------------------------------------------------
 // Debounce
-// ---------------------------------------------------------------------------
 
 /**
  * Returns true when the save should be debounced (i.e., already pending).
@@ -189,9 +175,7 @@ export class Debouncer {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Connection state helpers
-// ---------------------------------------------------------------------------
 
 export interface StatusBarModel {
   text: string;
@@ -233,17 +217,13 @@ export function buildStatusBarModel(
   }
 }
 
-// ---------------------------------------------------------------------------
 // Socket URL
-// ---------------------------------------------------------------------------
 
 export function buildSocketUrl(config: SyncConfig): string {
   return `http://127.0.0.1:${config.corePort}`;
 }
 
-// ---------------------------------------------------------------------------
 // Stats
-// ---------------------------------------------------------------------------
 
 export function emptyStats(): SyncStats {
   return {

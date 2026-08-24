@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Prompt System Types
-// ==============================================================================
-
 export type PromptInputType = 'string' | 'number' | 'boolean' | 'array' | 'object';
 
 export interface PromptInputSpec {

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Visual Workflow Builder View (Tailwind Edition)
-// ==============================================================================
-
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from '../i18n';
 import { Button } from '../components/ui';
@@ -88,7 +84,6 @@ export function WorkflowView() {
   } | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
-  // deep-review fix (L6): Escape cancels an in-progress link-draw (previously
   // the rubber-band persisted until a successful drop, blocking node drag).
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {

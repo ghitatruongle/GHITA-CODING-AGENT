@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Files & Batches Manager
-// ==============================================================================
-
 export class FilesManager {
   private apiKey: string;
   private baseUrl: string;

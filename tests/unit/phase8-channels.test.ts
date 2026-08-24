@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 8 Channel Plugins & FIFO Lanes Tests
-// ==============================================================================
-
 import { describe, it, expect, vi } from 'vitest';
 import {
   defineChannelEntry,

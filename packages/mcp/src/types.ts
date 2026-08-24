@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - @ghita/mcp shared types
-// ==============================================================================
-
 /** Transport kinds supported by the client. */
 export type ClientTransportKind = 'stdio' | 'sse' | 'http' | 'in-memory';
 

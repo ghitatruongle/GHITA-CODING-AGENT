@@ -1,6 +1,4 @@
-// ==============================================================================
 // v0.7.0 — AppStore new fields tests
-// ==============================================================================
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useAppStore } from './appStore';

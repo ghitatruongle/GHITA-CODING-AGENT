@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Analytics Types (Phase 39)
-// ==============================================================================
-
 /** Daily download counter */
 export interface DownloadStats {
   /** Product ID */

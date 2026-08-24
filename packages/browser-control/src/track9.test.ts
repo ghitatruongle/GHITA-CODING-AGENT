@@ -122,9 +122,7 @@ describe('T9.5: Browser safety', () => {
   });
 });
 
-// ===========================================================================
 // T9.6: Stealth v2 — preflight checks + humanize scroll
-// ===========================================================================
 
 describe('T9.6: Stealth v2', () => {
   describe('consistency checks', () => {
@@ -208,9 +206,7 @@ describe('T9.6: Stealth v2', () => {
   });
 });
 
-// ===========================================================================
 // T9.7: Computer-use window ops (unit-level verification)
-// ===========================================================================
 
 describe('T9.7: Computer-use window ops', () => {
   it('window operation types are defined', () => {

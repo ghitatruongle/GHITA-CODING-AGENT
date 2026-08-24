@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - AI Engine v1.1.0 Track 4 P53: distributed cache
-// ==============================================================================
 // Multi-layer cache: primary (Redis/remote) + secondary (disk/S3 snapshot),
 // plus a dual-mode wrapper that runs an exact cache and a semantic cache
 // side by side with a shared TTL. All backends are injectable for tests.
-// ==============================================================================
 
 import type { BaseCache } from './base-cache.js';
 

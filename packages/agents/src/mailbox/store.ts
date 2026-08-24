@@ -1,10 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - v1.1.5-beta1 Track 2.1: Mailbox Store (SQLite)
-// ------------------------------------------------------------------------------
 // Persistent mailbox with per-agent inboxes, at-least-once delivery via
 // explicit ack, worker_done reports, blocking asks with timeout, and
-// decision gates. Follows the SqliteFlowStateStore pattern from track5.
-// ==============================================================================
 
 import Database from 'better-sqlite3';
 import type {
@@ -23,6 +18,11 @@ function generateId(): string {
 }
 
 export class MailboxStore {
+  /** How long a delivery may stay in_flight before it is redelivered. */
+  static readonly VISIBILITY_TIMEOUT_MS = 60_000;
+  /** Upper bound on how long awaitGate blocks when nobody resolves the gate. */
+  static readonly GATE_TIMEOUT_MS = 600_000;
+
   private readonly db: Database.Database;
   private readonly maxInboxSize: number;
   private readonly defaultAskTimeoutMs: number;
@@ -41,10 +41,8 @@ export class MailboxStore {
     this.initSeqCounters();
   }
 
-  // ---------------------------------------------------------------------------
   // Schema
-  // ---------------------------------------------------------------------------
-
+  
   private initSchema(): void {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS mailbox_messages (
@@ -111,10 +109,8 @@ export class MailboxStore {
     `);
   }
 
-  // ---------------------------------------------------------------------------
   // Send / Check / Ack / Reply
-  // ---------------------------------------------------------------------------
-
+  
   /** Send a message to a recipient's inbox. Returns the message id. */
   send(from: string, to: string, payload: unknown, options?: { replyTo?: string }): string {
     const id = generateId();
@@ -142,11 +138,22 @@ export class MailboxStore {
 
   /**
    * Check an agent's inbox for pending messages. Marks returned messages as
-   * 'delivered' and increments delivery_count. Messages are returned in
-   * sequence order (oldest first).
+   * 'in_flight' and increments delivery_count. Messages are returned in
+   * sequence order (oldest first). In-flight messages that are never acked
+   * are automatically redelivered after VISIBILITY_TIMEOUT_MS, preserving the
+   * at-least-once guarantee across consumer crashes.
    */
   check(agentId: string, limit = 50): DeliveryRecord[] {
     const now = Date.now();
+
+    // Reclaim in-flight deliveries whose consumer died before acking.
+    this.db
+      .prepare(
+        `UPDATE mailbox_deliveries
+         SET status = 'pending'
+         WHERE recipient = ? AND status = 'in_flight' AND last_delivered_at < ?`,
+      )
+      .run(agentId, now - MailboxStore.VISIBILITY_TIMEOUT_MS);
 
     const selectPending = this.db.prepare(
       `SELECT m.id, m.sender, m.recipient, m.payload, m.timestamp, m.reply_to, m.seq,
@@ -160,7 +167,7 @@ export class MailboxStore {
 
     const markDelivered = this.db.prepare(
       `UPDATE mailbox_deliveries
-       SET status = 'delivered', delivery_count = delivery_count + 1, last_delivered_at = ?
+       SET status = 'in_flight', delivery_count = delivery_count + 1, last_delivered_at = ?
        WHERE message_id = ? AND recipient = ?`,
     );
 
@@ -213,7 +220,7 @@ export class MailboxStore {
       .prepare(
         `UPDATE mailbox_deliveries
          SET status = 'acked', acked_at = ?
-         WHERE message_id = ? AND recipient = ? AND status = 'delivered'`,
+         WHERE message_id = ? AND recipient = ? AND status IN ('in_flight', 'delivered')`,
       )
       .run(now, messageId, agentId);
     return result.changes > 0;
@@ -231,7 +238,7 @@ export class MailboxStore {
     const markAcked = this.db.prepare(
       `UPDATE mailbox_deliveries
        SET status = 'acked', acked_at = ?
-       WHERE message_id = ? AND recipient = ? AND status = 'delivered'`,
+       WHERE message_id = ? AND recipient = ? AND status IN ('in_flight', 'delivered')`,
     );
 
     const txn = this.db.transaction(() => {
@@ -253,10 +260,8 @@ export class MailboxStore {
     return this.send(from, orig.sender, payload, { replyTo: originalMessageId });
   }
 
-  // ---------------------------------------------------------------------------
   // Worker Done
-  // ---------------------------------------------------------------------------
-
+  
   /** Record that a worker has completed its task. */
   workerDone(agentId: string, outcome: WorkerOutcome, result?: unknown, error?: string): string {
     const id = generateId();
@@ -302,10 +307,8 @@ export class MailboxStore {
     };
   }
 
-  // ---------------------------------------------------------------------------
   // Ask (blocking question with timeout)
-  // ---------------------------------------------------------------------------
-
+  
   /** Pose a blocking question. Returns the ask id. */
   ask(
     from: string,
@@ -436,10 +439,8 @@ export class MailboxStore {
     }));
   }
 
-  // ---------------------------------------------------------------------------
   // Decision Gates
-  // ---------------------------------------------------------------------------
-
+  
   /** Create a decision gate that blocks task progression. */
   createGate(createdBy: string, description: string): string {
     const id = generateId();
@@ -489,12 +490,21 @@ export class MailboxStore {
     };
   }
 
-  /** Wait for a gate to be resolved. */
-  async awaitGate(gateId: string, pollIntervalMs = 200): Promise<DecisionGate> {
+  /** Wait for a gate to be resolved. Throws after `timeoutMs` (default 10
+   * minutes) so a gate nobody resolves cannot hang the calling session. */
+  async awaitGate(
+    gateId: string,
+    pollIntervalMs = 200,
+    timeoutMs = MailboxStore.GATE_TIMEOUT_MS,
+  ): Promise<DecisionGate> {
+    const deadline = Date.now() + timeoutMs;
     while (true) {
       const gate = this.getGate(gateId);
       if (!gate) throw new Error(`Gate ${gateId} not found`);
       if (gate.resolved) return gate;
+      if (Date.now() >= deadline) {
+        throw new Error(`Gate ${gateId} was not resolved within ${timeoutMs}ms`);
+      }
       await new Promise<void>((resolve) => setTimeout(resolve, pollIntervalMs));
     }
   }
@@ -523,10 +533,8 @@ export class MailboxStore {
     }));
   }
 
-  // ---------------------------------------------------------------------------
   // Cleanup & Utilities
-  // ---------------------------------------------------------------------------
-
+  
   /** Remove acked messages older than maxAgeMs from a recipient's inbox. */
   purgeAcked(recipient: string, maxAgeMs: number): number {
     const cutoff = Date.now() - maxAgeMs;
@@ -553,10 +561,8 @@ export class MailboxStore {
     this.db.close();
   }
 
-  // ---------------------------------------------------------------------------
   // Private Helpers
-  // ---------------------------------------------------------------------------
-
+  
   private nextSeq(sender: string): number {
     const current = this.seqCounters.get(sender) ?? 0;
     const next = current + 1;

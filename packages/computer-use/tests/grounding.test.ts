@@ -1,6 +1,4 @@
-// ==============================================================================
 // v0.4.9 A7: GUI Grounding & Retry Unit Tests
-// ==============================================================================
 
 import { describe, it, expect, vi } from 'vitest';
 import { verifyCoordinate, withActionRetry, annotateAction } from '../src/operators/grounding.js';

@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Pairing Manager
 // 6-character code-based 2-way authentication between Desktop ↔ Mobile
-// ==============================================================================
 
 import { generatePairingCode } from '@ghita/shared';
 import type { PairingState } from './types.js';

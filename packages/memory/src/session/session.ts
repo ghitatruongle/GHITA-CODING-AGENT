@@ -1,13 +1,9 @@
-// ==============================================================================
-// GHITA CODING AGENT - Session Management (Phase 24 — Update 0.0.3)
-// ==============================================================================
 // Persistent session management with:
 // - Two-tier storage: in-memory cache (fast) + SQLite (persistent)
 // - Lifecycle: create → pause → resume → archive
 // - Full-text search across history (FTS5 virtual table)
 // - Multi-session switching (active session tracking)
 // - Export/import as JSON
-// ==============================================================================
 
 // SECURITY (audit fix 2.15): use the `node:crypto` module directly instead
 // of relying on the global `crypto` object. The global is only available
@@ -86,6 +82,12 @@ export class InMemorySessionStore implements SessionStore {
   }
 
   async save(session: Session): Promise<void> {
+    // Deindex the previous snapshot first: without this, words from edited or
+    // removed messages keep pointing at their msgIds forever (stale FTS).
+    const previous = this.cache.get(session.id);
+    if (previous && previous !== session) {
+      this.deindexForFts(previous);
+    }
     this.cache.set(session.id, session);
     this.indexForFts(session);
     if (this.persistentBackend) {

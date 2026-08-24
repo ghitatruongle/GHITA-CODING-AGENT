@@ -1,7 +1,3 @@
-// ==============================================================================
-// v1.1.5-beta1 Track 2.4 — Interjection Buffer Tests
-// ==============================================================================
-
 import { describe, expect, it } from 'vitest';
 import { InterjectionBuffer } from '../src/interjection/buffer.js';
 import { createReActAgent } from '../src/react/agent.js';

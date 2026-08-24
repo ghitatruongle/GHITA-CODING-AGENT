@@ -1,14 +1,9 @@
-// ==============================================================================
-// GHITA CODING AGENT - Per-Provider Rate Limiter (Phase 28)
 // Token-bucket based rate limiter with sliding window counters.
-// ==============================================================================
 
 import type { RateLimitState, RateLimiterConfig } from './types.js';
 import { DEFAULT_RATE_LIMITER_CONFIG } from './types.js';
 
-// ---------------------------------------------------------------------------
 // Rate Limiter
-// ---------------------------------------------------------------------------
 
 export class RateLimiter {
   private config: Required<RateLimiterConfig>;

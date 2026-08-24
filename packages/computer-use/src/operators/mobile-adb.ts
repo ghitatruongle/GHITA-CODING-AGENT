@@ -1,12 +1,8 @@
-// ==============================================================================
-// GHITA CODING AGENT - Mobile ADB Operator (Phase 19 — Update 0.0.3)
-// ==============================================================================
 // Mobile device control via Android Debug Bridge (ADB).
 // - Screenshot via `adb exec-out screencap -p`
 // - Touch input: tap, swipe, long-press, pinch
 // - Device list and connection management
 // - Tauri command bridge interface (frontend-callable)
-// ==============================================================================
 
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';

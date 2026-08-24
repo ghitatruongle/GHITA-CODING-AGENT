@@ -1,10 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 1: Provider Config Schema (Zod + YAML loader)
-// ==============================================================================
 // Zod schema for validating provider YAML configurations.
 // Includes a lightweight YAML parser for simple provider config files
 // (no external yaml dependency required).
-// ==============================================================================
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -13,9 +9,7 @@ import type { ProviderConfig } from '../types.js';
 import type { ProviderYAMLConfig, ProvidersYAMLRoot } from './types.js';
 import { yamlToProviderConfig } from './types.js';
 
-// ---------------------------------------------------------------------------
 // Zod Schemas — validate provider configuration at runtime
-// ---------------------------------------------------------------------------
 
 const VALID_PROVIDER_TYPES: [string, ...string[]] = [
   'openai',
@@ -88,9 +82,7 @@ export const ProvidersYAMLRootSchema = z.object({
     .optional(),
 });
 
-// ---------------------------------------------------------------------------
 // Lightweight YAML parser — handles the subset needed for provider configs
-// ---------------------------------------------------------------------------
 
 /**
  * A minimal YAML parser that handles the simple key-value and list structures
@@ -208,9 +200,7 @@ function coerceYAMLValue(raw: string): string | number | boolean | null {
   return unquoted;
 }
 
-// ---------------------------------------------------------------------------
 // Provider Config Loader — reads, parses, validates YAML provider config files
-// ---------------------------------------------------------------------------
 
 export class ProviderConfigLoader {
   /**

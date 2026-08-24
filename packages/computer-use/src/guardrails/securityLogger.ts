@@ -1,16 +1,6 @@
-// =============================================================================
-// GHITA CODING AGENT - Phase 13: Security Logger (SQLite persistence)
-// Ghi vết logs các câu lệnh nguy hiểm bị chặn
-// =============================================================================
-
 import Database from 'better-sqlite3';
 import type { SecurityLogEntry, ThreatDetection } from './types.js';
 
-/**
- * SecurityLogger — Lưu trữ logs bảo mật vào SQLite
- *
- * Tác vụ 7: Ghi vết logs các câu lệnh nguy hiểm bị chặn để làm bằng chứng an ninh
- */
 export class SecurityLogger {
   private db: Database.Database | null = null;
   private dbPath: string;
@@ -26,9 +16,6 @@ export class SecurityLogger {
     this.dbPath = dbPath || ':memory:';
   }
 
-  /**
-   * Khởi tạo database và tạo bảng nếu chưa tồn tại
-   */
   init(): void {
     this.db = new Database(this.dbPath);
     this.db.pragma('journal_mode = WAL');
@@ -53,9 +40,6 @@ export class SecurityLogger {
     `);
   }
 
-  /**
-   * Ghi một security log entry vào SQLite
-   */
   log(entry: SecurityLogEntry): void {
     if (!this.db) this.init();
     if (!this.db) throw new Error('Database not initialized');
@@ -77,9 +61,6 @@ export class SecurityLogger {
     );
   }
 
-  /**
-   * Lấy tất cả logs, sắp xếp mới nhất trước
-   */
   getLogs(limit = 100): SecurityLogEntry[] {
     if (!this.db) this.init();
     if (!this.db) throw new Error('Database not initialized');
@@ -91,9 +72,6 @@ export class SecurityLogger {
     return rows.map(this.rowToEntry);
   }
 
-  /**
-   * Lấy các lệnh bị chặn (không safe và không approved)
-   */
   getBlockedCommands(limit = 50): SecurityLogEntry[] {
     if (!this.db) this.init();
     if (!this.db) throw new Error('Database not initialized');
@@ -107,9 +85,6 @@ export class SecurityLogger {
     return rows.map(this.rowToEntry);
   }
 
-  /**
-   * Thống kê: tổng số lệnh bị chặn theo threat type
-   */
   getThreatStats(): Record<string, number> {
     if (!this.db) this.init();
     if (!this.db) throw new Error('Database not initialized');
@@ -132,10 +107,6 @@ export class SecurityLogger {
     return stats;
   }
 
-  /**
-   * Lấy tỷ lệ block (số lệnh bị chặn / tổng số lệnh)
-   * @returns Tỷ lệ từ 0 đến 1, hoặc -1 nếu chưa có dữ liệu
-   */
   getBlockRate(): number {
     if (!this.db) this.init();
     if (!this.db) throw new Error('Database not initialized');
@@ -156,9 +127,6 @@ export class SecurityLogger {
     return (blockedRow?.count ?? 0) / total;
   }
 
-  /**
-   * Xóa logs cũ hơn N ngày
-   */
   cleanOlderThan(days: number): number {
     if (!this.db) this.init();
     if (!this.db) throw new Error('Database not initialized');
@@ -169,9 +137,6 @@ export class SecurityLogger {
     return result.changes;
   }
 
-  /**
-   * Đóng database connection
-   */
   close(): void {
     if (this.db) {
       this.db.close();
@@ -197,10 +162,8 @@ export class SecurityLogger {
     return [...this.telemetryLogs].reverse();
   }
 
-  // =========================================================================
   // Private helpers
-  // =========================================================================
-
+  
   private rowToEntry(row: Record<string, unknown>): SecurityLogEntry {
     const safe = Number(row.safe) === 1;
     const approved = row.approved === null ? undefined : Number(row.approved) === 1;

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Prompt Templates & Prompt Management (STT 2.6, 2.10)
-// ==============================================================================
-
 import type { ChatMessage, ChatRole } from '../types.js';
 
 /**
@@ -17,9 +13,7 @@ export function renderTemplate(template: string, variables: Record<string, unkno
   });
 }
 
-// ------------------------------------------------------------------------------
 // 2.10 Prompt Templates
-// ------------------------------------------------------------------------------
 
 /**
  * Basic String Prompt Template
@@ -116,9 +110,8 @@ export class PipelinePromptTemplate {
   }
 }
 
-// ------------------------------------------------------------------------------
 // 2.6 Prompt Management (PromptManager)
-// ------------------------------------------------------------------------------
+
 export class PromptManager {
   private registry = new Map<string, Map<string, unknown>>();
 

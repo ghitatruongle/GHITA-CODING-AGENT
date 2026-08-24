@@ -1,8 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - SecretDetector Unit Tests (Phase 3.8)
 // 30 test cases covering detection of API keys, tokens, passwords,
 // connection strings, redaction, allowlist, and custom patterns.
-// ==============================================================================
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { SecretDetector } from '../src/enterprise/secret-detection.js';

@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — Screen Preview Component
 // Shows desktop screenshot received via Socket.io
-// ==============================================================================
 
 import React, { useEffect, useState } from 'react';
 import {

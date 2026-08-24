@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Phase 5: DocsGriller Unit Tests
-// ==============================================================================
-
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { DocsGriller, createGrillMeCommand } from '../src/engineering/docsGriller.js';
 

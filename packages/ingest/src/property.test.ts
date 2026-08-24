@@ -8,10 +8,6 @@ import {
   chunkDocument,
 } from './splitters.js';
 
-// ==============================================================================
-// v1.1.0 Track 11 F5 — property tests cho splitters (fast-check)
-// ==============================================================================
-
 describe('splitFixed property tests', () => {
   it('never throws, returns strings within chunk size, non-empty when input non-empty', () => {
     fc.assert(

@@ -1,14 +1,8 @@
-// ==============================================================================
-// GHITA CODING AGENT — Unit Tests for CommunicationServer (Centralized)
-// ==============================================================================
-
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { CommunicationServer } from '../../packages/communication/src/server.js';
 import { SOCKET_EVENTS } from '../../packages/shared/src/constants.js';
 
-// ---------------------------------------------------------------------------
 // Mocks
-// ---------------------------------------------------------------------------
 
 import {
   mockSocketOnHandlers,
@@ -47,9 +41,7 @@ vi.mock('node:http', () => ({
   })),
 }));
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 function createServer(config?: Record<string, unknown>): CommunicationServer {
   return new CommunicationServer(config as ConstructorParameters<typeof CommunicationServer>[0]);
@@ -84,9 +76,7 @@ function triggerSocketEvent(event: string, ...args: unknown[]): void {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Tests
-// ---------------------------------------------------------------------------
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -432,9 +422,7 @@ describe('broadcastStatus()', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // Socket Event Handling
-// ---------------------------------------------------------------------------
 
 describe('pairing flow (PAIR event)', () => {
   it('should emit error when pairing code is missing', async () => {

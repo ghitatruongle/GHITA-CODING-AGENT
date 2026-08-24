@@ -1,6 +1,4 @@
-// ==============================================================================
 // @ghita/migration -- Migration Runner
-// ==============================================================================
 
 import type { Migration, MigrationState, MigrationRunnerConfig } from './types.js';
 

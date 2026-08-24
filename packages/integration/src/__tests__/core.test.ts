@@ -1,6 +1,4 @@
-// ==============================================================================
 // @ghita/integration -- Comprehensive Tests
-// ==============================================================================
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { GhitaCore } from '../core.js';
@@ -8,9 +6,7 @@ import { EventBus } from '../event-bus.js';
 import { ServiceRegistry } from '../service-registry.js';
 import { HealthCheckAggregator } from '../health-check.js';
 
-// ============================================================
 // EventBus
-// ============================================================
 
 describe('EventBus', () => {
   let bus: EventBus;
@@ -84,9 +80,7 @@ describe('EventBus', () => {
   });
 });
 
-// ============================================================
 // ServiceRegistry
-// ============================================================
 
 describe('ServiceRegistry', () => {
   let registry: ServiceRegistry;
@@ -152,9 +146,7 @@ describe('ServiceRegistry', () => {
   });
 });
 
-// ============================================================
 // HealthCheckAggregator
-// ============================================================
 
 describe('HealthCheckAggregator', () => {
   let aggregator: HealthCheckAggregator;
@@ -192,9 +184,7 @@ describe('HealthCheckAggregator', () => {
   });
 });
 
-// ============================================================
 // GhitaCore (integration)
-// ============================================================
 
 describe('GhitaCore', () => {
   it('creates all subsystems', () => {

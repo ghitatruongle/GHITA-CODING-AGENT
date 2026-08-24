@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Universal Chat Model Router (STT 2.9)
-// ==============================================================================
-
 import type { AIProviderType, AIStreamChunk } from '@ghita/shared';
 import { retry, sleep } from '@ghita/shared';
 import type {

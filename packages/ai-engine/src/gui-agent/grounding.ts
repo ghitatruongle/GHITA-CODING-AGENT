@@ -45,9 +45,8 @@ export interface GroundingCoordsResult {
   physical: { box: BoundingBox; point: Point };
 }
 
-// ---------------------------------------------------------------------------
 // 1. parseBoxToScreenCoords
-// ---------------------------------------------------------------------------
+
 /**
  * Translates predicted bounding box strings from various model patterns into screen coordinates.
  * Supports DPI scaling and coordinate ordering configuration.
@@ -195,9 +194,8 @@ export function parseBoxToScreenCoords(
   };
 }
 
-// ---------------------------------------------------------------------------
 // 2. smartResizeForV15
-// ---------------------------------------------------------------------------
+
 /**
  * Downscales image buffers so that the total pixels fit under maxPixels limits
  * while maintaining aspect ratios. Scale mapping constants are tracked for coordinate remapping.
@@ -254,9 +252,8 @@ export async function smartResizeForV15(
   };
 }
 
-// ---------------------------------------------------------------------------
 // 3. VisionGrounder
-// ---------------------------------------------------------------------------
+
 export class VisionGrounder {
   private configPath: string;
 

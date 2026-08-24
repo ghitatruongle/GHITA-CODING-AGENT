@@ -1,6 +1,4 @@
-// ==============================================================================
 // Wave 2 — skill-guard pure hash / trust helpers
-// ==============================================================================
 
 import { describe, it, expect } from 'vitest';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';

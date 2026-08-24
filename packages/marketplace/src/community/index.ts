@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Community Module Barrel Export (Phase 40)
-// ==============================================================================
-
 // --- Types ---
 export type { ForumThread, ForumReply, BugReport, FeatureRequest, Contributor } from './types.js';
 

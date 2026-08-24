@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - GUI Module Barrel Export (Phase 33)
-// ==============================================================================
-
 // --- Types ---
 export type {
   WindowRole,
@@ -24,4 +20,4 @@ export { LayoutPresetManager, type LayoutPreset, type LayoutWindowEntry } from '
 export { DialogService, type DialogResult, type DialogOptions, type FileFilter } from './dialog.js';
 export { ClipboardService } from './clipboard.js';
 
-export const GUI_VERSION = '1.1.5-beta2';
+export const GUI_VERSION = '1.1.5';

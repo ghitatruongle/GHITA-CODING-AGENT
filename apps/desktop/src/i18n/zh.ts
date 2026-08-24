@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Chinese Translations (Optimized)
-// ==============================================================================
-
 import type { TranslationKeys } from './types';
 
 export const zh: TranslationKeys = {
@@ -35,7 +31,7 @@ export const zh: TranslationKeys = {
   },
   app: {
     brand: 'GHITA CODING AGENT',
-    version: 'v1.1.5-beta2',
+    version: 'v1.1.5',
     deviceReconnected: '已重新连接设备: {{name}}',
     devicePaired: '成功配对设备: {{name}}',
     commandReceived: '从设备收到命令: {{action}}',
@@ -455,7 +451,7 @@ export const zh: TranslationKeys = {
     hide: '隐藏密钥',
     show: '显示密钥',
     fetch: '获取数据',
-    // Phase 1.1: Multi-key
+    
     addKey: '新增 API Key',
     removeKey: '移除',
     keyStrategy: 'API 密钥轮换与调度策略',
@@ -516,7 +512,7 @@ export const zh: TranslationKeys = {
     noContainersDesc:
       '当 AI 智能体需要在此隔离沙箱中运行端到端 (E2E) 测试或高风险系统命令时，容器会自动创建启动。',
   },
-  // Phase 7: Notification System (Q3 2026)
+  
   notification: {
     ariaLabel: '通知',
     title: '通知',
@@ -525,7 +521,7 @@ export const zh: TranslationKeys = {
     unreadBadge: '{{count}}',
     dismiss: '关闭通知',
   },
-  // Phase 8: Voice I/O (Q3 2026)
+  
   voice: {
     start: '开始语音输入',
     stop: '停止聆听',
@@ -533,7 +529,7 @@ export const zh: TranslationKeys = {
     unsupported: '不支持语音输入',
     unsupportedHint: '当前环境不支持语音识别',
   },
-  // Phase 9: Monitoring Dashboard (Q3 2026)
+  
   monitoring: {
     title: '监控',
     loading: '加载监控中…',
@@ -555,7 +551,7 @@ export const zh: TranslationKeys = {
     lastSeen: '最后出现',
     refresh: '刷新',
   },
-  // Phase 10: Quota & Rate Limiting (Q3 2026)
+  
   quota: {
     title: '配额与限流',
     loading: '加载配额中…',
@@ -579,7 +575,7 @@ export const zh: TranslationKeys = {
     refresh: '刷新',
     budgetUsage: '预算使用',
   },
-  // Phase 11: Code Knowledge Graph (Q3 2026)
+  
   codeGraph: {
     title: '代码知识图谱',
     workspacePath: '工作区路径',

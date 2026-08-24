@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT - Agent Template Gallery (Phase 36)
 // Pre-built agent template catalog with search and browsing
-// ==============================================================================
 
 import type {
   AgentTemplate,

@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — RemoteChatPanel Component
 // Chat message list + input for remote control
-// ==============================================================================
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';

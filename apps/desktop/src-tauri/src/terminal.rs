@@ -202,6 +202,25 @@ pub fn terminal_create(
     app_handle: AppHandle,
     state: tauri::State<'_, TerminalManager>,
 ) -> Result<TerminalSessionInfo, String> {
+    // Validate inputs before spawning a real shell: unknown shell names are a
+    // hard error (no silent fallback), and the working directory must exist.
+    let requested_shell = shell_type.as_deref().unwrap_or("").trim().to_lowercase();
+    if !requested_shell.is_empty()
+        && !matches!(
+            requested_shell.as_str(),
+            "powershell" | "pwsh" | "cmd" | "bash" | "sh" | "zsh"
+        )
+    {
+        return Err(format!("Unsupported shell type: {requested_shell}"));
+    }
+    if let Some(dir) = cwd.as_deref() {
+        if !dir.trim().is_empty() && !std::path::Path::new(dir).is_dir() {
+            return Err(format!(
+                "Terminal working directory does not exist or is not a folder: {dir}"
+            ));
+        }
+    }
+
     // Kill existing session with same id
     state.kill_session(&id);
 

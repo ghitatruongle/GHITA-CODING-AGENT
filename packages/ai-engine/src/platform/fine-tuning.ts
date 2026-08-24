@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Fine-Tuning Manager
-// ==============================================================================
-
 export class FineTuningManager {
   private apiKey: string;
   private baseUrl: string;

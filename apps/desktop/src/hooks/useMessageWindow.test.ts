@@ -1,7 +1,6 @@
 // @vitest-environment happy-dom
-// ==============================================================================
+
 // v0.4.9 B4: Message Windowing Unit Tests
-// ==============================================================================
 
 import { describe, it, expect } from 'vitest';
 import { renderHook, act } from '@testing-library/react';

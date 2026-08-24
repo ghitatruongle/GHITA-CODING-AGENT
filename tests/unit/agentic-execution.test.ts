@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 7 Integration and Sandboxed Execution Tests
-// ==============================================================================
-
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';

@@ -1,14 +1,9 @@
-// ==============================================================================
-// GHITA CODING AGENT - Request Batching Types (Phase 27)
 // Token-efficient prompt concatenation + parallel provider execution
-// ==============================================================================
 
 import type { AIProviderType, AIStreamChunk } from '@ghita/shared';
 import type { ChatMessage, ChatOptions, ChatResponse } from '../types.js';
 
-// ---------------------------------------------------------------------------
 // Batching Strategies
-// ---------------------------------------------------------------------------
 
 /**
  * Strategy for grouping multiple requests into a single batch.
@@ -19,9 +14,7 @@ import type { ChatMessage, ChatOptions, ChatResponse } from '../types.js';
  */
 export type BatchingStrategy = 'none' | 'time-window' | 'size-window' | 'hybrid';
 
-// ---------------------------------------------------------------------------
 // Concatenation Strategy
-// ---------------------------------------------------------------------------
 
 /**
  * How to merge multiple chat requests into one prompt for token efficiency.
@@ -32,9 +25,7 @@ export type BatchingStrategy = 'none' | 'time-window' | 'size-window' | 'hybrid'
  */
 export type ConcatenationStrategy = 'sequential' | 'numbered' | 'jsonl' | 'xml-tags';
 
-// ---------------------------------------------------------------------------
 // Batch Configuration
-// ---------------------------------------------------------------------------
 
 export interface BatchEngineConfig {
   /** Batching strategy (default: 'hybrid') */
@@ -69,9 +60,7 @@ export const DEFAULT_BATCH_CONFIG: Required<BatchEngineConfig> = {
   autoFlushOnError: true,
 };
 
-// ---------------------------------------------------------------------------
 // Batch Request/Response Types
-// ---------------------------------------------------------------------------
 
 /** A single request to be batched. */
 export interface BatchRequest {
@@ -152,9 +141,7 @@ export interface BatchExecution {
   providerLatencyMs: number;
 }
 
-// ---------------------------------------------------------------------------
 // Cost Tracking
-// ---------------------------------------------------------------------------
 
 export interface BatchCostEntry {
   batchId: string;
@@ -194,9 +181,7 @@ export interface BatchCostSummary {
   >;
 }
 
-// ---------------------------------------------------------------------------
 // Batch Engine Statistics
-// ---------------------------------------------------------------------------
 
 export interface BatchEngineStats {
   /** Total requests received */
@@ -221,9 +206,7 @@ export interface BatchEngineStats {
   uptimeMs: number;
 }
 
-// ---------------------------------------------------------------------------
 // Batch Provider Adapter Interface
-// ---------------------------------------------------------------------------
 
 /**
  * Interface a provider adapter must implement to be used with the batcher.
@@ -241,9 +224,7 @@ export interface BatchProviderAdapter {
   estimateCost?(promptTokens: number, completionTokens: number, model?: string): number;
 }
 
-// ---------------------------------------------------------------------------
 // Event Types
-// ---------------------------------------------------------------------------
 
 export type BatchEvent =
   | { type: 'enqueued'; request: BatchRequest; queueDepth: number }

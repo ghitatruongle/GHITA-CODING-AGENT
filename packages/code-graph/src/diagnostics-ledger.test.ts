@@ -1,7 +1,3 @@
-// ==============================================================================
-// LSP Diagnostics Ledger & Deferred Feedback Unit Tests (Track 3.5)
-// ==============================================================================
-
 import path from 'node:path';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { DiagnosticsLedger, DeferredDiagnosticsManager } from './diagnostics-ledger.js';

@@ -1,8 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - LRUCache Unit Tests (Phase 26)
 // 40 test cases covering get/set, TTL, eviction policies, tag/pattern
 // invalidation, batch ops, events, stats, and edge cases.
-// ==============================================================================
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { LRUCache } from '../src/cache/lru-cache.js';

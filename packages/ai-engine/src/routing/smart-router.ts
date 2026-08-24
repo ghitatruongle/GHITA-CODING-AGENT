@@ -1,8 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Smart Router
-// Phase 1.4: Cost/quality/latency-based provider routing
-// ==============================================================================
-
 import type { AIProviderType } from '@ghita/shared';
 import type { RoutingStrategy, RoutingDecision, RoutingConfig, ProviderMetrics } from './types.js';
 

@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Browser v1.1.0 Track 7 P77: action registry
-// ==============================================================================
 // Registry of browser actions with metadata (terminates-sequence, domains,
 // output type) + custom action support (browser-use pattern).
-// ==============================================================================
 
 export interface ActionDefinition {
   name: string;

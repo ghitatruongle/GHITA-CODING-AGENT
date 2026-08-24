@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Flow Orchestration Types
-// ==============================================================================
-
 export type FlowStepStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
 
 export interface FlowStep<TInput = unknown, TOutput = unknown> {

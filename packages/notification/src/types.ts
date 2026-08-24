@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Notification Types (Phase 35)
-// ==============================================================================
-
 /** Priority levels */
 export type NotificationPriority = 'low' | 'medium' | 'high' | 'critical';
 

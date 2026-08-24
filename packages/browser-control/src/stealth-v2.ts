@@ -132,9 +132,7 @@ export function runStealthPreflight(options: {
   };
 }
 
-// ---------------------------------------------------------------------------
 // Humanize re-scroll after reflow
-// ---------------------------------------------------------------------------
 
 export interface ScrollStep {
   x: number;

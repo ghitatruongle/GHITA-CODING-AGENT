@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — Settings Screen
 // App preferences, paired devices management, data clearing
-// ==============================================================================
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {

@@ -1,8 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 3.6: PII Detection
 // Personally Identifiable Information detection and redaction
 // Reference: LiteLLM Presidio-based PII detection
-// ==============================================================================
 
 // --- Types ---
 

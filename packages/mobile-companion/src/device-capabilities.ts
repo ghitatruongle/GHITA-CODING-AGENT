@@ -1,6 +1,4 @@
-// ==============================================================================
 // @ghita/mobile-companion -- Device Capabilities Detection
-// ==============================================================================
 
 import type { DeviceCapabilities } from './types.js';
 

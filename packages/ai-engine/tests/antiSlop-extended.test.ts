@@ -1,8 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — Phase 10: Anti-Slop Extended Tests
-// Bổ sung: Aho-Corasick unit tests, Code block detection, TokenSavingsTracker,
 // Stream/Chat middleware, edge cases, unicode, adversarial scenarios
-// ==============================================================================
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
@@ -12,9 +8,7 @@ import {
   createAntiSlopMiddleware,
 } from '../src/middleware/antiSlop.js';
 
-// =============================================================================
 // Aho-Corasick Algorithm Tests (via getAcMatcher)
-// =============================================================================
 
 describe('AhoCorasick (via AntiSlopFilter.getAcMatcher)', () => {
   it('should find single pattern in text', () => {
@@ -90,9 +84,7 @@ describe('AhoCorasick (via AntiSlopFilter.getAcMatcher)', () => {
   });
 });
 
-// =============================================================================
 // Code Block Detection Edge Cases
-// =============================================================================
 
 describe('Code Block Detection', () => {
   let filter: AntiSlopFilter;
@@ -162,9 +154,7 @@ describe('Code Block Detection', () => {
   });
 });
 
-// =============================================================================
 // TokenSavingsTracker
-// =============================================================================
 
 describe('TokenSavingsTracker', () => {
   it('should track total savings', () => {
@@ -222,9 +212,7 @@ describe('TokenSavingsTracker', () => {
   });
 });
 
-// =============================================================================
 // AntiSlopFilter.cleanChunk — Advanced
-// =============================================================================
 
 describe('AntiSlopFilter.cleanChunk — advanced', () => {
   let filter: AntiSlopFilter;
@@ -294,9 +282,7 @@ describe('AntiSlopFilter.cleanChunk — advanced', () => {
   });
 });
 
-// =============================================================================
 // AntiSlopFilter.cleanWithCodeBlockAwareness — Advanced
-// =============================================================================
 
 describe('cleanWithCodeBlockAwareness — advanced', () => {
   let filter: AntiSlopFilter;
@@ -337,9 +323,7 @@ describe('cleanWithCodeBlockAwareness — advanced', () => {
   });
 });
 
-// =============================================================================
 // createAntiSlopStreamMiddleware
-// =============================================================================
 
 describe('createAntiSlopStreamMiddleware', () => {
   it('should create a valid middleware function', () => {
@@ -445,9 +429,7 @@ describe('createAntiSlopStreamMiddleware', () => {
   });
 });
 
-// =============================================================================
 // createAntiSlopMiddleware (non-stream)
-// =============================================================================
 
 describe('createAntiSlopMiddleware', () => {
   it('should strip slop from non-stream response', async () => {
@@ -496,9 +478,7 @@ describe('createAntiSlopMiddleware', () => {
   });
 });
 
-// =============================================================================
 // cleanSlop utility
-// =============================================================================
 
 describe('cleanSlop utility', () => {
   it('should strip slop in one call', () => {
@@ -528,9 +508,7 @@ describe('cleanSlop utility', () => {
   });
 });
 
-// =============================================================================
 // Edge Cases & Adversarial
-// =============================================================================
 
 describe('Edge cases & adversarial', () => {
   it('should handle unicode text', () => {

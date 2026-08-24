@@ -55,9 +55,7 @@ export function detectTreeShaChange(
   return { changed: true, newHash, changedFiles };
 }
 
-// ---------------------------------------------------------------------------
 // T7.5: Plugin Manifest Normalization
-// ---------------------------------------------------------------------------
 
 export interface PluginManifest {
   name: string;
@@ -125,9 +123,7 @@ export function validateMarketplaceManifest(manifest: unknown): {
   return { valid: errors.length === 0, errors };
 }
 
-// ---------------------------------------------------------------------------
 // T7.6: Marketplace CI Lint + Content-Hash Cache
-// ---------------------------------------------------------------------------
 
 export interface SkillLintResult {
   skillId: string;
@@ -195,6 +191,8 @@ export function lintSkillSubmission(
 export class ScanCache {
   private readonly cache = new Map<string, { hash: string; result: unknown; timestamp: number }>();
   private readonly ttlMs: number;
+  private hits = 0;
+  private misses = 0;
 
   constructor(ttlMs = 3600_000) {
     this.ttlMs = ttlMs;
@@ -202,12 +200,21 @@ export class ScanCache {
 
   get(key: string, contentHash: string): unknown | null {
     const entry = this.cache.get(key);
-    if (!entry) return null;
-    if (entry.hash !== contentHash) return null;
-    if (Date.now() - entry.timestamp > this.ttlMs) {
+    if (!entry) {
+      this.misses++;
+      return null;
+    }
+    if (entry.hash !== contentHash) {
+      this.misses++;
       this.cache.delete(key);
       return null;
     }
+    if (Date.now() - entry.timestamp > this.ttlMs) {
+      this.misses++;
+      this.cache.delete(key);
+      return null;
+    }
+    this.hits++;
     return entry.result;
   }
 
@@ -215,9 +222,10 @@ export class ScanCache {
     this.cache.set(key, { hash: contentHash, result, timestamp: Date.now() });
   }
 
+  /** Real hit ratio over all lookups (0 until the first miss or hit). */
   hitRate(): number {
-    // Simple tracking would need hit/miss counters; return placeholder
-    return this.cache.size > 0 ? 1 : 0;
+    const total = this.hits + this.misses;
+    return total === 0 ? 0 : this.hits / total;
   }
 
   size(): number {
@@ -225,9 +233,7 @@ export class ScanCache {
   }
 }
 
-// ---------------------------------------------------------------------------
 // T7.7: Capability Doctor
-// ---------------------------------------------------------------------------
 
 export type CapabilityStatus = 'healthy' | 'degraded' | 'unavailable';
 

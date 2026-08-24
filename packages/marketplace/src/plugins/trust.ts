@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Marketplace v1.1.0 Track 3 P43: trust tiers & policy
-// ==============================================================================
 // Publisher trust model: trusted / verified / community / quarantined with
 // pinning (tag/digest), auto-update policy and rollback-safe version history.
-// ==============================================================================
 
 import type { PluginManifest } from '../types.js';
 import type { ScanVerdict } from './supply-chain.js';

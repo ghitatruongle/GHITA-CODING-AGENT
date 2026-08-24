@@ -1,12 +1,8 @@
-// ==============================================================================
-// GHITA CODING AGENT — Track 3 (v1.1.5-beta2): Monaco LSP Bridge & Live Diagnostics
-// ==============================================================================
 // Connects Monaco Editor with the Code Knowledge Graph & LSP Client/Ledger:
 // - Translates LSP diagnostics to Monaco model markers in real-time
 // - Registers rich Hover Providers (types, docs, JSDoc)
 // - Registers Definition Providers for jump-to-definition
 // - Registers Document Symbol Providers for active file AST outline
-// ==============================================================================
 
 import type * as monacoType from 'monaco-editor';
 import {

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Phase 19: SQLite FTS5 & Cosine Similarity Unit Tests
-// ==============================================================================
-
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { RustMemoryAddon } from '../src/semantic/rustAddon.js';
 
@@ -9,7 +5,7 @@ describe('RustMemoryAddon', () => {
   let addon: RustMemoryAddon;
 
   beforeEach(() => {
-    // Sử dụng in-memory database để test nhanh và độc lập
+    
     addon = new RustMemoryAddon(':memory:');
   });
 
@@ -17,9 +13,8 @@ describe('RustMemoryAddon', () => {
     addon.close();
   });
 
-  // ==============================================================================
   // 1. Database Indexing & FTS5 Query
-  // ==============================================================================
+  
   describe('SQLite Indexing & FTS5 matching', () => {
     it('should index and retrieve a single chat log entry', async () => {
       const entry = {
@@ -92,20 +87,22 @@ describe('RustMemoryAddon', () => {
     });
   });
 
-  // ==============================================================================
   // 2. Periodical Auto-Vacuum Execution
-  // ==============================================================================
+  
   describe('Auto-Vacuum & Write Counter', () => {
-    it('should execute autoVacuum periodically after 10 inserts', async () => {
-      const originalAutoVacuum = addon.autoVacuum;
+    it('should execute autoVacuum periodically after the configured write interval', async () => {
+      // Default interval is now 500 writes (incremental vacuum is cheap but
+      // not free) — this test scopes its own addon with a small interval.
+      const scoped = new RustMemoryAddon({ dbPath: ':memory:', vacuumIntervalWrites: 5 });
+      const originalAutoVacuum = scoped.autoVacuum.bind(scoped);
       let vacuumTriggered = false;
-      addon.autoVacuum = async () => {
+      scoped.autoVacuum = async () => {
         vacuumTriggered = true;
-        return originalAutoVacuum.call(addon);
+        return originalAutoVacuum();
       };
 
-      for (let i = 1; i <= 10; i++) {
-        await addon.indexChatMessage({
+      for (let i = 1; i <= 6; i++) {
+        await scoped.indexChatMessage({
           id: `c_${i}`,
           session_id: 'sess_auto',
           role: 'user',
@@ -116,11 +113,40 @@ describe('RustMemoryAddon', () => {
 
       expect(vacuumTriggered).toBe(true);
     });
+
+    it('does NOT run the old full-file VACUUM (incremental instead)', async () => {
+      const execCalls: string[] = [];
+      const rawDb = (addon as unknown as { db: { exec(sql: string): void } | null }).db;
+      if (rawDb) {
+        const originalExec = rawDb.exec.bind(rawDb);
+        rawDb.exec = (sql: string) => {
+          execCalls.push(sql);
+          originalExec(sql);
+        };
+      }
+      await addon.indexChatMessage({
+        id: 'c_vac',
+        session_id: 'sess_auto',
+        role: 'user',
+        content: 'vacuum probe',
+        timestamp: Date.now(),
+      });
+      // Force the interval boundary.
+      for (let i = 0; i < 500; i++) {
+        await addon.indexChatMessage({
+          id: `c_vac_${i}`,
+          session_id: 'sess_auto',
+          role: 'user',
+          content: `filler ${i}`,
+          timestamp: Date.now(),
+        });
+      }
+      expect(execCalls.some((sql) => /^\s*VACUUM\s*;?\s*$/i.test(sql))).toBe(false);
+    });
   });
 
-  // ==============================================================================
   // 3. 30-Day Old Log Purger
-  // ==============================================================================
+  
   describe('30-Day Old Log Vacuum', () => {
     it('should purge logs older than 30 days while preserving recent logs', async () => {
       const now = Date.now();
@@ -166,9 +192,8 @@ describe('RustMemoryAddon', () => {
     });
   });
 
-  // ==============================================================================
   // 4. Cosine Similarity (JS Fallback & Rust mock validation)
-  // ==============================================================================
+  
   describe('Cosine Similarity calculations', () => {
     it('should return 1.0 for perfectly identical vectors', () => {
       const v1 = [1.0, 2.0, 3.0, 4.0];
@@ -205,9 +230,8 @@ describe('RustMemoryAddon', () => {
     });
   });
 
-  // ==============================================================================
   // 5. RAM Semantic Cache LRU Eviction
-  // ==============================================================================
+  
   describe('RAM Semantic Cache Manager (100MB Cap)', () => {
     it('should store and retrieve vectors from cache correctly', () => {
       const vector = [0.1, 0.2, 0.3, 0.4];
@@ -219,15 +243,10 @@ describe('RustMemoryAddon', () => {
     });
 
     it('should evict the Least Recently Used (LRU) entry when size exceeds capacity', () => {
-      // Vì MAX_CACHE_SIZE_BYTES = 100MB, ta sẽ hạ thấp giới hạn bộ nhớ trong test hoặc
-      // mô phỏng đưa vào các vector cực lớn để kích hoạt LRU Eviction.
-      // Thay vào đó, ta có thể ghi đè biến MAX_CACHE_SIZE_BYTES trong test để kiểm thử an toàn!
-
+      
       const smallLimit = 1000; // 1000 bytes limit
       (addon as any).MAX_CACHE_SIZE_BYTES = smallLimit;
 
-      // Mỗi float64 số thực tốn 8 bytes.
-      // Một vector 100 dimensions tốn 800 bytes.
       // Entry 1 size = 'k1'.length * 2 + 100 * 8 + 64 = 4 + 800 + 64 = 868 bytes.
       const v1 = new Array(100).fill(0.1);
       const v2 = new Array(100).fill(0.2);
@@ -236,13 +255,11 @@ describe('RustMemoryAddon', () => {
       expect(addon.getCacheSize()).toBe(1);
       expect(addon.getCacheSizeBytes()).toBe(868);
 
-      // Thêm tiếp entry 2, vượt quá giới hạn 1000 bytes (868 + 868 = 1736 bytes > 1000)
-      // entry 1 'k1' sẽ bị đẩy ra (evicted) vì nó cũ hơn 'k2'
       addon.cacheEmbedding('k2', v2);
 
-      expect(addon.getCacheSize()).toBe(1); // Chỉ còn 1 phần tử
-      expect(addon.getEmbeddingFromCache('k1')).toBeUndefined(); // 'k1' đã bị xóa
-      expect(addon.getEmbeddingFromCache('k2')).toEqual(v2); // 'k2' vẫn còn
+      expect(addon.getCacheSize()).toBe(1); 
+      expect(addon.getEmbeddingFromCache('k1')).toBeUndefined(); 
+      expect(addon.getEmbeddingFromCache('k2')).toEqual(v2); 
     });
 
     it('should update timestamp of access to prevent eviction of recently retrieved items', () => {
@@ -254,19 +271,16 @@ describe('RustMemoryAddon', () => {
       addon.cacheEmbedding('k1', v);
       addon.cacheEmbedding('k2', v);
 
-      // Lúc này cả k1 và k2 đều nằm trong cache (~936 bytes <= 1000)
       expect(addon.getCacheSize()).toBe(2);
 
-      // Truy cập 'k1' -> Cập nhật k1 là phần tử mới dùng gần nhất
       addon.getEmbeddingFromCache('k1');
 
-      // Thêm 'k3' -> tổng size vượt 1000 -> sẽ evict 'k2' vì 'k2' cũ hơn 'k1' đã được làm mới
       addon.cacheEmbedding('k3', v);
 
       expect(addon.getCacheSize()).toBe(2);
-      expect(addon.getEmbeddingFromCache('k2')).toBeUndefined(); // 'k2' bị đẩy ra
-      expect(addon.getEmbeddingFromCache('k1')).toBeDefined(); // 'k1' được giữ lại
-      expect(addon.getEmbeddingFromCache('k3')).toBeDefined(); // 'k3' mới thêm được giữ lại
+      expect(addon.getEmbeddingFromCache('k2')).toBeUndefined(); 
+      expect(addon.getEmbeddingFromCache('k1')).toBeDefined(); 
+      expect(addon.getEmbeddingFromCache('k3')).toBeDefined(); 
     });
   });
 });

@@ -1,8 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 3.9: Audit Logging
 // Comprehensive audit trail for all requests and actions
 // Reference: LiteLLM proxy/audit_logging
-// ==============================================================================
 
 import { randomBytes } from 'node:crypto';
 

@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Memory MCP Server (standard @ghita/mcp)
-// ==============================================================================
-
 import { createMCPServer, type GhitaMCPServer, type ToolDefinition } from '@ghita/mcp';
 
 /** Structural surface of memory backing (AgentMemory compatible). */

@@ -1,11 +1,9 @@
-// ==============================================================================
 // AI Edit Proposal store — reactive queue of pending edits awaiting review
-// ==============================================================================
+
 //
 // Holds the AI-proposed edits so the CodeView can render a Monaco diff and let
 // the user accept (write to disk) or reject them. The pure proposal-building
 // logic lives in ../utils/editProposal.ts; this store only manages state.
-// ==============================================================================
 
 import { create } from 'zustand';
 import {
@@ -14,7 +12,7 @@ import {
   newProposalId,
   type BuildProposalInput,
   type EditProposal,
-} from '../utils/editProposal';
+} from '../utils/editProposal.ts';
 
 /** Payload pushed by the sidecar's Antigravity edit-review gate. */
 export interface RemoteEditProposalPayload {
@@ -82,7 +80,7 @@ export const useEditProposalStore = create<EditProposalState>((set, get) => ({
   },
 
   proposeRemote: (payload) => {
-    // deep-review fix (BUG-9): never enqueue the same sidecar proposal twice
+    
     // (network retry / duplicate broadcast). Re-answering one remoteId twice
     // would otherwise leave an orphaned row that can never be applied.
     const existing = get().proposals.find((p) => p.remoteId === payload.proposalId);

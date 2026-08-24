@@ -1,10 +1,8 @@
-// ==============================================================================
 // v0.4.9 A1: Security Scanner — Document Models
 //
 // Types describing the findings/coverage documents produced by the local
 // rule-based scanner. Document shapes are kept close to the common SARIF-like
 // security-scan conventions so results are easy to consume downstream.
-// ==============================================================================
 
 import type { SecuritySeverity } from '../types.js';
 
@@ -46,12 +44,12 @@ export interface ScanFinding {
     cwe: string[];
   };
   locations: FindingLocation[];
-  /** Code evidence (dòng khớp rule, đã cắt gọn). */
+  
   evidence?: string;
   remediation: string;
   fingerprints: {
     algorithm: 'ghita-scanner/v1';
-    /** sha256(ruleId|path|normalized evidence) — ổn định giữa các lần quét. */
+    
     primary: string;
   };
   provenance: {
@@ -76,7 +74,7 @@ export interface ScanCoverageDocument {
   completeness: 'complete' | 'partial';
   includePaths: string[];
   excludePaths: string[];
-  /** Số file đã quét / bị bỏ qua. */
+  
   stats: {
     filesScanned: number;
     filesSkipped: number;
@@ -84,35 +82,32 @@ export interface ScanCoverageDocument {
   };
 }
 
-/** Rule quét nội dung file (line-based regex). */
 export interface ScannerRule {
   id: string;
   title: string;
-  /** Regex áp lên từng dòng. KHÔNG dùng flag `g` (test từng dòng). */
+  
   pattern: RegExp;
   severity: FindingSeverityLevel;
   confidence: FindingConfidenceLevel;
   category: string;
   cwe: string[];
   remediation: string;
-  /** Chỉ áp cho các file có đuôi này (mặc định: mọi file text). */
+  
   fileExtensions?: string[];
-  /** Bỏ qua khi dòng khớp pattern này (giảm false positive). */
+  
   negativePattern?: RegExp;
 }
 
-/** Map severity của scanner sang SecuritySeverity dùng chung toàn package. */
 export function toSecuritySeverity(level: FindingSeverityLevel): SecuritySeverity {
   return level === 'informational' ? 'info' : level;
 }
 
-/** Tổng hợp kết quả trả về từ `SecurityScanner.scan()`. */
 export interface ScanSummary {
   scanId: string;
   startedAt: number;
   completedAt: number;
   root: string;
   counts: Record<FindingSeverityLevel, number>;
-  /** Điểm 0–100 (100 = sạch), cùng thang với AuditReport.score. */
+  
   score: number;
 }

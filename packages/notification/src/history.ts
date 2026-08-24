@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Notification History (Phase 35)
-// ==============================================================================
-
 import type { Notification, NotificationStatus } from './types.js';
 
 /**

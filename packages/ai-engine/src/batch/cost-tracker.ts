@@ -1,15 +1,10 @@
-// ==============================================================================
-// GHITA CODING AGENT - Per-Batch Cost Tracker (Phase 27)
 // Tracks cost entries for every batch execution, supports summary queries.
-// ==============================================================================
 
 import type { AIProviderType } from '@ghita/shared';
 import type { BatchCostEntry, BatchCostSummary } from './types.js';
 
-// ---------------------------------------------------------------------------
 // Default pricing (USD per 1K tokens) — used as a fallback when the adapter
 // does not provide its own estimator.
-// ---------------------------------------------------------------------------
 
 const DEFAULT_PRICING: Record<string, { input: number; output: number }> = {
   'gpt-4o': { input: 0.005, output: 0.015 },
@@ -42,9 +37,7 @@ export function estimateCostUsd(
   return input + output;
 }
 
-// ---------------------------------------------------------------------------
 // Cost Tracker
-// ---------------------------------------------------------------------------
 
 export class BatchCostTracker {
   private entries: BatchCostEntry[] = [];

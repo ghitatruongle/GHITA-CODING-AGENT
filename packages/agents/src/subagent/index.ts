@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Subagent Module Index (Phase 6)
-// ==============================================================================
-
 // --- Sub-Agent Spawner ---
 export { SubagentSpawner } from './spawner.js';
 

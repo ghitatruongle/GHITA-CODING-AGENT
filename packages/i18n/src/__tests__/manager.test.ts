@@ -1,6 +1,4 @@
-// ==============================================================================
 // @ghita/i18n -- Comprehensive Tests
-// ==============================================================================
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { I18nManager } from '../manager.js';
@@ -8,9 +6,7 @@ import { TranslationLoaderRegistry } from '../loader.js';
 import { LocaleDetector } from '../detector.js';
 import { formatNumber, formatDate, formatCurrency, formatPlural } from '../formatter.js';
 
-// ============================================================
 // I18nManager
-// ============================================================
 
 describe('I18nManager', () => {
   const config = {
@@ -82,9 +78,7 @@ describe('I18nManager', () => {
   });
 });
 
-// ============================================================
 // TranslationLoaderRegistry
-// ============================================================
 
 describe('TranslationLoaderRegistry', () => {
   let registry: TranslationLoaderRegistry;
@@ -110,9 +104,7 @@ describe('TranslationLoaderRegistry', () => {
   });
 });
 
-// ============================================================
 // LocaleDetector
-// ============================================================
 
 describe('LocaleDetector', () => {
   let detector: LocaleDetector;
@@ -142,9 +134,7 @@ describe('LocaleDetector', () => {
   });
 });
 
-// ============================================================
 // Formatter utilities
-// ============================================================
 
 describe('formatNumber', () => {
   it('formats number for locale', () => {

@@ -6,7 +6,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-1.1.0-purple.svg)
+![Version](https://img.shields.io/badge/version-1.1.5-purple.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Node](https://img.shields.io/badge/node-%3E%3D20-green.svg)
 ![TypeScript](https://img.shields.io/badge/typescript-5.6-blue.svg)
@@ -86,13 +86,22 @@ GHITA-CODING-AGENT/
 └── Plan/                # Development plan
 ```
 
-### Core vs Incubating (v0.1.5)
+### Core vs Incubating
 
-| Tier           | Packages                                                                                                                                                            |
+| Tier           | Packages                                                                                                                                                          |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Core**       | `ai-engine`, `agents`, `skills`, `memory`, `security`, `communication`, `desktop`                                                                                   |
-| **Product**    | `computer-use`, `browser-control`, `shared`, `vscode-extension`, `mobile`                                                                                           |
-| **Incubating** | `marketplace`, `voice`, `monitoring`, `notification`, `quotas`, `code-graph`, `gui`, `a11y`, `i18n`, `integration`, `migration`, `mobile-companion`, `relay-server` |
+| **Core**       | `ai-engine`, `agents`, `skills`, `memory`, `security`, `communication`, `code-graph` (native napi), `shared`, `desktop`                                             |
+| **Product**    | `computer-use`, `browser-control`, `vscode-extension`, `mobile`                                                                                                      |
+| **Incubating** | `marketplace`, `voice`, `monitoring`, `notification`, `quotas`, `gui`, `a11y`, `i18n`, `integration`, `migration`, `mobile-companion`, `relay-server`                |
+
+> **Honesty notes on Incubating packages:** `marketplace` installs/uninstalls
+> plugins for real, but its payment ledger is a simulation (`PaymentGateway`
+> never moves money). `voice` ships a Whisper-API STT client and DSP helpers
+> but no desktop app consumes it yet, and TTS is not wired to real audio out.
+> `mobile-companion` contains simulation harnesses (e.g. its `BluetoothPairing`
+> never radios — the mobile app uses `react-native-bluetooth-classic`). The
+> remaining incubating packages are functional building blocks that no app
+> wires in by default yet.
 
 ---
 

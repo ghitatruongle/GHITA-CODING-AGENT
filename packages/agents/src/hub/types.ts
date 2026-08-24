@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Hub Integration Types
-// ==============================================================================
-
 export interface HubPrompt {
   /** Prompt ID in the hub */
   id: string;

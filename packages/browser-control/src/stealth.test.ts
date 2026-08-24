@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Stealth Module Tests
-// ==============================================================================
-
 import { describe, it, expect, vi } from 'vitest';
 import { createStealthContext, applyStealth, withStealth, DEFAULT_UA } from './stealth.js';
 

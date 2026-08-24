@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT — Dashboard View (Phase 7B — Tailwind Edition)
-// ==============================================================================
-
 import { useAppStore } from '../stores/appStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useTranslation } from '../i18n';

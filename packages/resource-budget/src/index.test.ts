@@ -16,7 +16,7 @@ describe('BudgetRegistry', () => {
     registry.register({ module: 'ai-engine.cache', maxBytes: 1000 });
     expect(registry.account('ai-engine.cache', 600)).toBe(true);
     expect(registry.account('ai-engine.cache', 600)).toBe(false); // over → rolled back
-    expect(registry.state('ai-engine.cache')?.usedBytes).toBe(1000); // rolled back tới cap
+    expect(registry.state('ai-engine.cache')?.usedBytes).toBe(1000); 
     expect(registry.violations()).toHaveLength(1);
     expect(registry.state('ai-engine.cache')?.over).toBe(false); // hard limit rollback
   });
@@ -105,7 +105,7 @@ describe('ScreenPreviewBudget', () => {
     });
     expect(budget.maxBufferedFrames()).toBe(3);
     expect(budget.acceptFrame(50, Date.now() - 200).ok).toBe(true);
-    expect(budget.acceptFrame(50, Date.now() - 50).ok).toBe(false); // quá nhanh (fps)
-    expect(budget.acceptFrame(150, Date.now() - 200).ok).toBe(false); // quá lớn
+    expect(budget.acceptFrame(50, Date.now() - 50).ok).toBe(false); 
+    expect(budget.acceptFrame(150, Date.now() - 200).ok).toBe(false); 
   });
 });

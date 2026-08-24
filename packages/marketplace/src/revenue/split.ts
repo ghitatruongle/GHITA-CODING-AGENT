@@ -1,7 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Revenue Split Calculator (Phase 38)
-// ==============================================================================
-
 import { randomUUID } from 'node:crypto';
 import type { Payout, RevenueSplit, SplitConfig } from './types.js';
 

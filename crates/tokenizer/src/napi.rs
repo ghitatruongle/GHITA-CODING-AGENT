@@ -1,9 +1,6 @@
-// ==============================================================================
-// GHITA CODING AGENT — Tokenizer NAPI addon (v1.1.5-beta1 Track 4.1)
-// ------------------------------------------------------------------------------
-// Exposes exact BPE token counting to Node.js via @ghita/native-bridge.
-// Compiled only with --features addon. Uses dyn-symbols for Windows compat.
-// ==============================================================================
+//! GHITA CODING AGENT — Tokenizer NAPI addon
+//! Exposes exact BPE token counting to Node.js via @ghita/native-bridge.
+//! Compiled only with --features addon. Uses dyn-symbols for Windows compat.
 #![expect(dead_code)]
 
 use napi::bindgen_prelude::*;
@@ -33,12 +30,12 @@ pub fn count_tokens_js(text: String, family: Option<String>) -> Result<u32> {
 /// Count tokens for a list of [role, content] message pairs.
 /// Includes per-message overhead (~4 tokens) and reply priming (+2).
 #[napi]
-pub fn count_messages_tokens_js(
-    messages: Vec<MessagePair>,
-    family: Option<String>,
-) -> Result<u32> {
+pub fn count_messages_tokens_js(messages: Vec<MessagePair>, family: Option<String>) -> Result<u32> {
     let f = parse_family(family);
-    let pairs: Vec<(&str, &str)> = messages.iter().map(|m| (m.role.as_str(), m.content.as_str())).collect();
+    let pairs: Vec<(&str, &str)> = messages
+        .iter()
+        .map(|m| (m.role.as_str(), m.content.as_str()))
+        .collect();
     count_messages_tokens(&pairs, f)
         .map(|n| n as u32)
         .map_err(|e| Error::from_reason(e))

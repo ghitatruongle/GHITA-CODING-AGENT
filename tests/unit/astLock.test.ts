@@ -12,9 +12,9 @@ import {
 import type { SymbolTag } from '@ghita/shared';
 
 describe('3: AST-Lock Unit Tests', () => {
-  // ==============================================================================
+  
   // 1. buildHierarchy & computeSemanticHash
-  // ==============================================================================
+  
   describe('buildHierarchy & computeSemanticHash', () => {
     it('should build hierarchical scope strings (Class.Method) correctly', () => {
       const mockTags: SymbolTag[] = [
@@ -100,9 +100,8 @@ describe('3: AST-Lock Unit Tests', () => {
     });
   });
 
-  // ==============================================================================
   // 2. loadASTLockConfig YAML Loader
-  // ==============================================================================
+  
   describe('loadASTLockConfig', () => {
     const dummyYamlPath = path.resolve('.ghita/rules.yaml.test');
 
@@ -148,9 +147,8 @@ astLock:
     });
   });
 
-  // ==============================================================================
   // 3. ASTLockEngine Symbol Hashing & Verification
-  // ==============================================================================
+  
   describe('ASTLockEngine', () => {
     let engine: ASTLockEngine;
 
@@ -311,9 +309,8 @@ astLock:
     });
   });
 
-  // ==============================================================================
   // 4. ASTLockMiddleware Integration & PreTool Gate
-  // ==============================================================================
+  
   describe('ASTLockMiddleware', () => {
     let engine: ASTLockEngine;
     let middleware: ASTLockMiddleware;

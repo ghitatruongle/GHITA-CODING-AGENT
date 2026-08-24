@@ -1,16 +1,13 @@
-// ==============================================================================
-// ghita-secscan — napi bindings (v1.1.0 Track 8 A7)
-// ==============================================================================
-// Compiled only with `--features addon` (via @napi-rs/cli). Exposes
-// `scanFast` returning findings as Uint32Array (lines + rule indices) +
-// evidence strings — zero JSON string intermediates.
-// Strategy: ONE combined regex with named capture groups (r0..rn) scanned once
-// over the whole buffer (regex crate is fast on long input); line numbers are
-// tracked with memchr between matches.
-// ==============================================================================
-// Exports here are N-API ABI entry points consumed by the JS addon loader at
-// runtime (see @ghita/native-bridge). Within the crate they are unreferenced,
-// so treat dead-code as expected for this module.
+//! ghita-secscan — napi bindings
+//! Compiled only with `--features addon` (via @napi-rs/cli). Exposes
+//! `scanFast` returning findings as Uint32Array (lines + rule indices) +
+//! evidence strings — zero JSON string intermediates.
+//! Strategy: ONE combined regex with named capture groups (r0..rn) scanned once
+//! over the whole buffer (regex crate is fast on long input); line numbers are
+//! tracked with memchr between matches.
+//! Exports here are N-API ABI entry points consumed by the JS addon loader at
+//! runtime (see @ghita/native-bridge). Within the crate they are unreferenced,
+//! so treat dead-code as expected for this module.
 #![expect(dead_code)]
 
 use napi::bindgen_prelude::*;
@@ -33,6 +30,11 @@ pub struct ScanResult {
     pub rule_indices: Uint32Array,
     /// Matched evidence strings (parallel to lines/rule_indices).
     pub evidence: Vec<String>,
+    /// UTF-8 byte offsets where each match starts (parallel arrays). Additive
+    /// in 1.1.5 — lets callers redact exact ranges without re-matching.
+    pub match_starts: Uint32Array,
+    /// UTF-8 byte offsets one past each match end.
+    pub match_ends: Uint32Array,
 }
 
 /// Scan `content` with regex rules; returns findings as typed arrays.
@@ -54,7 +56,7 @@ pub fn scan_fast(content: String, rules: Vec<NativeRule>) -> napi::Result<ScanRe
     let combined_re = match Regex::new(&combined) {
         Ok(re) => re,
         Err(e) => {
-            // regex crate không hỗ trợ look-around → trả lỗi để JS fallback.
+            // regex crate lacks look-around support: surface the error so the JS fallback takes over.
             return Err(napi::Error::from_reason(format!(
                 "secscan: pattern unsupported ({e})"
             )));
@@ -69,6 +71,8 @@ pub fn scan_fast(content: String, rules: Vec<NativeRule>) -> napi::Result<ScanRe
     let mut lines_out: Vec<u32> = Vec::new();
     let mut idx_out: Vec<u32> = Vec::new();
     let mut evidence_out: Vec<String> = Vec::new();
+    let mut starts_out: Vec<u32> = Vec::new();
+    let mut ends_out: Vec<u32> = Vec::new();
 
     let bytes = content.as_bytes();
     let mut last = 0usize;
@@ -103,6 +107,8 @@ pub fn scan_fast(content: String, rules: Vec<NativeRule>) -> napi::Result<ScanRe
             lines_out.push(line_no);
             idx_out.push(i as u32);
             evidence_out.push(evidence);
+            starts_out.push(m.start() as u32);
+            ends_out.push(m.end() as u32);
             break;
         }
     }
@@ -111,6 +117,8 @@ pub fn scan_fast(content: String, rules: Vec<NativeRule>) -> napi::Result<ScanRe
         lines: lines_out.into(),
         rule_indices: idx_out.into(),
         evidence: evidence_out,
+        match_starts: starts_out.into(),
+        match_ends: ends_out.into(),
     })
 }
 

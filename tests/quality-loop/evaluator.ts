@@ -1,8 +1,3 @@
-// ==============================================================================
-// GHITA CODING AGENT - Search Quality Loop Evaluator
-// Phase 4: Benchmark Suite for Repomap Precision/Recall Measurement
-// ==============================================================================
-
 import fs from 'fs';
 import path from 'path';
 

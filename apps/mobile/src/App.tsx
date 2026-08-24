@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — Mobile App Root
 // Navigation + SafeArea + ErrorBoundary + Theme
-// ==============================================================================
 
 import React, { Component, useEffect } from 'react';
 import type { ErrorInfo } from 'react';

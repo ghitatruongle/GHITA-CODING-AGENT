@@ -1,7 +1,4 @@
-// ==============================================================================
-// GHITA CODING AGENT — WifiPairingTab Component
 // Wi-Fi pairing: IP address input + pairing code + connect button
-// ==============================================================================
 
 import React from 'react';
 import {

@@ -69,7 +69,7 @@ describe('computePageRank — native addon path (v1.1.0 Track 8 A11)', () => {
       const { nodes, edges } = makeGraph(50);
       const ranks = computePageRank(nodes, edges);
       expect(ranks.size).toBe(50);
-      // Native (uniform 1/n) wins → mọi rank bằng nhau.
+      
       expect(ranks.get('sym-0')).toBeCloseTo(1 / 50, 5);
     } finally {
       unregisterNative('codegraph');

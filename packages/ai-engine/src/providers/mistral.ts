@@ -1,9 +1,5 @@
-// ==============================================================================
-// GHITA CODING AGENT - Phase 1: Mistral Provider
-// ==============================================================================
 // Dedicated Mistral AI provider with native API support.
 // Mistral uses a La Plateforme API compatible with OpenAI format.
-// ==============================================================================
 
 import type { AIStreamChunk } from '@ghita/shared';
 import type {
