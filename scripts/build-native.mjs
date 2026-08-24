@@ -49,3 +49,6 @@ for (const crate of ADDON_CRATES) {
 }
 
 console.log('\nAll native addons built.');
+
+// NOTE: the CPU bench gate is non-blocking on push (see build-native.yml) —
+// shared-runner micro-bench variance; blocking only in quality-gates (PR/nightly).
