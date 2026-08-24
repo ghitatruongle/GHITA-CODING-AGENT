@@ -81,5 +81,12 @@ jobs:
         run: node scripts/bench-native.mjs --json
 
       # CPU regression gate (JS probes vs docs/perf-baseline.json, >10% fails).
+      # continue-on-error on push: the sub-15ms probes swing up to +80% between
+      # shared-runner VMs with IDENTICAL code (observed 15.0 → 23.0 ms across
+      # consecutive pushes of the same probe), so a hard gate here is a
+      # false-positive generator. The gate stays BLOCKING in quality-gates
+      # (pull_request + nightly), where same-infrastructure comparison is
+      # meaningful.
       - name: CPU regression gate
         run: node scripts/bench-cpu.mjs --baseline
+        continue-on-error: true
