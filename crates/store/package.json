@@ -1,0 +1,10 @@
+{
+  "name": "@ghita/store-native",
+  "version": "1.1.0",
+  "private": true,
+  "description": "ghita-store napi addon (v1.1.5 Track 5 — WAL + set_many batch)",
+  "napi": {
+    "name": "store",
+    "triples": {}
+  }
+}

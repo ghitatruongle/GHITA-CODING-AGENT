@@ -142,5 +142,7 @@ fn empty_result() -> ScanResult {
         lines: Uint32Array::new(Vec::<u32>::new()),
         rule_indices: Uint32Array::new(Vec::<u32>::new()),
         evidence: Vec::new(),
+        match_starts: Uint32Array::new(Vec::<u32>::new()),
+        match_ends: Uint32Array::new(Vec::<u32>::new()),
     }
 }
