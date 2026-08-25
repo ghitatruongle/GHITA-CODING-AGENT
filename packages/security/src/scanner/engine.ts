@@ -24,7 +24,14 @@ interface SecscanNative {
   scanFast(
     content: string,
     rules: Array<{ id: string; pattern: string; negative?: string }>,
-  ): { lines: Uint32Array; ruleIndices: Uint32Array; evidence: string[] };
+    withSpans?: boolean,
+  ): {
+    lines: Uint32Array;
+    ruleIndices: Uint32Array;
+    evidence: string[];
+    matchStarts?: Uint32Array;
+    matchEnds?: Uint32Array;
+  };
 }
 
 const DEFAULT_EXCLUDED_DIRS = new Set([

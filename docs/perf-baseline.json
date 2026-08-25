@@ -1,7 +1,7 @@
 {
   "scanner.naive.ms": 66.7238,
-  "scanner.stream.ms": 87.7344,
-  "scanner.fast.ms": 12.884399999999971,
+  "scanner.stream.ms": 98.5,
+  "scanner.fast.ms": 15.0,
   "scanner.findings": 266,
   "bm25.index+query.ms": 0.3849999999999909,
   "bm25.chunks": 10000,

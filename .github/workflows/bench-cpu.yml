@@ -22,10 +22,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: pnpm
+
+      - name: Install pnpm deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Build code-graph (bench imports dist/ast-parser.js)
+        run: pnpm --filter @ghita/code-graph... build
 
       - name: CPU benchmark + regression gate (JS)
         run: node scripts/bench-cpu.mjs --baseline
@@ -34,6 +45,9 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - run: cargo test --workspace
         working-directory: crates
+        env:
+          RUST_MIN_STACK: 134217728
+          CARGO_BUILD_JOBS: 1
 
       - name: Build native addons (secscan/retrieval/codegraph)
         run: |

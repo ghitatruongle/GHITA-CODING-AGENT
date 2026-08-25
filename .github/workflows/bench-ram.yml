@@ -22,10 +22,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: pnpm
+
+      - name: Install pnpm deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Build resource-budget (budget gate imports dist)
+        run: pnpm --filter @ghita/resource-budget... build
 
       - name: RAM benchmark + regression gate
         run: node scripts/bench-ram.mjs --baseline

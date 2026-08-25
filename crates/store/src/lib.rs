@@ -4,6 +4,7 @@ mod napi;
 #[cfg(feature = "addon")]
 use rusqlite::OptionalExtension;
 
+#[cfg(not(feature = "addon"))]
 use std::collections::HashMap;
 
 /// A simple key-value store interface.

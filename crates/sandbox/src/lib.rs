@@ -840,7 +840,8 @@ mod tests {
     #[test]
     fn env_scrub_drops_unlisted_vars() {
         let env = scrub_env(&["CUSTOM_TOKEN".into()]);
-        assert!(env.contains_key("PATH") || env.is_empty());
+        // Windows runners expose the path variable as `Path`, not `PATH`.
+        assert!(env.keys().any(|k| k.eq_ignore_ascii_case("PATH")) || env.is_empty());
     }
 
     #[test]
@@ -865,11 +866,13 @@ mod tests {
         assert_eq!(v1.len(), 1);
         assert_eq!(v1[0].reason, "deny-glob");
 
-        let v2 = precheck(
-            "cmd",
-            &[">".into(), "C:\\Windows\\system32\\evil.dll".into()],
-            &opts,
-        );
+        // Absolute path outside both the workspace and the temp root, on every
+        // platform (`C:\...` is relative on unix; temp_dir itself is allowed).
+        #[cfg(target_os = "windows")]
+        let outside = String::from("C:\\Windows\\system32\\evil.dll");
+        #[cfg(not(target_os = "windows"))]
+        let outside = String::from("/etc/ghita-sandbox-evil.dll");
+        let v2 = precheck("cmd", &[">".into(), outside], &opts);
         assert!(v2.iter().any(|v| v.reason == "write-outside-scope"));
 
         let strict_opts = SandboxOptions::new(SandboxProfile::Strict, &workspace);

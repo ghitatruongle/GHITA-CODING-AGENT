@@ -10,6 +10,9 @@
 //!   libraries are not linked (the JS fallback handles those formats)
 
 #[cfg(feature = "addon")]
+// napi entry points are only referenced by the generated addon registration,
+// which the test harness does not link — silence dead_code there.
+#[cfg_attr(test, allow(dead_code))]
 mod napi;
 
 /// Result of loading a document.
@@ -130,11 +133,7 @@ pub fn extract_docx(data: &[u8]) -> Result<String, String> {
         match reader.read_event_into(&mut buf) {
             Ok(quick_xml::events::Event::Start(e)) => match e.name().as_ref() {
                 b"w:t" => in_text_run = true,
-                b"w:p" => {
-                    if !out.is_empty() && !out.ends_with('\n') {
-                        out.push('\n');
-                    }
-                }
+                b"w:p" if !out.is_empty() && !out.ends_with('\n') => out.push('\n'),
                 _ => {}
             },
             Ok(quick_xml::events::Event::End(e)) => {

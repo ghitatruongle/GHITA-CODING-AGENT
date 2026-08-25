@@ -38,8 +38,14 @@ pub struct ScanResult {
 }
 
 /// Scan `content` with regex rules; returns findings as typed arrays.
+/// Span arrays (`match_starts`/`match_ends`) are only populated when
+/// `with_spans` is true — the hot scan path skips the extra allocations.
 #[napi]
-pub fn scan_fast(content: String, rules: Vec<NativeRule>) -> napi::Result<ScanResult> {
+pub fn scan_fast(
+    content: String,
+    rules: Vec<NativeRule>,
+    with_spans: Option<bool>,
+) -> napi::Result<ScanResult> {
     // 1. Compile ONE combined regex: (?<r0>p0)|(?<r1>p1)|...
     let mut combined = String::from("(?:");
     for (i, r) in rules.iter().enumerate() {
@@ -107,8 +113,10 @@ pub fn scan_fast(content: String, rules: Vec<NativeRule>) -> napi::Result<ScanRe
             lines_out.push(line_no);
             idx_out.push(i as u32);
             evidence_out.push(evidence);
-            starts_out.push(m.start() as u32);
-            ends_out.push(m.end() as u32);
+            if with_spans.unwrap_or(false) {
+                starts_out.push(m.start() as u32);
+                ends_out.push(m.end() as u32);
+            }
             break;
         }
     }
@@ -142,5 +150,7 @@ fn empty_result() -> ScanResult {
         lines: Uint32Array::new(Vec::<u32>::new()),
         rule_indices: Uint32Array::new(Vec::<u32>::new()),
         evidence: Vec::new(),
+        match_starts: Uint32Array::new(Vec::<u32>::new()),
+        match_ends: Uint32Array::new(Vec::<u32>::new()),
     }
 }
