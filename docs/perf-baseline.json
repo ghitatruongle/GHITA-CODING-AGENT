@@ -1,7 +1,7 @@
 {
   "scanner.naive.ms": 66.7238,
   "scanner.stream.ms": 98.5,
-  "scanner.fast.ms": 15.0,
+  "scanner.fast.ms": 15,
   "scanner.findings": 266,
   "bm25.index+query.ms": 0.3849999999999909,
   "bm25.chunks": 10000,
@@ -9,6 +9,6 @@
   "pagerank.nodes": 20000,
   "ast-parse.js.ms": 817.4,
   "ast-parse.files": 1000,
-  "diffstat.js.ms": 1452.9,
+  "diffstat.js.ms": 2,
   "diffstat.lines": 5000
 }

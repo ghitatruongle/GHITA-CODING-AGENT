@@ -26,11 +26,15 @@ function loadLegacyState<TSession>(): PersistedChatSessionState<TSession> {
 }
 
 function saveLegacyState<TSession>(state: PersistedChatSessionState<TSession>): void {
-  localStorage.setItem(CHAT_SESSIONS_STORAGE_KEY, JSON.stringify(state.sessions));
-  if (state.activeSessionId) {
-    localStorage.setItem(ACTIVE_CHAT_SESSION_STORAGE_KEY, state.activeSessionId);
-  } else {
-    localStorage.removeItem(ACTIVE_CHAT_SESSION_STORAGE_KEY);
+  try {
+    localStorage.setItem(CHAT_SESSIONS_STORAGE_KEY, JSON.stringify(state.sessions));
+    if (state.activeSessionId) {
+      localStorage.setItem(ACTIVE_CHAT_SESSION_STORAGE_KEY, state.activeSessionId);
+    } else {
+      localStorage.removeItem(ACTIVE_CHAT_SESSION_STORAGE_KEY);
+    }
+  } catch {
+    // QuotaExceededError / private mode — persistence best-effort only.
   }
 }
 
@@ -51,7 +55,11 @@ export async function loadChatSessionState<TSession>(): Promise<
 
   const legacy = loadLegacyState<TSession>();
   if (legacy.sessions.length > 0) {
-    await saveChatSessionState(legacy);
+    try {
+      await saveChatSessionState(legacy);
+    } catch {
+      // Migration best-effort — legacy state already returned below.
+    }
   }
   return legacy;
 }

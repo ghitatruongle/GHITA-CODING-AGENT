@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { useAppStore, type ThemeMode } from '../stores/appStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useTranslation } from '../i18n';
@@ -112,6 +113,22 @@ export function SettingsView() {
   const setLanguage = useAppStore((s) => s.setLanguage);
   const setLogLevel = useAppStore((s) => s.setLogLevel);
   const { t } = useTranslation();
+
+  // v1.2.0 — manual update check (wires the signature-verified check_update command)
+  const [updateStatus, setUpdateStatus] = useState<string | null>(null);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const handleCheckUpdate = async () => {
+    setCheckingUpdate(true);
+    setUpdateStatus(null);
+    try {
+      const result = await invoke<unknown>('check_update');
+      setUpdateStatus(typeof result === 'string' ? result : JSON.stringify(result ?? 'No update info'));
+    } catch (e) {
+      setUpdateStatus(e instanceof Error ? e.message : 'Update check failed');
+    } finally {
+      setCheckingUpdate(false);
+    }
+  };
 
   const THEME_OPTIONS: Array<{ value: ThemeMode; label: string; icon: string }> = [
     { value: 'dark', label: t('settings.themeDark'), icon: '🌙' },
@@ -258,7 +275,10 @@ export function SettingsView() {
           />
           <select
             value={mcpTransport}
-            onChange={(e) => setMcpTransport(e.target.value as 'stdio' | 'sse')}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === 'stdio' || v === 'sse') setMcpTransport(v);
+            }}
             className="px-2.5 py-1.5 text-xs rounded-md bg-slate-900/60 border border-white/10 text-slate-100"
           >
             <option value="stdio">stdio</option>
@@ -277,6 +297,7 @@ export function SettingsView() {
                     transport: mcpTransport,
                     enabled: true,
                     connected: false,
+                    command: mcpCommand,
                   },
                 ]);
                 setMcpName('');
@@ -453,9 +474,10 @@ export function SettingsView() {
         <SettingRow label="Cursor Style">
           <select
             value={terminalCursorStyle}
-            onChange={(e) =>
-              setTerminalCursorStyle(e.target.value as 'block' | 'underline' | 'bar')
-            }
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === 'block' || v === 'underline' || v === 'bar') setTerminalCursorStyle(v);
+            }}
             className="text-sm bg-bg-surface border border-border-default rounded-md px-2 py-1 text-text-primary outline-none"
           >
             <option value="block">Block</option>
@@ -536,6 +558,22 @@ export function SettingsView() {
                 : `🖥️ ${t('mainLayout.unknown')}`}
           </span>
         </SettingRow>
+        <SettingRow label={t('settings.checkUpdate')} description={t('settings.checkUpdateDesc')}>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={handleCheckUpdate}
+            disabled={checkingUpdate}
+            data-testid="check-update-btn"
+          >
+            {checkingUpdate ? t('settings.checkingUpdate') : t('settings.checkUpdateAction')}
+          </Button>
+        </SettingRow>
+        {updateStatus && (
+          <p className="text-xs text-[var(--text-muted)] mt-2" data-testid="update-status">
+            {updateStatus}
+          </p>
+        )}
       </Section>
 
       {/* Reset */}

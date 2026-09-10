@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.2.0-demo1] - 2026-08-31 (chưa phát hành — chờ owner nghiệm)
+
+### Track 1 — Ổn định 100%
+
+- **Feature verification matrix** (`docs/feat-matrix-1.2.0.md`): 55 dòng tính năng user-facing (34 desktop, 8 mobile, 1 vscode, 12 engine cross-cutting) — **55/55 ✅** với bằng chứng tự động.
+- **Bằng chứng mới**: `views-render.test.tsx` (15 test — mọi view desktop mount không throw + regression BUG-005), `components-render.test.tsx` (16 test — 15 component tương tác + click export chat Markdown thật), `useModelSelection.test.ts` (4 test — model options động), `apps/mobile screens-load.test.tsx` (5 test module-load), `splitters.parity.test.ts` (20 test JS↔Rust).
+- **Bug đã sửa** (`docs/bugs-demo1.md`):
+  - **BUG-001** (nghiêm trọng, Windows): native `split_fixed` cắt theo byte offset → **panic abort cả ingest worker** trên tài liệu CJK/tiếng Việt (`end byte index is not a char boundary`) — CI Linux không thấy vì addon không build trong test job. Viết lại UTF-16-unit + char-boundary an toàn + clamp overlap đúng JS. Rust 24→30 test, ingest JS 32/32, parity 20/20.
+  - **BUG-004**: native `split_markdown` chỉ nhận H2, JS nhận H1–H3 + re-wrap `## ` → chunk khác nhau giữa máy dev và CI. Mirror JS chính xác; thêm tham số overlap vào `split_markdown_native`.
+  - **BUG-005**: `check_update` (updater đã ký) không có UI gọi — tính năng không tới được người dùng. Nút "Check for updates" trong Settings → About, i18n 4 key × 6 locale, regression test.
+  - **BUG-002/003** (splitCode/splitRecursive native): CLOSED-BY-DECISION — đo cho thấy JS <1ms và native string-slice chậm hơn JS qua FFI; quyết định ghi trong `docs/rust-demo1-design.md`.
+  - **Review+debug pass (fuzz adversarial)**: bắt thêm 2 bug — **BUG-006**: JS `splitFixed` fallback cắt đôi surrogate pair (emoji → lone surrogate hỏng text) + lặp vô hạn khi `chunkSize≤0` + nhảy ký tự khi overlap âm; fix bằng đường code-point-safe mirror Rust, giữ fast path BMP. **BUG-007**: Rust `split_markdown` xử lý heading whitespace-only (`'##   '`) khác JS (regex match capture rỗng); fix truthiness-style. Regression: `splitters.fuzz.test.ts` 93 test + `editProposal.lcs-fuzz.test.ts` 7 adversarial + `check-bench-probe-parity.mts` (probe==production 310/310).
+
+### Track 2 — Tối ưu thuật toán (3/3 vùng ≥20%)
+
+- **Diff-stat** (`lcsLength`, apps/desktop): naive DP O(n·m) → **common prefix/suffix trim + Hunt–Szymanski LIS** (parity float-identical, golden test 200 fixture ngẫu nhiên): realistic 5k dòng đổi 1% **1120.6 ms → 1.5 ms (−99.9%)**; worst-case **1698.9 → 2.0 ms**; probe chính thức bench-cpu [E] **1452.9 → 0.9 ms** — baseline `docs/perf-baseline.json` cập nhật, gate "within 10% of baseline" xanh.
+- **Memory scoreAll** (`packages/memory`): pairwise O(n²) set-scan → **adaptive bitset/inverted-index** (chi phí ước lượng `N²·words` vs `Σ postings²`, chọn cái nhỏ hơn; skip theo id-equality đúng bản gốc): 1k entries **522.7 ms → 21.9 ms JS (−95.8%)**.
+- **Native splitter**: ASCII fast path + streaming `char_indices` (bỏ Vec<char> toàn input): đường native CJK **4.3 → 3.2 ms (−26%)** và đúng semantics.
+- Profiling chi tiết + xếp hạng điểm nóng: `docs/profiling-1.2.0-demo1.md`; bench tái hiện: `examples/bench-demo1.mts`, `examples/bench-demo1-split.mts`.
+
+### Track 3 — Rust hóa nhỏ gọn
+
+- **`shared_counts` port sang `crates/retrieval`** (module `importance.rs`): phần đếm shared-token của scoreAll chạy native (bitset popcount / inverted-index accumulate, so sánh ngưỡng bằng IEEE f64 đúng JS, duplicate-id group skip qua `group[]`). `MemoryCompactor.scoreAll` wire `native ?? js` — 1k entries **21.9 → 11.9 ms** (tổng **−97.7%** so với 522.7 ms gốc). Parity test trực tiếp 4/4 + golden 4/4 cả hai nhánh.
+- Ứng viên PageRank/textops bị phế truất có bằng chứng (dead code / JS đã <1ms) — `docs/rust-demo1-design.md`.
+- Rust gates: `cargo test -p ghita-retrieval` **30/30**, clippy `--features addon -D warnings` 0, fmt sạch, addon rebuild + parity JS xanh.
+
+### Gates (chạy 2026-08-31, toàn bộ xanh)
+
+typecheck 44/44 · lint 43/43 · turbo test 44/44 (desktop 209, memory 270, ingest 52) · knip 0 · audit-security baseline 44 không tăng · cargo fmt/test/clippy workspace 0 warning · desktop-smoke 4/4 · e2e-smoke 4/4 · evals 79/100 PASS · coverage T0/T1 6/6 · integrity + check-artifacts OK · smells ok · audit:policy + licenses OK · i18n 432 strings × 6 locale · **dogfood 18/18**.
+
 ## [1.1.5] - 2026-08-24
 
 ### Track 6 — Quality Gates & Publish Readiness

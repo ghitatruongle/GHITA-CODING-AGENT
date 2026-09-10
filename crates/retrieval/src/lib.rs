@@ -8,6 +8,7 @@
 //!
 //! Std-only (HashMap + Vec) so `cargo test` runs offline; addon exposes napi.
 
+pub mod importance;
 pub mod splitters;
 
 #[cfg(feature = "addon")]

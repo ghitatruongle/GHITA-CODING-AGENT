@@ -118,6 +118,10 @@ export interface TranslationKeys {
     version: string;
     platform: string;
     platformDesc: string;
+    checkUpdate: string;
+    checkUpdateDesc: string;
+    checkUpdateAction: string;
+    checkingUpdate: string;
     windows: string;
     linux: string;
     themeDark: string;

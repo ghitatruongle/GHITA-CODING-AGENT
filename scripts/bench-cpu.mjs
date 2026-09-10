@@ -161,7 +161,7 @@ export function pagerankTyped(nodes, edges, damping = 0.85, iterations = 30) {
   for (let i = 0; i < edges.length; i++) {
     from[i] = edges[i][0];
     to[i] = edges[i][1];
-    outCount[edges[i][1]]++;
+    outCount[edges[i][0]]++;
   }
   const rank = new Float64Array(N).fill(1 / N);
   const next = new Float64Array(N);
@@ -232,22 +232,52 @@ export function ensureTsCorpus(dir, count) {
   return paths;
 }
 
-/** JS lineDiffStat (same algorithm as apps/desktop/src/utils/editProposal.ts). */
+/** JS lineDiffStat (same algorithm as apps/desktop/src/utils/editProposal.ts —
+ * v1.2.0-demo1: prefix/suffix trim + Hunt–Szymanski LIS; golden parity test in
+ * apps/desktop/src/utils/editProposal.lcs-golden.test.ts). */
 export function lineDiffStatJS(original, proposed) {
   if (original === proposed) return { added: 0, removed: 0, unchanged: true };
   const a = original.split('\n');
   const b = proposed.split('\n');
+  const n = a.length;
   const m = b.length;
-  let prev = new Array(m + 1).fill(0);
-  let curr = new Array(m + 1).fill(0);
-  for (let i = 1; i <= a.length; i++) {
-    for (let j = 1; j <= m; j++) {
-      curr[j] = a[i - 1] === b[j - 1] ? (prev[j - 1] ?? 0) + 1 : Math.max(prev[j] ?? 0, curr[j - 1] ?? 0);
+  let lcs = 0;
+  if (n > 0 && m > 0) {
+    let prefix = 0;
+    while (prefix < n && prefix < m && a[prefix] === b[prefix]) prefix++;
+    let suffix = 0;
+    if (prefix < n && prefix < m) {
+      while (suffix < n - prefix && suffix < m - prefix && a[n - 1 - suffix] === b[m - 1 - suffix]) suffix++;
+      const aEnd = n - suffix;
+      const bEnd = m - suffix;
+      const positions = new Map();
+      for (let j = bEnd - 1; j >= prefix; j--) {
+        const line = b[j];
+        const arr = positions.get(line);
+        if (arr) arr.push(j);
+        else positions.set(line, [j]);
+      }
+      const tails = [];
+      for (let i = prefix; i < aEnd; i++) {
+        const arr = positions.get(a[i]);
+        if (!arr) continue;
+        for (const j of arr) {
+          let lo = 0;
+          let hi = tails.length;
+          while (lo < hi) {
+            const mid = (lo + hi) >> 1;
+            if (tails[mid] < j) lo = mid + 1;
+            else hi = mid;
+          }
+          if (lo === tails.length) tails.push(j);
+          else tails[lo] = j;
+        }
+      }
+      lcs = prefix + suffix + tails.length;
+    } else {
+      lcs = prefix;
     }
-    [prev, curr] = [curr, prev];
-    curr.fill(0);
   }
-  const lcs = prev[m] ?? 0;
   return { added: b.length - lcs, removed: a.length - lcs, unchanged: false };
 }
 
