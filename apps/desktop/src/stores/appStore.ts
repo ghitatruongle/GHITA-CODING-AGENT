@@ -222,6 +222,7 @@ interface AppState {
     transport: string;
     enabled: boolean;
     connected: boolean;
+    command?: string;
   }>;
   setMcpServers: (
     servers: Array<{
@@ -230,6 +231,7 @@ interface AppState {
       transport: string;
       enabled: boolean;
       connected: boolean;
+      command?: string;
     }>,
   ) => void;
 
@@ -325,7 +327,10 @@ export const useAppStore = create<AppState>()(
 
       // v0.7.0 — Editor Preferences
       editorFontSize: 14,
-      setEditorFontSize: (size) => set({ editorFontSize: Math.max(10, Math.min(32, size)) }),
+      setEditorFontSize: (size) =>
+        set({
+          editorFontSize: Number.isFinite(size) ? Math.max(10, Math.min(32, size)) : 14,
+        }),
       editorWordWrap: true,
       setEditorWordWrap: (wrap) => set({ editorWordWrap: wrap }),
       editorMinimap: true,
@@ -333,9 +338,13 @@ export const useAppStore = create<AppState>()(
       editorLineNumbers: true,
       setEditorLineNumbers: (show) => set({ editorLineNumbers: show }),
       editorTabSize: 2,
-      setEditorTabSize: (size) => set({ editorTabSize: Math.max(1, Math.min(8, size)) }),
+      setEditorTabSize: (size) =>
+        set({ editorTabSize: Number.isFinite(size) ? Math.max(1, Math.min(8, size)) : 2 }),
       terminalFontSize: 13,
-      setTerminalFontSize: (size) => set({ terminalFontSize: Math.max(10, Math.min(24, size)) }),
+      setTerminalFontSize: (size) =>
+        set({
+          terminalFontSize: Number.isFinite(size) ? Math.max(10, Math.min(24, size)) : 13,
+        }),
       terminalFontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
       setTerminalFontFamily: (family) => set({ terminalFontFamily: family }),
       terminalCursorStyle: 'block',
@@ -383,6 +392,7 @@ export const useAppStore = create<AppState>()(
         transport: string;
         enabled: boolean;
         connected: boolean;
+        command?: string;
       }>,
       setMcpServers: (servers) => set({ mcpServers: servers }),
 

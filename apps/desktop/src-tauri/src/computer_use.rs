@@ -72,23 +72,42 @@ impl std::ops::DerefMut for SendableEnigo {
 }
 
 pub struct ComputerUseState {
-    pub enigo: Mutex<SendableEnigo>,
+    pub enigo: Mutex<Option<SendableEnigo>>,
 }
 
 impl ComputerUseState {
     pub fn new() -> Self {
-        let enigo = Enigo::new(&Settings::default()).unwrap_or_else(|e| {
-            eprintln!("[GHITA] Failed to initialize enigo input controller: {e}");
-            eprintln!(
-                "[GHITA] Computer use features (mouse/keyboard control) will be unavailable."
-            );
-            // Return a dummy enigo - will fail on actual input operations
-            Enigo::new(&Settings::default())
-                .unwrap_or_else(|_| panic!("Cannot create even dummy enigo controller"))
-        });
-        Self {
-            enigo: Mutex::new(SendableEnigo(enigo)),
+        match Enigo::new(&Settings::default()) {
+            Ok(enigo) => Self {
+                enigo: Mutex::new(Some(SendableEnigo(enigo))),
+            },
+            Err(e) => {
+                eprintln!("[GHITA] Failed to initialize enigo input controller: {e}");
+                eprintln!(
+                    "[GHITA] Computer use features (mouse/keyboard control) will be unavailable."
+                );
+                // Headless / no-display machines must not crash at startup —
+                // input commands will return a clear error instead.
+                Self {
+                    enigo: Mutex::new(None),
+                }
+            }
         }
+    }
+
+    fn lock_enigo<'a>(
+        state: &'a tauri::State<'a, ComputerUseState>,
+    ) -> Result<std::sync::MutexGuard<'a, Option<SendableEnigo>>, String> {
+        state.enigo.lock().map_err(|e| e.to_string())
+    }
+
+    fn require_enigo<'a>(
+        guard: &'a mut std::sync::MutexGuard<'_, Option<SendableEnigo>>,
+    ) -> Result<&'a mut Enigo, String> {
+        guard
+            .as_mut()
+            .map(|s| &mut s.0)
+            .ok_or_else(|| "Input controller unavailable (headless / no display)".to_string())
     }
 }
 
@@ -310,7 +329,8 @@ pub fn computer_move_mouse(
     y: i32,
     state: tauri::State<'_, ComputerUseState>,
 ) -> Result<(), String> {
-    let mut enigo = state.enigo.lock().map_err(|e| e.to_string())?;
+    let mut guard = ComputerUseState::lock_enigo(&state)?;
+    let enigo = ComputerUseState::require_enigo(&mut guard)?;
     enigo
         .move_mouse(x, y, Coordinate::Abs)
         .map_err(|e| format!("move_mouse: {e}"))
@@ -326,7 +346,8 @@ pub fn computer_click(
     button: Option<String>,
     state: tauri::State<'_, ComputerUseState>,
 ) -> Result<(), String> {
-    let mut enigo = state.enigo.lock().map_err(|e| e.to_string())?;
+    let mut guard = ComputerUseState::lock_enigo(&state)?;
+    let enigo = ComputerUseState::require_enigo(&mut guard)?;
     let btn = resolve_button(button.as_deref().unwrap_or("left"));
 
     if let Some(p) = point {
@@ -348,7 +369,8 @@ pub fn computer_type_text(
     text: String,
     state: tauri::State<'_, ComputerUseState>,
 ) -> Result<(), String> {
-    let mut enigo = state.enigo.lock().map_err(|e| e.to_string())?;
+    let mut guard = ComputerUseState::lock_enigo(&state)?;
+    let enigo = ComputerUseState::require_enigo(&mut guard)?;
     enigo.text(&text).map_err(|e| format!("type_text: {e}"))
 }
 
@@ -361,7 +383,8 @@ pub fn computer_press_key(
     key: String,
     state: tauri::State<'_, ComputerUseState>,
 ) -> Result<(), String> {
-    let mut enigo = state.enigo.lock().map_err(|e| e.to_string())?;
+    let mut guard = ComputerUseState::lock_enigo(&state)?;
+    let enigo = ComputerUseState::require_enigo(&mut guard)?;
     let k = resolve_key(&key);
     enigo
         .key(k, Direction::Press)
@@ -380,7 +403,11 @@ pub fn computer_health_check(
 ) -> Result<serde_json::Value, String> {
     let screenshot_ok = Screen::all().is_ok();
     // Reuse existing Enigo instance instead of creating a new one each call
-    let input_ok = state.enigo.lock().is_ok();
+    let input_ok = state
+        .enigo
+        .lock()
+        .map(|g| g.is_some())
+        .unwrap_or(false);
 
     Ok(serde_json::json!({
         "ready": screenshot_ok && input_ok,

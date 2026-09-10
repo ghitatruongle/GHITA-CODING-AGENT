@@ -114,4 +114,4 @@ export function isAddonBuilt(name: string): boolean {
   return addonCandidates(name).some((c) => existsSync(c));
 }
 
-export const NATIVE_BRIDGE_VERSION = '1.1.5';
+export const NATIVE_BRIDGE_VERSION = '1.2.0-demo1';

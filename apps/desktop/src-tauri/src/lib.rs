@@ -180,7 +180,7 @@ fn persist_fs_scope(
     let roots: Vec<String> = scope
         .roots
         .lock()
-        .unwrap()
+        .map_err(|e| format!("Filesystem scope lock poisoned: {e}"))?
         .iter()
         .map(|p| p.to_string_lossy().into_owned())
         .collect();
@@ -190,7 +190,10 @@ fn persist_fs_scope(
 
 fn ensure_fs_scoped(scope: &tauri::State<'_, FsScopeState>, path: &Path) -> Result<(), String> {
     let candidate = normalize_loose(path);
-    let granted = scope.roots.lock().unwrap();
+    let granted = scope
+        .roots
+        .lock()
+        .map_err(|e| format!("Filesystem scope lock poisoned: {e}"))?;
     if granted.iter().any(|r| is_within_root(&candidate, r)) {
         return Ok(());
     }
@@ -227,7 +230,11 @@ fn fs_request_access(
         return Ok(false);
     }
     let norm = normalize_path(Path::new(trimmed));
-    scope.roots.lock().unwrap().insert(norm);
+    scope
+        .roots
+        .lock()
+        .map_err(|e| format!("Filesystem scope lock poisoned: {e}"))?
+        .insert(norm);
     persist_fs_scope(&app, &scope)?;
     Ok(true)
 }
@@ -237,10 +244,13 @@ fn fs_scope_list(scope: tauri::State<'_, FsScopeState>) -> Vec<String> {
     scope
         .roots
         .lock()
-        .unwrap()
-        .iter()
-        .map(|p| p.to_string_lossy().into_owned())
-        .collect()
+        .map(|roots| {
+            roots
+                .iter()
+                .map(|p| p.to_string_lossy().into_owned())
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 // --- Native filesystem commands ---
@@ -355,7 +365,9 @@ fn fs_read_text(path: String, max_bytes: Option<u64>) -> Result<NativeFsReadText
     // Binary sniff on DECODED text: UTF-16 payloads are full of 0x00 bytes and
     // would otherwise be mislabeled as binary, making the whole UTF-16 path
     // dead. NUL in decoded text reliably indicates a true binary file.
-    let is_binary = content[..content.len().min(8192)].contains('\0');
+    // Byte-based sniff avoids slicing `content` at a non-char-boundary
+    // (CJK/emoji at byte 8192 would panic with `content[..8192]`).
+    let is_binary = content.as_bytes().iter().take(8192).any(|&b| b == 0);
 
     Ok(NativeFsReadText {
         content,
@@ -1799,7 +1811,9 @@ pub fn run(headless: bool) {
             {
                 let scope = app.state::<FsScopeState>();
                 let loaded = load_fs_scope(app.handle());
-                *scope.roots.lock().unwrap() = loaded;
+                if let Ok(mut roots) = scope.roots.lock() {
+                    *roots = loaded;
+                };
             }
             // In headless mode: skip window management, auto-start server
             if headless {

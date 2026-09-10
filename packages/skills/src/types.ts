@@ -4,7 +4,7 @@
 import type { Skill, SkillCategory, SkillResult } from '@ghita/shared';
 
 /** Version constant for the skills package assets. */
-export const SKILLS_VERSION = '1.1.5';
+export const SKILLS_VERSION = '1.2.0-demo1';
 
 /** Ready, disabled, or missing status states for loaded skills. */
 export type SkillStatus = 'ready' | 'disabled' | 'missing-adapter' | 'error';

@@ -1,8 +1,8 @@
 {
   "GHSA-mh99-v99m-4gvg": {
-    "expires": "2026-09-01",
+    "expires": "2026-12-31",
     "severity": "high",
-    "reason": "Build-time glob traversal inherited from screenshot-desktop and React Native 0.76 tooling. Inputs are repository-controlled; migrate those parents before expiry.",
+    "reason": "Build-time glob traversal inherited from screenshot-desktop and React Native 0.76 tooling. Inputs are repository-controlled; not shipped to end users at runtime. Extension per owner decision 2026-09-10: migrate screenshot-desktop usage and/or upgrade React Native (dependabot PR open -> 0.87) no later than v1.2.0-beta5; re-evaluate at that milestone.",
     "allowedPaths": [
       "apps__desktop>screenshot-desktop>",
       "apps__mobile>",
@@ -13,18 +13,92 @@
     "expires": "2026-12-31",
     "severity": "high",
     "reason": "Build-time / CI-only js-yaml (3.x/4.x) reached via Docusaurus (docs) and React Native CLI tooling (metro, cosmiconfig, babel-plugin-istanbul). Not shipped to end users at runtime; upstream has not backported the CVE-2026-59870 fix for these majors. Revisit when upstream releases a patched 3.x/4.x.",
-    "allowedPaths": ["apps__mobile>", "docs>"]
+    "allowedPaths": [
+      "apps__mobile>",
+      "docs>"
+    ]
   },
   "GHSA-w3rx-r6r6-pgpr": {
     "expires": "2026-12-31",
     "severity": "high",
     "reason": "Build-time / CI-only image-size ICNS parser (infinite-loop DoS) reached via metro/React Native CLI tooling (apps__mobile) and Docusaurus mdx-loader (docs). Not shipped to end users at runtime; upstream has NOT yet released a patched version (latest 2.0.2 still affected, per GitHub advisory 2026-08-10). Revisit when upstream releases a patched release.",
-    "allowedPaths": ["apps__mobile>", "docs>"]
+    "allowedPaths": [
+      "apps__mobile>",
+      "docs>"
+    ]
   },
   "GHSA-5p2g-fcmc-qvqq": {
     "expires": "2026-12-31",
     "severity": "high",
     "reason": "Build-time / CI-only image-size JXL/HEIF parser (infinite-loop DoS) reached via metro/React Native CLI tooling (apps__mobile) and Docusaurus mdx-loader (docs). Not shipped to end users at runtime; upstream has NOT yet released a patched version (latest 2.0.2 still affected, per GitHub advisory 2026-08-10). Revisit when upstream releases a patched release.",
-    "allowedPaths": ["apps__mobile>", "docs>"]
+    "allowedPaths": [
+      "apps__mobile>",
+      "docs>"
+    ]
+  },
+  "GHSA-c83g-rgw3-j3cx": {
+    "expires": "2026-12-31",
+    "severity": "high",
+    "reason": "Build-time browserslist reached via React Native 0.76 tooling (@notifee/react-native > react-native > @react-native/babel-preset chain). Used only to resolve browser targets during Metro/babel transpilation; not shipped to end users at runtime. Revisit when RN tooling adopts a patched browserslist.",
+    "allowedPaths": [
+      "apps__mobile>"
+    ]
+  },
+  "GHSA-73wf-gq98-2v4g": {
+    "expires": "2026-12-31",
+    "severity": "high",
+    "reason": "Build-time browserslist reached via React Native 0.76 tooling (@notifee/react-native > react-native > @react-native/babel-preset chain). Used only to resolve browser targets during Metro/babel transpilation; not shipped to end users at runtime. Revisit when RN tooling adopts a patched browserslist.",
+    "allowedPaths": [
+      "apps__mobile>"
+    ]
+  },
+  "GHSA-5jgf-p345-68v8": {
+    "expires": "2026-12-31",
+    "severity": "high",
+    "reason": "Build-time / CI-only fast-uri reached via webpack schema validation inside Docusaurus (docs site tooling). Not shipped to end users at runtime; webpack 5 line has not yet bumped fast-uri past the patched version. Revisit when docusaurus/webpack upgrade fast-uri.",
+    "allowedPaths": [
+      "docs>"
+    ]
+  },
+  "GHSA-f65p-4m7j-42xc": {
+    "expires": "2026-12-31",
+    "severity": "high",
+    "reason": "Build-time / CI-only fast-uri reached via webpack schema validation inside Docusaurus (docs site tooling). Not shipped to end users at runtime; webpack 5 line has not yet bumped fast-uri past the patched version. Revisit when docusaurus/webpack upgrade fast-uri.",
+    "allowedPaths": [
+      "docs>"
+    ]
+  },
+  "GHSA-fph4-wmhf-6fwf": {
+    "expires": "2026-12-31",
+    "severity": "high",
+    "reason": "Build-time / CI-only fast-uri reached via webpack schema validation inside Docusaurus (docs site tooling). Not shipped to end users at runtime; webpack 5 line has not yet bumped fast-uri past the patched version. Revisit when docusaurus/webpack upgrade fast-uri.",
+    "allowedPaths": [
+      "docs>"
+    ]
+  },
+  "GHSA-jqff-g426-hqxp": {
+    "expires": "2026-12-31",
+    "severity": "high",
+    "reason": "Build-time / CI-only fast-uri reached via webpack schema validation inside Docusaurus (docs site tooling). Not shipped to end users at runtime; webpack 5 line has not yet bumped fast-uri past the patched version. Revisit when docusaurus/webpack upgrade fast-uri.",
+    "allowedPaths": [
+      "docs>"
+    ]
+  },
+  "GHSA-2883-xcg3-v3hh": {
+    "expires": "2026-12-31",
+    "severity": "high",
+    "reason": "Build-time / CI-only js-yaml reached via React Native CLI tooling (metro, cosmiconfig, babel-plugin-istanbul) on apps__mobile and Docusaurus (gray-matter, webpack loaders) on docs. Same toolchain family as GHSA-5p4m-2wfm-xmqj. Not shipped to end users at runtime. Revisit when RN/Docusaurus tooling ships patched js-yaml.",
+    "allowedPaths": [
+      "apps__mobile>",
+      "docs>"
+    ]
+  },
+  "GHSA-w27v-7q3p-w38r": {
+    "expires": "2026-12-31",
+    "severity": "high",
+    "reason": "Build-time svgo reached via Docusaurus webpack/cssnano SVG optimization in docs. Docs site tooling only; not shipped to end users at runtime. Revisit when docusaurus/cssnano upgrade svgo past the patched version.",
+    "allowedPaths": [
+      "docs>"
+    ]
   }
 }

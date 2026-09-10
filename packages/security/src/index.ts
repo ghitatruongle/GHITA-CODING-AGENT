@@ -73,4 +73,4 @@ export type {
   RotationEvent,
 } from './types.js';
 
-export const SECURITY_VERSION = '1.1.5';
+export const SECURITY_VERSION = '1.2.0-demo1';

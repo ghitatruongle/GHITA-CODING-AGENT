@@ -8,6 +8,11 @@
 // - Compaction scheduling for periodic maintenance
 
 import type { SessionMessage } from '../search.js';
+import { loadNative } from '@ghita/native-bridge';
+
+interface RetrievalImportanceNative {
+  sharedCountsNative(tokens: number[][], group: number[]): number[];
+}
 
 // Types
 
@@ -91,6 +96,17 @@ export interface CompactSchedule {
 
 const TOKEN_PATTERN = /[\p{L}\p{N}_-]+/gu;
 
+/** Hamming weight of a 32-bit word (Kernighan loop — words are sparse). */
+function popcount32(x: number): number {
+  let c = 0;
+  let v = x | 0;
+  while (v !== 0) {
+    v &= v - 1;
+    c++;
+  }
+  return c;
+}
+
 export class MemoryCompactor {
   private readonly config: Required<CompactConfig>;
   private lastCompactAt = 0;
@@ -152,30 +168,70 @@ export class MemoryCompactor {
     return { entryId: entry.id, recency, frequency, relevance, composite };
   }
 
-  /** Score all entries at once. Pre-tokenizes each entry exactly once —
-   * the naive per-pair tokenize loop was O(n²) on up to maxEntries items. */
+  /** Score all entries at once. v1.2.0-demo1: shared-token pair counts run
+   * through the Rust `retrieval` addon when available (shared_counts_native),
+   * otherwise via the cheaper of two exact JS strategies — per-entry bitsets
+   * over a small vocabulary, or inverted-index accumulation for sparse vocab —
+   * instead of the old O(n²) pairwise set scan. Output is bit-identical to
+   * the pairwise loop (golden test: compact-scoreall-golden.test.ts). */
   scoreAll(entries: CompactableEntry[], now?: number): ImportanceScore[] {
     const currentTime = now ?? Date.now();
-    const tokenSets = new Map<string, Set<string>>();
-    for (const e of entries) {
-      tokenSets.set(e.id, this.tokenize(e.content));
+    const N = entries.length;
+    // Per-index token sets (not keyed by id): duplicate ids must keep their
+    // own tokens — a Map keyed by id would keep only the last entry's set.
+    const tokenSets: Array<Set<string>> = entries.map((e) => this.tokenize(e.content));
+
+    let sharedCounts: number[] | Int32Array | null = null;
+    const bridge = loadNative<RetrievalImportanceNative>(
+      'retrieval',
+      undefined as unknown as RetrievalImportanceNative,
+    );
+    if (bridge.native && typeof bridge.impl?.sharedCountsNative === 'function') {
+      try {
+        const vocab = new Map<string, number>();
+        const tokenIds = entries.map((_, idx) => {
+          const ids: number[] = [];
+          for (const t of tokenSets[idx]!) {
+            let v = vocab.get(t);
+            if (v === undefined) {
+              v = vocab.size;
+              vocab.set(t, v);
+            }
+            ids.push(v);
+          }
+          return ids.sort((a, b) => a - b);
+        });
+        const first = new Map<string, number>();
+        const group = entries.map((e, i) => {
+          const f = first.get(e.id);
+          if (f === undefined) {
+            first.set(e.id, i);
+            return i;
+          }
+          return f;
+        });
+        const nativeCounts = bridge.impl.sharedCountsNative(tokenIds, group);
+        // Validate native length — a short array would yield NaN frequencies.
+        if (Array.isArray(nativeCounts) && nativeCounts.length === N) {
+          sharedCounts = nativeCounts;
+        } else {
+          sharedCounts = null;
+        }
+      } catch {
+        sharedCounts = null; // fall through to the JS path
+      }
+    }
+    if (!sharedCounts || sharedCounts.length !== N) {
+      sharedCounts = this.jsSharedCounts(entries, tokenSets);
     }
 
-    return entries.map((entry) => {
+    return entries.map((entry, i) => {
       const ageMs = Math.max(0, currentTime - entry.timestamp);
       const ageDays = ageMs / 86_400_000;
       const recency = Math.pow(0.5, ageDays / this.config.decayHalfLifeDays);
 
-      const entryTokens = tokenSets.get(entry.id)!;
-      let sharedCount = 0;
-      for (const other of entries) {
-        if (other.id === entry.id) continue;
-        const otherTokens = tokenSets.get(other.id)!;
-        let shared = 0;
-        for (const t of entryTokens) if (otherTokens.has(t)) shared++;
-        if (entryTokens.size > 0 && shared / entryTokens.size > 0.3) sharedCount++;
-      }
-      const frequency = Math.min(1, sharedCount / Math.max(entries.length * 0.1, 1));
+      const sharedCount = sharedCounts![i] ?? 0;
+      const frequency = Math.min(1, sharedCount / Math.max(N * 0.1, 1));
       const relevance = entry.relevance ?? 0;
 
       const composite =
@@ -185,6 +241,78 @@ export class MemoryCompactor {
 
       return { entryId: entry.id, recency, frequency, relevance, composite };
     });
+  }
+
+  /** JS reference for shared-token counts (bitset / inverted-index adaptive). */
+  private jsSharedCounts(
+    entries: CompactableEntry[],
+    tokenSets: Array<Set<string>>,
+  ): Int32Array {
+    const N = entries.length;
+    // Vocabulary ids.
+    const vocab = new Map<string, number>();
+    for (const set of tokenSets) {
+      for (const t of set) if (!vocab.has(t)) vocab.set(t, vocab.size);
+    }
+    const V = vocab.size;
+    const words = Math.max(1, Math.ceil(V / 32));
+
+    // Inverted index + its total accumulation cost Σ_t postings(t)².
+    const postings: number[][] = Array.from({ length: V }, () => []);
+    for (let i = 0; i < N; i++) {
+      const set = tokenSets[i]!;
+      for (const t of set) postings[vocab.get(t)!]!.push(i);
+    }
+    let invCost = 0;
+    for (const p of postings) invCost += p.length * p.length;
+    const bitCost = N * N * words;
+
+    const sharedCounts = new Int32Array(N);
+    if (bitCost <= invCost) {
+      // Dense/small vocab: bitset intersection via popcount.
+      const bits: Uint32Array[] = [];
+      for (let i = 0; i < N; i++) {
+        const b = new Uint32Array(words);
+        for (const t of tokenSets[i]!) {
+          const vi = vocab.get(t)!;
+          b[vi >> 5] = (b[vi >> 5] ?? 0) | (1 << (vi & 31));
+        }
+        bits.push(b);
+      }
+      for (let i = 0; i < N; i++) {
+        const idI = entries[i]!.id;
+        const size = tokenSets[i]!.size;
+        if (size === 0) continue;
+        const bi = bits[i]!;
+        let count = 0;
+        for (let j = 0; j < N; j++) {
+          // Original loop skipped by id equality (covers self + duplicate ids).
+          if (entries[j]!.id === idI) continue;
+          const bj = bits[j]!;
+          let shared = 0;
+          for (let w = 0; w < words; w++) shared += popcount32(bi[w]! & bj[w]!);
+          if (shared / size > 0.3) count++;
+        }
+        sharedCounts[i] = count;
+      }
+    } else {
+      // Sparse vocab: accumulate shared-token counts through postings.
+      for (let i = 0; i < N; i++) {
+        const idI = entries[i]!.id;
+        const set = tokenSets[i]!;
+        if (set.size === 0) continue;
+        const counts = new Int32Array(N);
+        for (const t of set) {
+          for (const o of postings[vocab.get(t)!] ?? []) counts[o] = (counts[o] ?? 0) + 1;
+        }
+        let count = 0;
+        for (let j = 0; j < N; j++) {
+          if (entries[j]!.id !== idI && counts[j]! / set.size > 0.3) count++;
+        }
+        sharedCounts[i] = count;
+      }
+    }
+    return sharedCounts;
   }
 
   // Deduplication
@@ -343,8 +471,8 @@ export class MemoryCompactor {
     summaryParts.push(`${messages.length} messages exchanged.`);
 
     let summary = summaryParts.join(' | ');
-    if (summary.length > this.config.maxSummaryLength) {
-      summary = `${summary.slice(0, this.config.maxSummaryLength)  }...`;
+    if (Array.from(summary).length > this.config.maxSummaryLength) {
+      summary = `${Array.from(summary).slice(0, this.config.maxSummaryLength).join('')}...`;
     }
 
     const startTime =
@@ -461,10 +589,15 @@ export class MemoryCompactor {
 
     const intervalMs = schedule.intervalMs ?? 3_600_000;
     this.scheduleTimer = setInterval(() => {
-      const entries = getEntries();
-      if (entries.length > 0) {
-        const result = this.compact(entries);
-        onSave(result.entries);
+      try {
+        const entries = getEntries();
+        if (entries.length > 0) {
+          const result = this.compact(entries);
+          onSave(result.entries);
+        }
+      } catch {
+        // Timer must never throw — a failing compact/save would otherwise
+        // kill future ticks silently. Swallow and retry next interval.
       }
     }, intervalMs);
   }
@@ -490,22 +623,24 @@ export class MemoryCompactor {
   private groupSimilar(entries: CompactableEntry[]): CompactableEntry[][] {
     const threshold = this.config.mergeThreshold;
     const maxGroupSize = this.config.maxGroupSize;
-    const used = new Set<string>();
+    // Key by index, not id: duplicate ids are distinct entries and must not
+    // be dropped (a Set<string> keyed by id would skip the second duplicate).
+    const used = new Set<number>();
     const groups: CompactableEntry[][] = [];
 
     for (let i = 0; i < entries.length; i++) {
-      if (used.has(entries[i]!.id)) continue;
+      if (used.has(i)) continue;
 
       const group: CompactableEntry[] = [entries[i]!];
-      used.add(entries[i]!.id);
+      used.add(i);
       const groupTokens = this.tokenize(entries[i]!.content);
 
       for (let j = i + 1; j < entries.length && group.length < maxGroupSize; j++) {
-        if (used.has(entries[j]!.id)) continue;
+        if (used.has(j)) continue;
         const sim = this.jaccardSimilarity(groupTokens, this.tokenize(entries[j]!.content));
         if (sim >= threshold) {
           group.push(entries[j]!);
-          used.add(entries[j]!.id);
+          used.add(j);
         }
       }
 
@@ -531,9 +666,8 @@ export class MemoryCompactor {
     }
 
     const merged = parts.join(' | ');
-    return merged.length > this.config.maxSummaryLength
-      ? `${merged.slice(0, this.config.maxSummaryLength)  }...`
-      : merged;
+    if (Array.from(merged).length <= this.config.maxSummaryLength) return merged;
+    return `${Array.from(merged).slice(0, this.config.maxSummaryLength).join('')}...`;
   }
 
   private tokenize(text: string): Set<string> {
@@ -555,7 +689,8 @@ export class MemoryCompactor {
   }
 
   private truncate(text: string, maxLen: number): string {
-    if (text.length <= maxLen) return text;
-    return `${text.slice(0, maxLen)  }...`;
+    const chars = Array.from(text);
+    if (chars.length <= maxLen) return text;
+    return `${chars.slice(0, maxLen).join('')}...`;
   }
 }
