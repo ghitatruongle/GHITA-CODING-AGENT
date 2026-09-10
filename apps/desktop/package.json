@@ -26,7 +26,7 @@
     "@ghita/shared": "workspace:*",
     "@ghita/skills": "workspace:*",
     "@monaco-editor/react": "^4.7.0",
-    "monaco-editor": "0.55.1",
+    "monaco-editor": "0.56.0",
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-dialog": "^2.7.1",
     "@xterm/addon-fit": "^0.10.0",
